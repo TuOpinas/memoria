@@ -1,0 +1,15 @@
+{
+  "name": "memoria-marketplace",
+  "owner": {
+    "name": "TuOpinas",
+    "url": "https://tuopinas.ai"
+  },
+  "plugins": [
+    {
+      "name": "memoria",
+      "source": "./plugins/memoria",
+      "description": "Memoria de la organizacion: metodo de trabajo y documentacion por proyecto que la IA lee y sobre el que los equipos construyen.",
+      "version": "1.10.1"
+    }
+  ]
+}
