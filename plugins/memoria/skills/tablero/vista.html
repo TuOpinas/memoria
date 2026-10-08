@@ -905,7 +905,7 @@ function render(){
   db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); ready.a = true; view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("proyectos").onSnapshot(snap=>{ PROJ = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); ready.p = true; view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("cambios").onSnapshot(snap=>{ CAMBIOS = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Vista " + META.organizacion; render(); }, ()=>{});
+  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion + (META.modo==="completo" ? " completo" : ""); render(); }, ()=>{});
   db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});
 })();
 
