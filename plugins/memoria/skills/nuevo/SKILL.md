@@ -85,7 +85,7 @@ fijar. No pueden contradecir `metodo.md`; si alguna lo hace, manda `metodo.md`.]
 
 ## Cómo conectarte
 
-Una vez, cada quien, cinco minutos.
+Una vez, cada quien, tres minutos.
 
 **1. Crea tu proyecto** en Claude con el nombre de tu área: "[Organización] · [tu área]".
 Uno por persona, no uno para todos.
@@ -101,24 +101,13 @@ Si la organización ya lo distribuye a todos, te saltas este paso.
 de tu área: la IA necesita poder mirar en cualquiera para decirte qué se sabe ya y qué
 decisión de otra te afecta. Se elige al crear el proyecto y no se puede cambiar después.
 
-**4. Pega esto en las instrucciones del proyecto**, tal cual:
+**4. Compruébalo.** Escribe «abre sesión en [un proyecto de tu área]». Tiene que ponerte
+al día y proponerte en qué trabajar. No hay nada que pegar en las instrucciones del
+proyecto: el plugin aplica el método solo en cuanto ve esta carpeta, y sabe cuál es tu
+área por tu cuenta en la tabla de arriba.
 
-    Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
-    Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
-    Escribe solo donde te haya dicho que trabajo, y en ningún otro sitio de la carpeta; si no te lo he dicho, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
-    No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
-    Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
-    Antes de guardar algo, pregúntate si alguien más lo va a leer y si contiene datos que no todos deben ver. Si algo parece confidencial, avísame y propón moverlo; no lo muevas tú.
-
-Debajo añade **una línea tuya** diciendo dónde escribes: «Trabajo en el área `comercial`.»
-Si no la pones, la IA te lo preguntará antes de escribir nada.
-
-**5. Compruébalo.** Escribe «abre sesión en [un proyecto de tu área]». Tiene que ponerte
-al día y proponerte en qué trabajar.
-
-**6. Si quieres ver la carpeta entera sin abrirla**, escribe «monta el tablero»: una página
-tuya que se pone al día cada mañana. Te dará un enlace para añadir a tu línea de arriba,
-«Mi tablero: …». Es tuyo; si lo compartes, hazlo desde su menú.
+**5. Si quieres ver la carpeta entera sin abrirla**, escribe «monta el tablero»: una página
+tuya que se pone al día cada mañana. Es tuyo; si lo compartes, hazlo desde su menú.
 
 ## Versión del método
 La primera línea de `metodo.md` dice cuál corre esta carpeta. Si la IA avisa de que se

@@ -50,6 +50,6 @@ fi
 BLOQUE_ACTUAL="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar algo/p' "$CONTRATO")"
 BLOQUE_PREVIO="$(git -C "$REPO_DIR" show HEAD:plugins/memoria/skills/convenciones/SKILL.md 2>/dev/null | sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar algo/p' || true)"
 if [ -n "$BLOQUE_PREVIO" ] && [ "$BLOQUE_ACTUAL" != "$BLOQUE_PREVIO" ]; then
-  echo "  4. El texto de las instrucciones cambió: TODAS las personas tienen que volver"
-  echo "     a pegarlo en su proyecto. Eso no se propaga solo."
+  echo "  4. El bloque de instrucciones cambió. El hook de arranque lo inyecta solo al"
+  echo "     reinstalar el plugin; quien lo tenga pegado a mano en su proyecto, que lo quite."
 fi

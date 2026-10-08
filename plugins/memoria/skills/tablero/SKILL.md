@@ -12,7 +12,7 @@ Cuatro reglas que no cambian:
 - **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su tarea escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Su dueño puede compartirlo desde el menú del artifact, y esa es la única manera de que otra persona lo vea.
 - **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/`) y nada más. Nunca abre `fuentes/`, `taller/`, `restringido/` ni `base/`.
 - **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la tarea diaria lo mecánico, la siguiente sesión del proyecto lo que pide juicio.
-- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea son de la cuenta de su dueño. En la carpeta de la organización no entra nada: ni un enlace. La URL va en la línea personal de las instrucciones del proyecto de Claude de esa persona, que es donde `sesion` la lee.
+- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea son de la cuenta de su dueño. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
 
 ## Dos modos
 
@@ -69,10 +69,9 @@ Con eso el dueño lo ve y lanza la sincronización; si lo comparte, un lector le
 
 ### Qué respondo al terminar
 
-Cinco líneas, sin recapitular los pasos:
+Cuatro líneas, sin recapitular los pasos:
 
 - Qué quedó montado: el tablero, su modo, la tarea y su hora.
-- **La línea personal.** Que añada a la línea suya de las instrucciones de su proyecto de Claude «Mi tablero: <URL>» (y «Mi tablero completo: <URL>» si es ese). Sin esa línea, `sesion` no encuentra la cola al abrir un proyecto. Se le da la línea completa para pegar.
 - **El modelo de la tarea.** Una tarea nace con el modelo de la sesión que la crea y desde Claude no se le puede cambiar; se fija en los ajustes de la tarea, en la app. El trabajo es mecánico con un solo paso de juicio («Por dónde empezar»), así que basta el modelo intermedio de la familia vigente. Cuando un modelo deje de existir, ahí mismo se cambia.
 - **Compartir**, solo si es público: desde el menú del artifact, como contribuidor a quien vaya a actuar desde él, como lector al resto. Si es completo, que no se comparte.
 - **La computadora encendida.** La tarea corre contra la carpeta sincronizada en la computadora de quien la creó; si está apagada a esa hora, la tarea avisa y reintenta hasta la una de la tarde.
@@ -81,7 +80,7 @@ Cinco líneas, sin recapitular los pasos:
 
 Cuando sale una versión nueva del plugin, la página del tablero y el generador cambian juntos. «Actualiza el tablero»:
 
-1. Se toma la URL de la línea personal de las instrucciones, o se busca el artifact por nombre con `Artifact` `list`.
+1. Se busca el artifact por su nombre con `Artifact` `list`.
 2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con la misma declaración de capacidades del paso 1 de montar. La base no se toca: la cola, el enfoque y las correcciones sobreviven.
 3. Se compara el prompt de la tarea con `tarea.md` sustituido. Si cambió, se pide reescribirlo con `update_trigger`; en una tarea ligada a una computadora eso solo surte efecto cuando la persona lo aprueba en una conversación de la app ligada a esa misma computadora, y hasta entonces no cambia nada: se dice, no se rodea, y nunca se borra la tarea para crear otra, porque se pierde su historial y su computadora.
 4. Se recuerda revisar el modelo de la tarea en sus ajustes: es el momento para cambiarlo si el que tenía ya no existe.
@@ -111,6 +110,4 @@ Además de las prohibiciones de `convenciones`:
 
 > Montado. «Tablero Acme», público, con las 4 áreas y los 11 proyectos de la carpeta (`legal/` solo con nombre y dueño, como dice `guia.md`), «Por dónde empezar» con tres grupos, y la tarea «Regenerar tablero Acme» de lunes a viernes a las 9:35 ligada a esta computadora.
 >
-> Pega esto al final de tu línea en las instrucciones del proyecto: «Mi tablero: https://claude.ai/artifact/…». Es lo que me permite leer tu cola al abrir una sesión.
->
-> Dos cosas más quedan en tu mano. El modelo de la tarea: nació con el de esta sesión; en sus ajustes elige el intermedio vigente, que para este trabajo sobra. Y compartirlo, si quieres, desde su menú: como contribuidor a quien vaya a fechar o marcar pasos, como lector al resto. La computadora tiene que estar encendida a las 9:35, o la tarea avisará y reintentará hasta la una.
+> Dos cosas quedan en tu mano. El modelo de la tarea: nació con el de esta sesión; en sus ajustes elige el intermedio vigente, que para este trabajo sobra. Y compartirlo, si quieres, desde su menú: como contribuidor a quien vaya a fechar o marcar pasos, como lector al resto. La computadora tiene que estar encendida a las 9:35, o la tarea avisará y reintentará hasta la una.

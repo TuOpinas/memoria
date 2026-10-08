@@ -1,0 +1,16 @@
+{
+  "description": "Al arrancar una sesión, el plugin memoria se presenta solo: si hay una carpeta conectada con guia.md y metodo.md, Claude aplica el método sin que nadie pegue instrucciones en el proyecto.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/arranque.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
