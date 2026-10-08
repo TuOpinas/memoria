@@ -116,9 +116,9 @@ Si no la pones, la IA te lo preguntará antes de escribir nada.
 **5. Compruébalo.** Escribe «abre sesión en [un proyecto de tu área]». Tiene que ponerte
 al día y proponerte en qué trabajar.
 
-Quien administra la carpeta puede además montar el tablero, una página que muestra la
-carpeta entera sin abrirla y se pone al día cada mañana: con la carpeta conectada, escribe
-«monta el tablero». Cuando exista, su enlace queda aquí debajo.
+**6. Si quieres ver la carpeta entera sin abrirla**, escribe «monta el tablero»: una página
+tuya que se pone al día cada mañana. Te dará un enlace para añadir a tu línea de arriba,
+«Mi tablero: …». Es tuyo; si lo compartes, hazlo desde su menú.
 
 ## Versión del método
 La primera línea de `metodo.md` dice cuál corre esta carpeta. Si la IA avisa de que se

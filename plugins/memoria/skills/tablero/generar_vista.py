@@ -5,8 +5,14 @@ Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
 proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
 Nunca abre fuentes/, taller/, restringido/ ni base/.
 
-Uso: generar_vista.py <raiz> <carpeta-de-salida> [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
+Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
+
+Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
+«Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md dice «restringido»,
+solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo fecha y título.
+«completo»: todo lo que la cuenta pueda leer, con la bitácora entera. Un tablero completo no se comparte.
+En los dos modos, lo que la cuenta no puede leer sale como restringido.
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
 proyectos/<area>--<slug>.json, y un indice.json con la lista de archivos.
 """
@@ -23,6 +29,10 @@ def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
 TAREA = _arg("--tarea")
 VERSION_PLUGIN = _arg("--version")
+MODO = (_arg("--modo") or "publico").lower()
+if MODO not in ("publico", "completo"):
+    sys.exit("--modo admite publico o completo")
+PUBLICO = MODO == "publico"
 HOY = datetime.datetime.now(TZ).date().isoformat()
 
 def leer(p):
@@ -289,7 +299,8 @@ for a in areas_guia:
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
-    if texto is None:
+    if texto is None or (PUBLICO and area_doc["restringido"]):
+        area_doc["legible"] = False
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -313,11 +324,12 @@ for a in areas_guia:
         pid = f"{a['slug']}--{slug}"
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-        tp = leer(pc / "proyecto.md")
+        declarado = "restringid" in ref["descripcion"].lower()
+        tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
             "indice_descripcion": ref["descripcion"], "indice_notas": ref["notas"],
-            "legible": tp is not None, "restringido": tp is None and pc.exists(),
+            "legible": tp is not None, "restringido": tp is None and (pc.exists() or declarado),
         }
         if tp is None:
             docs["proyectos"][pid] = pdoc
@@ -363,7 +375,7 @@ for a in areas_guia:
         pdoc["decisiones"] = dec
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         pdoc["sesiones_total"] = len(ses)
-        pdoc["sesiones"] = ses[:5]
+        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
         pdoc["ultima_sesion"] = ses[0]["fecha"] if ses else None
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
@@ -399,7 +411,7 @@ docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
-    "version_tablero": VERSION_PLUGIN,
+    "version_tablero": VERSION_PLUGIN, "modo": MODO,
 }
 
 # ---------- escribir ----------

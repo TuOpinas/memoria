@@ -37,7 +37,7 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`.
 5. `decisiones.md` del proyecto, las 5 entradas más recientes
 6. `sesiones.md`, las 3 entradas más recientes
 7. `entregables/`, solo las cabeceras de cada archivo: nombre, estado, actualizado. `taller/` no se lee al abrir: entra a demanda, por su disparador de la sección 12
-8. La cola del tablero, solo si `guia.md` lleva la línea «El tablero de esta carpeta: …»: con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` de ese artifact con `proyecto` igual a `<area>--<proyecto>`. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
+8. La cola del tablero, solo si la línea personal de las instrucciones del proyecto de Claude trae «Mi tablero: <URL>» (si trae también «Mi tablero completo», se leen los dos): con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` de ese artifact con `proyecto` igual a `<area>--<proyecto>`. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
 
 **El barrido de avisos**, que es lo único que recorre la raíz entera:
 

@@ -681,7 +681,7 @@ function renderLoUltimo(n){
   const ev = [];
   for(const p of PROJ){
     if(p.restringido) continue;
-    for(const s of (p.sesiones||[])) if(s.fecha) ev.push({f:s.fecha, k:"Sesión", p, t:(s.titulo||"").replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,"") || (s.trabajamos||""), tab:"bitacora"});
+    for(const s of (p.sesiones||[])) if(s.fecha) ev.push({f:s.fecha, k:"Sesión", p, t:(s.titulo||"").replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,"") || (s.trabajamos||"") || "Sesión de trabajo", tab:"bitacora"});
     for(const d of (p.decisiones||[]).slice(0,3)) if(d.fecha) ev.push({f:d.fecha, k:"Decisión", p, t:d.titulo||"", tab:"decisiones"});
     for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && !e.fecha_de_archivo) ev.push({f:e.actualizado, k:"Entregable", p, t:e.nombre||e.archivo||"", tab:"entregables"});
   }
@@ -790,6 +790,7 @@ function syncBtn(){
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
+  if(META.modo === "completo") out += `<div class="stale"><span><b>Tablero completo.</b> Incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».</span></div>`;
   if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el plugin que la regenera corre la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY);
   if(dias >= 2) out += `<div class="stale"><span>La vista lleva <b>${dias} días</b> sin regenerarse (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.</span>${syncBtn()}</div>`;
@@ -867,7 +868,7 @@ function renderProj(p){
     body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin cabecera", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
-    body = `<div class="card">${(p.sesiones||[]).length ? p.sesiones.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} sesiones más recientes de ${nS}.</p>`:"") : `<p class="empty">Sin sesiones registradas.</p>`}</div>`;
+    body = `<div class="card">${(p.sesiones||[]).length ? p.sesiones.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} sesiones más recientes de ${nS}.</p>`:"") + (META && META.modo!=="completo" && p.sesiones.length ? `<p class="more">La bitácora es taller privado del área: aquí solo fecha y título. El detalle está en <code>sesiones.md</code>.</p>` : "") : `<p class="empty">Sin sesiones registradas.</p>`}</div>`;
   }
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); renderProj(p); });
