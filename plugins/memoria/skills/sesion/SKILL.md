@@ -37,10 +37,11 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`.
 5. `decisiones.md` del proyecto, las 5 entradas más recientes
 6. `sesiones.md`, las 3 entradas más recientes
 7. `entregables/`, solo las cabeceras de cada archivo: nombre, estado, actualizado. `taller/` no se lee al abrir: entra a demanda, por su disparador de la sección 12
+8. La cola del tablero, solo si `guia.md` lleva la línea «El tablero de esta carpeta: …»: con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` de ese artifact con `proyecto` igual a `<area>--<proyecto>`. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
 
 **El barrido de avisos**, que es lo único que recorre la raíz entera:
 
-8. Las líneas `Afecta a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
+9. Las líneas `Afecta a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
 
 No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistemas.md`, ni el resto de `area.md`. Entran cuando el trabajo del día los pida, por sus disparadores de la sección 12.
 
@@ -49,6 +50,8 @@ No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistem
 Tres bloques, en este orden y sin encabezados largos.
 
 **Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero.
+
+**Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
 **Avisos**, solo si aplican. Cinco comprobaciones:
 
@@ -69,6 +72,8 @@ Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabaj
 # Cerrar sesión
 
 ## Qué escribo y dónde
+
+**0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
 
 **1. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
 
@@ -123,6 +128,7 @@ Además de las 19 prohibiciones de `convenciones`:
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto
+- Borrar de la cola del tablero un cambio que la carpeta todavía no refleja
 
 ---
 

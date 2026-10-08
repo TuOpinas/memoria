@@ -31,6 +31,8 @@ fi
 
 perl -0pi -e "s/(\"version\": *\")[0-9.]+(\")/\${1}$VERSION\${2}/" "$PLUGIN_JSON"
 perl -0pi -e "s/(\"version\": *\")[0-9.]+(\")/\${1}$VERSION\${2}/" "$MARKETPLACE"
+# La página del tablero lleva la misma versión que el plugin: es lo que compara con meta/estado para avisar de desfase
+perl -0pi -e "s/(const VERSION_TABLERO = \")[0-9.]+(\")/\${1}$VERSION\${2}/" "$PLUGIN_DIR/skills/tablero/vista.html"
 
 "$PLUGIN_DIR/build-metodo.sh"
 
@@ -39,6 +41,9 @@ echo "Publicada la versión $VERSION en el repo. Lo que no hace este script:"
 echo "  1. Commitear y pushear. El push lo hace una persona desde su máquina."
 echo "  2. Copiar metodo.md a la raíz de cada organización que corra el método."
 echo "     Compruébalo con:  shasum plugins/memoria/metodo.md <raiz>/metodo.md"
+if git -C "$REPO_DIR" diff --name-only HEAD 2>/dev/null | grep -q "skills/tablero/"; then
+  echo "  2b. El tablero cambió: cada organización con tablero tiene que decir «actualiza el tablero»."
+fi
 if git -C "$REPO_DIR" diff --name-only HEAD 2>/dev/null | grep -q "skills/convenciones/SKILL.md"; then
   echo "  3. El contrato cambió: pasa verificar.sh por cada raíz antes de darla por al día."
 fi

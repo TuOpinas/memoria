@@ -31,7 +31,7 @@ descripcion() {
 }
 
 # Orden del índice: contrato y estilo primero, después el ciclo de trabajo, al final la migración
-INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta migrar"
+INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta tablero migrar"
 
 {
   echo "# Método de trabajo · versión $VERSION · generado desde el plugin memoria, no se edita a mano"

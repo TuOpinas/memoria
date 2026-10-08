@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.10.1 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.11.0 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -8,7 +8,7 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada y no repiten sus reglas. Si una skill contradice algo de aquí, manda este documento.
 
-Versión del método: **1.10**
+Versión del método: **1.11**
 
 ## 1. Las tres capas de propiedad
 
@@ -119,7 +119,7 @@ RAIZ/
 
 Tres niveles: área, proyecto, carpeta del proyecto. Un cuarto nivel significa que ahí había dos proyectos, con una excepción: dentro de `entregables/`, `taller/` y `fuentes/` se permite **un** nivel de agrupación cuando hay material suficiente para que la lista deje de leerse; el nombre de la subcarpeta sigue la convención de nombres y no lleva número de fase. Antes de crearla vale la pena probar con el asunto por delante del nombre del archivo, que agrupa igual en el listado y no añade nivel. `restringido/` no admite ninguno: es plano.
 
-`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su dueño y su cuenta, quién responde por el contexto, quién administra la carpeta compartida, las reglas propias de la casa y la receta para conectarse. Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
+`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su dueño y su cuenta, quién responde por el contexto, quién administra la carpeta compartida, las reglas propias de la casa, la receta para conectarse y, si lo tiene, el enlace de su tablero. Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
 
 ### Los archivos de `base/`
 
@@ -359,6 +359,7 @@ Cuando un registro pasa de unas 1.500 líneas o cambia el año, se archiva con e
 - `AGENTS.md` ni ningún archivo de instrucciones para la IA dentro de la raíz. Las instrucciones son las skills y el texto que cada persona pega en su proyecto
 - Índices, inventarios o resúmenes mantenidos a mano o por otra herramienta. El único índice es el bloque `Proyectos` de cada `area.md`, es derivado y lo escriben las skills
 - El almacén de datos de una aplicación dentro de la raíz. Lo escribe la aplicación sola y nadie responde por lo que hay dentro
+- El tablero dentro de la raíz. La página que muestra la carpeta entera, su base de datos, sus scripts y su tarea viven fuera, en la cuenta de quien administra la carpeta; es derivado de la raíz y nunca su fuente, y en ella solo queda su enlace en `guia.md`
 - Material que llegó de fuera guardado en cualquier sitio que no sea `fuentes/`
 - Una clave de dueño en la cabecera. El dueño está en `area.md` y `proyecto.md`
 - Un estado intermedio entre `borrador` y `vigente`. Si un borrador está terminado y espera al dueño, lo dice `Estado actual` de `proyecto.md`
@@ -420,7 +421,7 @@ Nunca se lee todo, y casi nunca se lee `base/`. Al abrir, se carga lo justo para
 
 Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se pide por su nombre.
 
-**Nivel 1, del proyecto activo, una vez que se sabe cuál es.** `proyecto.md`; las cinco entradas más recientes de `decisiones.md`; las tres más recientes de `sesiones.md`; y las cabeceras de `entregables/`, nunca su cuerpo.
+**Nivel 1, del proyecto activo, una vez que se sabe cuál es.** `proyecto.md`; las cinco entradas más recientes de `decisiones.md`; las tres más recientes de `sesiones.md`; y las cabeceras de `entregables/`, nunca su cuerpo. Si `guia.md` lleva el enlace del tablero, también la cola de ese proyecto: lo que alguien fechó, marcó hecho, anotó o corrigió desde el tablero y la carpeta todavía no refleja. Es lo primero que se resuelve en la sesión, antes de proponer en qué trabajar.
 
 **Nivel 2, a demanda, cada uno con su disparador.**
 
@@ -450,6 +451,8 @@ Si el camino lleva a una carpeta restringida sin acceso, la lectura falla. Eso n
 **Se conecta la raíz completa, nunca la carpeta de un área.** `guia.md`, `metodo.md` y `base/` viven en la raíz; la lectura cruza áreas; `consulta` busca en lo que produjo cualquier área y `sesion` avisa de las decisiones de otras que afectan al proyecto. Conectada solo un área, el método se rompe en la primera llamada. Conectar de más no abre ningún riesgo: quién puede leer y escribir dónde lo fijan los permisos de las carpetas, no el alcance de la conexión, y lo restringido sigue restringido dentro de una carpeta conectada.
 
 Un proyecto de Claude admite una sola carpeta, que se elige al crearlo y no se puede ampliar después. Es la raíz, y no hace falta ninguna más. Si se eligió mal, se crea otro proyecto.
+
+**El tablero es opcional y lo monta quien administra la carpeta**, desde su cuenta, escribiendo «monta el tablero» con la raíz conectada; la skill `tablero` publica la página, crea la tarea que la regenera cada mañana desde la computadora de esa persona y deja el enlace en `guia.md`. Quien tenga el enlace lo lee; actuar desde él pide que lo compartan como contribuidor. Lo que se toca en el tablero espera en su cola hasta que la tarea lo escribe en la carpeta, o hasta la siguiente sesión del proyecto si pide juicio; la página nunca escribe en la raíz. Cuando sale una versión nueva del plugin, «actualiza el tablero» republica la página sobre la misma URL.
 
 El texto para pegar en las instrucciones del proyecto no nombra skills, porque Claude las elige solo:
 
@@ -577,4 +580,5 @@ Lo que hace cada una, en una línea. Con el plugin instalado se activan solas po
 - **revisar**: Revisa un entregable, detecta lo que quedo desfasado y lo publica de borrador a vigente. Usala con 'revisa X', 'esto esta listo?', 'que esta desactualizado?', 'pasalo a vigente' o 'ya lo aprobo...'.
 - **donde-va**: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, o aparezca un archivo suelto en la raiz.
 - **consulta**: Responde preguntas sobre lo que la organizacion ya sabe, leyendo solo la superficie publica de la raiz y sin escribir nada. Usala cuando pregunten 'que sabemos de X?', 'alguien ya trabajo esto?', 'que se decidio sobre...?', 'hay algo hecho sobre...?' o 'quien lleva...?'.
+- **tablero**: Monta, actualiza y sincroniza el tablero de una organizacion, una pagina que muestra su carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia por una tarea diaria. Usala cuando digan 'monta el tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista' o pregunten por que el tablero no muestra algo.
 - **migrar**: Adopta una carpeta que sigue otra estructura y la trae al metodo sin borrar los originales. Usala cuando digan 'migra esta carpeta', 'trae esto al metodo', 'adopta lo que hay en...', 'convierte estos documentos a la estructura' o cuando aparezca una carpeta con ADR, logs de sesion o carpetas numeradas.
