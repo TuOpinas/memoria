@@ -420,6 +420,12 @@ footer{font-size:12.5px;color:var(--muted)}
 .ent-t:hover{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
 .ent-t:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .ent-l{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+button.est-btn{all:unset;cursor:pointer}
+.pill.est-btn{display:inline-flex;align-items:center;gap:5px;font:600 11.5px/1 var(--f-mono);letter-spacing:.02em;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.pill.est-btn.ok{background:var(--signal-dim);color:var(--signal)}.pill.est-btn.soon{background:var(--warn-dim);color:var(--warn)}.pill.est-btn.none{background:var(--pause-dim);color:var(--pause)}.pill.est-btn.closed{border:1px solid var(--rule);color:var(--muted)}
+.pill.est-btn:hover{filter:brightness(.95)}
+.pill.est-btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.pill.est-btn[aria-expanded="true"]{box-shadow:0 0 0 2px var(--signal)}
 .aviso{background:var(--warn-dim);color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13.5px}
 .aviso.suave{background:var(--rule-soft);color:var(--ink-soft)}
 .mt-i .prio-go{justify-self:end}
@@ -622,7 +628,7 @@ function stepRow(p, s, withProj){
 }
 document.addEventListener("click", e => {
   const t = e.target; if(!CAN || !DB) return;
-  const ce = t.closest("[data-corr-est]"); if(ce){ CORR = CORR==="est:"+ce.dataset.corrEst ? null : "est:"+ce.dataset.corrEst; EDIT = null; render(); return; }
+  const ce = t.closest("[data-corr-est]"); if(ce && CAN){ CORR = CORR==="est:"+ce.dataset.corrEst ? null : "est:"+ce.dataset.corrEst; EDIT = null; render(); return; }
   const ces = t.closest("[data-corr-est-set]"); if(ces){ const p = byId[ces.dataset.corrEstSet]; if(p) corregirEstado(p, ces.dataset.v); return; }
   const cb_ = t.closest("[data-corr]"); if(cb_){ CORR = CORR===cb_.dataset.corr ? null : cb_.dataset.corr; EDIT = null; render(); return; }
   const cs = t.closest("[data-corr-set]"); if(cs){ const [pid, ...rest] = cs.dataset.corrSet.split("||"); const p = byId[pid], s = (p.pasos||[]).find(x=>x.texto===rest.join("||")); if(p&&s) corregir(p, s, cs.dataset.v); return; }
@@ -1256,11 +1262,17 @@ function renderProj(p){
     head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1><p class="sub">Proyecto restringido. Existe y responde por él ${esc(a.dueno)}; su contenido no se muestra en este tablero.</p>`;
     main.innerHTML = ""; return;
   }
-  head.innerHTML = `<div class="eyebrow">${esc(a.nombre)} · proyecto</div><h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
-    <div class="meta"><span>Dueño: <b>${esc(p.dueno)}</b></span>${p.ultima_sesion?`<span>Última sesión: <b>${fmtL(p.ultima_sesion)}</b></span>`:""}${p.actualizado?`<span>Ficha actualizada el <b>${fmtL(p.actualizado)}</b></span>`:""}<span class="tags">${projTags(p)}${CAN?`<button type="button" class="corr-btn" data-corr-est="${p.id}" aria-expanded="${CORR==="est:"+p.id}" title="Corregir el estado que deduce el tablero">corregir estado</button>`:""}</span>${CORR==="est:"+p.id?`<span class="corr-form" style="padding-left:0">${EST_OPC.map(([v,l])=>`<button type="button" class="chip${projStatus(p).corregido&&projStatus(p).k===v?" on":""}" data-corr-est-set="${p.id}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></span>`:""}<p class="more" style="margin:0">${(()=>{ const e=projStatus(p); return esc(e.regla)+(e.riesgo?` · En riesgo: ${esc(e.riesgoRegla)}`:""); })()}</p></div>`;
+  const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;
+  const ses = hace===null ? "sin sesiones" : hace===0 ? "hoy" : hace===1 ? "ayer" : `hace ${hace} días`;
+  const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${p.id}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
+  const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon">${nc} por registrar</span>` : ""; })()].join("");
+  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
+    <div class="meta"><span class="tags">${estBtn}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span><span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
+    ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${p.id}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
   const nP = stepsLive(p).length;
-  const tabs = [["estado","Estado",""],["pasos","Acciones",nP],["decisiones","Decisiones",nD],["entregables","Entregables",nE],["bitacora","Bitácora",nS]];
+  const nV = p.entregables_vigentes||0;
+  const tabs = [["estado","Estado",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones","Decisiones",nD],["bitacora","Bitácora",nS]];
   let body = "";
   if(tab==="estado"){
     const live = stepsLive(p), nx = mainStep(p), tday = today();
@@ -1271,7 +1283,6 @@ function renderProj(p){
     const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length;
     const ir = (t, txt) => `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${p.id}" data-tab="${t}">${txt}</button>`;
     const filas = [
-      nx ? `<dt>Siguiente paso</dt><dd>${inline(nx.texto)}${effDate(p,nx)?` <span class="pill ${due(effDate(p,nx)).cls}">${due(effDate(p,nx)).label}</span>`:""}<br>${ir("pasos", `Ver las ${live.length} acciones ›`)}</dd>` : `<dt>Siguiente paso</dt><dd>Ninguno escrito.</dd>`,
       nLate ? `<dt>Vencidos</dt><dd><span class="pill late">${nLate}</span> ${ir("pasos","Atenderlos ›")}</dd>` : "",
       esperas.length ? `<dt>Espera a alguien de fuera</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
       (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);
@@ -1281,7 +1292,8 @@ function renderProj(p){
       nc ? `<dt>Por registrar</dt><dd><span class="pill soon">${nc}</span> marcados aquí; los recoge la siguiente sesión</dd>` : ""
     ].join("");
     const largo = (p.estado_actual||"").trim().length > (p.estado_resumen||"").trim().length + 20, full = EST_FULL.has(p.id);
-    body = `<div class="card ficha"><h3>En resumen</h3><dl class="facts">${filas}</dl></div>
+    const top = live.filter(x=>["accion","decision","espera"].includes(effNat(p,x))).sort(stepOrder(p)).slice(0,3);
+    body = `<div class="card ficha"><h3>Lo siguiente</h3>${top.length ? `<div class="steps">${top.map(x=>stepRow(p,x,false)).join("")}</div>` : `<p class="empty">Ningún paso por hacer escrito.</p>`}${live.length>top.length ? ir("pasos", `Ver las ${live.length} acciones ›`) : ""}${filas.trim() ? `<dl class="facts" style="border-top:1px solid var(--rule-soft);padding-top:12px">${filas}</dl>` : ""}</div>
       <div class="card"><h3>Estado actual</h3><div class="md">${(full ? md(p.estado_actual) : md(p.estado_resumen)) || `<p class="empty">Sin estado escrito.</p>`}</div>${largo?`<button type="button" class="leer" data-est-full="${p.id}">${full?"Leer menos":"Leer el estado completo"}</button>`:""}</div>
       <div class="card"><h3>Objetivo y alcance</h3><dl class="facts"><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Consumen esto</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>`;
   } else if(tab==="pasos"){
@@ -1321,7 +1333,7 @@ function render(){
   const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
-  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; ${META.modo==="completo" ? "todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido»" : "nunca fuentes, taller ni lo restringido"}. La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
+  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; ${META.modo==="completo" ? "todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido»" : "nunca fuentes, taller ni lo restringido"}. La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
 }
 (async ()=>{
   render();
