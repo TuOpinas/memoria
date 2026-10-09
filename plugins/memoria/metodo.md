@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.11.0 · huella 65436fa · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.12.0 · huella ca2573d · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -8,7 +8,7 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada y no repiten sus reglas. Si una skill contradice algo de aquí, manda este documento.
 
-Versión del método: **1.11**
+Versión del método: **1.12**
 
 ## 1. Las tres capas de propiedad
 

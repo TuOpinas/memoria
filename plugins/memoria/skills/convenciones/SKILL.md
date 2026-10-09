@@ -7,7 +7,7 @@ description: Contrato base del metodo de trabajo: estructura de carpetas, cabece
 
 Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada y no repiten sus reglas. Si una skill contradice algo de aquí, manda este documento.
 
-Versión del método: **1.11**
+Versión del método: **1.12**
 
 ## 1. Las tres capas de propiedad
 
