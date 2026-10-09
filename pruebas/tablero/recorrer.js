@@ -1,0 +1,50 @@
+// Recorre las páginas de prueba con Playwright: cada vista, cada ventana, en claro, oscuro y móvil.
+// Uso: node recorrer.js <carpeta-con-las-páginas> <carpeta-de-capturas>. Sale con 1 si la página da algún error.
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const [dir, out] = process.argv.slice(2);
+  const exe = process.env.CHROMIUM || undefined;
+  const b = await chromium.launch(exe ? { executablePath: exe } : {});
+  const errores = [];
+  const vistas = [
+    ['inicio', ''], ['pendientes', '#pendientes'], ['decisiones', '#decisiones'], ['entregables', '#entregables'],
+    ['area', '#a-ventas'], ['area-restringida', '#a-personas'],
+    ['proyecto', '#p-ventas--cuentas-t-estado'], ['acciones', '#p-ventas--cuentas-t-pasos'],
+    ['proy-entregables', '#p-ventas--cuentas-t-entregables'], ['proy-decisiones', '#p-ventas--cuentas-t-decisiones'], ['bitacora', '#p-ventas--cuentas-t-bitacora'],
+    ['proy-restringido', '#p-ventas--precios'],
+  ];
+  // ventanas y controles: se abren desde la vista indicada
+  const acciones = [
+    ['memoria-al-dia', '', '[data-mt-open]'], ['prioridad', '#a-ventas', '[data-prio-toggle]'],
+    ['entregable', '#entregables', '[data-ent-open]'], ['estado', '#p-ventas--cuentas-t-estado', '.est-btn'],
+    ['corregir-paso', '#p-ventas--cuentas-t-pasos', '.step-x'], ['fecha', '#p-ventas--cuentas-t-pasos', '[data-edit-due]'],
+    ['decision', '#decisiones', '[data-dec-open]'],
+  ];
+  async function pasada(pagina, etiqueta, opciones){
+    const ctx = await b.newContext(opciones);
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`${etiqueta}: ${e.message}`));
+    const url = 'file://' + path.resolve(dir, pagina);
+    for(const [nombre, hash] of vistas){
+      await p.goto(url + hash); await p.waitForTimeout(400);
+      await p.screenshot({ path: path.join(out, `${etiqueta}-${nombre}.png`), fullPage: true });
+    }
+    for(const [nombre, hash, sel] of acciones){
+      await p.goto(url + hash); await p.waitForTimeout(400);
+      const el = await p.$(sel);
+      if(!el){ errores.push(`${etiqueta}: no aparece ${sel} (${nombre})`); continue; }
+      await el.click(); await p.waitForTimeout(250);
+      await p.screenshot({ path: path.join(out, `${etiqueta}-${nombre}.png`) });
+      await p.keyboard.press('Escape');
+    }
+    await ctx.close();
+  }
+  await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
+  await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
+  await pasada('publico.html', 'publico-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  await b.close();
+  console.log(errores.length ? errores.join('\n') : 'La página no dio ningún error.');
+  process.exit(errores.length ? 1 : 0);
+})();

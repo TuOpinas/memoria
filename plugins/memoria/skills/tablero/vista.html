@@ -751,7 +751,9 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 function sesionFrase(p){ return `abre sesión en ${p.area}/${p.slug} y ordena sus siguientes pasos con lo que propone el tablero`; }
 function regNecesita(p){
   const live = stepsLive(p), by = {};
-  for(const s of live){ const n = effNat(p,s); by[n] = (by[n]||0)+1; }
+  // una revisión con fecha que ya tocó se avisa aparte («revisión por hacer»), no aquí
+  const tday = today();
+  for(const s of live){ if(s.revisar && s.revisar<=tday) continue; const n = effNat(p,s); by[n] = (by[n]||0)+1; }
   const raros = ["rutina","condicional","caducidad"].filter(k=>by[k]);
   const nR = raros.reduce((n,k)=>n+by[k],0);
   if(nR < 2 && live.length < 12) return null;
@@ -899,7 +901,7 @@ function mtModal(){
   const colaFila = c => `<div class="due-item static"><span class="pill ${c.tipo==="nota"?"":"soon"}">${esc(c.tipo)}</span><span class="t">${c.tipo==="nota" ? esc(c.nota) : c.tipo==="prioridad" ? `${c.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"}: ${inline(c.texto||"")}` : c.tipo==="corregir" && c.campo==="estado" ? `Estado del proyecto: ${esc((EST[c.propuesta]||{label:c.propuesta}).label)}` : c.tipo==="corregir" ? `${esc((CORR_OPC.find(o=>o[0]===c.propuesta)||[,c.propuesta])[1])}: ${inline(c.paso||"")}` : `Hecho sin nota: ${inline(c.paso||"")}`}</span><span class="w">${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${c.id}">Deshacer</button>`:""}</span></div>`;
   const ir = (tab, txt) => p ? `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${p.id}" data-tab="${tab}">${txt}</button>` : "";
   const sec = x => {
-    if(x.k==="reg"){ const raros = stepsLive(p).filter(s=>["rutina","condicional","caducidad"].includes(effNat(p,s)));
+    if(x.k==="reg"){ const raros = stepsLive(p).filter(s=>["rutina","condicional","caducidad"].includes(effNat(p,s)) && !(s.revisar && s.revisar<=today()));
       return `<h3>Pasos que no se agendan como una acción <span class="c">${raros.length || x.r.total}</span></h3>${raros.length ? `<p class="more" style="margin:0">Una rutina va a las prioridades del área o se vuelve un hábito; lo que depende de algo espera a que pase; una revisión con fecha se revisa en su fecha. Si el tablero se equivocó con alguno, corrígelo con «⋯».</p><div class="steps">${raros.map(s=>stepRow(p,s,false)).join("")}</div>` : `<p class="more" style="margin:0">${x.r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos. ${ir("pasos","Ver las acciones ›")}</p>`}`; }
     if(x.k==="rev") return `<h3>Revisión periódica que ya tocó</h3><div class="steps">${x.revs.map(s=>stepRow(p,s,false)).join("")}</div>`;
     if(x.k==="enc") return `<h3>Objetivo y alcance sin confirmar</h3><p class="more" style="margin:0">El objetivo, el alcance y «terminado significa» de <code>proyecto.md</code> siguen en borrador desde hace ${x.dias} días: nadie los ha dado por buenos. ${ir("estado","Ver el objetivo y el alcance ›")}</p>`;

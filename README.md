@@ -46,6 +46,8 @@ El plugin trae además las dos plantillas del método (brief y comparativo), den
 | `release.sh <version>` | Publica una versión: sube el número en los tres sitios, comprueba el contrato y el README, regenera `metodo.md` y dice qué queda a mano |
 | `verificar.sh <raiz>` | Comprueba una raíz entera contra el contrato sin leer contenido y sin escribir nada |
 
+Fuera del plugin, y por tanto fuera de lo que se instala, `pruebas/tablero/probar.sh` prueba el tablero contra una organización inventada: que no se filtre lo restringido, que los plazos y los entregables se lean bien y, si hay Node con Playwright, que la página no dé errores en claro, oscuro y móvil. Se pasa antes de publicar cualquier cambio al tablero.
+
 ## Cómo se usa con una organización
 
 Cada organización tiene una raíz sincronizada en Drive, autocontenida, con `guia.md`, `metodo.md` y `base/`, y una carpeta por área. La monta la skill `nuevo`.
