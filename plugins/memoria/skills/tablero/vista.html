@@ -416,6 +416,10 @@ footer{font-size:12.5px;color:var(--muted)}
 .mt-i .t span{font-size:13px;color:var(--ink-soft)}
 .mt-i .t em{font:400 13px var(--f-body);font-style:normal;color:var(--muted)}
 .nv{display:grid;gap:10px}
+.ent-t{all:unset;cursor:pointer;font-weight:600;border-radius:3px}
+.ent-t:hover{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
+.ent-t:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.ent-l{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
 .mt-i .prio-go{justify-self:end}
 .ar{display:grid}
 .ar-i{all:unset;cursor:pointer;box-sizing:border-box;display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:6px 16px;align-items:center;padding:10px 0;border-top:1px solid var(--rule-soft);border-radius:4px}
@@ -558,11 +562,11 @@ function parseHash(){
   if(h==="entregables") return {lvl:"ent"};
   return {lvl:"root"};
 }
-function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "estado"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
-window.addEventListener("popstate", ()=>{ view = parseHash(); render(); });
+function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "estado"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
+window.addEventListener("popstate", ()=>{ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
-  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],[data-mt-open],[data-mt-pos],[data-mt-unpos],[data-modal-close],.modal-h,.modal-f,.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
+  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],[data-mt-open],[data-mt-pos],[data-ent-open],[data-mt-unpos],[data-modal-close],.modal-h,.modal-f,.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
   const b = t.closest("[data-go-area],[data-go-proj],[data-go-root],[data-go-pend],[data-go-dec],[data-go-ent]"); if(!b) return;
   e.preventDefault();
   if(b.dataset.goRoot!==undefined) go({lvl:"root"});
@@ -572,7 +576,7 @@ document.addEventListener("click", e => {
   else if(b.dataset.goArea) go({lvl:"area", id:b.dataset.goArea});
   else go({lvl:"proj", id:b.dataset.goProj, tab: b.dataset.tab || (t.closest("#view-pend, .enf, .due, .steps") ? "pasos" : undefined)});
 });
-document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && (PRIO_OPEN || MT_OPEN) && !EDIT && !HECHO){ PRIO_OPEN = null; MT_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
+document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && (PRIO_OPEN || MT_OPEN || ENT_OPEN) && !EDIT && !HECHO){ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
 
 // ---- controles de un paso ----
 let EDIT = null, HECHO = null, CALM = null, CORR = null;
@@ -717,7 +721,7 @@ function prioModal(){
 document.addEventListener("click", e => {
   const b = e.target.closest && e.target.closest("[data-prio-toggle]"); if(b){ PRIO_OPEN = b.dataset.prioToggle; render(); const m = document.querySelector(".modal"); if(m) m.focus(); return; }
   const c = e.target.closest && e.target.closest("[data-modal-close]");
-  if(c && (e.target===c || e.target.closest(".modal-x,.modal-f [data-modal-close]"))){ PRIO_OPEN = null; MT_OPEN = null; render(); }
+  if(c && (e.target===c || e.target.closest(".modal-x,.modal-f [data-modal-close]"))){ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; render(); }
 });
 document.addEventListener("click", e => {
   if(!CAN || !DB) return;
@@ -862,7 +866,7 @@ function mtModal(){
     if(x.k==="rev") return `<h3>Revisión periódica que ya tocó</h3><div class="steps">${x.revs.map(s=>stepRow(p,s,false)).join("")}</div>`;
     if(x.k==="enc") return `<h3>Encuadre en borrador</h3><p class="more" style="margin:0">El objetivo, el alcance y «terminado significa» de <code>proyecto.md</code> siguen en borrador desde hace ${x.dias} días: nadie los ha dado por buenos. ${ir("estado","Ver el encuadre ›")}</p>`;
     if(x.k==="par") return `<h3>Proyecto parado</h3><p class="more" style="margin:0">${esc(x.txt.charAt(0).toUpperCase()+x.txt.slice(1))}. La sesión decide si sigue, se pausa o se cierra. ${ir("pasos","Ver las acciones ›")}</p>`;
-    if(x.k==="desc") return `<h3>Entregables vigentes sin descripción</h3><div class="ents">${x.ents.map(e=>`<div class="ent"><b>${inline(e.titulo||e.nombre)}</b><span class="f">${e.actualizado?fmtD(e.actualizado):""}</span></div>`).join("")}</div>`;
+    if(x.k==="desc") return `<h3>Entregables vigentes sin descripción</h3><div class="ents">${x.ents.map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.actualizado?fmtD(e.actualizado):""}</span></div>`).join("")}</div>`;
     if(x.k==="conf") return `<h3>Decisiones por confirmar <span class="c">${x.decs.length}</span></h3><div class="dl">${x.decs.map(d=>decItem(d,p,false)).join("")}</div>`;
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
     return "";
@@ -884,6 +888,35 @@ document.addEventListener("click", e => {
   if(e.target.closest && e.target.closest("[data-nov-all]")){ NOV_ALL = !NOV_ALL; render(); return; }
   if(e.target.closest && e.target.closest("[data-mt-all]")){ MT_ALL = !MT_ALL; render(); }
 });
+// ---- detalle de un entregable: de qué sale y quién se construye encima ----
+let ENT_OPEN = null;
+const entPath = (p, e) => `${p.area}/${p.slug}/entregables/${e.archivo}`;
+function entIdx(){ const m = {}; for(const p of PROJ){ if(p.restringido) continue; for(const e of (p.entregables||[])) m[entPath(p,e)] = {p, e}; } return m; }
+const entBtn = (p, e) => `<button type="button" class="ent-t" data-ent-open="${esc(entPath(p,e))}">${inline(e.titulo||e.nombre)}</button>`;
+function origen(ruta, idx){
+  const r = ruta.replace(/^\.?\//, ""), x = idx[r];
+  if(x) return `<li>${entBtn(x.p, x.e)} <span class="more">· ${esc(x.e.estado||x.e.formato||"")} · ${esc(x.p.nombre)}</span></li>`;
+  const seg = r.split("/"), pr = byId[seg[0]+"--"+seg[1]], nom = pr ? pr.nombre : seg.slice(0,2).join("/");
+  const tipo = /decisiones\.md$/.test(r) ? `las decisiones de ${esc(nom)}` : /proyecto\.md$/.test(r) ? `el encuadre de ${esc(nom)}` : /sesiones\.md$/.test(r) ? `la bitácora de ${esc(nom)}` : r.includes("/fuentes/") ? `una fuente de ${esc(nom)}` : r.includes("/taller/") ? `el taller de ${esc(nom)}` : r.includes("/restringido/") ? `material restringido de ${esc(nom)}` : /area\.md$/.test(r) ? "el área" : r==="guia.md" ? "la guía de la raíz" : "";
+  return `<li>${tipo ? `${tipo[0].toUpperCase()+tipo.slice(1)} <span class="more">· <code>${esc(r)}</code></span>` : `<code>${esc(r)}</code>`}</li>`;
+}
+function entModal(){
+  if(!ENT_OPEN) return "";
+  const idx = entIdx(), x = idx[ENT_OPEN]; if(!x){ ENT_OPEN = null; return ""; }
+  const {p, e} = x, a = areaBy[p.area];
+  const usan = Object.entries(idx).filter(([k,y])=>k!==ENT_OPEN && (y.e.basado_en||[]).some(b=>b.replace(/^\.?\//,"")===ENT_OPEN)).map(([,y])=>y);
+  const pill = e.estado==="vigente" ? "ok" : e.estado==="reemplazado" ? "closed" : e.estado ? "draft" : "none";
+  const reemp = e.reemplazado_por || (/\*\*reemplazad[oa]s?\*\*\s*por\s*([^;.]*)/i.exec(e.descripcion||"")||[])[1];
+  const base = e.basado_en;
+  return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ent-h" tabindex="-1">
+    <header class="modal-h"><span></span><div><div class="eyebrow">${esc(a?.nombre||"")} · ${esc(p.nombre)} · entregable</div><h2 id="ent-h">${inline(e.titulo||e.nombre)}</h2>${e.descripcion?`<p class="sub">${inline(e.descripcion)}</p>`:""}</div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
+    <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(e.estado || "sin cabecera")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
+    <section class="modal-s"><h3>Construido sobre <span class="c">${base ? base.length : ""}</span></h3>${base ? (base.length ? `<ul class="ent-l">${base.map(b=>origen(b, idx)).join("")}</ul>` : `<p class="more" style="margin:0">Su cabecera no cita nada: es material adoptado sin trazabilidad. Antes de publicarlo de nuevo, «revisar» pide completarla.</p>`) : `<p class="more" style="margin:0">${e.formato && e.formato!=="md" ? "Es un archivo sin cabecera: de qué se construyó lo cuenta proyecto.md o la decisión que lo produjo." : "Sin datos de origen en su cabecera."}</p>`}</section>
+    <section class="modal-s"><h3>Lo usan <span class="c">${usan.length}</span></h3>${usan.length ? `<p class="more" style="margin:0">Se construyen sobre este: si cambia, conviene revisarlos.</p><ul class="ent-l">${usan.map(y=>`<li>${entBtn(y.p,y.e)} <span class="more">· ${esc(y.e.estado||"")} · ${esc(areaBy[y.p.area]?.nombre||"")} · ${esc(y.p.nombre)}</span></li>`).join("")}</ul>` : `<p class="more" style="margin:0">Ningún otro entregable lo cita en su cabecera.</p>`}</section>
+    <footer class="modal-f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">Ir al proyecto ›</button><button type="button" class="chip" data-modal-close style="margin-left:auto">Cerrar</button></footer>
+  </div></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ent-open]"); if(!b) return; e.preventDefault(); ENT_OPEN = b.dataset.entOpen; MT_OPEN = null; PRIO_OPEN = null; render(); const m = document.querySelector(".modal"); if(m) m.focus(); });
 // ---- piezas ----
 const nextStep = p => { const live = stepsLive(p); return live.filter(s=>effDate(p,s)).sort((a,b)=>effDate(p,a).localeCompare(effDate(p,b)))[0] || live[0] || null; };
 function projTags(p){
@@ -1071,7 +1104,7 @@ function renderEnt(){
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     total += vig.length;
     if(!vig.length) return "";
-    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${isNew("e",p.id,entKey(p,e))?`<span class="pill new">nuevo</span> `:""}${inline(e.titulo||e.nombre)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
+    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${isNew("e",p.id,entKey(p,e))?`<span class="pill new">nuevo</span> `:""}${entBtn(p,e)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
   }).join("");
   head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Entregables vigentes</h1><p class="sub">Sobre lo que se puede construir hoy, por área. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
   main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`);
@@ -1172,7 +1205,7 @@ function renderArea(a){
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
-      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${inline(e.titulo||e.nombre)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
+      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
 }
 // ---- proyecto ----
 let tab = "estado", EST_FULL = new Set();
@@ -1220,7 +1253,7 @@ function renderProj(p){
     body = `<div class="card">${(p.decisiones||[]).length ? decList(p.decisiones.map(d=>({d,p})), false, 0) + (nD>p.decisiones.length?`<p class="more">Se muestran las ${p.decisiones.length} más recientes de ${nD}. El registro completo está en <code>decisiones.md</code>.</p>`:"") : `<p class="empty">Sin decisiones registradas.</p>`}</div>`;
   } else if(tab==="entregables"){
     const ents = (p.entregables||[]);
-    const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(e=>`<div class="ent"><b>${inline(e.titulo||e.nombre)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
+    const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
     body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin cabecera", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
@@ -1244,7 +1277,7 @@ function render(){
     console.error(err);
     document.getElementById("main").innerHTML = `<p class="empty">No se pudo pintar esta vista (${esc(err && err.message || err)}). Vuelve a cargar la página; si sigue, avisa a quien administra la carpeta.</p>`;
   }
-  const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN)); }
+  const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
   f.innerHTML = META ? esc(`Vista al ${fmtL(META.snapshot)} · generada desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee guia.md, cada area.md y, de cada proyecto, proyecto.md, decisiones.md, sesiones.md y las cabeceras de sus entregables. Nunca fuentes, taller ni lo restringido. La carpeta es la fuente; lo que se toca aquí espera en una cola hasta que la sincronización lo escribe allí.`) : "";

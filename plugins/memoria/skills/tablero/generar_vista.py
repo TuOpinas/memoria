@@ -49,10 +49,20 @@ def frontmatter(texto):
     fm = {}
     if not m:
         return fm, texto
+    ultima = None
     for linea in m.group(1).split("\n"):
         mm = re.match(r"^(\w+):\s*(.*)$", linea)
         if mm:
-            fm[mm.group(1)] = mm.group(2).strip()
+            ultima = mm.group(1)
+            v = mm.group(2).strip()
+            # listas en línea («[]», «[a, b]»); las de varias líneas se suman abajo
+            fm[ultima] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()] if v.startswith("[") and v.endswith("]") else v
+            continue
+        ml = re.match(r"^\s+-\s+(.*)$", linea)
+        if ml and ultima:
+            if not isinstance(fm.get(ultima), list):
+                fm[ultima] = []
+            fm[ultima].append(ml.group(1).strip().strip("'\""))
     return fm, texto[m.end():]
 
 def seccion(texto, nombre):
@@ -219,6 +229,8 @@ def entregables_de(carpeta, indice):
                 fm, cuerpo_e = frontmatter(t)
                 ent["titulo"] = titulo_h1(cuerpo_e) or None
                 ent["estado"] = fm.get("estado")
+                if isinstance(fm.get("basado_en"), list):
+                    ent["basado_en"] = [re.sub(r"^\./", "", b) for b in fm["basado_en"]]
                 ent["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
                     ent["reemplazado_por"] = fm["reemplazado_por"]
