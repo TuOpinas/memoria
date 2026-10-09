@@ -10,7 +10,7 @@ Una página que muestra la carpeta de la organización sin abrirla: qué áreas 
 Cuatro reglas que no cambian:
 
 - **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su tarea escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Su dueño puede compartirlo desde el menú del artifact, y esa es la única manera de que otra persona lo vea.
-- **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/`) y nada más. Nunca abre `fuentes/`, `taller/`, `restringido/` ni `base/`.
+- **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/`) y nada más. Nunca abre `fuentes/`, `taller/`, `restringido/` ni `base/`; de `fuentes/` y `taller/` solo mira las fechas de los archivos, para avisar del trabajo sin sesión.
 - **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la tarea diaria lo mecánico, la siguiente sesión del proyecto lo que pide juicio.
 - **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea son de la cuenta de su dueño. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
 
@@ -18,7 +18,7 @@ Cuatro reglas que no cambian:
 
 | | Público | Completo |
 |---|---|---|
-| Qué muestra | La superficie pública del contrato: `area.md`, `proyecto.md`, decisiones, entregables. De un área cuya columna «Quién la lee» diga «Restringida», y de un proyecto cuya línea del índice diga «restringido», solo nombre y dueño, aunque tu cuenta pueda leerlos. De cada sesión, solo fecha y título | Todo lo que tu cuenta lee, incluidas las áreas y proyectos restringidos a los que tienes acceso, con la bitácora entera |
+| Qué muestra | La superficie pública del contrato: `area.md`, `proyecto.md`, decisiones, entregables. De un área cuya columna «Quién la lee» diga «Restringida», y de un proyecto cuya línea del índice empiece por «restringido» o que no esté en el índice, solo nombre y dueño, aunque tu cuenta pueda leerlos. De cada sesión, solo fecha y título | Todo lo que tu cuenta lee, incluidas las áreas y proyectos restringidos a los que tienes acceso, con las cinco sesiones más recientes enteras |
 | Para quién | Para compartirlo con cualquiera de la organización | Para ti. Lleva una marca fija que dice que no se comparte |
 | Frase | «monta el tablero» (es el modo por defecto) | «monta el tablero completo», «monta el tablero con todo» |
 

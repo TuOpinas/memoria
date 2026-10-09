@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/arranque.sh",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/arranque.sh\"",
             "timeout": 10
           }
         ]

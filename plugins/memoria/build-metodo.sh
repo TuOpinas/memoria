@@ -22,12 +22,13 @@ fi
 
 # Cuerpo de una skill sin su frontmatter (el bloque entre los dos primeros '---')
 cuerpo() {
-  awk 'BEGIN{n=0} /^---$/ && n<2 {n++; next} n>=2 {print}' "$1" | sed '1{/^$/d}'
+  # sin retornos de carro: un archivo guardado con finales de Windows perdería su cuerpo entero
+  tr -d '\r' < "$1" | awk 'BEGIN{n=0} /^---$/ && n<2 {n++; next} n>=2 {print}' | sed '1{/^$/d;}'
 }
 
 # Descripción de una skill, en una línea
 descripcion() {
-  sed -n 's/^description: *//p' "$1" | head -n 1
+  tr -d '\r' < "$1" | sed -n 's/^description: *//p' | head -n 1
 }
 
 # Orden del índice: contrato y estilo primero, después el ciclo de trabajo, al final la migración
@@ -42,6 +43,11 @@ trap 'rm -f "$CUERPO"' EXIT
   echo
   echo "---"
   echo
+  for s in convenciones estilo; do
+    if [ "$(cuerpo "$SKILLS/$s/SKILL.md" | wc -l)" -lt 5 ]; then
+      echo "La skill $s sale vacía: revisa su cabecera" >&2; exit 1
+    fi
+  done
   cuerpo "$SKILLS/convenciones/SKILL.md"
   echo
   echo "---"
@@ -63,7 +69,8 @@ trap 'rm -f "$CUERPO"' EXIT
     echo "- **$s**: $(descripcion "$f")"
   done
 } > "$CUERPO"
-HUELLA="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest()[:7])' "$CUERPO")"
+HUELLA="$({ shasum -a 256 2>/dev/null || sha256sum; } < "$CUERPO" | cut -c1-7)"
+[ ${#HUELLA} -eq 7 ] || { echo "No se pudo calcular la huella" >&2; exit 1; }
 {
   echo "# Método de trabajo · versión $VERSION · huella $HUELLA · generado desde el plugin memoria, no se edita a mano"
   echo

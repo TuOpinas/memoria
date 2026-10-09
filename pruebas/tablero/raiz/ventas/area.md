@@ -18,3 +18,4 @@ Clientes, propuestas y precios.
   - kit-cuentas — guía para preparar una cuenta · actualizado 2026-09-10
   - propuesta-base — plantilla de propuesta con su estructura · actualizado 2026-09-20
 - `precios/` — restringido: política de precios y márgenes
+- `margenes/` – restringido: márgenes por cliente, con el guion medio que pone el autocorrector

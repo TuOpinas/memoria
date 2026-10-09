@@ -3,15 +3,16 @@
 
 Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
 proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
-Nunca abre fuentes/, taller/, restringido/ ni base/.
+Nunca abre fuentes/, taller/, restringido/ ni base/: de fuentes/ y taller/ solo mira las fechas
+de modificación, para el aviso de trabajo sin sesión.
 
 Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--ruta <ruta de la raíz en la computadora de la persona>] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
-«Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md dice «restringido»,
+«Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md empieza por «restringido» o que no está en ese índice,
 solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo fecha y título.
-«completo»: todo lo que la cuenta pueda leer, con la bitácora entera. Un tablero completo no se comparte.
+«completo»: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras. Un tablero completo no se comparte.
 En los dos modos, lo que la cuenta no puede leer sale como restringido.
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
 proyectos/<area>--<slug>.json, y un indice.json con la lista de archivos.
@@ -29,7 +30,7 @@ def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
 TAREA = _arg("--tarea")
 VERSION_PLUGIN = _arg("--version")
-RUTA_PERSONA = _arg("--ruta")  # la ruta de la raíz tal como la ve la persona en su computadora; el tablero la usa para «copiar ruta»
+# --ruta se acepta por compatibilidad con tareas viejas y no se guarda: la ruta de Drive lleva el correo de la persona
 MODO = (_arg("--modo") or "publico").lower()
 if MODO not in ("publico", "completo"):
     sys.exit("--modo admite publico o completo")
@@ -37,12 +38,22 @@ PUBLICO = MODO == "publico"
 HOY = datetime.datetime.now(TZ).date().isoformat()
 
 def leer(p):
+    """Texto del archivo, o None si no se puede leer (sin permiso, sin descargar, borrado). Un archivo
+    con otra codificación no tumba la generación: se lee con reemplazos."""
     try:
-        return p.read_text(encoding="utf-8")
-    except PermissionError:
+        return p.read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+    except OSError:
         return None
-    except FileNotFoundError:
-        return None
+
+def fecha_valida(f):
+    try:
+        datetime.date.fromisoformat(f); return True
+    except (ValueError, TypeError):
+        return False
+
+def es_sesion_de_tarea(titulo):
+    # las tareas programadas dejan su línea en sesiones.md marcada así; no son sesiones de trabajo
+    return bool(re.search(r"\((tarea|tablero)\)", titulo or "", re.I))
 
 def frontmatter(texto):
     m = re.match(r"^---\n(.*?)\n---\n?", texto, re.S)
@@ -56,7 +67,7 @@ def frontmatter(texto):
             ultima = mm.group(1)
             v = mm.group(2).strip()
             # listas en línea («[]», «[a, b]»); las de varias líneas se suman abajo
-            fm[ultima] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()] if v.startswith("[") and v.endswith("]") else v
+            fm[ultima] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()] if v.startswith("[") and v.endswith("]") else v.strip("'\"")
             continue
         ml = re.match(r"^\s+-\s+(.*)$", linea)
         if ml and ultima:
@@ -107,9 +118,12 @@ org = titulo_h1(guia).split("·")[0].strip() or RAIZ.name
 
 areas_guia = []
 tabla = seccion(guia, "Áreas")
+primera = True
 for l in tabla.split("\n"):
-    if not l.startswith("|") or "---" in l or "Área" in l:
+    if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
         continue
+    if primera:   # la fila de títulos
+        primera = False; continue
     celdas = [c.strip() for c in l.strip().strip("|").split("|")]
     if len(celdas) < 5:
         continue
@@ -192,7 +206,7 @@ def parse_indice_proyectos(texto_area):
     idx = {}
     actual = None
     for l in bloque.split("\n"):
-        m1 = re.match(r"^- `([^`]+?)/?`\s*[—-]\s*(.*)$", l)
+        m1 = re.match(r"^- `([^`]+?)/?`\s*[—–:-]?\s*(.*)$", l)
         if m1:
             actual = m1.group(1)
             idx[actual] = {"descripcion": m1.group(2).strip(), "entregables": {}, "notas": []}
@@ -234,14 +248,14 @@ def entregables_de(carpeta, indice):
                 ent["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
                     ent["reemplazado_por"] = fm["reemplazado_por"]
-        ref = indice.get(stem) or indice.get(stem.replace("-en", ""))
+        ref = indice.get(stem) or (indice.get(stem[:-3]) if stem.endswith("-en") else None)
         if ref:
             ent["descripcion"] = ref["descripcion"]
             if not ent["actualizado"]:
                 ent["actualizado"] = ref["actualizado"]
         if not ent["actualizado"]:
             try:
-                ent["actualizado"] = datetime.date.fromtimestamp(p.stat().st_mtime).isoformat()
+                ent["actualizado"] = datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
                 ent["fecha_de_archivo"] = True
             except OSError:
                 pass
@@ -290,7 +304,9 @@ def plazos_en(texto):
     out = []
     previa = None   # cómo se leyó la fecha anterior, para «el 2026-09-01 y el 2026-09-02»
     for m in re.finditer(r"\b(20\d\d-\d\d-\d\d)\b", texto):
-        f = m.group(1); antes = texto[max(0, m.start()-40):m.start()].lower()
+        f = m.group(1)
+        if not fecha_valida(f): continue
+        antes = texto[max(0, m.start()-40):m.start()].lower()
         despues = texto[m.end():m.end()+12].lower()
         if m.start() <= 2: out.append(f); previa = True; continue          # «2026-10-13: buscar a…»
         if previa is not None and re.search(r"20\d\d-\d\d-\d\d\s*(y|o|,)\s*(el\s*)?$", antes):
@@ -349,8 +365,9 @@ for a in areas_guia:
         pid = f"{a['slug']}--{slug}"
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-        # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta
-        declarado = bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I))
+        # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta.
+        # En público, un proyecto que no está en el índice del área tampoco se muestra: sin su línea no se sabe si es restringido
+        declarado = bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I)) or (PUBLICO and slug not in indice)
         tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
@@ -377,12 +394,15 @@ for a in areas_guia:
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
-        # pasos con fecha
+        ses = parse_sesiones(leer(pc / "sesiones.md"))
+        reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
+        ultima_real = reales[0]["fecha"] if reales else None
+        # pasos con fecha. Una fecha más de 30 días anterior a la última sesión (o, sin sesiones, a «actualizado»)
+        # se toma por contexto viejo, no por plazo. No se mide desde «actualizado» cuando hay sesión, porque la
+        # tarea lo mueve al cerrar un paso y escondería los plazos vencidos de los demás.
         pasos = []
-        try:
-            ref_fecha = datetime.date.fromisoformat(pdoc.get("actualizado") or HOY) - datetime.timedelta(days=30)
-        except ValueError:
-            ref_fecha = datetime.date.fromisoformat(HOY) - datetime.timedelta(days=30)
+        base_ref = ultima_real if fecha_valida(ultima_real) else (pdoc.get("actualizado") if fecha_valida(pdoc.get("actualizado")) else HOY)
+        ref_fecha = datetime.date.fromisoformat(base_ref) - datetime.timedelta(days=30)
         for l in pdoc["siguientes_pasos"]:
             # una fecha es plazo solo si el texto la trata como tal; las que cuentan algo pasado son contexto
             fs = [f for f in plazos_en(l) if f >= ref_fecha.isoformat()]
@@ -398,18 +418,17 @@ for a in areas_guia:
                     p_["revisar"] = p_["fecha"]; p_["fecha"] = None
             pasos.append(p_)
         pdoc["pasos"] = pasos
-        pdoc["decisiones_total"] = 0
         dec = parse_decisiones(leer(pc / "decisiones.md"))
         pdoc["decisiones_total"] = len(dec)
         pdoc["decisiones"] = dec
-        ses = parse_sesiones(leer(pc / "sesiones.md"))
         pdoc["sesiones_total"] = len(ses)
         pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
-        pdoc["ultima_sesion"] = ses[0]["fecha"] if ses else None
-        # trabajo sin sesión: archivos que cambiaron después de la última sesión registrada. Solo se mira
-        # la fecha de modificación, nunca el contenido; proyecto.md no cuenta, porque la tarea del tablero
-        # lo toca al aplicar fechas sin abrir sesión, y restringido/ no se mira.
-        if pdoc["ultima_sesion"] and not pdoc["cerrado"]:
+        pdoc["ultima_sesion"] = ultima_real
+        # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
+        # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
+        # contenido; proyecto.md no cuenta, porque la tarea del tablero lo toca al aplicar fechas, y restringido/ no se mira.
+        ultima_entrada = ses[0]["fecha"] if ses and fecha_valida(ses[0]["fecha"]) else None
+        if ultima_entrada and not pdoc["cerrado"]:
             donde, ultimo = {}, None
             objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
             for nombre, d in objetivos:
@@ -422,17 +441,17 @@ for a in areas_guia:
                             fm_ = datetime.datetime.fromtimestamp(os.stat(os.path.join(raiz_, f)).st_mtime, TZ).date().isoformat()
                         except OSError:
                             continue
-                        if fm_ > pdoc["ultima_sesion"]:
+                        if fm_ > ultima_entrada:
                             donde[nombre] = donde.get(nombre, 0) + 1
                             ultimo = max(ultimo or fm_, fm_)
             try:
                 fd = datetime.datetime.fromtimestamp(os.stat(pc / "decisiones.md").st_mtime, TZ).date().isoformat()
-                if fd > pdoc["ultima_sesion"]:
+                if fd > ultima_entrada:
                     donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
             except OSError:
                 pass
             if donde:
-                pdoc["sin_sesion"] = {"desde": pdoc["ultima_sesion"], "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
+                pdoc["sin_sesion"] = {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
         docs["proyectos"][pid] = pdoc
@@ -494,7 +513,7 @@ docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
-    "version_tablero": VERSION_PLUGIN, "modo": MODO, "raiz": RUTA_PERSONA or str(RAIZ.resolve()),
+    "version_tablero": VERSION_PLUGIN, "modo": MODO,
     "fuera": fuera,
 }
 

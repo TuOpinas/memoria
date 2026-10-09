@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Comprueba la raíz de una organización contra el contrato, sin leer el contenido de nada
-# y sin escribir nada.
+# Comprueba la raíz de una organización contra el contrato, sin escribir nada. De cada .md
+# lee la cabecera y busca enlaces wiki y rutas absolutas; no lee fuentes/ ni restringido/.
+# Una carpeta que no se deja leer (restringida para esta cuenta) se salta sin más.
 #
 #   ./verificar.sh <ruta-a-la-raiz>
 #
@@ -13,10 +14,18 @@ import os, re, sys, unicodedata
 raiz = sys.argv[1]
 ESTADOS = {"borrador", "vigente", "reemplazado"}
 PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
-hallazgos = []
+hallazgos = set()
+SUELTOS_OK = {"guia.md", "metodo.md", "desktop.ini", "Icon\r"}
+ROTADO = re.compile(r"^(sesiones|decisiones)-\d{4}(-\d+)?\.md$")   # el registro que se rota por año
 
 def h(clase, ruta, detalle=""):
-    hallazgos.append((clase, ruta, detalle))
+    hallazgos.add((clase, ruta, detalle))
+
+def ls(p):
+    try:
+        return sorted(os.listdir(p))
+    except OSError:
+        return []
 
 def rel(p):
     return os.path.relpath(p, raiz)
@@ -39,6 +48,14 @@ def nombre_ok(n):
         return False
     return re.fullmatch(r"[a-z0-9][a-z0-9-]*", base) is not None
 
+def nombre_con_orden_version_o_fecha(n):
+    base = n[:-3] if n.endswith(".md") else n
+    return bool(re.match(r"^\d+-", base) or re.search(r"(^|-)v\d+($|-)", base) or re.search(r"\d{4}-\d{2}-\d{2}", base))
+
+def seccion_proyectos(txt):
+    m = re.search(r"^## Proyectos\s*\n(.*?)(?=^## |\Z)", txt, re.S | re.M)
+    return m.group(1) if m else ""
+
 # --- raíz ---
 for req in ("guia.md", "metodo.md", "base/contexto.md", "base/glosario.md", "base/sistemas.md"):
     if not os.path.exists(os.path.join(raiz, req)):
@@ -48,9 +65,15 @@ for extra in ("base/ajustes.md", "base/plantillas"):
         h("ya no existe en el método", extra, "lo propio de la organización va en guia.md")
 
 areas = []
-for nombre in sorted(os.listdir(raiz)):
+for nombre in ls(raiz):
     ruta = os.path.join(raiz, nombre)
-    if not os.path.isdir(ruta) or nombre in ("base", ".git") or nombre.startswith("."):
+    if nombre.startswith("."):
+        continue
+    if os.path.isfile(ruta):
+        if nombre not in SUELTOS_OK:
+            h("archivo suelto en la raíz", nombre)
+        continue
+    if nombre in ("base", ".git"):
         continue
     if nombre.lower() == "claude outputs":
         n = sum(1 for _, _, fs in os.walk(ruta) for f in fs if not f.startswith("."))
@@ -58,7 +81,7 @@ for nombre in sorted(os.listdir(raiz)):
             h("archivos de Claude sin proyecto", nombre, "%d archivo%s: cada uno va a su proyecto («ordena Claude outputs»)" % (n, "" if n == 1 else "s"))
         continue
     areas.append((nombre, ruta))
-    if not nombre_ok(nombre):
+    if not nombre_ok(nombre) or nombre_con_orden_version_o_fecha(nombre):
         h("nombre de carpeta", nombre)
 
 # --- áreas y proyectos ---
@@ -71,12 +94,13 @@ for area, aruta in areas:
         h("área sin dueño", rel(amd))
     if "## Proyectos" not in txt:
         h("area.md sin bloque Proyectos", rel(amd))
+    bloque = seccion_proyectos(txt)
 
-    for proj in sorted(os.listdir(aruta)):
+    for proj in ls(aruta):
         pruta = os.path.join(aruta, proj)
         if not os.path.isdir(pruta) or proj.startswith("."):
             continue
-        if not nombre_ok(proj):
+        if not nombre_ok(proj) or nombre_con_orden_version_o_fecha(proj):
             h("nombre de carpeta", rel(pruta))
         if not os.path.exists(os.path.join(pruta, "proyecto.md")):
             h("carpeta en un área que no es un proyecto", rel(pruta)); continue
@@ -88,13 +112,13 @@ for area, aruta in areas:
             if not os.path.isdir(os.path.join(pruta, d)):
                 h("proyecto incompleto", rel(pruta), "falta " + d + "/")
 
-        for x in sorted(os.listdir(pruta)):
+        for x in ls(pruta):
             xr = os.path.join(pruta, x)
             if os.path.isdir(xr) and x not in ("entregables", "taller", "fuentes", "restringido") and not x.startswith("."):
                 h("carpeta que la estructura no contempla", rel(xr))
             if x.lower() in PROHIBIDAS:
                 h("carpeta prohibida", rel(xr))
-            if os.path.isfile(xr) and x.endswith(".md") and x not in ("proyecto.md", "decisiones.md", "sesiones.md"):
+            if os.path.isfile(xr) and x.endswith(".md") and x not in ("proyecto.md", "decisiones.md", "sesiones.md") and not ROTADO.match(x):
                 h("archivo suelto en la raíz del proyecto", rel(xr))
 
         # un solo nivel de agrupación dentro de entregables/, taller/ y fuentes/
@@ -102,19 +126,21 @@ for area, aruta in areas:
             sruta = os.path.join(pruta, sub)
             if not os.path.isdir(sruta):
                 continue
-            for g in sorted(os.listdir(sruta)):
+            for g in ls(sruta):
                 gr = os.path.join(sruta, g)
+                if sub == "taller" and g in ("decisiones.md", "sesiones.md"):
+                    h("registro dentro de taller/", rel(gr), "los registros del proyecto son los de su raíz")
                 if os.path.isdir(gr) and not g.startswith("."):
-                    if sub != "fuentes" and not nombre_ok(g):
+                    if sub != "fuentes" and (not nombre_ok(g) or nombre_con_orden_version_o_fecha(g)):
                         h("nombre de carpeta", rel(gr))
-                    for gg in os.listdir(gr):
+                    for gg in ls(gr):
                         if os.path.isdir(os.path.join(gr, gg)) and not gg.startswith("."):
                             h("un nivel de agrupación de más", rel(os.path.join(gr, gg)))
 
         # restringido/ es plano
         rruta = os.path.join(pruta, "restringido")
         if os.path.isdir(rruta):
-            for g in sorted(os.listdir(rruta)):
+            for g in ls(rruta):
                 if os.path.isdir(os.path.join(rruta, g)) and not g.startswith("."):
                     h("subcarpeta dentro de restringido/", rel(os.path.join(rruta, g)), "es plano")
 
@@ -124,18 +150,18 @@ for area, aruta in areas:
         cerrado = "Proyecto terminado el" in ptxt
         ed = os.path.join(pruta, "entregables")
         if os.path.isdir(ed) and not cerrado:
-            for f in sorted(os.listdir(ed)):
+            for f in ls(ed):
                 if not f.endswith(".md"):
                     continue
                 efm, _ = cabecera(os.path.join(ed, f))
-                if efm and re.search(r"^estado: *vigente", efm, re.M) and f[:-3] not in txt:
+                if efm and re.search(r"^estado: *vigente", efm, re.M) and not re.search(r"(?<![\w-])" + re.escape(f[:-3]) + r"(?![\w-])", bloque):
                     h("entregable vigente que no está en el bloque Proyectos", rel(os.path.join(ed, f)))
-        if proj not in txt:
+        if not re.search(r"`" + re.escape(proj) + r"/?`", bloque):
             h("proyecto que no está en el bloque Proyectos de su área", rel(pruta))
 
 # --- todos los .md ---
 for dp, dn, fn in os.walk(raiz):
-    dn[:] = [d for d in dn if not d.startswith(".")]
+    dn[:] = [d for d in dn if not d.startswith(".") and not (dp == raiz and d.lower() == "claude outputs")]
     for f in fn:
         if not f.endswith(".md"):
             continue
@@ -147,7 +173,7 @@ for dp, dn, fn in os.walk(raiz):
         # así que no se les pide cabecera ni nombre. Sus enlaces.md sí son nuestros.
         if ("/fuentes/" in "/" + r or "/restringido/" in "/" + r) and f != "enlaces.md":
             continue
-        if not nombre_ok(f):
+        if not nombre_ok(f) or (nombre_con_orden_version_o_fecha(f) and not ROTADO.match(f)):
             h("nombre de archivo", r)
         fm, txt = cabecera(p)
         if fm is None:

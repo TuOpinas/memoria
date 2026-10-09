@@ -22,6 +22,8 @@ PY
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/publico" --modo publico --version "${VERSION:-prueba}" >/dev/null
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/completo" --modo completo --version "${VERSION:-prueba}" >/dev/null
 python3 "$AQUI/comprobar.py" "$OUT/publico" "$OUT/completo"
+rm -rf "$OUT/raiz-cola"; cp -R "$OUT/raiz" "$OUT/raiz-cola"
+python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 for m in publico completo; do python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/$m" "$OUT/$m.html"; done
 if command -v node >/dev/null && node -e "require('playwright')" 2>/dev/null; then
   node "$AQUI/recorrer.js" "$OUT" "$OUT/capturas"

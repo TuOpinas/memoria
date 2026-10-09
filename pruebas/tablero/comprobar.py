@@ -25,6 +25,9 @@ ok(pub["proyectos"]["ventas--cuentas"]["legible"], "público: un proyecto que so
 ok(all(set(s) <= {"fecha", "titulo"} for p in pub["proyectos"].values() for s in p.get("sesiones", [])), "público: de las sesiones, solo fecha y título")
 ok("AVANCE-CUENTAS" in texto(com) and "AVANCE-CUENTAS" not in texto(pub), "completo trae la bitácora entera; público no")
 ok(pub["meta"]["estado"]["modo"] == "publico" and com["meta"]["estado"]["modo"] == "completo", "cada salida dice su modo")
+ok("SECRETO-MARGENES" not in texto(pub), "público: un proyecto restringido escrito con guion medio en el índice no se publica")
+ok("SECRETO-OCULTO" not in texto(pub) and "SECRETO-OCULTO" in texto(com), "público: un proyecto que no está en el índice del área no se publica; completo sí")
+ok(all("raiz" not in D["meta"]["estado"] for D in (pub, com)), "no se guarda la ruta de la carpeta (en Drive lleva el correo)")
 
 print("Lo que dejó Claude fuera de los proyectos")
 fp, fc = pub["meta"]["estado"].get("fuera", []), com["meta"]["estado"].get("fuera", [])
@@ -44,6 +47,12 @@ ok(rev["fecha"] is None and rev.get("revisar") == "2026-10-01", "una revisión p
 ok(paso("Sostener")["naturaleza"] == "rutina", "«Sostener…» es rutina")
 ok(paso("Decidir")["naturaleza"] == "decision", "«Decidir…» es decisión")
 ok(paso("Esperar")["naturaleza"] == "espera", "«Esperar…» es espera")
+
+print("Lectura de la carpeta")
+ok(len(com["areas"]) == 3 and "operacion" in com["areas"], "un área cuya descripción dice «Área» no se pierde")
+sop = com["proyectos"]["operacion--soporte"]
+ok(sop["ultima_sesion"] == "2026-08-15", "una entrada «(tarea)» de la bitácora no cuenta como sesión")
+ok(any(s_.get("fecha") == "2026-08-20" for s_ in sop["pasos"]), "un plazo vencido no se esconde porque la tarea movió «actualizado»")
 
 print("Entregables y decisiones")
 ents = {e["nombre"]: e for e in com["proyectos"]["ventas--cuentas"]["entregables"]}

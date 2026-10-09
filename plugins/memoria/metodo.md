@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.12.3 · huella 1e41f24 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.12.4 · huella b4b14e1 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -413,7 +413,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 
 El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
 
-Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: sube el número en los tres sitios donde vive, comprueba que este documento declare la mayor.menor, regenera `metodo.md` y dice qué queda por hacer a mano. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No lee el contenido de ningún archivo y no escribe nada.
+Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que este documento declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
 
 ## 12. Cómo se lee
 
