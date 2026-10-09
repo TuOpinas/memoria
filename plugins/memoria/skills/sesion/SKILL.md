@@ -5,7 +5,7 @@ description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando d
 
 # Sesión
 
-Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga la skill `convenciones`: su sección 12 fija qué se lee y en qué orden, y sus 19 prohibiciones aplican a todo lo que sigue.
+Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga la skill `convenciones`: su sección 12 fija qué se lee y en qué orden, y sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -13,7 +13,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Cerrar**: "cierra la sesión", "guarda lo de hoy", "terminamos".
 
-Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado.
+Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso (`convenciones`, sección 1).
 
 ---
 
@@ -112,7 +112,9 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 
 **6. Lo que entró en `fuentes/` o en `taller/`.** Si durante la sesión se guardó algo en `fuentes/` sin haber pasado por la pregunta de si es confidencial, se pregunta ahora: si trae datos personales, facturación, contratos, credenciales o cualquier cosa que no todos deban ver, se propone llevarlo a `restringido/` del mismo proyecto y dejar su fila en el `fuentes/enlaces.md` público. El usuario decide; nada se mueve sin que lo confirme.
 
-**7. Rotación.** Si `sesiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`) y se abre uno nuevo. Sin preguntar.
+**7. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
+
+**8. Rotación.** Si `sesiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`) y se abre uno nuevo. Sin preguntar.
 
 ## Qué respondo al terminar
 
@@ -122,7 +124,7 @@ Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. 
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Escribir algo al abrir sesión. Abrir es solo lectura
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1

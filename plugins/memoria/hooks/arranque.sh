@@ -13,6 +13,8 @@ TEXTO="Plugin memoria ${VERSION}. Esta sesión puede tener conectada una carpeta
 
 ${BLOQUE}
 
+Si hay más de una carpeta así, antes de leer o escribir nada pregunta en cuál se trabaja; trabaja en una a la vez, di en cuál escribes y anuncia cada cambio de raíz. Nada de una pasa a otra salvo por un traspaso que la persona pide y confirma pieza a pieza (contrato, sección 1, «Independencia entre raíces»).
+
 Dónde escribes: tu cuenta es la que abre esta sesión. En la tabla de áreas de guia.md, las áreas cuya columna Cuenta coincide con ella son tuyas, y ahí escribes; si guia.md te nombra responsable de contexto, también en guia.md y base/. Si ninguna coincide, pregunta antes de escribir nada.
 
 Tu tablero, si lo tienes: un artifact de tu cuenta llamado «Tablero <organización>» o «Tablero <organización> completo», donde <organización> es el título de guia.md. Al abrir sesión en un proyecto se busca por ese nombre para leer su cola; si no existe, no hay tablero y no se pregunta."

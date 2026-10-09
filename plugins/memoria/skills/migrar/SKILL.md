@@ -5,7 +5,7 @@ description: Adopta una carpeta que sigue otra estructura y la trae al metodo si
 
 # Migrar
 
-Traer al método una carpeta que se organizó de otra forma: otro sistema de documentación, una carpeta de proyecto heredada, un repositorio con ADR y logs. La migración crea la estructura nueva al lado, deja los originales intactos y termina con un reporte de qué se trajo, qué se dejó y qué quedó como hueco. Antes de nada se carga `convenciones`: sus 19 prohibiciones aplican a todo lo que sigue.
+Traer al método una carpeta que se organizó de otra forma: otro sistema de documentación, una carpeta de proyecto heredada, un repositorio con ADR y logs. La migración crea la estructura nueva al lado, deja los originales intactos y termina con un reporte de qué se trajo, qué se dejó y qué quedó como hueco. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -63,7 +63,7 @@ El reporte se guarda como entregable en la raíz de quien migró, en su proyecto
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Borrar, mover o modificar un archivo del origen. Se copia; el origen queda como estaba hasta que el usuario decida qué hacer con él
 - Migrar sin enseñar antes el inventario y el mapeo

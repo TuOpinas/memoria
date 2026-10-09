@@ -5,7 +5,7 @@ description: Coloca cualquier material que llegue en el sitio correcto de la est
 
 # Dónde va
 
-Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se carga `convenciones`: sus 19 prohibiciones aplican a todo lo que sigue.
+Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -70,7 +70,7 @@ Después de colocarlo, se dice en una línea qué es lo siguiente que hay que ha
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Crear una carpeta nueva para acomodar algo que no encaja. Si no encaja, es la pregunta 6
 - Dejar algo en la raíz o en la carpeta de un área

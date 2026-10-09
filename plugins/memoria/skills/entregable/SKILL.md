@@ -5,7 +5,7 @@ description: Crea o actualiza un entregable de un proyecto. Usala cuando pidan '
 
 # Entregable
 
-Crear o actualizar un entregable. Antes de nada se cargan `convenciones`, cuyas 19 prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
+Crear o actualizar un entregable. Antes de nada se cargan `convenciones`, cuyas prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
 
 ## Cuándo
 
@@ -75,7 +75,7 @@ Si al escribirlo aparecieron decisiones que nadie había tomado, se listan al us
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Escribir una afirmación que no sale de una fuente citable
 - Dejar `basado_en` vacía en un entregable que escribí yo

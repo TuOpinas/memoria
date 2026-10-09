@@ -5,7 +5,7 @@ description: Da de alta lo que falte en la memoria de la organizacion: monta la 
 
 # Nuevo
 
-Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones`: sus 19 prohibiciones aplican a todo lo que sigue.
+Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -261,7 +261,7 @@ El nombre de la carpeta creada y el primer siguiente paso. Dos líneas.
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Crear un área sin decir antes que es una decisión organizativa
 - Montar la raíz encima de una carpeta con documentos sin avisar de que después toca `migrar`

@@ -5,7 +5,7 @@ description: Responde preguntas sobre lo que la organizacion ya sabe, leyendo so
 
 # Consulta
 
-Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dónde sale cada cosa. Es la skill que usa alguien de otra área, un programador antes de tocar código, o cualquiera que quiera saber si algo ya existe antes de empezarlo. Antes de nada se carga la skill `convenciones`: su sección 12 fija qué se lee y en qué orden, su sección 7 qué es público, y sus 19 prohibiciones aplican a todo lo que sigue.
+Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dónde sale cada cosa. Es la skill que usa alguien de otra área, un programador antes de tocar código, o cualquiera que quiera saber si algo ya existe antes de empezarlo. Antes de nada se carga la skill `convenciones`: su sección 12 fija qué se lee y en qué orden, su sección 7 qué es público, y sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -48,7 +48,7 @@ Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Escribir o modificar ningún archivo. Consultar es solo lectura
 - Contar a alguien lo que leí en una carpeta restringida a la que esa persona no tiene acceso, aunque lo resuma o lo diga con otras palabras

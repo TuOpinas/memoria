@@ -5,7 +5,7 @@ description: Revisa un entregable, detecta lo que quedo desfasado y lo publica d
 
 # Revisar
 
-Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar lo que quedó desfasado y publicar. Antes de nada se carga la skill `convenciones`: sus secciones 5 y 7 fijan estados y superficie pública, y sus 19 prohibiciones aplican a todo lo que sigue.
+Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar lo que quedó desfasado y publicar. Antes de nada se carga la skill `convenciones`: sus secciones 5 y 7 fijan estados y superficie pública, y sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -117,7 +117,7 @@ Se avisa de quién consume este entregable, según el campo `Consumen esto` de `
 
 ## Lo que nunca hago
 
-Además de las 19 prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones`:
 
 - Publicar sin comprobar que quien lo pide es el dueño del proyecto
 - Publicar con `basado_en` vacía sin que el dueño acepte el hueco y quede escrito
