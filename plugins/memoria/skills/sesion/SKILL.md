@@ -19,7 +19,7 @@ Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el �
 
 # Abrir sesión
 
-Abrir es solo lectura. No se escribe ningún archivo al abrir.
+Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al día `metodo.md` cuando abre el responsable de contexto (ver «Puesta al día del método»).
 
 ## Qué leo antes de responder
 
@@ -53,9 +53,8 @@ Tres bloques, en este orden y sin encabezados largos.
 
 **Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
-**Avisos**, solo si aplican. Seis comprobaciones:
+**Avisos**, solo si aplican. Cinco comprobaciones:
 
-- La primera línea del `metodo.md` de la raíz no coincide con la del `metodo.md` del plugin (versión y huella). La raíz se quedó atrás. Si quien abre la sesión es el responsable de contexto según `guia.md`, se le pregunta «¿lo copio?» y, con su sí, se copia el `metodo.md` del plugin sobre el de la raíz: es lo único que se escribe al abrir. Si no lo es, se le dice que se lo pida a él
 - Alguna decisión de otro proyecto de la raíz nombra este proyecto en `Afecta a:`. Se cita la entrada con su fecha, quién decidió y de qué proyecto viene
 - `base/contexto.md` lleva más de 90 días sin actualizarse, mirando solo su fecha `actualizado`, sin abrirlo
 - Algún entregable tiene en `basado_en` un archivo cuya fecha `actualizado` es posterior a la suya, y por tanto puede estar desfasado
@@ -63,6 +62,12 @@ Tres bloques, en este orden y sin encabezados largos.
 - Algún entregable tiene una fecha `actualizado` posterior a la última entrada de `sesiones.md`: hubo trabajo que ninguna sesión registró, seguramente una que no se cerró. Se dice qué cambió y se propone registrarlo hoy, preguntando qué pasó
 
 Si no hay avisos, no se menciona que no los hay.
+
+**Puesta al día del método.** Se compara la primera línea del `metodo.md` de la raíz con la del `metodo.md` del plugin, versión y huella. Si coinciden, no se dice nada. Si no:
+
+- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión 1.12. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
+- **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (1.12 frente a 1.11). Actualiza el plugin memoria desde los ajustes de plugins de Claude, o pide ayuda a quien administra la carpeta.»
+- **Misma versión con huellas distintas**: no se toca ni se dice nada. Solo pasa entre dos publicaciones y lo resuelve la siguiente versión
 
 **Propuesta de trabajo.** Dos o tres focos posibles, tomados de los siguientes pasos de `proyecto.md`, de lo que quedó pendiente en la última sesión y de los avisos de otras áreas, cada uno con una línea de por qué ahora. Se ordenan por lo que desbloquea a otros: primero lo que otra persona está esperando, después lo que cierra algo empezado, al final lo que abre frente nuevo. Termina preguntando por cuál empezamos, y espera respuesta.
 
@@ -129,7 +134,7 @@ Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. 
 
 Además de las prohibiciones de `convenciones`:
 
-- Escribir algo al abrir sesión. Abrir es solo lectura, salvo copiar `metodo.md` con el sí del responsable de contexto
+- Escribir algo al abrir sesión. Abrir es solo lectura, salvo poner al día `metodo.md` cuando abre el responsable de contexto y la raíz está atrasada
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto

@@ -112,8 +112,8 @@ proyecto: el plugin aplica el método solo en cuanto ve esta carpeta, y sabe cu�
 tuya que se pone al día cada mañana. Es tuyo; si lo compartes, hazlo desde su menú.
 
 ## Versión del método
-La primera línea de `metodo.md` dice cuál corre esta carpeta. Si la IA avisa de que se
-quedó atrás, [responsable de contexto] la pone al día desde el plugin.
+La primera línea de `metodo.md` dice cuál corre esta carpeta. Se pone al día sola la
+primera vez que [responsable de contexto] abre sesión con una versión nueva del plugin.
 ```
 
 **2. `metodo.md`.** Copia exacta del `metodo.md` del plugin, que está en la raíz de la carpeta del plugin, dos niveles por encima de esta skill. No se edita ni una línea: su primera línea lleva la versión y es lo que `sesion` compara al abrir.
