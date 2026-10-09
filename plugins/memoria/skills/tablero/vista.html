@@ -215,7 +215,16 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 body{padding-inline:0;padding-block:0}
 .app{display:grid;grid-template-columns:272px minmax(0,1fr);min-height:100dvh}
 .side{background:var(--surface);border-right:1px solid var(--rule);position:sticky;top:env(safe-area-inset-top,0px);height:calc(100dvh - env(safe-area-inset-top,0px));overflow-y:auto;padding:18px 12px 24px}
-.side-org{font:700 20px/1.1 var(--f-display);padding:4px 8px 12px}
+.side-org{font:700 20px/1.1 var(--f-display);padding:4px 8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sync-ico{all:unset;cursor:pointer;width:30px;height:30px;display:inline-grid;place-items:center;border-radius:999px;color:var(--muted);flex:none}
+.sync-ico svg{width:18px;height:18px}
+.sync-ico:hover{background:var(--signal-dim);color:var(--signal)}
+.sync-ico:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.sync-ico.done{color:var(--signal)}
+.sync-ico.busy{color:var(--muted);cursor:progress}
+.sync-ico.busy svg{animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.sync-ico.busy svg{animation:none}}
 .side-i{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;font-size:13.5px;color:var(--ink-soft)}
 .side-i span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .side-i.top{grid-template-columns:minmax(0,1fr) auto;font-weight:600;color:var(--ink)}
@@ -638,6 +647,7 @@ function pendientes(){
 function colaRows(){
   return CAMBIOS.slice().sort((a,b)=>(b.creado||"").localeCompare(a.creado||"")).map(c => {
     const p = byId[c.proyecto]; if(!p) return "";
+    if(PEND_AREA && view.lvl==="pend" && p.area!==PEND_AREA) return "";
     const que = c.tipo==="fecha" ? `Fecha ${c.fecha_anterior?fmtD(c.fecha_anterior):"sin fecha"} → ${c.fecha_nueva?fmtD(c.fecha_nueva):"sin fecha"}: ${inline(c.paso)}`
       : c.tipo==="hecho" ? `Hecho${c.nota?` (${esc(c.nota)})`:""}: ${inline(c.paso)}`
       : c.tipo==="corregir" && c.campo==="estado" ? `Estado del proyecto: ${esc((EST[c.propuesta]||{label:c.propuesta==="riesgo"?"En riesgo (ya no es un estado; se resuelve con las fechas)":c.propuesta}).label)}`
@@ -648,7 +658,7 @@ function colaRows(){
   }).join("");
 }
 function renderPendientes(){
-  const all = pendientes(), t = today(), lim = new Date(new Date(t+"T12:00:00").getTime()+14*DAY).toISOString().slice(0,10);
+  const all = pendientes().filter(i=>!PEND_AREA || i.p.area===PEND_AREA), t = today(), lim = new Date(new Date(t+"T12:00:00").getTime()+14*DAY).toISOString().slice(0,10);
   const byDate = (a,b)=>a.f.localeCompare(b.f);
   const late = all.filter(i=>i.f && i.f<t).sort(byDate);
   const soon = all.filter(i=>i.f && i.f>=t && i.f<=lim).sort(byDate);
@@ -658,13 +668,13 @@ function renderPendientes(){
   const porProy = {};
   for(const i of none){ (porProy[i.p.id] = porProy[i.p.id] || {p:i.p, n:0}).n++; }
   const sinFecha = Object.values(porProy).sort((a,b)=>b.n-a.n);
-  const enfoque = ENFOQUE && ENFOQUE.grupos && ENFOQUE.grupos.length ? `<section class="due enf"><div class="top"><h2>Por dónde empezar</h2><span class="c">${ENFOQUE.grupos.length} grupos · ${esc(ENFOQUE.generado||"")}</span><span class="c" style="margin-left:auto">${(ENFOQUE.criterios||[]).map(esc).join(" · ")}</span></div>
+  const enfoque = !PEND_AREA && ENFOQUE && ENFOQUE.grupos && ENFOQUE.grupos.length ? `<section class="due enf"><div class="top"><h2>Por dónde empezar</h2><span class="c">${ENFOQUE.grupos.length} grupos · ${esc(ENFOQUE.generado||"")}</span><span class="c" style="margin-left:auto">${(ENFOQUE.criterios||[]).map(esc).join(" · ")}</span></div>
     <div class="enf-l">${ENFOQUE.grupos.map((g,i)=>`<article class="enf-g"><div class="enf-h"><span class="enf-n">${i+1}</span><h3>${esc(g.titulo)}</h3></div><p class="enf-r">${inline(g.razon||"")}</p>
       <ul class="enf-p">${(g.pasos||[]).map(x=>{ const p = byId[x.proyecto]; return `<li>${p?`<button type="button" class="lnk" data-go-proj="${p.id}">${esc(p.nombre)}</button> · `:""}${esc(x.paso)}</li>`; }).join("")}</ul>
       ${g.sesion?`<div class="frase"><code class="frase-t">${esc(g.sesion)}</code><button type="button" class="chip" data-copy="${esc(g.sesion)}">Copiar</button></div>`:""}</article>`).join("")}</div>
     <p class="more">Lo escribe la tarea diaria con los tres criterios de arriba; vencido no suma. Es una sugerencia: la sesión decide.</p></section>` : "";
-  return enfoque + `<p class="sub" style="font-size:14px">Los «Siguientes pasos» de cada <code>proyecto.md</code>, todos juntos. Nada viene de fuera de las áreas. ${CAN?"Puedes cambiar fechas y marcar hechos aquí; se escriben en la carpeta con la sincronización diaria, y lo que necesite contexto se cierra en la siguiente sesión del proyecto.":""}</p>`
-    + (CAMBIOS.length ? `<section class="due"><div class="top"><h2>Por registrar en la carpeta</h2><span class="c">${CAMBIOS.length}</span><span class="c" style="margin-left:auto">Lo tocado aquí que la carpeta aún no refleja</span></div><div class="due-list">${colaRows()}</div></section>` : "")
+  return areaChips(PEND_AREA, "pend-area") + enfoque + `<p class="sub" style="font-size:14px">Los «Siguientes pasos» de cada <code>proyecto.md</code>, todos juntos. Nada viene de fuera de las áreas. ${CAN?"Puedes cambiar fechas y marcar hechos aquí; se escriben en la carpeta con la sincronización diaria, y lo que necesite contexto se cierra en la siguiente sesión del proyecto.":""}</p>`
+    + (CAMBIOS.some(c=>!PEND_AREA || (byId[c.proyecto]||{}).area===PEND_AREA) ? `<section class="due"><div class="top"><h2>Por registrar en la carpeta</h2><span class="c">${CAMBIOS.filter(c=>!PEND_AREA || (byId[c.proyecto]||{}).area===PEND_AREA).length}</span><span class="c" style="margin-left:auto">Lo tocado aquí que la carpeta aún no refleja</span></div><div class="due-list">${colaRows()}</div></section>` : "")
     + grp("Vencidos", late, "Con fecha ya pasada y aún abiertos")
     + grp("Próximos 14 días", soon)
     + grp("Más adelante", later)
@@ -714,9 +724,11 @@ function renderPend(){
     <div class="meta"><span><b>${all.filter(i=>i.f).length}</b> con fecha</span><span><b>${nLate}</b> vencidos</span><span><b>${all.filter(i=>!i.f).length}</b> sin fecha</span>${CAMBIOS.length?`<span><b>${CAMBIOS.length}</b> por registrar</span>`:""}</div>`;
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">Cargando…</p>`; return; }
   main.innerHTML = renderPendientes();
+  main.querySelectorAll("[data-pend-area]").forEach(b=>b.onclick=()=>{ PEND_AREA = b.dataset.pendArea; renderPend(); });
 }
 // ---- decisiones de toda la raíz ----
-let DEC_AREA = "";
+let DEC_AREA = "", PEND_AREA = "", ENT_AREA = "";
+const areaChips = (cur, attr) => `<div class="chips">${[["","Todas"],...AREAS.map(a=>[a.slug,a.nombre])].map(([v,l])=>`<button type="button" class="chip${cur===v?" on":""}" data-${attr}="${v}">${l}</button>`).join("")}</div>`;
 function renderDec(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const all = [];
@@ -733,7 +745,7 @@ function renderDec(){
 function renderEnt(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   let total = 0;
-  const bloques = AREAS.map(a => {
+  const bloques = AREAS.filter(a=>!ENT_AREA || a.slug===ENT_AREA).map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido);
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e})));
     total += vig.length;
@@ -741,7 +753,8 @@ function renderEnt(){
     return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""} · ${copiaRuta(p,e)}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
   }).join("");
   head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Entregables vigentes</h1><p class="sub">Sobre lo que se puede construir hoy, por área. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
-  main.innerHTML = bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`;
+  main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`);
+  main.querySelectorAll("[data-ent-area]").forEach(b=>b.onclick=()=>{ ENT_AREA = b.dataset.entArea; renderEnt(); });
 }
 // ---- búsqueda ----
 function buscar(q){
@@ -787,8 +800,9 @@ async function sincronizar(){
 document.addEventListener("click", e => { if(e.target.closest && e.target.closest("[data-sync]")) sincronizar(); });
 function syncBtn(){
   if(!OWNER || !MCP || !META || !META.tarea) return "";
-  const lbl = SYNC_STATE==="corriendo" ? "Lanzando…" : SYNC_STATE==="lanzada" ? "Lanzada ✓" : "Sincronizar ahora";
-  return `<button type="button" class="chip${SYNC_STATE==="lanzada"?" on":""}" data-sync ${SYNC_STATE==="corriendo"?"disabled":""}>${lbl}</button>`;
+  const tipTxt = SYNC_STATE==="corriendo" ? "Lanzando la sincronización…" : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar." : "Sincronizar ahora: regenera el tablero desde la carpeta y escribe en ella lo que marcaste aquí. Lanza la tarea diaria; tarda unos minutos.";
+  const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
+  return `<button type="button" class="sync-ico${SYNC_STATE==="corriendo"?" busy":""}${SYNC_STATE==="lanzada"?" done":""}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
 }
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
@@ -798,7 +812,7 @@ function staleBanner(){
   if(META.modo === "completo" && view.lvl === "root") out += `<div class="stale"><span><b>Tablero completo.</b> Incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».</span></div>`;
   if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el plugin que la regenera corre la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY);
-  if(dias >= 2) out += `<div class="stale"><span>La vista lleva <b>${dias} días</b> sin regenerarse (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.</span>${syncBtn()}</div>`;
+  if(dias >= 2) out += `<div class="stale"><span>La vista lleva <b>${dias} días</b> sin regenerarse (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.${OWNER&&MCP?" Sincroniza con el icono junto al nombre, arriba a la izquierda.":""}</span></div>`;
   return out;
 }
 // ---- lateral ----
@@ -809,7 +823,7 @@ function renderSide(){
   const all = ready.p ? pendientes() : [], t = today(), nLate = all.filter(i=>i.f && i.f<t).length;
   const cur = (lvl, id) => view.lvl===lvl && (id===undefined || view.id===id) ? ' aria-current="page"' : "";
   const nDec = PROJ.reduce((n,p)=>n+(p.decisiones_total||0),0), nEnt = PROJ.reduce((n,p)=>n+(p.entregables_vigentes||0),0);
-  let h = `<div class="side-org">${esc(org)}</div>
+  let h = `<div class="side-org"><span>${esc(org)}</span>${syncBtn()}</div>
     <input type="search" id="side-q" class="search side-search" placeholder="Buscar" aria-label="Buscar en proyectos, decisiones, entregables y acciones" value="${esc(QUERY)}">
     <button type="button" class="side-i top" data-go-root${cur("root")}><span>Inicio</span></button>
     <button type="button" class="side-i top" data-go-pend${cur("pend")}><span>Pendientes</span>${nLate?`<span class="side-n late">${nLate}</span>`:all.length?`<span class="side-n">${all.filter(i=>i.f).length}</span>`:""}</button>
@@ -894,7 +908,7 @@ function render(){
   }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
-  f.innerHTML = META ? `${syncBtn()} ` + esc(`Vista al ${fmtL(META.snapshot)} · generada desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee guia.md, cada area.md y, de cada proyecto, proyecto.md, decisiones.md, sesiones.md y las cabeceras de sus entregables. Nunca fuentes, taller ni lo restringido. La carpeta es la fuente; lo que se toca aquí espera en una cola hasta que la sincronización lo escribe allí.`) : "";
+  f.innerHTML = META ? esc(`Vista al ${fmtL(META.snapshot)} · generada desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee guia.md, cada area.md y, de cada proyecto, proyecto.md, decisiones.md, sesiones.md y las cabeceras de sus entregables. Nunca fuentes, taller ni lo restringido. La carpeta es la fuente; lo que se toca aquí espera en una cola hasta que la sincronización lo escribe allí.`) : "";
 }
 (async ()=>{
   render();
