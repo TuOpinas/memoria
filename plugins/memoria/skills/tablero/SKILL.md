@@ -49,7 +49,7 @@ Si el modo es público y la cuenta de la sesión lee áreas o proyectos restring
 
 ## Montar
 
-**1. Publicar la página.** `vista.html` de esta skill se publica como artifact nuevo con título «Tablero <organización>» (y « completo» al final si es ese modo; el nombre de la organización sale del título de `guia.md`), icono genérico, y esta declaración de capacidades, idéntica para todos los tableros:
+**1. Publicar la página.** Se copia `vista.html` de esta skill al scratchpad con el nombre `tablero.html`, se sustituye su primera línea `<title>Tablero</title>` por `<title>Tablero <organización></title>` (y « completo» al final si es ese modo; el nombre de la organización sale del título de `guia.md`), y se publica como artifact nuevo con el icono `dashboard`, y esta declaración de capacidades, idéntica para todos los tableros:
 
 ```
 db: reglas [{path: "", read: "view", write: "admin"}, {path: "cambios", read: "view", write: "interact"}]
@@ -83,7 +83,7 @@ Cuando sale una versión nueva del plugin, la página del tablero y el generador
 «Actualiza el tablero», a mano o cuando la tarea lo pide:
 
 1. Se busca el artifact por su nombre con `Artifact` `list`.
-2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con la misma declaración de capacidades del paso 1 de montar. La base no se toca: la cola, el enfoque y las correcciones sobreviven.
+2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con el `<title>` sustituido como en el paso 1 de montar y la misma declaración de capacidades. La base no se toca: la cola, el enfoque y las correcciones sobreviven.
 3. Se compara el prompt de la tarea con `tarea.md` sustituido. Si cambió, se pide reescribirlo con `update_trigger`; en una tarea ligada a una computadora eso solo surte efecto cuando la persona lo aprueba en una conversación de la app ligada a esa misma computadora, y hasta entonces no cambia nada: se dice, no se rodea, y nunca se borra la tarea para crear otra, porque se pierde su historial y su computadora.
 4. Se recuerda revisar el modelo de la tarea en sus ajustes: es el momento para cambiarlo si el que tenía ya no existe.
 5. Se sincroniza una vez (abajo) para que `meta/estado` lleve la versión nueva y la banda de desfase desaparezca.
