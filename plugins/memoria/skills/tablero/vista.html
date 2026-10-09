@@ -525,10 +525,10 @@ async function corregir(p, s, propuesta){
 const isDone = (p, s) => !!pend(p.id, s.texto).hecho;
 const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 const stepsLive = p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s));
-const CORR_OPC = [["rutina","No es una acción: es una rutina"],["condicional","Es condicional: va a «Después»"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
+const CORR_OPC = [["rutina","Es una rutina, no un paso"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
 async function addCambio(data){
   try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"}); }
-  catch(e){ flash(e && e.code==="not_granted" ? "Solo quien edita la vista puede anotar aquí." : "No se pudo guardar el cambio."); }
+  catch(e){ flash(e && e.code==="not_granted" ? "Solo quien puede editar este tablero puede anotar aquí." : "No se pudo guardar el cambio."); }
 }
 async function setFecha(p, s, v){
   EDIT = null; CALM = null;
@@ -604,7 +604,7 @@ function duePill(p, s){
   const k = key(p.id, s.texto), f = effDate(p, s), u = due(f), pending = !!pend(p.id, s.texto).fecha;
   const rev = !f && !pending && s.revisar;
   const label = (f ? `${fmtD(f)} · ${u.label}` : rev ? `Revisión ${fmtD(s.revisar)}` : "") + (pending ? " ⟳" : "");
-  if(rev) return `<span class="pill rev" ${tip("Revisión periódica o caducidad: no vence, se revisa. Si ya tocó, aparece en «La memoria al día» de Inicio.")}>${CAL}${label}</span>`;
+  if(rev) return `<span class="pill rev" ${tip("Revisión con fecha: no vence, se revisa. Si ya tocó, aparece en «La memoria al día» de Inicio.")}>${CAL}${label}</span>`;
   if(CAN) return `<button type="button" class="pill due-edit ${f?u.cls:"none"}${label?"":" solo"}" data-edit-due="${esc(k)}" aria-expanded="${EDIT===k}" aria-label="${f?"Cambiar la fecha":"Poner fecha"}" ${tip(pending?"Fecha cambiada aquí, pendiente de escribir en la carpeta":f?"Cambiar la fecha":"Sin fecha: ponle una")}>${CAL}${label}</button>`;
   return label ? `<span class="pill ${f?u.cls:"none"}">${label}</span>` : "";
 }
@@ -650,12 +650,12 @@ document.addEventListener("submit", e => {
 // ---- estado de un proyecto, derivado de lo escrito ----
 const EST = {
   cerrado:   {label:"Cerrado",     dot:"closed", pill:"closed", desc:"Su estado actual dice «Proyecto terminado». Queda como registro."},
-  bloqueado: {label:"Bloqueado",   dot:"soon",   pill:"soon",   desc:"Su estado actual dice «en pausa», o todo lo abierto espera a terceros. No depende de nosotros ahora."},
+  bloqueado: {label:"Bloqueado",   dot:"soon",   pill:"soon",   desc:"Su estado actual dice «en pausa», o todo lo abierto espera a alguien de fuera. No depende de nosotros ahora."},
   sininiciar:{label:"Sin iniciar", dot:"none",   pill:"none",   desc:"Su estado actual empieza por «Arrancando», o solo tiene la sesión de arranque y ningún entregable."},
   parado:    {label:"Parado",      dot:"pause",  pill:"none",   desc:"Más de 30 días sin sesión y con acciones abiertas. Nadie lo está moviendo."},
   encurso:   {label:"En curso",    dot:"ok",     pill:"ok",     desc:"Tiene sesiones recientes y acciones abiertas que dependen de nosotros."}
 };
-const RIESGO = {label:"En riesgo", desc:"Marca que se suma a cualquier estado: dos o más acciones vencidas, o una espera a terceros ya vencida. Hay que intervenir."};
+const RIESGO = {label:"En riesgo", desc:"Marca que se suma a cualquier estado: dos o más acciones vencidas, o una espera a alguien de fuera ya vencida. Hay que intervenir."};
 const EST_ORDEN = ["bloqueado","parado","encurso","sininiciar","cerrado"];
 const EST_OPC = [["encurso","En curso"],["bloqueado","Bloqueado"],["parado","Parado"],["sininiciar","Sin iniciar"]];
 const estRank = p => { const e = projStatus(p); return (e.riesgo ? 0 : 10) + EST_ORDEN.indexOf(e.k); };
@@ -666,11 +666,11 @@ function projStatus(p){
   const venc = live.filter(s=>{ const f = effDate(p,s); return f && f<t; });
   const espVenc = venc.filter(s=>effNat(p,s)==="espera").length;
   const riesgo = venc.length>=2 || espVenc>0;
-  const riesgoRegla = riesgo ? `${venc.length} acci${venc.length===1?"ón vencida":"ones vencidas"}${espVenc?`, ${espVenc} de ellas espera${espVenc===1?"":"s"} a terceros`:""}` : "";
+  const riesgoRegla = riesgo ? `${venc.length} acci${venc.length===1?"ón vencida":"ones vencidas"}${espVenc?`, ${espVenc} de ellas espera${espVenc===1?"":"s"} a alguien de fuera`:""}` : "";
   const corr = CAMBIOS.find(c=>c.tipo==="corregir" && c.proyecto===p.id && c.campo==="estado");
-  if(corr && EST[corr.propuesta]) return {k:corr.propuesta, ...EST[corr.propuesta], regla:"Corregido desde la vista; pendiente de registrar en sesión", corregido:true, riesgo, riesgoRegla};
+  if(corr && EST[corr.propuesta]) return {k:corr.propuesta, ...EST[corr.propuesta], regla:"Corregido desde el tablero; pendiente de registrar en sesión", corregido:true, riesgo, riesgoRegla};
   const pausa = /\ben pausa\b/i.test(p.estado_resumen||"");
-  if(pausa || (live.length && live.every(s=>effNat(p,s)==="espera"))) return {k:"bloqueado", ...EST.bloqueado, regla: pausa ? "Estado actual dice «en pausa»" : "Todas las acciones abiertas esperan a terceros", riesgo, riesgoRegla};
+  if(pausa || (live.length && live.every(s=>effNat(p,s)==="espera"))) return {k:"bloqueado", ...EST.bloqueado, regla: pausa ? "Estado actual dice «en pausa»" : "Todas las acciones abiertas esperan a alguien de fuera", riesgo, riesgoRegla};
   const nEnt = (p.entregables||[]).length;
   if(/^arrancando/i.test(p.estado_resumen||"") || ((p.sesiones_total||0)<=1 && !nEnt)) return {k:"sininiciar", ...EST.sininiciar, regla: /^arrancando/i.test(p.estado_resumen||"") ? "Estado actual dice «Arrancando»" : "Solo la sesión de arranque y ningún entregable", riesgo, riesgoRegla};
   const dias = p.ultima_sesion ? Math.round((new Date(t+"T12:00:00") - new Date(p.ultima_sesion+"T12:00:00"))/DAY) : 999;
@@ -732,30 +732,31 @@ document.addEventListener("click", e => {
   addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
 });
 // ---- naturaleza e importancia de un paso ----
-const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"condicional", rutina:"rutina", caducidad:"caducidad"};
+const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"depende de algo", rutina:"rutina", caducidad:"revisión con fecha"};
 const NAT_HINT = {
-  accion:"Se agenda: ponle fecha", decision:"Se resuelve en sesión, no en la agenda", espera:"Pide fecha de seguimiento, no de hacer",
-  condicional:"Tiene disparador: calcula la fecha o pásalo a «Después»", rutina:"No es un paso: va a Prioridades del área o a un ritmo", caducidad:"Fecha exacta y lejana: archívalo con ella"};
+  accion:"Se hace una vez: ponle fecha", decision:"Hay que decidirlo, mejor en una sesión", espera:"Depende de alguien de fuera: ponle fecha para darle seguimiento",
+  condicional:"Se hace cuando pase algo: ponle la fecha en que toca mirarlo, o déjalo para después", rutina:"Se hace siempre, no una vez: va a las prioridades del área o se vuelve un hábito", caducidad:"Toca revisar algo en una fecha: no vence, se revisa"};
 function natPill(s, p){ if(!s.naturaleza) return ""; const n = p ? effNat(p, s) : s.naturaleza; const c = p ? pend(p.id, s.texto).corregir : null; return `${n==="accion" && !c ? "" : `<span class="pill nat ${n}" ${tip(NAT_HINT[n]||"")}>${NAT[n]||n}${c?" ⟳":""}</span>`}${(s.puntos||0)>=5?`<span class="pill imp" ${tip("Importante: "+[s.prioridad_area?"está en las prioridades del área":"", s.cliente_o_dinero?"toca cliente o dinero":"", s.desbloquea?"desbloquea otros proyectos":""].filter(Boolean).join(" · "))}>importante</span>`:""}`; }
 async function copiar(txt, btn){
   try{ await navigator.clipboard.writeText(txt); flash("Copiado. Pégalo en una conversación con la carpeta conectada."); }
   catch(e){ const r = document.createRange(); const el = btn.previousElementSibling; if(el){ r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); flash("Selecciona y copia el texto."); } }
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-copy]"); if(b){ e.preventDefault(); copiar(b.dataset.copy, b); } });
-function sesionFrase(p){ return `abre sesión en ${p.area}/${p.slug} y regulariza sus siguientes pasos con la propuesta de la vista`; }
+function sesionFrase(p){ return `abre sesión en ${p.area}/${p.slug} y ordena sus siguientes pasos con lo que propone el tablero`; }
 function regNecesita(p){
   const live = stepsLive(p), by = {};
   for(const s of live){ const n = effNat(p,s); by[n] = (by[n]||0)+1; }
   const raros = ["rutina","condicional","caducidad"].filter(k=>by[k]);
   const nR = raros.reduce((n,k)=>n+by[k],0);
   if(nR < 2 && live.length < 12) return null;
-  const pl = (k,n) => `${n} ${NAT[k]}${n===1?"":k==="accion"||k==="decision"?"es":"s"}`;
+  const PL = {accion:["acción","acciones"], decision:["decisión","decisiones"], espera:["espera","esperas"], condicional:["que depende de algo","que dependen de algo"], rutina:["rutina","rutinas"], caducidad:["revisión con fecha","revisiones con fecha"]};
+  const pl = (k,n) => `${n} ${(PL[k]||[k,k])[n===1?0:1]}`;
   return {total: live.length, raros: raros.map(k=>pl(k,by[k])), nRaros: raros.reduce((n,k)=>n+by[k],0)};
 }
 function regularizar(p){
   const r = regNecesita(p); if(!r) return "";
   const frase = sesionFrase(p);
-  return `<p class="hint">${r.nRaros ? `Entre los ${r.total} pasos, el tablero ve ${r.raros.join(", ").replace(/, ([^,]*)$/," y $1")}: no se agendan como una acción y tapan lo importante.` : `${r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos.`} <code class="sr">${esc(frase)}</code><button type="button" class="lnk" data-copy="${esc(frase)}">Copiar la frase para regularizarlos en sesión</button></p>`;
+  return `<p class="hint">${r.nRaros ? `Entre los ${r.total} pasos, el tablero ve ${r.raros.join(", ").replace(/, ([^,]*)$/," y $1")}: no se agendan como una acción y tapan lo importante.` : `${r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos.`} <code class="sr">${esc(frase)}</code><button type="button" class="lnk" data-copy="${esc(frase)}">Copiar la frase para ordenarlos en una sesión</button></p>`;
 }
 // ---- desde tu última visita: huellas en el navegador de quien mira; sin almacenamiento, no hay marcas ----
 let NOV = null, NOV_ALL = false, MT_ALL = false;
@@ -831,7 +832,7 @@ function desfase(p, e, idx){
     if(x){ if(x.e.actualizado && x.e.actualizado > e.actualizado) out.ents.push(x); continue; }
     const seg = r.split("/"), q = byId[seg[0]+"--"+seg[1]]; if(!q) continue;
     if(/decisiones\.md$/.test(r)){ const f = (q.decisiones||[])[0]?.fecha; if(f && f > e.actualizado) out.blandos.push(`hay decisiones de ${q.nombre} posteriores (la última, del ${fmtD(f)})`); }
-    else if(/proyecto\.md$/.test(r) && q.actualizado && q.actualizado > e.actualizado) out.blandos.push(`el encuadre de ${q.nombre} cambió el ${fmtD(q.actualizado)}`);
+    else if(/proyecto\.md$/.test(r) && q.actualizado && q.actualizado > e.actualizado) out.blandos.push(`la ficha de ${q.nombre} cambió el ${fmtD(q.actualizado)}`);
   }
   return out;
 }
@@ -847,12 +848,12 @@ function mtDatos(){
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
     const it = [], fr = [];
     const r = regNecesita(p);
-    if(r){ it.push({k:"reg", r, txt: r.nRaros ? `${r.raros.join(", ").replace(/, ([^,]*)$/," y $1")} entre sus ${r.total} pasos` : `${r.total} pasos abiertos sin agendar`}); fr.push("regulariza sus siguientes pasos con la propuesta del tablero"); }
+    if(r){ it.push({k:"reg", r, txt: r.nRaros ? `${r.raros.join(", ").replace(/, ([^,]*)$/," y $1")} entre sus ${r.total} pasos` : `${r.total} pasos abiertos sin agendar`}); fr.push("ordena sus siguientes pasos con lo que propone el tablero"); }
     const revs = stepsLive(p).filter(s=>s.revisar && s.revisar<=tday);
     if(revs.length){ it.push({k:"rev", revs, txt:`revisión del ${revs.map(s=>fmtD(s.revisar)).join(" y del ")} por hacer`}); fr.push("haz la revisión periódica que ya tocó"); }
     // un encuadre recién abierto en borrador es lo normal; flojo es el que sigue así semanas después
     const diasEnc = p.actualizado ? Math.round((new Date(tday+"T12:00:00") - new Date(p.actualizado+"T12:00:00"))/DAY) : 0;
-    if(p.estado_cabecera==="borrador" && diasEnc > 21){ it.push({k:"enc", dias: diasEnc, txt:`encuadre en borrador desde hace ${diasEnc} días`}); fr.push("cierra el encuadre de proyecto.md, que sigue en borrador"); }
+    if(p.estado_cabecera==="borrador" && diasEnc > 21){ it.push({k:"enc", dias: diasEnc, txt:`objetivo y alcance sin confirmar desde hace ${diasEnc} días`}); fr.push("confirma su objetivo y su alcance en proyecto.md, que siguen en borrador"); }
     const e = projStatus(p);
     if(e.k==="parado"){ it.push({k:"par", txt: e.regla.charAt(0).toLowerCase()+e.regla.slice(1)}); fr.push("decide si sigue, se pausa o se cierra"); }
     const sinD = (p.entregables||[]).filter(x=>x.estado==="vigente" && !x.descripcion);
@@ -882,7 +883,7 @@ function memoriaAlDia(){
   const fila = f => `<div class="mt-i"><span class="t"><b>${f.p ? `<button type="button" class="lnk" data-go-proj="${f.p.id}">${esc(f.p.nombre)}</button> <em>· ${esc(areaBy[f.p.area]?.nombre||"")}</em>` : `<button type="button" class="lnk" data-go-area="${f.a.slug}">${esc(f.a.nombre)}</button> <em>· área</em>`}</b><span>${f.it.map(x=>esc(x.txt)).join(" · ")}</span></span><button type="button" class="prio-go" data-mt-open="${esc(f.id)}">Revisar<span aria-hidden="true"> ›</span></button></div>`;
   const n = activas.length;
   return `<section class="due"><div class="top"><h2>La memoria al día</h2><span class="c">${n ? `${n} por poner al día` : "todo al día"}</span><span class="c" style="margin-left:auto">Lo que la memoria tiene flojo; revisa el detalle y decide si abres sesión</span></div>
-    ${n ? `<div class="mt">${vis.map(fila).join("")}</div>${activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":(((activas.length-6)===1)?"Ver el restante":`Ver los ${activas.length-6} restantes`)}</button>`:""}` : `<p class="empty">${nPos ? "Nada más por ahora." : "Nada flojo: pasos clasificados, encuadres cerrados, decisiones confirmadas y nada por registrar."}</p>`}
+    ${n ? `<div class="mt">${vis.map(fila).join("")}</div>${activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":(((activas.length-6)===1)?"Ver el restante":`Ver los ${activas.length-6} restantes`)}</button>`:""}` : `<p class="empty">${nPos ? "Nada más por ahora." : "Nada flojo: pasos clasificados, objetivos confirmados, decisiones confirmadas y nada por registrar."}</p>`}
     ${nPos ? `<p class="hint">${nPos} pospuesto${nPos===1?"":"s"} con «Ahora no». <button type="button" class="lnk" data-mt-unpos>Volver a mostrarlo${nPos===1?"":"s"}</button></p>` : ""}</section>`;
 }
 function mtModal(){
@@ -893,13 +894,13 @@ function mtModal(){
   const ir = (tab, txt) => p ? `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${p.id}" data-tab="${tab}">${txt}</button>` : "";
   const sec = x => {
     if(x.k==="reg"){ const raros = stepsLive(p).filter(s=>["rutina","condicional","caducidad"].includes(effNat(p,s)));
-      return `<h3>Pasos que no se agendan como una acción <span class="c">${raros.length || x.r.total}</span></h3>${raros.length ? `<p class="more" style="margin:0">Una rutina va a las prioridades del área o a un ritmo; un condicional espera su disparador; una caducidad se archiva con su fecha. Si el tablero se equivocó con alguno, corrígelo con «⋯».</p><div class="steps">${raros.map(s=>stepRow(p,s,false)).join("")}</div>` : `<p class="more" style="margin:0">${x.r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos. ${ir("pasos","Ver las acciones ›")}</p>`}`; }
+      return `<h3>Pasos que no se agendan como una acción <span class="c">${raros.length || x.r.total}</span></h3>${raros.length ? `<p class="more" style="margin:0">Una rutina va a las prioridades del área o se vuelve un hábito; lo que depende de algo espera a que pase; una revisión con fecha se revisa en su fecha. Si el tablero se equivocó con alguno, corrígelo con «⋯».</p><div class="steps">${raros.map(s=>stepRow(p,s,false)).join("")}</div>` : `<p class="more" style="margin:0">${x.r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos. ${ir("pasos","Ver las acciones ›")}</p>`}`; }
     if(x.k==="rev") return `<h3>Revisión periódica que ya tocó</h3><div class="steps">${x.revs.map(s=>stepRow(p,s,false)).join("")}</div>`;
-    if(x.k==="enc") return `<h3>Encuadre en borrador</h3><p class="more" style="margin:0">El objetivo, el alcance y «terminado significa» de <code>proyecto.md</code> siguen en borrador desde hace ${x.dias} días: nadie los ha dado por buenos. ${ir("estado","Ver el encuadre ›")}</p>`;
+    if(x.k==="enc") return `<h3>Objetivo y alcance sin confirmar</h3><p class="more" style="margin:0">El objetivo, el alcance y «terminado significa» de <code>proyecto.md</code> siguen en borrador desde hace ${x.dias} días: nadie los ha dado por buenos. ${ir("estado","Ver el objetivo y el alcance ›")}</p>`;
     if(x.k==="par") return `<h3>Proyecto parado</h3><p class="more" style="margin:0">${esc(x.txt.charAt(0).toUpperCase()+x.txt.slice(1))}. La sesión decide si sigue, se pausa o se cierra. ${ir("pasos","Ver las acciones ›")}</p>`;
     if(x.k==="desc") return `<h3>Entregables vigentes sin descripción</h3><div class="ents">${x.ents.map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.actualizado?fmtD(e.actualizado):""}</span></div>`).join("")}</div>`;
     if(x.k==="conf") return `<h3>Decisiones por confirmar <span class="c">${x.decs.length}</span></h3><div class="dl">${x.decs.map(d=>decItem(d,p,false)).join("")}</div>`;
-    if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Citan en su cabecera otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
+    if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Se construyen sobre otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
     if(x.k==="bor") return `<h3>Borradores de más de 30 días <span class="c">${x.bor.length}</span></h3><ul class="ent-l">${x.bor.map(e=>`<li>${entBtn(p,e)} <span class="more">· sin tocar desde hace ${diasDesde(e.actualizado)} días</span></li>`).join("")}</ul>`;
     if(x.k==="afe") return `<h3>Decisiones de otros proyectos que le afectan <span class="c">${x.afe.length}</span></h3><p class="more" style="margin:0">Las registraron después de la última sesión de este proyecto y lo citan en «Afecta a».</p><div class="dl">${x.afe.map(({q,d})=>decItem(d,q,true)).join("")}</div>`;
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
@@ -931,7 +932,7 @@ function origen(ruta, idx){
   const r = ruta.replace(/^\.?\//, ""), x = idx[r];
   if(x) return `<li>${entBtn(x.p, x.e)} <span class="more">· ${esc(x.e.estado||x.e.formato||"")} · ${esc(x.p.nombre)}</span></li>`;
   const seg = r.split("/"), pr = byId[seg[0]+"--"+seg[1]], nom = pr ? pr.nombre : seg.slice(0,2).join("/");
-  const tipo = /decisiones\.md$/.test(r) ? `las decisiones de ${esc(nom)}` : /proyecto\.md$/.test(r) ? `el encuadre de ${esc(nom)}` : /sesiones\.md$/.test(r) ? `la bitácora de ${esc(nom)}` : r.includes("/fuentes/") ? `una fuente de ${esc(nom)}` : r.includes("/taller/") ? `el taller de ${esc(nom)}` : r.includes("/restringido/") ? `material restringido de ${esc(nom)}` : /area\.md$/.test(r) ? "el área" : r==="guia.md" ? "la guía de la raíz" : "";
+  const tipo = /decisiones\.md$/.test(r) ? `las decisiones de ${esc(nom)}` : /proyecto\.md$/.test(r) ? `la ficha de ${esc(nom)}` : /sesiones\.md$/.test(r) ? `la bitácora de ${esc(nom)}` : r.includes("/fuentes/") ? `una fuente de ${esc(nom)}` : r.includes("/taller/") ? `el taller de ${esc(nom)}` : r.includes("/restringido/") ? `material restringido de ${esc(nom)}` : /area\.md$/.test(r) ? "el área" : r==="guia.md" ? "la guía de la raíz" : "";
   return `<li>${tipo ? `${tipo[0].toUpperCase()+tipo.slice(1)} <span class="more">· <code>${esc(r)}</code></span>` : `<code>${esc(r)}</code>`}</li>`;
 }
 function entModal(){
@@ -945,10 +946,10 @@ function entModal(){
   const base = e.basado_en;
   return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ent-h" tabindex="-1">
     <header class="modal-h"><span></span><div><div class="eyebrow">${esc(a?.nombre||"")} · ${esc(p.nombre)} · entregable</div><h2 id="ent-h">${inline(e.titulo||e.nombre)}</h2>${e.descripcion?`<p class="sub">${inline(e.descripcion)}</p>`:""}</div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
-    <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(e.estado || "sin cabecera")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
+    <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(e.estado || "sin estado")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
     ${df.ents.length || df.blandos.length ? `<section class="modal-s"><div class="aviso${df.ents.length?"":" suave"}"><b>${df.ents.length ? "Posiblemente desfasado" : "Para tener en cuenta"}.</b> ${[...df.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)}, en el que se basa, cambió el ${fmtD(y.e.actualizado)}`), ...df.blandos.map(esc)].join("; ")}; este es del ${fmtD(e.actualizado)}.</div></section>` : ""}
-    <section class="modal-s"><h3>Construido sobre <span class="c">${base ? base.length : ""}</span></h3>${base ? (base.length ? `<ul class="ent-l">${base.map(b=>origen(b, idx)).join("")}</ul>` : `<p class="more" style="margin:0">Su cabecera no cita nada: es material adoptado sin trazabilidad. Antes de publicarlo de nuevo, «revisar» pide completarla.</p>`) : `<p class="more" style="margin:0">${e.formato && e.formato!=="md" ? "Es un archivo sin cabecera: de qué se construyó lo cuenta proyecto.md o la decisión que lo produjo." : "Sin datos de origen en su cabecera."}</p>`}</section>
-    <section class="modal-s"><h3>Lo usan <span class="c">${usan.length}</span></h3>${usan.length ? `<p class="more" style="margin:0">Se construyen sobre este: si cambia, conviene revisarlos.</p><ul class="ent-l">${usan.map(y=>`<li>${entBtn(y.p,y.e)} <span class="more">· ${esc(y.e.estado||"")} · ${esc(areaBy[y.p.area]?.nombre||"")} · ${esc(y.p.nombre)}</span></li>`).join("")}</ul>` : `<p class="more" style="margin:0">Ningún otro entregable lo cita en su cabecera.</p>`}</section>
+    <section class="modal-s"><h3>Construido sobre <span class="c">${base ? base.length : ""}</span></h3>${base ? (base.length ? `<ul class="ent-l">${base.map(b=>origen(b, idx)).join("")}</ul>` : `<p class="more" style="margin:0">No dice de qué se construyó. Antes de volver a publicarlo, la revisión pedirá completarlo.</p>`) : `<p class="more" style="margin:0">${e.formato && e.formato!=="md" ? "Es un archivo (PDF, presentación, hoja) que no lleva estos datos: de qué se construyó lo cuenta el proyecto o la decisión que lo produjo." : "No dice de qué se construyó."}</p>`}</section>
+    <section class="modal-s"><h3>Lo usan <span class="c">${usan.length}</span></h3>${usan.length ? `<p class="more" style="margin:0">Se construyen sobre este: si cambia, conviene revisarlos.</p><ul class="ent-l">${usan.map(y=>`<li>${entBtn(y.p,y.e)} <span class="more">· ${esc(y.e.estado||"")} · ${esc(areaBy[y.p.area]?.nombre||"")} · ${esc(y.p.nombre)}</span></li>`).join("")}</ul>` : `<p class="more" style="margin:0">Ningún otro entregable dice construirse sobre este.</p>`}</section>
     <footer class="modal-f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">Ir al proyecto ›</button><button type="button" class="chip" data-modal-close style="margin-left:auto">Cerrar</button></footer>
   </div></div>`;
 }
@@ -957,7 +958,7 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 const nextStep = p => { const live = stepsLive(p); return live.filter(s=>effDate(p,s)).sort((a,b)=>effDate(p,a).localeCompare(effDate(p,b)))[0] || live[0] || null; };
 function projTags(p){
   const t = [statusPill(p)];
-  if(!p.restringido && !p.cerrado && p.estado_cabecera==="borrador") t.push(`<span class="pill draft" ${tip("El proyecto.md está en borrador: su objetivo, alcance o «terminado significa» no se han dado por buenos. Se cierra en una sesión del proyecto.")}>Encuadre en borrador</span>`);
+  if(!p.restringido && !p.cerrado && p.estado_cabecera==="borrador") t.push(`<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>`);
   if(p.entregables_vigentes) t.push(`<span class="pill ok">${p.entregables_vigentes} ${p.entregables_vigentes===1?"entregable vigente":"entregables vigentes"}</span>`);
   if(p.decisiones_total) t.push(`<span class="pill">${p.decisiones_total} ${p.decisiones_total===1?"decisión":"decisiones"}</span>`);
   const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; if(nc) t.push(`<span class="pill soon">${nc} por registrar</span>`);
@@ -1007,7 +1008,7 @@ function colaRows(){
       : c.tipo==="corregir" ? `${esc((CORR_OPC.find(o=>o[0]===c.propuesta)||[,c.propuesta])[1])}: ${inline(c.paso)}`
       : `Nota: ${esc(c.nota)}`;
     const orf = huerfano(c) && c.tipo!=="nota";
-    return `<div class="due-item static${orf?" orf":""}"><span class="pill ${c.tipo==="nota"?"":orf?"late":"soon"}">${orf?"huérfano":c.tipo}</span><span class="t">${que}${orf?`<span class="pend-note" style="display:block">El paso ya no está escrito así en la carpeta: la tarea no lo aplicará. Deshazlo o ciérralo en sesión.</span>`:""}</span><span class="w">${esc(areaBy[p.area].nombre)} · <button type="button" class="lnk" data-go-proj="${p.id}">${esc(p.nombre)}</button> · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${c.id}">Deshacer</button>`:""}</span></div>`;
+    return `<div class="due-item static${orf?" orf":""}"><span class="pill ${c.tipo==="nota"?"":orf?"late":"soon"}">${orf?"ya no coincide":c.tipo}</span><span class="t">${que}${orf?`<span class="pend-note" style="display:block">El paso ya no está escrito así en la carpeta: la sincronización no lo aplicará. Deshazlo o resuélvelo en una sesión.</span>`:""}</span><span class="w">${esc(areaBy[p.area].nombre)} · <button type="button" class="lnk" data-go-proj="${p.id}">${esc(p.nombre)}</button> · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${c.id}">Deshacer</button>`:""}</span></div>`;
   }).join("");
 }
 const NAT_ORD = {accion:0, decision:1, espera:2, condicional:3, rutina:4, caducidad:5};
@@ -1077,7 +1078,7 @@ function renderRoot(){
   const modo = META && META.modo==="completo" ? `<span class="pill draft" ${tip("Tablero completo: incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».")}>Completo · no compartir</span>` : "";
   head.innerHTML = `<h1>${esc(org||"Tablero")}</h1>
     <div class="meta">${modo}${META?`<span>Método <b>${esc(META.version_metodo||"—")}</b></span><span>Contexto común: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
-  if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero lee sus datos de la base de la página y no está disponible aquí. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
+  if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero solo funciona dentro de Claude. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
   visita();
   const all = pendientes(), t = today(), nLate = all.filter(i=>i.f && i.f<t).length, nSoon = all.filter(i=>i.f && i.f>=t && i.f<=addDays(7)).length;
   const barra = `<section class="acc-bar"><button type="button" class="acc-k" data-go-pend><b>${all.length}</b><span>pasos abiertos</span></button><button type="button" class="acc-k${nLate?" late":""}" data-go-pend><b>${nLate}</b><span>vencido${nLate===1?"":"s"}</span></button><button type="button" class="acc-k${nSoon?" soon":""}" data-go-pend><b>${nSoon}</b><span>esta semana</span></button>${CAMBIOS.length?`<button type="button" class="acc-k soon" data-go-pend><b>${CAMBIOS.length}</b><span>por registrar</span></button>`:""}</section>`;
@@ -1179,36 +1180,36 @@ async function sincronizar(){
   SYNC_STATE = "corriendo"; render();
   try{
     await MCP.callTool("Claude Code Remote", "fire_trigger", {trigger_id: META.tarea});
-    SYNC_STATE = "lanzada"; flash("Sincronización lanzada. Tarda unos minutos; la vista se actualiza sola cuando termina.");
+    SYNC_STATE = "lanzada"; flash("Sincronización lanzada. Tarda unos minutos; el tablero se pone al día solo cuando termina.");
   }catch(e){
     const code = e && e.code;
     SYNC_STATE = code==="server_not_connected" ? "sin-conector" : code==="not_in_manifest" ? "sin-permiso" : code==="needs_reauth" ? "reconectar" : "error";
-    flash(SYNC_STATE==="sin-conector" ? "Falta el conector de tareas programadas en tu cuenta de Claude." : SYNC_STATE==="sin-permiso" ? "No diste permiso a esta página para lanzar la tarea." : SYNC_STATE==="reconectar" ? "Reconecta el conector de tareas en Claude → Conectores." : "No se pudo lanzar la tarea: " + (e && e.message || ""));
+    flash(SYNC_STATE==="sin-conector" ? "Falta el conector de tareas programadas en tu cuenta de Claude." : SYNC_STATE==="sin-permiso" ? "No diste permiso a esta página para lanzar la sincronización." : SYNC_STATE==="reconectar" ? "Reconecta el conector de tareas en Claude → Conectores." : "No se pudo lanzar la sincronización: " + (e && e.message || ""));
   }
   render();
 }
 document.addEventListener("click", e => { if(e.target.closest && e.target.closest("[data-sync]")) sincronizar(); });
 function syncBtn(){
   if(!OWNER || !MCP || !META || !META.tarea) return "";
-  const tipTxt = SYNC_STATE==="corriendo" ? "Lanzando la sincronización…" : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar." : "Sincronizar ahora: regenera el tablero desde la carpeta y escribe en ella lo que marcaste aquí. Lanza la tarea diaria; tarda unos minutos.";
+  const tipTxt = SYNC_STATE==="corriendo" ? "Lanzando la sincronización…" : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar." : "Sincronizar ahora: pone el tablero al día con la carpeta y pasa a la carpeta lo que marcaste aquí. Es lo mismo que ocurre cada mañana; tarda unos minutos.";
   const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
   return `<button type="button" class="sync-ico${SYNC_STATE==="corriendo"?" busy":""}${SYNC_STATE==="lanzada"?" done":""}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
 }
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
-  if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale" style="background:var(--signal-dim);color:var(--signal);border-color:var(--signal)"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)}, con la tarea diaria. Nada que hacer.</span></div>`;
-  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>El plugin trae un prompt nuevo para la tarea diaria y cambiarlo pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero».</span></div>`;
-  if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el plugin que la regenera corre la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
+  if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale" style="background:var(--signal-dim);color:var(--signal);border-color:var(--signal)"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} con la puesta al día de cada mañana. Nada que hacer.</span></div>`;
+  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>Hay instrucciones nuevas para la puesta al día de cada mañana y cambiarlas pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero».</span></div>`;
+  if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el método instalado es la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY);
-  if(dias >= 2) out += `<div class="stale"><span>La vista lleva <b>${dias} días</b> sin regenerarse (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.${OWNER&&MCP?" Sincroniza con el icono junto al nombre, arriba a la izquierda.":""}</span></div>`;
+  if(dias >= 2) out += `<div class="stale"><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.${OWNER&&MCP?" Sincroniza con el icono junto al nombre, arriba a la izquierda.":""}</span></div>`;
   return out;
 }
 // ---- lateral ----
 let SIDE_OPEN = false;
 function renderSide(){
   const el = document.getElementById("side-nav"); if(!el) return;
-  const org = META ? META.organizacion : "Vista";
+  const org = META ? META.organizacion : "Tablero";
   const all = ready.p ? pendientes() : [], t = today(), nLate = all.filter(i=>i.f && i.f<t).length;
   const cur = (lvl, id) => view.lvl===lvl && (id===undefined || view.id===id) ? ' aria-current="page"' : "";
   const nDec = PROJ.reduce((n,p)=>n+(p.decisiones_total||0),0), nEnt = PROJ.reduce((n,p)=>n+(p.entregables_vigentes||0),0);
@@ -1252,11 +1253,11 @@ function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
   if(p.restringido){
-    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1><p class="sub">Proyecto restringido. Existe y responde por él ${esc(a.dueno)}; su contenido no se muestra en esta vista.</p>`;
+    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1><p class="sub">Proyecto restringido. Existe y responde por él ${esc(a.dueno)}; su contenido no se muestra en este tablero.</p>`;
     main.innerHTML = ""; return;
   }
   head.innerHTML = `<div class="eyebrow">${esc(a.nombre)} · proyecto</div><h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
-    <div class="meta"><span>Dueño: <b>${esc(p.dueno)}</b></span>${p.ultima_sesion?`<span>Última sesión: <b>${fmtL(p.ultima_sesion)}</b></span>`:""}${p.actualizado?`<span>Encuadre actualizado el <b>${fmtL(p.actualizado)}</b></span>`:""}<span class="tags">${projTags(p)}${CAN?`<button type="button" class="corr-btn" data-corr-est="${p.id}" aria-expanded="${CORR==="est:"+p.id}" title="Corregir el estado que deduce la vista">corregir estado</button>`:""}</span>${CORR==="est:"+p.id?`<span class="corr-form" style="padding-left:0">${EST_OPC.map(([v,l])=>`<button type="button" class="chip${projStatus(p).corregido&&projStatus(p).k===v?" on":""}" data-corr-est-set="${p.id}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></span>`:""}<p class="more" style="margin:0">${(()=>{ const e=projStatus(p); return esc(e.regla)+(e.riesgo?` · En riesgo: ${esc(e.riesgoRegla)}`:""); })()}</p></div>`;
+    <div class="meta"><span>Dueño: <b>${esc(p.dueno)}</b></span>${p.ultima_sesion?`<span>Última sesión: <b>${fmtL(p.ultima_sesion)}</b></span>`:""}${p.actualizado?`<span>Ficha actualizada el <b>${fmtL(p.actualizado)}</b></span>`:""}<span class="tags">${projTags(p)}${CAN?`<button type="button" class="corr-btn" data-corr-est="${p.id}" aria-expanded="${CORR==="est:"+p.id}" title="Corregir el estado que deduce el tablero">corregir estado</button>`:""}</span>${CORR==="est:"+p.id?`<span class="corr-form" style="padding-left:0">${EST_OPC.map(([v,l])=>`<button type="button" class="chip${projStatus(p).corregido&&projStatus(p).k===v?" on":""}" data-corr-est-set="${p.id}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></span>`:""}<p class="more" style="margin:0">${(()=>{ const e=projStatus(p); return esc(e.regla)+(e.riesgo?` · En riesgo: ${esc(e.riesgoRegla)}`:""); })()}</p></div>`;
   const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
   const nP = stepsLive(p).length;
   const tabs = [["estado","Estado",""],["pasos","Acciones",nP],["decisiones","Decisiones",nD],["entregables","Entregables",nE],["bitacora","Bitácora",nS]];
@@ -1272,7 +1273,7 @@ function renderProj(p){
     const filas = [
       nx ? `<dt>Siguiente paso</dt><dd>${inline(nx.texto)}${effDate(p,nx)?` <span class="pill ${due(effDate(p,nx)).cls}">${due(effDate(p,nx)).label}</span>`:""}<br>${ir("pasos", `Ver las ${live.length} acciones ›`)}</dd>` : `<dt>Siguiente paso</dt><dd>Ninguno escrito.</dd>`,
       nLate ? `<dt>Vencidos</dt><dd><span class="pill late">${nLate}</span> ${ir("pasos","Atenderlos ›")}</dd>` : "",
-      esperas.length ? `<dt>Espera a terceros</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
+      esperas.length ? `<dt>Espera a alguien de fuera</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
       (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);
         return `<dt>Le afectan</dt><dd>${nu.length?`<span class="pill soon">${nu.length} desde su última sesión</span> `:""}<span class="more">${af.length} decisi${af.length===1?"ón":"ones"} de otros proyectos lo citan</span><ul class="ent-l" style="margin-top:6px">${ver.map(({q,d,nueva})=>`<li>${inline(d.titulo)} <span class="more">· ${esc(q.nombre)} · ${fmtD(d.fecha)}${nueva?" · nueva":""}</span> <button type="button" class="lnk" style="font-size:12.5px" data-go-proj="${q.id}" data-tab="decisiones">Ver ›</button></li>`).join("")}</ul>${af.length>ver.length||AF_ALL.has(p.id)?`<button type="button" class="leer" data-af-all="${p.id}">${AF_ALL.has(p.id)?"Ver menos":`Ver las ${af.length}`}</button>`:""}</dd>`; })(),
       ud ? `<dt>Última decisión</dt><dd>${inline(ud.titulo)} <span class="more">· ${fmtD(ud.fecha)}</span></dd>` : "",
@@ -1282,7 +1283,7 @@ function renderProj(p){
     const largo = (p.estado_actual||"").trim().length > (p.estado_resumen||"").trim().length + 20, full = EST_FULL.has(p.id);
     body = `<div class="card ficha"><h3>En resumen</h3><dl class="facts">${filas}</dl></div>
       <div class="card"><h3>Estado actual</h3><div class="md">${(full ? md(p.estado_actual) : md(p.estado_resumen)) || `<p class="empty">Sin estado escrito.</p>`}</div>${largo?`<button type="button" class="leer" data-est-full="${p.id}">${full?"Leer menos":"Leer el estado completo"}</button>`:""}</div>
-      <div class="card"><h3>Encuadre</h3><dl class="facts"><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Consumen esto</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>`;
+      <div class="card"><h3>Objetivo y alcance</h3><dl class="facts"><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Consumen esto</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>`;
   } else if(tab==="pasos"){
     const notas = notasDe(p.id);
     const pasos = (p.pasos||[]);
@@ -1294,7 +1295,7 @@ function renderProj(p){
   } else if(tab==="entregables"){
     const ents = (p.entregables||[]);
     const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
-    body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin cabecera", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
+    body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin estado", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
     body = `<div class="card">${(p.sesiones||[]).length ? p.sesiones.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} sesiones más recientes de ${nS}.</p>`:"") + (META && META.modo!=="completo" && p.sesiones.length ? `<p class="more">La bitácora es taller privado del área: aquí solo fecha y título. El detalle está en <code>sesiones.md</code>.</p>` : "") : `<p class="empty">Sin sesiones registradas.</p>`}</div>`;
@@ -1315,12 +1316,12 @@ function render(){
     else { view = {lvl:"root"}; renderRoot(); }
   }catch(err){
     console.error(err);
-    document.getElementById("main").innerHTML = `<p class="empty">No se pudo pintar esta vista (${esc(err && err.message || err)}). Vuelve a cargar la página; si sigue, avisa a quien administra la carpeta.</p>`;
+    document.getElementById("main").innerHTML = `<p class="empty">No se pudo mostrar esta página (${esc(err && err.message || err)}). Vuelve a cargar la página; si sigue, avisa a quien administra la carpeta.</p>`;
   }
   const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
-  f.innerHTML = META ? esc(`Vista al ${fmtL(META.snapshot)} · generada desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee guia.md, cada area.md y, de cada proyecto, proyecto.md, decisiones.md, sesiones.md y las cabeceras de sus entregables. Nunca fuentes, taller ni lo restringido. La carpeta es la fuente; lo que se toca aquí espera en una cola hasta que la sincronización lo escribe allí.`) : "";
+  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; ${META.modo==="completo" ? "todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido»" : "nunca fuentes, taller ni lo restringido"}. La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
 }
 (async ()=>{
   render();
