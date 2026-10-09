@@ -27,7 +27,7 @@ Migrar es una tarea larga. Se hace por proyecto, no toda la carpeta de golpe, y 
 
 Los nombres reservados (`proyecto.md`, `decisiones.md`, `sesiones.md`, `area.md`) no sobreviven a una adopción: se renombran a lo que de verdad es cada archivo, como dice `convenciones`, sección 3. Y si lo que se adopta es un proyecto del propio método que se pliega dentro de otro, sus registros se funden con los del que recibe, sin editar ninguna entrada. Un proyecto nuevo se crea con la skill `nuevo`, con su dueño con nombre y apellido, que es bloqueante también aquí. Si el origen mezclaba dos trabajos en una carpeta, salen dos proyectos. Si el origen tenía un cuarto nivel de carpetas, ahí había dos proyectos.
 
-**3. Decisiones.** Cada ADR o archivo de decisión del origen pasa a ser una entrada de `decisiones.md` con el formato del método: fecha, título en una frase, quién decidió, por qué, qué se descartó, a qué afecta. Si el ADR traía análisis (opciones comparadas, tablas, cifras), el análisis no cabe en la entrada: se convierte en un entregable del proyecto, con la plantilla `comparativo.md` si compara opciones, y la entrada lo cita en `Afecta a`. Si el ADR no dice quién decidió, se pregunta; si nadie lo sabe, se escribe "no consta" y queda como hueco en el reporte.
+**3. Decisiones.** Cada ADR o archivo de decisión del origen pasa a ser una entrada de `decisiones.md` con el formato del método: fecha, título en una frase, quién decidió, por qué, qué se descartó, a qué afecta. Si el ADR traía análisis (opciones comparadas, tablas, cifras), el análisis no cabe en la entrada: se convierte en un entregable del proyecto, con la plantilla `comparativo.md` si compara opciones, y la entrada lo cita en `Afecta a`. Si el ADR no dice quién decidió, se pregunta; si nadie lo sabe, se escribe "no consta" y queda como hueco en el manifiesto. Toda decisión recuperada entra marcada `Decidió: Nombre Apellido (pendiente de confirmar)` (`convenciones`, sección 4), y la confirma su dueño después con una entrada nueva.
 
 **4. Sesiones.** Todos los logs de sesión del origen, estén en un archivo por sesión o en una carpeta, se consolidan en un solo `sesiones.md` del proyecto. Cada log pasa a una entrada con encabezado `## AAAA-MM-DD`, tomada del nombre del archivo o de su contenido, y el cuerpo viejo se conserva debajo tal cual, con sus encabezados bajados a `###` para que no compitan con las fechas. Las entradas van de la más reciente a la más antigua. No se resume ni se reescribe lo que decían: la regla de histórico permite convertir este registro porque nadie lo ha consumido todavía, pero convertir es cambiar el formato, no el contenido.
 
@@ -35,7 +35,7 @@ Los nombres reservados (`proyecto.md`, `decisiones.md`, `sesiones.md`, `area.md`
 
 Cuando un entregable entra con `basado_en: []`, la línea bajo el título dice de quién venía el material y con qué fecha, y por qué no hay trazabilidad. No nombra las rutas ni las carpetas del sistema de origen: la raíz que estrena el método no guarda rastro de él, y quien lea esa línea dentro de seis meses necesita saber de quién viene el documento, no en qué carpeta vivía antes. El mapa de rutas viejas a rutas nuevas vive en el manifiesto, que es de quien migró. Un entregable binario del origen (una presentación o una hoja de cálculo sin `.md` detrás, guardada antes en una carpeta aparte porque el sistema viejo no la previsualizaba) entra igual a `entregables/`, sin cabecera propia; su estado y procedencia se anotan en `proyecto.md`. Si lo produjo alguien ajeno a la organización que migra, no es un entregable suyo: va a `fuentes/`.
 
-**6. Documentos largos.** Un documento de contexto largo del origen (`00-contexto.md`, un README de cuarenta pantallas) no se trae entero como entregable. Se extraen de él las cifras con su fecha y los pendientes abiertos: los del proyecto van a `Estado actual` y `Siguientes pasos` de `proyecto.md`; los del área van a `Prioridades ahora` de `area.md`, y ahí solo si el dueño del área lo aprueba. El documento entero se guarda en `fuentes/` como material adoptado, por si hace falta volver a él.
+**6. Documentos largos.** Un documento de contexto largo del origen (`00-contexto.md`, un README de cuarenta pantallas) no se trae entero como entregable. Se extraen de él las cifras con su fecha y los pendientes abiertos: los del proyecto van a `Estado actual` y `Siguientes pasos` de `proyecto.md`; los del área van a `Prioridades ahora` de `area.md`, y ahí solo si el dueño del área lo aprueba. El documento entero se guarda en `taller/` como material adoptado, congelado, por si hace falta volver a él: lo escribió la propia organización, así que no es una fuente de fuera.
 
 **7. Fuentes.** Migrar es la excepción declarada a la puerta única de `fuentes/`: lo que se adopta es el trabajo anterior de la propia organización, no material de fuera, y por eso puede entrar como entregable en borrador. Lo que en el origen ya era material de entrada sigue la regla normal. Exports, PDFs, transcripciones, correos, capturas: a `fuentes/` con nombre en minúsculas y guiones. Los enlaces sueltos, a `fuentes/enlaces.md`, una fila cada uno. Si una fuente ya está en otro proyecto de la misma área, no se duplica: se cita la original.
 
@@ -49,7 +49,7 @@ Antes de traer cada archivo se mira si trae indicios de información confidencia
 
 ## Qué respondo al terminar
 
-Un reporte de tres bloques, y nada más:
+Un manifiesto de tres bloques, y nada más:
 
 **Qué se trajo.** Una línea por archivo del origen con su ruta nueva y qué es ahora (entrada de decisión, entregable en borrador, fuente).
 
@@ -57,9 +57,9 @@ Un reporte de tres bloques, y nada más:
 
 **Qué quedó como hueco.** Decisiones sin quién decidió, entregables con `basado_en` vacía, cifras sin fecha, enlaces que apuntaban a algo que no existe, dueños por confirmar. Cada hueco con la ruta donde está marcado.
 
-Si la migración se hace por proyectos, el reporte se da al cerrar cada uno.
+Si la migración se hace por proyectos, el manifiesto se da al cerrar cada uno.
 
-El reporte se guarda como entregable en la raíz de quien migró, en su proyecto de la relación con esa organización. En la raíz de la organización migrada no entra: cuenta el trabajo del proveedor y habla del sistema de origen, que su equipo no usó. Lo que sí entra allá, y en el proyecto donde se usa, son las decisiones recuperadas pendientes de confirmar y las filas de material confidencial que quedó fuera de alcance.
+El manifiesto se guarda como entregable en la raíz de quien migró, en su proyecto de la relación con esa organización; con dos raíces conectadas, se anuncia el cambio de raíz antes de escribirlo. En la raíz de la organización migrada no entra: cuenta el trabajo del proveedor y habla del sistema de origen, que su equipo no usó. Lo que sí entra allá, y en el proyecto donde se usa, son las decisiones recuperadas pendientes de confirmar y las filas de material confidencial que quedó fuera de alcance.
 
 ## Lo que nunca hago
 
@@ -73,9 +73,9 @@ Además de las prohibiciones de `convenciones`:
 - Traer a `entregables/` un documento que produjo alguien ajeno a la organización que migra. Va a `fuentes/`
 - Traer a `entregables/` un documento que no sale del proyecto. Va a `taller/`
 - Sacar de una carpeta restringida un archivo que pertenece dentro de ella, o dejar fuera la ruta de lo que se migró dentro
-- Escribir en el reporte de la migración el contenido de lo restringido. Se cuenta cuántos archivos fueron y a qué carpeta, nunca qué decían
-- Dejar en la raíz migrada rastro del sistema de origen: sus rutas, sus nombres de carpeta, su vocabulario o el reporte de la migración
-- Inventar una fecha para una entrada cuya fecha no se puede saber. Se usa la fecha del archivo y se marca como aproximada
+- Escribir en el manifiesto de la migración el contenido de lo restringido. Se cuenta cuántos archivos fueron y a qué carpeta, nunca qué decían
+- Dejar en la raíz migrada rastro del sistema de origen: sus rutas, sus nombres de carpeta, su vocabulario o el manifiesto de la migración
+- Inventar una fecha para una entrada cuya fecha no se puede saber. Se usa la fecha del archivo y el encabezado lo dice: `## AAAA-MM-DD (fecha aproximada)`
 
 ## Ejemplo completo
 

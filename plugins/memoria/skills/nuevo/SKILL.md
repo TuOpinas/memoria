@@ -202,7 +202,7 @@ actualizado: 2026-09-01
 Dueño: Marta Ruiz
 ```
 
-**3. La fila del área en la tabla de `guia.md`**, con su dueño, su cuenta y quién la lee.
+**3. La fila del área en la tabla de `guia.md`**, con su dueño, su cuenta y quién la lee. La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
 
 Nada más: ni proyectos vacíos, ni plantillas, ni un `README`.
 
@@ -311,7 +311,7 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta:**
 
-> Un área es una capa de propiedad nueva: alguien responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Tres preguntas y la creo, contigo como dueño salvo que me digas otra cosa:
+> Un área es una capa de propiedad nueva: alguien responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Cuatro preguntas y la creo, contigo como dueño salvo que me digas otra cosa:
 >
 > 1. ¿Qué es el área, en dos o tres líneas?
 > 2. ¿Qué tiene entre manos ahora?

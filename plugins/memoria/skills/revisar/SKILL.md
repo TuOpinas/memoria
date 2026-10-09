@@ -37,13 +37,13 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 
 **4. Huecos.** Los huecos declarados en el documento siguen abiertos, o ya hay material para cerrarlos.
 
-**5. Estilo.** Los siete patrones de la skill `estilo`. Se cuentan los guiones largos y se comparan con el umbral: más de uno cada 500 palabras es muletilla. Se buscan cifras sin fecha ni fuente.
+**5. Estilo.** Los siete patrones de la skill `estilo`. Se cuentan los guiones largos y se comparan con el umbral: más de uno cada 500 palabras es muletilla. Las cifras sin fecha ni fuente se buscan aquí, pero no son estilo: son bloqueantes, porque el contrato las prohíbe.
 
 ## Qué respondo
 
 Los hallazgos separados en dos grupos, nunca mezclados:
 
-**Bloqueantes**, que impiden publicar: contradicciones con decisiones, afirmaciones sin fuente, `basado_en` vacía, huecos abiertos, fuentes desfasadas.
+**Bloqueantes**, que impiden publicar: contradicciones con decisiones, afirmaciones sin fuente, cifras sin fecha ni fuente, `basado_en` vacía, huecos abiertos, fuentes desfasadas.
 
 **Mejoras**, que no impiden nada: estilo, estructura, extensión.
 
@@ -71,15 +71,14 @@ No se toca ningún archivo durante un barrido.
 
 ## Lo que entró por otro camino
 
-En el mismo barrido, tres comprobaciones más sobre cada proyecto. Son de listado de carpeta: se mira qué archivos hay, no qué dicen.
+En el mismo barrido, cinco comprobaciones más sobre cada proyecto. Son de listado de carpeta: se mira qué archivos hay, no qué dicen.
 
 1. **Archivos en `entregables/` sin cabecera** que no estén anotados en `proyecto.md` ni en una entrada de `decisiones.md`. Un binario que produjo el equipo consta en uno de los dos; si no consta en ninguno, o llegó de fuera o nadie respondió por él.
 2. **Carpetas que la estructura no contempla** dentro del proyecto: cualquiera que no sea `entregables/`, `taller/`, `fuentes/` o `restringido/`. Un nivel de agrupación dentro de las tres primeras está permitido y no se reporta; dentro de `restringido/` no, porque es plano.
-
 3. **Entregables que no salen del proyecto.** Un archivo en `entregables/` que no se le puede dar a nadie de fuera es taller: un inventario interno, unas notas de conversación, el análisis del que salió otro documento. Se listan con `taller/` como destino propuesto. Es lo que evita que `entregables/` acabe con un entregable de verdad y treinta que no lo son.
 
 4. **Registros dentro de `taller/`.** Un `decisiones.md` o un `sesiones.md` ahí dentro solo es legítimo si es material adoptado y congelado; si alguien le está añadiendo entradas, el registro vivo del proyecto es el de su raíz.
-3. **Archivos sueltos en la raíz del proyecto**, más allá de `proyecto.md`, `decisiones.md` y `sesiones.md`.
+5. **Archivos sueltos en la raíz del proyecto**, más allá de `proyecto.md`, `decisiones.md`, `sesiones.md` y sus archivados por año.
 
 Cada hallazgo se reporta con su ruta y un destino propuesto, casi siempre `fuentes/`. Ninguno bloquea una publicación y ninguno se mueve sin que el usuario lo confirme: la regla es norma y no candado, y hay motivos legítimos para que algo esté fuera de sitio un rato.
 
@@ -135,14 +134,16 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta:**
 
-> Dos bloqueantes y tres mejoras.
+> Tres bloqueantes y dos mejoras.
 >
 > **Bloqueantes:**
 >
 > 1. Sigue abierto el hueco de quién aprueba entre 5.000 y 20.000 MXN. La entrevista y el export se contradicen y no ha entrado material nuevo.
 > 2. El paso 4 dice que todas las órdenes pasan por validación presupuestal, pero la decisión del 29 de agosto exime a las de menos de 5.000 MXN. El documento quedó desfasado respecto a `decisiones.md`.
 >
-> **Mejoras:** siete guiones largos en 1.200 palabras, cuando el umbral es uno cada 500; dos párrafos que anuncian antes de decir; y la cifra "el 70% del volumen" sin decir de qué periodo ni de qué export sale. Te paso las reescrituras si quieres.
+> 3. La cifra "el 70% del volumen" no dice de qué periodo ni de qué export sale.
+>
+> **Mejoras:** siete guiones largos en 1.200 palabras, cuando el umbral es uno cada 500, y dos párrafos que anuncian antes de decir. Te paso las reescrituras si quieres.
 >
 > El punto 2 lo puedo corregir ahora mismo con la decisión registrada. El punto 1 necesita que alguien confirme el dato, no lo puedo cerrar yo.
 

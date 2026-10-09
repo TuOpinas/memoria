@@ -35,11 +35,13 @@ Los formatos que la IA no puede teclear, una presentación o una hoja de cálcul
 
 Ninguna carpeta de trabajo aloja el almacén de datos de una aplicación. Lo escribe la aplicación sola, crece por su cuenta y nadie responde por lo que hay dentro.
 
-La migración es la excepción declarada. El material que se adopta al migrar no llega de fuera: es el trabajo anterior de la propia organización, y entra donde le toque con `estado: borrador` y con la trazabilidad que se pueda reconstruir. Lo que en el origen ya era material de entrada entra por `fuentes/` como en cualquier proyecto. Lo detalla la skill `migrar`.
+La migración es la excepción declarada. El material que se adopta al migrar no llega de fuera: es el trabajo anterior de la propia organización, y entra donde le toque con `estado: borrador` y con la trazabilidad que se pueda reconstruir, salvo lo que su dueño en el origen pida publicar al migrar. Lo que en el origen ya era material de entrada entra por `fuentes/` como en cualquier proyecto. Lo detalla la skill `migrar`.
 
 Es norma, no candado. Nada impide abrir un archivo y editarlo a mano, y a veces hay que hacerlo; detectar lo que entró por otro camino es trabajo de la skill `revisar`. La propiedad no cambia: quien responde por un archivo sigue siendo su dueño, lo que cambia es la mano que escribe.
 
 La raíz es la carpeta que contiene `guia.md`, `metodo.md` y `base/`. Ninguna instrucción del método usa rutas absolutas, porque cada usuario tiene la carpeta sincronizada en un sitio distinto.
+
+**La carpeta se lee y se escribe por su copia en la computadora**, con las herramientas de la carpeta conectada, y nunca por un conector de Google Drive u otro servicio en la nube, ni para buscar ni para escribir, aunque esté conectado. Por el conector no se ven la estructura, las cabeceras ni las fechas de los archivos, y lo que se escribe por ahí puede acabar en otro formato o fuera de su sitio. Si la carpeta no aparece entre las conectadas, no se busca en Drive: se pide añadirla. El conector sirve para lo que no es la memoria, como un documento que alguien comparte, y si eso entra a la memoria lo hace por `fuentes/`.
 
 ### Quién es el dueño
 
@@ -78,7 +80,7 @@ Se restringe en tres sitios y en ninguno más:
 
 Lo que decide dónde va cada cosa es quién puede leerla, no de qué trata: da igual que sea una cuenta de cliente, recursos humanos, finanzas o legal.
 
-**Un proyecto no se parte.** Sigue siendo uno, con un dueño, un `proyecto.md`, un `decisiones.md` y un `sesiones.md`. Lo que no puede leer todo el equipo va a `restringido/`, **una carpeta plana** con su propio `enlaces.md`. No repite dentro las carpetas del proyecto: un espejo cuesta más de mantener de lo que ordena, y lo que vive ahí suele ser un puñado de archivos. Si hace falta saber si uno de ellos es un entregable o material de taller, lo dice su cabecera.
+**Un proyecto no se parte.** Sigue siendo uno, con un dueño, un `proyecto.md`, un `decisiones.md` y un `sesiones.md`. Lo que no puede leer todo el equipo va a `restringido/`, **una carpeta plana** con su propio `enlaces.md`. No repite dentro las carpetas del proyecto: un espejo cuesta más de mantener de lo que ordena, y lo que vive ahí suele ser un puñado de archivos. Si hace falta saber si uno de ellos es un entregable o material de taller, lo dice su fila en ese `enlaces.md`.
 
 En el `fuentes/enlaces.md` público queda la fila que dice que ese material existe y dónde está, nunca lo que dice. Sin ella nadie sabe que hay algo ni a quién pedirlo, que es lo mismo que busca el método al dejar visible el nombre de una carpeta restringida.
 
@@ -176,7 +178,7 @@ El bloque `Proyectos` es el índice de contexto del área: una línea por proyec
 | `entregables/` | Vivo | El producto del proyecto, en cualquier estado |
 | `taller/` | Vivo | Lo que el equipo escribe para llegar al producto y no es el producto |
 | `fuentes/` | Inmutable | Insumos crudos: exports, PDFs, transcripciones, material sin clasificar |
-| `fuentes/enlaces.md` | Inmutable | Tabla de enlaces externos y de lo que está en `restringido/`. Solo existe si hay filas |
+| `fuentes/enlaces.md` | Registro | Tabla de enlaces externos y de lo que está en `restringido/`: se le añaden filas, las que hay no se editan. Solo existe si hay filas |
 
 Los tres archivos de la raíz del proyecto y las tres carpetas existen siempre, aunque estén vacías. `sesiones.md` es obligatorio y lo escribe la skill de cierre de sesión, no el usuario.
 
@@ -271,6 +273,8 @@ Descartamos: …
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
 
+Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su dueño con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
+
 Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir nada más. El análisis que respalda la decisión (opciones, tablas, cifras) no va en la entrada: va a un entregable del proyecto y la entrada lo cita en `Afecta a` o en `Por qué`.
 
 `Afecta a` lleva rutas relativas al proyecto para lo que está dentro de él, y `area/proyecto` cuando la decisión toca a otro proyecto de la raíz. Cada destino admite detrás un paréntesis corto con la consecuencia concreta; sin él, quien recibe el aviso sabe que algo le toca pero no qué. Los destinos se separan con `·` y la línea no se parte en varias.
@@ -284,7 +288,7 @@ Avances: …
 Pendiente: …
 ```
 
-Entradas nuevas arriba.
+Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`: cuenta lo que hizo, pero no es una sesión, y el tablero no la cuenta como tal.
 
 ### Regla de histórico
 
@@ -296,7 +300,7 @@ La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de ot
 
 ## 5. Cabecera
 
-Todo `.md` empieza con estas tres claves y ninguna más, con dos excepciones: `guia.md` y `metodo.md`, que están hechos para leerse sin nada delante y empiezan directamente por el título, y el contenido de `fuentes/`, que es material y no se edita, así que añadirle una cabecera sería editarlo. El `enlaces.md` de `fuentes/` sí la lleva, porque ese lo escribimos nosotros.
+Todo `.md` empieza con una cabecera de estas claves y ninguna más, con dos excepciones: `guia.md` y `metodo.md`, que están hechos para leerse sin nada delante y empiezan directamente por el título, y el contenido de `fuentes/`, que es material y no se edita, así que añadirle una cabecera sería editarlo. El `enlaces.md` de `fuentes/` sí la lleva, porque ese lo escribimos nosotros.
 
 ```yaml
 ---
@@ -309,6 +313,15 @@ basado_en:
 ```
 
 Inmediatamente después va el título en `#`, para que quien abra el archivo sin renderizador vea de qué trata en la primera línea legible.
+
+| Archivo | `estado` | `actualizado` | `basado_en` |
+|---|---|---|---|
+| Entregables | sí | sí | sí, obligatoria |
+| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo |
+| `proyecto.md`, `base/` | sí | sí | no |
+| `area.md`, `decisiones.md`, `sesiones.md`, los `enlaces.md` | `vigente` siempre | sí | no |
+
+`area.md` y los registros llevan `vigente` desde que se crean y no lo cambian: son índice y registro, no algo que se publique. Lo que pasa de `borrador` a `vigente` es lo demás.
 
 **estado**, tres valores y nada más:
 
@@ -354,14 +367,14 @@ Lo aprendido dentro de un área restringida vuelve a la memoria común **reescri
 
 ## 8. Rotación
 
-Cuando un registro pasa de unas 1.500 líneas o cambia el año, se archiva con el año en el nombre (`sesiones-2026.md`) y se abre uno nuevo. Lo hace la skill de cierre de sesión, sin preguntar.
+Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o cambia el año, se archiva en la misma carpeta con el año en el nombre (`sesiones-2026.md`; si en un mismo año hace falta otro, `sesiones-2026-2.md`) y se abre uno nuevo con su cabecera. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace la skill de cierre de sesión, sin preguntar.
 
 ## 9. Lo que no existe en este sistema
 
 - Una carpeta `metodo/` dentro de la raíz. El método vive en el plugin y en `metodo.md`
 - Un archivo de reglas propias en `base/`. Lo propio de la organización vive en `guia.md`
 - Una carpeta de plantillas en la raíz. Las dos plantillas del método viven en el plugin
-- `AGENTS.md` ni ningún archivo de instrucciones para la IA dentro de la raíz. Las instrucciones son las skills y el texto que cada persona pega en su proyecto
+- `AGENTS.md` ni ningún archivo de instrucciones para la IA dentro de la raíz. Las instrucciones son las skills, el aviso de arranque del plugin y `guia.md`
 - Índices, inventarios o resúmenes mantenidos a mano o por otra herramienta. El único índice es el bloque `Proyectos` de cada `area.md`, es derivado y lo escriben las skills
 - El almacén de datos de una aplicación dentro de la raíz. Lo escribe la aplicación sola y nadie responde por lo que hay dentro
 - El tablero dentro de la raíz. La página que muestra la carpeta entera, su base de datos, sus scripts y su tarea viven fuera, en la cuenta de la persona que lo montó; es derivado de la raíz y nunca su fuente, y en la raíz no deja ni su enlace
@@ -386,11 +399,11 @@ Cuando un registro pasa de unas 1.500 líneas o cambia el año, se archiva con e
 
 Valen para todas las skills y no se repiten en ninguna. Cada skill añade las suyas, que son las de su trabajo concreto.
 
-1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el dueño del proyecto.
+1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el dueño del proyecto; y `migrar`, con lo que su dueño en el origen pide publicar al migrar. `area.md` y los registros nacen `vigente` (sección 5).
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
-3. No registrar una decisión que el usuario no confirmó en esta sesión.
-4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde.
-5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`.
+3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
+4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones son de la sesión del responsable de contexto, que escribe `guia.md` y `base/` y pone al día `metodo.md` (sección 11).
+5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, y `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión.
 6. No leer `sesiones.md`, `taller/`, `fuentes/` ni lo restringido de otra área. Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
@@ -399,7 +412,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 11. No crear un área ni un proyecto sin dueño con nombre y apellido.
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
-14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta.
+14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
 15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md`, ni un índice a mano, ni una carpeta de borradores.
 16. No dejar dentro de la raíz el almacén de datos de una aplicación, ni apuntar una aplicación a que escriba ahí.
 17. No borrar un entregable superado. Pasa a `reemplazado` con `reemplazado_por`, porque alguien puede tenerlo citado.
@@ -426,7 +439,7 @@ Nunca se lee todo, y casi nunca se lee `base/`. Al abrir, se carga lo justo para
 
 Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se pide por su nombre.
 
-**Nivel 1, del proyecto activo, una vez que se sabe cuál es.** `proyecto.md`; las cinco entradas más recientes de `decisiones.md`; las tres más recientes de `sesiones.md`; y las cabeceras de `entregables/`, nunca su cuerpo. Si la cuenta tiene tablero (un artifact llamado «Tablero <organización>» o «Tablero <organización> completo», con la organización del título de `guia.md`; se busca listando los artifacts de la cuenta), también la cola de ese proyecto en ese tablero: lo que se fechó, marcó hecho, anotó o corrigió desde él y la carpeta todavía no refleja. Es lo primero que se resuelve en la sesión, antes de proponer en qué trabajar.
+**Nivel 1, del proyecto activo, una vez que se sabe cuál es.** `proyecto.md`; las cinco entradas más recientes de `decisiones.md`; las tres más recientes de `sesiones.md`; y las cabeceras de `entregables/`, nunca su cuerpo. Para los avisos de apertura se miran además, sin abrirlos, la fecha `actualizado` de `base/contexto.md` y las cabeceras de lo que citan los entregables en `basado_en`. Si la cuenta tiene tablero (un artifact llamado «Tablero <organización>» o «Tablero <organización> completo», con la organización del título de `guia.md`; se busca listando los artifacts de la cuenta), también la cola de ese proyecto en ese tablero: lo que se fechó, marcó hecho, anotó o corrigió desde él y la carpeta todavía no refleja. Es lo primero que se resuelve en la sesión, antes de proponer en qué trabajar.
 
 **Nivel 2, a demanda, cada uno con su disparador.**
 
@@ -451,20 +464,21 @@ Si el camino lleva a una carpeta restringida sin acceso, la lectura falla. Eso n
 
 **Cowork.** El uso principal del método es Claude Cowork con la raíz conectada y el plugin instalado. El montaje tiene dos reglas.
 
-**Un proyecto por persona**, nombrado por su área. Es lo que hace que la línea del área en las instrucciones signifique algo y que el aviso de «esto le toca a otra área» tenga a quién señalar.
+**Un proyecto de Claude por persona**, nombrado por su área, para que cada quien trabaje con su cuenta y el aviso de «esto le toca a otra área» tenga a quién señalar.
 
 **Se conecta la raíz completa, nunca la carpeta de un área.** `guia.md`, `metodo.md` y `base/` viven en la raíz; la lectura cruza áreas; `consulta` busca en lo que produjo cualquier área y `sesion` avisa de las decisiones de otras que afectan al proyecto. Conectada solo un área, el método se rompe en la primera llamada. Conectar de más no abre ningún riesgo: quién puede leer y escribir dónde lo fijan los permisos de las carpetas, no el alcance de la conexión, y lo restringido sigue restringido dentro de una carpeta conectada.
 
-Un proyecto de Claude admite una sola carpeta, que se elige al crearlo y no se puede ampliar después. Es la raíz, y no hace falta ninguna más. Si se eligió mal, se crea otro proyecto.
+Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ninguna carpeta más. Si se vinculan varias raíces, vale lo de «Independencia entre raíces» (sección 1).
 
-**El tablero es opcional y personal.** Cualquiera lo monta desde su propia cuenta escribiendo «monta el tablero» con la raíz conectada; la skill `tablero` publica la página y crea la tarea que la regenera cada mañana desde la computadora de esa persona, con sus permisos: lo que su cuenta no lee en la carpeta sale como restringido, y lo que su tarea escribe lo escribe con sus permisos. Tiene dos modos: público, la superficie pública del contrato con lo restringido declarado fuera y de las sesiones solo fecha y título, que se puede compartir con cualquiera de la organización desde el menú del artifact; y completo, con todo lo que la cuenta lee y la bitácora entera, que es para su dueño y no se comparte. Se encuentra por su nombre entre los artifacts de la cuenta; en la raíz no queda nada de él. Lo que se toca en el tablero espera en su cola hasta que la tarea lo escribe en la carpeta, o hasta la siguiente sesión del proyecto si pide juicio; la página nunca escribe en la raíz. Cuando sale una versión nueva del plugin, «actualiza el tablero» republica la página sobre la misma URL.
+**El tablero es opcional y personal.** Cualquiera lo monta desde su propia cuenta escribiendo «monta el tablero» con la raíz conectada; la skill `tablero` publica la página y crea la tarea que la regenera cada mañana desde la computadora de esa persona, con sus permisos: lo que su cuenta no lee en la carpeta sale como restringido, y lo que su tarea escribe lo escribe con sus permisos. Tiene dos modos: público, la superficie pública del contrato con lo restringido declarado fuera y de las sesiones solo fecha y título, que se puede compartir con cualquiera de la organización desde el menú del artifact; y completo, con todo lo que la cuenta lee y las sesiones recientes enteras, que es para su dueño y no se comparte. Se encuentra por su nombre entre los artifacts de la cuenta; en la raíz no queda nada de él. Lo que se toca en el tablero espera en su cola hasta que la tarea lo escribe en la carpeta, o hasta la siguiente sesión del proyecto si pide juicio; la página nunca escribe en la raíz. Cuando sale una versión nueva del plugin, «actualiza el tablero» republica la página sobre la misma URL.
 
 **Nadie pega instrucciones en el proyecto.** El plugin trae un hook de arranque que, al empezar cada sesión, inyecta el bloque de abajo como contexto, y con él cómo saber dónde escribe cada quien: la cuenta que abre la sesión se busca en la columna Cuenta de la tabla de áreas de `guia.md`, y esas áreas son las suyas. Así el método se aplica en cuanto la carpeta está conectada, se actualiza solo con cada versión del plugin y no depende de que nadie copie bien un texto. El bloque sigue aquí para quien trabaje con otro modelo sin el plugin, o en una superficie donde el arranque del plugin no corra: en ese caso se pega tal cual y se añade debajo una línea propia diciendo dónde se escribe. El texto no nombra skills, porque Claude las elige solo:
 
 ```
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
 Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
-Escribe solo donde te haya dicho que trabajo, y en ningún otro sitio de la carpeta; si no te lo he dicho, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
+Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado; si no la ves, pídeme que la añada.
+Escribe solo en las áreas que `guia.md` asigna a tu cuenta, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
 Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
 Lo que hagas para un proyecto, un documento, un PDF o un análisis, guárdalo en su carpeta en cuanto exista, como borrador, y no en «Claude outputs»; cerrar sesión es registrar lo que pasó, no guardar.
@@ -473,7 +487,7 @@ Antes de guardar algo, pregúntate si alguien más lo va a leer y si contiene da
 
 El bloque es idéntico en cualquier organización: no nombra a ninguna, no lleva huecos que rellenar y nada de una raíz concreta entra en él. Lo propio de una raíz vive en `guia.md`, que la segunda línea manda leer. Dónde escribe cada quien sale de `guia.md` y de la cuenta de la sesión; si ninguna área coincide con la cuenta, la IA pregunta antes de escribir en vez de suponer.
 
-La skill `nuevo` escribe todo esto en `guia.md` como una receta de cuatro pasos: crear el proyecto con el nombre del área, instalar el plugin desde el marketplace, conectar la raíz y comprobar con «abre sesión en...», para que cada persona lo monte sola sin preguntarle a nadie.
+La skill `nuevo` escribe todo esto en `guia.md` como una receta corta: crear el proyecto con el nombre del área, instalar el plugin desde el marketplace, conectar la raíz, comprobar con «abre sesión en...» y, si se quiere, montar el tablero, para que cada persona lo monte sola sin preguntarle a nadie.
 
 **Otros modelos.** Gemini u otro modelo sin plugin leen `metodo.md`. Contiene este contrato, el estilo y el índice de skills, así que saben qué reglas seguir aunque no puedan ejecutarlas como skills.
 

@@ -2,7 +2,7 @@
 
 Marketplace con el plugin `memoria`: la memoria de la organización. Un método de trabajo y documentación por proyecto que la IA lee y sobre el que los equipos construyen.
 
-Nueve skills que escriben y mantienen una estructura de carpetas compartida en Drive, con sesiones, decisiones y entregables en Markdown, para que la carpeta sirva de memoria que la IA lee antes de ayudar a cualquiera.
+Diez skills que escriben y mantienen una estructura de carpetas compartida en Drive, con sesiones, decisiones y entregables en Markdown, para que la carpeta sirva de memoria que la IA lee antes de ayudar a cualquiera.
 
 Lo mantiene [TuOpinas](https://tuopinas.ai), que lo usa en su propia memoria de trabajo y en la de las organizaciones con las que trabaja.
 
@@ -37,13 +37,14 @@ En una organización de Claude Team o Enterprise, el propietario puede distribui
 | `donde-va` | Colocar material que llega en el sitio correcto |
 | `consulta` | Responder qué sabe ya la organización, sin escribir nada |
 | `migrar` | Adoptar una carpeta que venía de otra estructura, sin borrar los originales |
+| `tablero` | Montar y mantener una página personal que muestra la carpeta entera, puesta al día cada mañana |
 
 El plugin trae además las dos plantillas del método (brief y comparativo), dentro de la skill `nuevo`, el archivo `metodo.md` generado y tres scripts:
 
 | Script | Para qué |
 |---|---|
 | `build-metodo.sh` | Genera `metodo.md` a partir del contrato, el estilo y el índice de skills |
-| `release.sh <version>` | Publica una versión: sube el número en los tres sitios, comprueba el contrato y el README, regenera `metodo.md` y dice qué queda a mano |
+| `release.sh <version>` | Publica una versión: comprueba antes la versión, el contrato y el README, sube el número, regenera `metodo.md` y dice qué queda a mano; si algo falla, deja todo como estaba |
 | `verificar.sh <raiz>` | Comprueba una raíz entera contra el contrato sin escribir nada: estructura, nombres, cabeceras e índices |
 
 Fuera del plugin, y por tanto fuera de lo que se instala, `pruebas/tablero/probar.sh` prueba el tablero contra una organización inventada: que no se filtre lo restringido, que los plazos y los entregables se lean bien y, si hay Node con Playwright, que la página no dé errores en claro, oscuro y móvil. Se pasa antes de publicar cualquier cambio al tablero.
@@ -56,7 +57,7 @@ El corte entre los dos archivos de la raíz es qué es propio y qué es igual en
 
 La raíz se lee por niveles y nunca entera. Al abrir solo entran tres cosas: la primera línea de `metodo.md`, `guia.md` y el bloque `Proyectos` del área. Con eso ya se sabe qué existe, de quién es y dónde está; `base/` y todo lo demás entran a demanda, cada uno con su disparador.
 
-El número de versión vive en el plugin y en la primera línea de `metodo.md`. Al abrir sesión se comparan y se avisa si la raíz se quedó atrás; ponerla al día es regenerar `metodo.md` con `plugins/memoria/build-metodo.sh` y copiarlo a la raíz.
+El número de versión vive en el plugin y en la primera línea de `metodo.md`. Al abrir sesión se comparan, y si la raíz se quedó atrás la sesión de su responsable de contexto copia el `metodo.md` del plugin sin preguntar.
 
 ## Lo restringido
 
@@ -81,6 +82,8 @@ El método está vivo: cambia seguido y cada versión dice en la sección de aba
 MIT, ver `LICENSE`. Puedes usarlo, adaptarlo y redistribuirlo, también con fines comerciales, siempre que conserves el aviso de copyright de TuOpinas. Si lo adaptas para otra organización, se agradece que lo cites.
 
 ## Versiones
+
+**1.12.5** · **El texto del método, coherente.** Sin reglas nuevas salvo una: **la carpeta se lee y se escribe por su copia en la computadora, nunca por el conector de Google Drive**, ni para buscar ni para escribir, aunque esté conectado; si la carpeta no aparece se pide añadirla (contrato, sección 1; bloque de instrucciones, `sesion` y `consulta`). El resto pone de acuerdo lo que se contradecía: el bloque dice dónde escribe cada quien como lo dice el hook, por la cuenta en `guia.md`; las excepciones que las skills ya aplicaban quedan escritas en las prohibiciones (lo que `migrar` publica con el sí del dueño en el origen, lo que escribe la sesión del responsable de contexto, `Prioridades ahora` cuando lo pide el dueño del área); la cabecera dice qué claves lleva cada tipo de archivo y que `area.md` y los registros nacen `vigente`; el registro archivado por año es la única excepción a los nombres sin fecha, y rota también `decisiones.md`; las entradas de una tarea se marcan `(tarea)` y las decisiones recuperadas al migrar `(pendiente de confirmar)`; `revisar` trata como bloqueante una cifra sin fecha ni fuente y numera bien sus comprobaciones; `migrar` guarda en `taller/` el contexto largo del origen, que es de la propia organización, y llama manifiesto a su informe; `sesion` gana «cierra el proyecto», que el contrato describía y ninguna skill hacía. Se quitan los restos de versiones anteriores (el texto que se pegaba en el proyecto, un proyecto que solo admite una carpeta, la copia a mano de `metodo.md`). Cada raíz recibe `metodo.md` sola; las organizaciones que trabajen con otro modelo sin el plugin y tengan el bloque pegado tienen que volver a pegarlo.
 
 **1.12.4** · **Revisión de calidad: arreglos.** Nada cambia en cómo se trabaja; se cierran fallos que encontró una revisión del código entero. Tablero público: un proyecto restringido escrito en el índice con guion medio («–») se publicaba entero, y ahora tampoco se publica un proyecto que no esté en el índice de su área; el tablero deja de guardar la ruta de la carpeta, que en Drive lleva el correo; y lo que viene de la carpeta se escapa antes de entrar en la página. El generador ya no se cae con un archivo raro (otra codificación, sin descargar), no pierde un área cuya descripción dice «Área», lee cabeceras con comillas o con marca de orden de bytes, no cuenta como sesión la línea «(tarea)» de la bitácora y mide la ventana de plazos desde la última sesión, así que la tarea ya no esconde plazos vencidos al tocar «actualizado». `aplicar_cambios.py` no toca «actualizado», reconoce una fecha que ya aplicó y separa los errores de escritura, que se reintentan. La tarea vacía su salida en cada corrida, marca sus entradas con «(tarea)» y conserva una semana el aviso de página actualizada. El hook funciona con espacios en la ruta del plugin y sin python; `release.sh` comprueba todo antes de tocar nada (versión mayor, entrada exacta del README) y deshace si algo falla; `build-metodo.sh` tolera finales de línea de Windows; `verificar.sh` salta lo que no se deja leer, busca proyectos y entregables en el bloque `Proyectos` y no en todo el archivo, y marca archivos sueltos en la raíz, nombres con número de orden, versión o fecha, y registros dentro de `taller/`. La skill `sesion` ya no lleva el número de versión escrito a mano. Pruebas nuevas para cada arreglo, y para `aplicar_cambios.py`. Las raíces no tienen que hacer nada más que lo de siempre: `metodo.md` se copia solo.
 

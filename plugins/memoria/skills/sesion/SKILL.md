@@ -1,6 +1,6 @@
 ---
 name: sesion
-description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' u 'ordena Claude outputs'.
+description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos', 'cierra el proyecto' u 'ordena Claude outputs'.
 ---
 
 # Sesión
@@ -13,9 +13,9 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Cerrar**: "cierra la sesión", "guarda lo de hoy", "terminamos".
 
-**Ordenar «Claude outputs»**: "ordena Claude outputs", o la frase que copia el tablero. Va al final de esta skill.
+**Ordenar «Claude outputs»**: "ordena Claude outputs", o la frase que copia el tablero. **Cerrar el proyecto**: "cierra el proyecto", "esto ya está". Los dos van al final de esta skill.
 
-Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado.
+Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado, y nunca se sustituye por el conector de Google Drive (`convenciones`, sección 1).
 
 Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso (`convenciones`, sección 1).
 
@@ -27,7 +27,7 @@ Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al d�
 
 ## Qué leo antes de responder
 
-Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`.
+Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`, salvo la fecha `actualizado` de `base/contexto.md` para su aviso.
 
 **Nivel 0**, siempre:
 
@@ -105,7 +105,7 @@ Tres líneas. Si una sesión no cabe en tres líneas, es que hubo decisiones y e
 Decidió: Ana Pérez
 Por qué: el 70% del volumen son órdenes pequeñas y consumían el 80% del tiempo de aprobación, según el export de órdenes de 2025.
 Descartamos: tope acumulado mensual por proveedor, porque el ERP no expone el acumulado en tiempo real.
-Afecta a: entregables/flujo-aprobacion.md · finanzas/cierre-mensual
+Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a todas) · finanzas/cierre-mensual (menos órdenes que conciliar)
 ```
 
 Una decisión es un compromiso que cambia lo que se va a construir. Una preferencia expresada en voz alta no lo es. Ante la duda, se pregunta.
@@ -126,7 +126,7 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 
 **8. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
 
-**9. Rotación.** Si `sesiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`) y se abre uno nuevo. Sin preguntar.
+**9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`, o `sesiones-2026-2.md` si ya hay uno de ese año) y se abre uno nuevo con su cabecera. Sin preguntar.
 
 ## Qué respondo al terminar
 
@@ -145,6 +145,18 @@ Es la carpeta donde la app de Claude deja lo que produce, fuera de cualquier pro
 5. Lo que sobra (copias, pruebas, capturas sin uso) no se borra sin el sí de la persona.
 
 Se responde en dos o tres líneas: cuántos archivos fueron a qué proyectos, cuántos quedan y de quién son.
+
+---
+
+# Cerrar el proyecto
+
+Cuando el dueño dice que el proyecto terminó («cierra el proyecto», «esto ya está»). Antes se comprueba con él que se cumple lo que dice `Terminado significa`; si no, se dice qué falta y se espera.
+
+1. `Estado actual` de `proyecto.md` abre con «Proyecto terminado el AAAA-MM-DD» y una línea de cómo acabó; `Siguientes pasos` dice que no queda ninguno propio, y lo que siga vivo se nombra con el proyecto que lo recoge.
+2. La línea del proyecto en el bloque `Proyectos` de `area.md` se queda sola, sin desglosar sus entregables (`convenciones`, sección 3, «Un proyecto cerrado»).
+3. Una entrada en `sesiones.md` que lo cuenta, y en `decisiones.md` solo si cerrarlo fue una decisión que alguien tomó.
+
+Nada se borra ni se mueve: los entregables siguen con su estado y se siguen citando.
 
 ---
 
@@ -192,7 +204,7 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta al cerrar:**
 
-> Escribí la entrada en `decisiones.md`, la sesión de hoy en `sesiones.md`, actualicé los siguientes pasos en `proyecto.md` y la línea del proyecto en `compras/area.md`. Marqué `entregables/flujo-aprobacion.md` como afectado por la decisión.
+> Escribí la entrada en `decisiones.md`, la sesión de hoy en `sesiones.md`, actualicé los siguientes pasos en `proyecto.md` y la línea del proyecto en `compras/area.md`. La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a», así que conviene revisarlo antes de publicarlo.
 >
 > La decisión afecta a `finanzas/cierre-mensual`. Avísale a Luis Romero, que es el dueño de Finanzas; la carpeta no lo hace por ti.
 >

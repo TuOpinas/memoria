@@ -27,7 +27,7 @@ Antes de las seis, se resuelve si el proyecto al que pertenece el material está
 
 Si el área o el proyecto están restringidos y no tengo acceso, la lectura falla y no coloco nada: lo digo, digo quién es su dueño y ahí se para.
 
-## Las seis preguntas, en orden
+## Las preguntas, en orden
 
 Se para en la primera que dé un sí.
 
@@ -49,7 +49,7 @@ Si la fuente ya existe en otro proyecto de la misma área, no se copia: se cita 
 
 **5. ¿Es contexto de la organización y no de un proyecto?** Organigrama, sistemas, políticas, vocabulario. Va a `base/`, que desde otra área no se toca. Se prepara el texto y se le pasa al responsable de contexto, que lo escribe en su sesión. Si es un sistema, el texto va en el formato de la tabla de `sistemas.md`: sistema, para qué, quién da acceso, antes de usarlo.
 
-**6. Ninguna de las anteriores.** Va a `fuentes/` del proyecto más probable, con una línea diciendo qué es y que está sin clasificar. Se decide más adelante, cuando esté claro.
+**6. Ninguna de las anteriores.** Va a `fuentes/` del proyecto más probable, y una fila en su `fuentes/enlaces.md` dice qué es y que está sin clasificar. Se decide más adelante, cuando esté claro.
 
 No hay carpeta de borradores. Lo que no es material ni entregable ni decisión se guarda como fuente sin clasificar, o no se guarda.
 
@@ -87,7 +87,7 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta:**
 
-> Es material crudo de una reunión, así que va a `compras/automatizacion-ordenes/fuentes/tiempos-aprobacion-por-departamento.md`. Lo guardo tal cual, con una nota de quién lo pasó y en qué reunión.
+> Es material crudo de una reunión, así que va a `compras/automatizacion-ordenes/fuentes/tiempos-aprobacion-por-departamento.md`. Lo guardo tal cual, y en `fuentes/enlaces.md` dejo una fila con quién lo pasó y en qué reunión.
 >
 > Lo siguiente: estos tiempos contradicen el export del ERP en el rango de 5.000 a 20.000 MXN, que es justo el hueco abierto del mapa de proceso. Cuando quieras lo miramos.
 
