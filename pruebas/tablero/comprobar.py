@@ -26,6 +26,13 @@ ok(all(set(s) <= {"fecha", "titulo"} for p in pub["proyectos"].values() for s in
 ok("AVANCE-CUENTAS" in texto(com) and "AVANCE-CUENTAS" not in texto(pub), "completo trae la bitácora entera; público no")
 ok(pub["meta"]["estado"]["modo"] == "publico" and com["meta"]["estado"]["modo"] == "completo", "cada salida dice su modo")
 
+print("Lo que dejó Claude fuera de los proyectos")
+fp, fc = pub["meta"]["estado"].get("fuera", []), com["meta"]["estado"].get("fuera", [])
+ok(len(fp) == 1 and fp[0]["de_claude"] and fp[0]["archivos"] == 2, "se cuentan los archivos de «Claude outputs»")
+ok("nombres" not in fp[0] and "NOMBRE-SUELTO" not in texto(pub), "público: solo cuántos, sin nombres de archivo")
+ok(any("NOMBRE-SUELTO" in n["nombre"] for n in fc[0].get("nombres", [])), "completo: con sus nombres")
+ok("Claude outputs" not in pub["areas"], "«Claude outputs» no sale como área")
+
 print("Plazos")
 pasos = {s["texto"][:30]: s for s in com["proyectos"]["ventas--cuentas"]["pasos"]}
 def paso(inicio): return next(v for k, v in pasos.items() if k.startswith(inicio))

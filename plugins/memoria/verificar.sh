@@ -52,6 +52,11 @@ for nombre in sorted(os.listdir(raiz)):
     ruta = os.path.join(raiz, nombre)
     if not os.path.isdir(ruta) or nombre in ("base", ".git") or nombre.startswith("."):
         continue
+    if nombre.lower() == "claude outputs":
+        n = sum(1 for _, _, fs in os.walk(ruta) for f in fs if not f.startswith("."))
+        if n:
+            h("archivos de Claude sin proyecto", nombre, "%d archivo%s: cada uno va a su proyecto («ordena Claude outputs»)" % (n, "" if n == 1 else "s"))
+        continue
     areas.append((nombre, ruta))
     if not nombre_ok(nombre):
         h("nombre de carpeta", nombre)

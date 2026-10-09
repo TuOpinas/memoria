@@ -464,7 +464,7 @@ button.est-btn{all:unset;cursor:pointer}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.12.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.12.2"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -886,12 +886,15 @@ function mtDatos(){
   const prios = {};
   for(const c of CAMBIOS) if(c.tipo==="prioridad" && areaBy[c.area]) (prios[c.area] = prios[c.area] || []).push(c);
   const filasA = Object.entries(prios).map(([slug,cs])=>({id:"a:"+slug, a: areaBy[slug], it:[{k:"prio", cola: cs, txt:`${cs.length} prioridad${cs.length===1?"":"es"} marcada${cs.length===1?"":"s"} como cumplida${cs.length===1?"":"s"} o retirada${cs.length===1?"":"s"}, por registrar`}], frase:`abre sesión en el área ${slug} y actualiza las prioridades de ${slug}/area.md con lo que se marcó en el tablero`}));
-  return [...filasA, ...filas];
+  // carpetas de la raíz que no son de ningún área: sobre todo «Claude outputs», donde la app deja lo que produce
+  const filasR = ((META && META.fuera) || []).map(r=>({id:"r:"+r.carpeta, r, it:[{k:"fuera", r, txt: r.de_claude ? `${r.archivos} archivo${r.archivos===1?"":"s"} que dejó Claude fuera de los proyectos` : `${r.archivos} archivo${r.archivos===1?"":"s"} en una carpeta que no es de ningún área`}],
+    frase: r.de_claude ? "ordena Claude outputs: propón a qué proyecto va cada archivo y muévelo cuando te lo confirme" : `revisa la carpeta «${r.carpeta}» de la raíz, que no es de ningún área, y propón a qué proyecto va lo que tiene`}));
+  return [...filasR, ...filasA, ...filas];
 }
 function memoriaAlDia(){
   const pos = pospuestos(), todas = mtDatos(), activas = todas.filter(f=>!pos[f.id]), nPos = todas.length - activas.length;
   const vis = MT_ALL ? activas : activas.slice(0,6);
-  const fila = f => `<div class="mt-i"><span class="t"><b>${f.p ? `<button type="button" class="lnk" data-go-proj="${f.p.id}">${esc(f.p.nombre)}</button> <em>· ${esc(areaBy[f.p.area]?.nombre||"")}</em>` : `<button type="button" class="lnk" data-go-area="${f.a.slug}">${esc(f.a.nombre)}</button> <em>· área</em>`}</b><span>${f.it.map(x=>esc(x.txt)).join(" · ")}</span></span><button type="button" class="prio-go" data-mt-open="${esc(f.id)}">Revisar<span aria-hidden="true"> ›</span></button></div>`;
+  const fila = f => `<div class="mt-i"><span class="t"><b>${f.r ? `${f.r.de_claude ? "Archivos de Claude sin proyecto" : esc(f.r.carpeta)} <em>· ${f.r.de_claude ? "carpeta «Claude outputs»" : "raíz"}</em>` : f.p ? `<button type="button" class="lnk" data-go-proj="${f.p.id}">${esc(f.p.nombre)}</button> <em>· ${esc(areaBy[f.p.area]?.nombre||"")}</em>` : `<button type="button" class="lnk" data-go-area="${f.a.slug}">${esc(f.a.nombre)}</button> <em>· área</em>`}</b><span>${f.it.map(x=>esc(x.txt)).join(" · ")}</span></span><button type="button" class="prio-go" data-mt-open="${esc(f.id)}">Revisar<span aria-hidden="true"> ›</span></button></div>`;
   const n = activas.length;
   return `<section class="due"><div class="top"><h2>La memoria al día</h2><span class="c">${n ? `${n} por poner al día` : "todo al día"}</span><span class="c" style="margin-left:auto">Lo que la memoria tiene flojo; revisa el detalle y decide si abres sesión</span></div>
     ${n ? `<div class="mt">${vis.map(fila).join("")}</div>${activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":(((activas.length-6)===1)?"Ver el restante":`Ver los ${activas.length-6} restantes`)}</button>`:""}` : `<p class="empty">${nPos ? "Nada más por ahora." : "Nada flojo: pasos clasificados, objetivos confirmados, decisiones confirmadas y nada por registrar."}</p>`}
@@ -900,7 +903,7 @@ function memoriaAlDia(){
 function mtModal(){
   if(!MT_OPEN) return "";
   const f = mtDatos().find(x=>x.id===MT_OPEN); if(!f){ MT_OPEN = null; return ""; }
-  const p = f.p, nom = p ? p.nombre : f.a.nombre, sub = p ? `${areaBy[p.area]?.nombre||""} · proyecto` : "área";
+  const p = f.p, nom = f.r ? (f.r.de_claude ? "Archivos de Claude sin proyecto" : f.r.carpeta) : p ? p.nombre : f.a.nombre, sub = f.r ? "raíz" : p ? `${areaBy[p.area]?.nombre||""} · proyecto` : "área";
   const colaFila = c => `<div class="due-item static"><span class="pill ${c.tipo==="nota"?"":"soon"}">${esc(c.tipo)}</span><span class="t">${c.tipo==="nota" ? esc(c.nota) : c.tipo==="prioridad" ? `${c.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"}: ${inline(c.texto||"")}` : c.tipo==="corregir" && c.campo==="estado" ? `Estado del proyecto: ${esc((EST[c.propuesta]||{label:c.propuesta}).label)}` : c.tipo==="corregir" ? `${esc((CORR_OPC.find(o=>o[0]===c.propuesta)||[,c.propuesta])[1])}: ${inline(c.paso||"")}` : `Hecho sin nota: ${inline(c.paso||"")}`}</span><span class="w">${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${c.id}">Deshacer</button>`:""}</span></div>`;
   const ir = (tab, txt) => p ? `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${p.id}" data-tab="${tab}">${txt}</button>` : "";
   const sec = x => {
@@ -916,6 +919,9 @@ function mtModal(){
     if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Se construyen sobre otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
     if(x.k==="bor") return `<h3>Borradores de más de 30 días <span class="c">${x.bor.length}</span></h3><ul class="ent-l">${x.bor.map(e=>`<li>${entBtn(p,e)} <span class="more">· sin tocar desde hace ${diasDesde(e.actualizado)} días</span></li>`).join("")}</ul>`;
     if(x.k==="afe") return `<h3>Decisiones de otros proyectos que le afectan <span class="c">${x.afe.length}</span></h3><p class="more" style="margin:0">Las registraron después de la última sesión de este proyecto y lo citan en «Afecta a».</p><div class="dl">${x.afe.map(({q,d})=>decItem(d,q,true)).join("")}</div>`;
+    if(x.k==="fuera"){ const r = x.r, rango = r.primero && r.primero!==r.ultimo ? `del ${fmtD(r.primero)} al ${fmtD(r.ultimo)}` : `del ${fmtD(r.ultimo)}`;
+      const intro = r.de_claude ? `La app de Claude guarda en la carpeta «Claude outputs» lo que produce cuando no se le dice dónde. Ahí no es de ningún proyecto: nadie lo encuentra, no aparece en este tablero y se pierde de vista. Hay ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}. La frase de abajo abre una sesión que propone a qué proyecto va cada uno y los mueve cuando lo confirmas; lo de áreas que no son tuyas se queda para su dueño.` : `La carpeta «${esc(r.carpeta)}» está en la raíz pero no es de ningún área de la guía. Tiene ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}.`;
+      return `<h3>${r.de_claude ? "Lo que dejó Claude fuera de los proyectos" : "Carpeta fuera de las áreas"} <span class="c">${r.archivos}</span></h3><p class="more" style="margin:0">${intro}</p>${(r.nombres||[]).length ? `<ul class="ent-l">${r.nombres.slice(0,12).map(n=>`<li><code>${esc(n.nombre)}</code> <span class="more">· ${fmtD(n.fecha)}</span></li>`).join("")}</ul>${r.archivos>12?`<p class="more" style="margin:0">Y ${r.archivos-12} más.</p>`:""}` : ""}`; }
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
     return "";
   };

@@ -463,11 +463,39 @@ for pid, pdoc in docs["proyectos"].items():
         s_["puntos"] = pts
 docs["meta"]["enfoque-candidatos"] = {"generado": HOY, "grupos": candidatos[:25]}
 
+# ---------- carpetas de la raíz que no son de ningún área ----------
+# «Claude outputs» es donde la app de Claude deja lo que produce; cualquier otra carpeta suelta en la
+# raíz también queda fuera de la memoria. Solo se cuentan archivos y fechas; los nombres, solo en completo.
+fuera = []
+slugs_area = {a["slug"] for a in areas_guia}
+try:
+    sueltas = [n for n in sorted(os.listdir(RAIZ)) if (RAIZ / n).is_dir() and not n.startswith(".") and n not in slugs_area and n != "base"]
+except OSError:
+    sueltas = []
+for n in sueltas:
+    arch = []
+    for raiz_, dirs, files in os.walk(RAIZ / n):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        for f in files:
+            if f.startswith("."): continue
+            try:
+                fecha = datetime.datetime.fromtimestamp(os.stat(os.path.join(raiz_, f)).st_mtime, TZ).date().isoformat()
+            except OSError:
+                continue
+            arch.append((fecha, os.path.relpath(os.path.join(raiz_, f), RAIZ / n)))
+    if not arch: continue
+    arch.sort(reverse=True)
+    item = {"carpeta": n, "de_claude": n.lower() == "claude outputs", "archivos": len(arch), "ultimo": arch[0][0], "primero": arch[-1][0]}
+    if not PUBLICO:
+        item["nombres"] = [{"fecha": f_, "nombre": n_} for f_, n_ in arch[:40]]
+    fuera.append(item)
+
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
     "version_tablero": VERSION_PLUGIN, "modo": MODO, "raiz": RUTA_PERSONA or str(RAIZ.resolve()),
+    "fuera": fuera,
 }
 
 # ---------- escribir ----------

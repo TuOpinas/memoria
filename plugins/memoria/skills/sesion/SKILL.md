@@ -1,6 +1,6 @@
 ---
 name: sesion
-description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy' o 'terminamos'.
+description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' u 'ordena Claude outputs'.
 ---
 
 # Sesión
@@ -12,6 +12,8 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 **Abrir**: "abre sesión en compras", "retomamos automatización de órdenes", "¿en qué quedamos con X?", o cualquier arranque de trabajo sobre un proyecto existente.
 
 **Cerrar**: "cierra la sesión", "guarda lo de hoy", "terminamos".
+
+**Ordenar «Claude outputs»**: "ordena Claude outputs", o la frase que copia el tablero. Va al final de esta skill.
 
 Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso (`convenciones`, sección 1).
 
@@ -81,7 +83,7 @@ Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabaj
 
 **0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea, una prioridad ya quitada de «Prioridades ahora» de `area.md` porque el dueño del área lo pidió en esta sesión. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
 
-**1. Lo que se hizo y aún no está en la carpeta.** Lo producido se guarda al crearlo, así que esto no debería pasar; si algo de la sesión (un documento, un PDF, un análisis) solo existe en la conversación, se guarda ahora en `entregables/` o en `taller/` como borrador, antes de registrar nada.
+**1. Lo que se hizo y aún no está en la carpeta.** Lo producido se guarda al crearlo, así que esto no debería pasar; si algo de la sesión (un documento, un PDF, un análisis) solo existe en la conversación, se guarda ahora en `entregables/` o en `taller/` como borrador, antes de registrar nada. Lo mismo con lo que la app haya dejado en «Claude outputs» durante esta sesión: se mueve a este proyecto y deja de estar ahí.
 
 **2. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
 
@@ -127,6 +129,20 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 ## Qué respondo al terminar
 
 Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Nada más. El resumen largo ya está en los archivos.
+
+---
+
+# Ordenar «Claude outputs»
+
+Es la carpeta donde la app de Claude deja lo que produce, fuera de cualquier proyecto (`convenciones`, sección 1). Ordenarla es llevar cada archivo a su proyecto.
+
+1. Se listan los archivos de «Claude outputs» con su fecha, sin abrirlos. Por el nombre, la fecha y las sesiones de esos días en los `sesiones.md` de la raíz, se propone a qué proyecto va cada uno y si va a `entregables/` (se puede dar a alguien de fuera) o a `taller/`. Lo que no tiene proyecto claro se pregunta; lo que ya existe dentro de un proyecto con el mismo contenido es una copia y se propone quitarlo.
+2. La persona confirma la lista. Solo se mueve a las áreas que son suyas; lo que le toca a otra área se dice, con el nombre de su dueño, y se queda donde está.
+3. Antes de mover, se pregunta lo de siempre: si algo trae datos personales, contratos, facturación o algo que no todos deban ver, va a `restringido/` del proyecto, con el sí de la persona.
+4. Cada archivo se mueve con un nombre en minúsculas y guiones y entra como `borrador`. En cada proyecto que recibió algo se deja una entrada en `sesiones.md`, «Ordenado desde Claude outputs», con lo que llegó.
+5. Lo que sobra (copias, pruebas, capturas sin uso) no se borra sin el sí de la persona.
+
+Se responde en dos o tres líneas: cuántos archivos fueron a qué proyectos, cuántos quedan y de quién son.
 
 ---
 
