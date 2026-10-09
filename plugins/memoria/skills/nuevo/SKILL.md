@@ -95,6 +95,8 @@ Uno por persona, no uno para todos.
     /plugin marketplace add TuOpinas/memoria
     /plugin install memoria@memoria-marketplace
 
+Después, en `/plugin`, pestaña Marketplaces, elige `memoria-marketplace` y activa la
+actualización automática: así cada versión nueva del método te llega sola al abrir sesión.
 Si la organización ya lo distribuye a todos, te saltas este paso.
 
 **3. Conecta esta carpeta completa**, la que tiene dentro `guia.md` y `metodo.md`. No la

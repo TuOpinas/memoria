@@ -61,7 +61,7 @@ Con eso el dueño lo ve y lanza la sincronización; si lo comparte, un lector le
 
 **2. Crear la tarea diaria.** Con `create_trigger`: nombre «Regenerar tablero <organización>» (con « completo» si lo es), de lunes a viernes a una hora de la mañana que no sea en punto (9:35 si no dicen otra), ligada a la computadora (`requires_local_device`) y con la carpeta de la raíz declarada en `folders`. El prompt es `tarea.md` de esta skill con sus cuatro huecos sustituidos: `{{ORGANIZACION}}`, `{{RUTA_RAIZ}}` (la ruta absoluta de la raíz en la computadora), `{{URL}}` (la del artifact del paso 1) y `{{MODO}}` (`publico` o `completo`). Se guarda el id que devuelve.
 
-**3. Generar y cargar.** Se copian `generar_vista.py` y `aplicar_cambios.py` a `$HOME/tablero/` de la VM de la computadora con `device_bash` y un heredoc con delimitador entre comillas (la computadora no ve el contenedor), y se corre `python3 generar_vista.py "<raíz>" salida --modo <modo> --tarea <id> --version <versión del plugin, de plugin.json>`. La salida va a `$HOME/tablero/salida/`, fuera de la raíz. Cada JSON de `salida/areas`, `salida/proyectos` y `salida/meta` se escribe en la base del artifact con `ArtifactData` en lotes de hasta 50: colección y doc_id iguales a carpeta y archivo.
+**3. Generar y cargar.** Se copian `generar_vista.py` y `aplicar_cambios.py` a `$HOME/tablero/` de la VM de la computadora con `device_bash` y un heredoc con delimitador entre comillas (la computadora no ve el contenedor), y se corre `python3 generar_vista.py "<raíz en $HOME/mnt>" salida --modo <modo> --ruta "<ruta de la raíz en la computadora>" --tarea <id> --version <versión del plugin, de plugin.json>`. La salida va a `$HOME/tablero/salida/`, fuera de la raíz. Cada JSON de `salida/areas`, `salida/proyectos` y `salida/meta` se escribe en la base del artifact con `ArtifactData` en lotes de hasta 50: colección y doc_id iguales a carpeta y archivo.
 
 **4. El primer «Por dónde empezar».** Es el paso 6 de `tarea.md` y se hace aquí mismo, porque una tarea nueva no ha corrido todavía y la página saldría sin esa sección: se leen los grupos candidatos de `salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe `enfoque/actual`.
 
@@ -78,7 +78,9 @@ Cuatro líneas, sin recapitular los pasos:
 
 ## Actualizar
 
-Cuando sale una versión nueva del plugin, la página del tablero y el generador cambian juntos. «Actualiza el tablero»:
+Cuando sale una versión nueva del plugin, la página del tablero y el generador cambian juntos, y **la cadena es automática**: la tarea diaria corre con el plugin nuevo, ve que la página es de otra versión, la republica sobre la misma URL y deja en Inicio el aviso «El tablero se actualizó a la versión X» durante una semana. Quien tenga el marketplace con actualización automática no hace nada; quien actualice el plugin a mano, lo hace y el resto viene en cadena. Lo único que la tarea no puede hacer sola es reescribir su propio prompt: si `tarea.md` cambió, lo marca en Inicio y pide «actualiza el tablero».
+
+«Actualiza el tablero», a mano o cuando la tarea lo pide:
 
 1. Se busca el artifact por su nombre con `Artifact` `list`.
 2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con la misma declaración de capacidades del paso 1 de montar. La base no se toca: la cola, el enfoque y las correcciones sobreviven.

@@ -5,7 +5,7 @@ Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
 proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
 Nunca abre fuentes/, taller/, restringido/ ni base/.
 
-Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
+Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--ruta <ruta de la raíz en la computadora de la persona>] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
@@ -29,6 +29,7 @@ def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
 TAREA = _arg("--tarea")
 VERSION_PLUGIN = _arg("--version")
+RUTA_PERSONA = _arg("--ruta")  # la ruta de la raíz tal como la ve la persona en su computadora; el tablero la usa para «copiar ruta»
 MODO = (_arg("--modo") or "publico").lower()
 if MODO not in ("publico", "completo"):
     sys.exit("--modo admite publico o completo")
@@ -411,7 +412,7 @@ docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
-    "version_tablero": VERSION_PLUGIN, "modo": MODO,
+    "version_tablero": VERSION_PLUGIN, "modo": MODO, "raiz": RUTA_PERSONA or str(RAIZ.resolve()),
 }
 
 # ---------- escribir ----------
