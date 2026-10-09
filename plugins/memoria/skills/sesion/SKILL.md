@@ -1,6 +1,6 @@
 ---
 name: sesion
-description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos', 'cierra el proyecto' u 'ordena Claude outputs'.
+description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto'.
 ---
 
 # Sesión
@@ -13,11 +13,11 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Cerrar**: "cierra la sesión", "guarda lo de hoy", "terminamos".
 
-**Ordenar «Claude outputs»**: "ordena Claude outputs", o la frase que copia el tablero. **Cerrar el proyecto**: "cierra el proyecto", "esto ya está". Los dos van al final de esta skill.
+**Cerrar el proyecto**: "cierra el proyecto", "esto ya está". Va al final de esta skill.
 
 Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado, y nunca se sustituye por el conector de Google Drive (`convenciones`, sección 1).
 
-Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso (`convenciones`, sección 1).
+Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso, que se hace como dice `raices.md`, junto al contrato.
 
 ---
 
@@ -131,20 +131,6 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 ## Qué respondo al terminar
 
 Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Nada más. El resumen largo ya está en los archivos.
-
----
-
-# Ordenar «Claude outputs»
-
-Es la carpeta donde la app de Claude deja lo que produce, fuera de cualquier proyecto (`convenciones`, sección 1). Ordenarla es llevar cada archivo a su proyecto.
-
-1. Se listan los archivos de «Claude outputs» con su fecha, sin abrirlos. Por el nombre, la fecha y las sesiones de esos días en los `sesiones.md` de la raíz, se propone a qué proyecto va cada uno y si va a `entregables/` (se puede dar a alguien de fuera) o a `taller/`. Lo que no tiene proyecto claro se pregunta; lo que ya existe dentro de un proyecto con el mismo contenido es una copia y se propone quitarlo.
-2. La persona confirma la lista. Solo se mueve a las áreas que son suyas; lo que le toca a otra área se dice, con el nombre de su dueño, y se queda donde está.
-3. Antes de mover, se pregunta lo de siempre: si algo trae datos personales, contratos, facturación o algo que no todos deban ver, va a `restringido/` del proyecto, con el sí de la persona.
-4. Cada archivo se mueve con un nombre en minúsculas y guiones y entra como `borrador`. En cada proyecto que recibió algo se deja una entrada en `sesiones.md`, «Ordenado desde Claude outputs», con lo que llegó.
-5. Lo que sobra (copias, pruebas, capturas sin uso) no se borra sin el sí de la persona.
-
-Se responde en dos o tres líneas: cuántos archivos fueron a qué proyectos, cuántos quedan y de quién son.
 
 ---
 

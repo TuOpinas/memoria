@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Hook de arranque del plugin memoria. Inyecta como contexto el bloque de instrucciones
-# del contrato (convenciones, sección 13) más cómo deducir el área y el tablero de quien
-# abre la sesión. El texto del bloque vive en el contrato y aquí solo se lee: una sola fuente.
+# del contrato (su anexo montaje.md) más cómo deducir el área y el tablero de quien
+# abre la sesión. El texto del bloque vive en el anexo y aquí solo se lee: una sola fuente.
 set -u
 RAIZ="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-CONTRATO="$RAIZ/skills/convenciones/SKILL.md"
+CONTRATO="$RAIZ/skills/convenciones/montaje.md"
 VERSION="$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' "$RAIZ/.claude-plugin/plugin.json" 2>/dev/null | head -n 1)"
 BLOQUE="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar algo/p' "$CONTRATO" 2>/dev/null)"
 # Si el contrato perdió la línea final del bloque, sed llegaría hasta el final del archivo: mejor no inyectar nada

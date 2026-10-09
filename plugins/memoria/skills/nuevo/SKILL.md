@@ -5,7 +5,7 @@ description: Da de alta lo que falte en la memoria de la organizacion: monta la 
 
 # Nuevo
 
-Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
+Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones`, y al montar una raíz también su anexo `montaje.md`, que dice cómo se conecta cada persona: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 

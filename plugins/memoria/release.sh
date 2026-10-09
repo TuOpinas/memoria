@@ -16,7 +16,9 @@ MARKETPLACE="$REPO_DIR/.claude-plugin/marketplace.json"
 CONTRATO="$PLUGIN_DIR/skills/convenciones/SKILL.md"
 VISTA="$PLUGIN_DIR/skills/tablero/vista.html"
 README="$REPO_DIR/README.md"
-REL_CONTRATO="plugins/memoria/skills/convenciones/SKILL.md"
+REL_CONTRATO="plugins/memoria/skills/convenciones"
+MONTAJE="$PLUGIN_DIR/skills/convenciones/montaje.md"
+REL_MONTAJE="plugins/memoria/skills/convenciones/montaje.md"
 
 for f in "$PLUGIN_JSON" "$MARKETPLACE" "$CONTRATO" "$VISTA" "$README"; do
   [ -f "$f" ] || { echo "No encuentro $f" >&2; exit 1; }
@@ -47,7 +49,9 @@ if [ -n "$PREV" ]; then
   [ -n "$DIF" ] && TABLERO_CAMBIO=1
   git -C "$REPO_DIR" diff --quiet "$PREV" -- "$REL_CONTRATO" || CONTRATO_CAMBIO=1
   bloque() { sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar algo/p'; }
-  if [ "$(bloque < "$CONTRATO")" != "$(git -C "$REPO_DIR" show "$PREV:$REL_CONTRATO" 2>/dev/null | bloque)" ]; then BLOQUE_CAMBIO=1; fi
+  # el bloque vivía en el contrato hasta la 1.12.5 y desde la 1.13 en su anexo montaje.md
+  ANTES="$(git -C "$REPO_DIR" show "$PREV:$REL_MONTAJE" 2>/dev/null || git -C "$REPO_DIR" show "$PREV:$REL_CONTRATO/SKILL.md" 2>/dev/null || true)"
+  if [ "$(bloque < "$MONTAJE")" != "$(printf '%s\n' "$ANTES" | bloque)" ]; then BLOQUE_CAMBIO=1; fi
 fi
 
 # --- cambios, con vuelta atrás si algo falla ---

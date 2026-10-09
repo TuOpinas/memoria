@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.12.5 · huella 39607fe · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.13.0 · huella 2763027 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -6,9 +6,9 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 # Convenciones
 
-Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada y no repiten sus reglas. Si una skill contradice algo de aquí, manda este documento.
+Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada. Si una skill contradice algo de aquí, manda este documento. Dos anexos, junto a este archivo, se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración) y `montaje.md` (montaje, publicación, bloque de instrucciones, programadores).
 
-Versión del método: **1.12**
+Versión del método: **1.13**
 
 ## 1. Las tres capas de propiedad
 
@@ -32,7 +32,7 @@ Los formatos que la IA no puede teclear, una presentación o una hoja de cálcul
 
 **Lo que se produce para un proyecto se guarda en su carpeta en cuanto existe**, no al cerrar la sesión: un documento, un PDF, una propuesta o un análisis van a `entregables/`, o a `taller/` si no salen del proyecto, con `estado: borrador`, aunque falte pulirlos, y aunque los haya hecho otra herramienta y no la skill `entregable`. Lo que solo vive en la conversación se pierde con ella y nadie más lo ve. Cerrar la sesión es registrar lo que pasó, no guardar lo que se hizo. Por la misma razón, una tarea programada que escribe en la carpeta algo más que fechas de pasos deja su línea en el `sesiones.md` del proyecto, con «(tarea)» en el título: si no, su trabajo parece una sesión que nadie cerró.
 
-**«Claude outputs» no es parte de la memoria.** Es la carpeta donde la app de Claude guarda por su cuenta lo que produce cuando trabaja sobre una carpeta conectada. Lo que hay ahí no tiene proyecto, nadie lo encuentra y el tablero no lo ve como trabajo de nadie. Lo que se haga para un proyecto se guarda directamente en ese proyecto; si la app lo dejó en «Claude outputs», se mueve a su proyecto en cuanto existe. La sesión que lo produjo lo recoge al cerrar, y lo que se haya acumulado se ordena con la frase «ordena Claude outputs» (skill `sesion`). `verificar.sh` y el tablero cuentan los archivos que siguen ahí.
+**«Claude outputs» no es parte de la memoria.** Es la carpeta donde la app de Claude guarda por su cuenta lo que produce cuando trabaja sobre una carpeta conectada. Lo que hay ahí no tiene proyecto, nadie lo encuentra y el tablero no lo ve como trabajo de nadie. Lo que se haga para un proyecto se guarda directamente en ese proyecto; si la app lo dejó en «Claude outputs», se mueve a su proyecto en cuanto existe. La sesión que lo produjo lo recoge al cerrar, y lo que se haya acumulado se ordena con la frase «ordena Claude outputs» (skill `donde-va`). `verificar.sh` y el tablero cuentan los archivos que siguen ahí.
 
 Ninguna carpeta de trabajo aloja el almacén de datos de una aplicación. Lo escribe la aplicación sola, crece por su cuenta y nadie responde por lo que hay dentro.
 
@@ -52,13 +52,7 @@ La cuenta de cada dueño queda escrita junto a su nombre en `guia.md`. Eso es lo
 
 ### Independencia entre raíces
 
-Una sesión puede tener conectada más de una raíz a la vez, o una raíz y el repo del plugin. Se trabaja en una a la vez: si hay más de una carpeta con `guia.md` y `metodo.md`, antes de leer o escribir nada se pregunta en cuál, cada escritura dice en qué raíz se hace y cambiar de raíz se anuncia. Cada raíz sigue siendo de una sola organización: nada que se escriba en una raíz usa hechos, cifras, nombres o decisiones de otra raíz, ni del repo del plugin, salvo por un traspaso; y nada que se escriba en el repo del plugin usa hechos de una organización en particular, porque el plugin es idéntico para todas. Comparar la forma de dos raíces (¿tienen las mismas piezas?, ¿la misma cabecera?) no es tocar su contenido, y ese trabajo no se guarda dentro de ninguna de las dos. Lo que una organización guarda sobre otra, por ejemplo quien mantiene el método guardando el historial de una migración que hizo para un cliente, se limita a lo operativo de quien lo guarda: qué se entregó y cuándo, nunca el contenido del trabajo del cliente.
-
-**Traspaso entre raíces.** A veces algo de una raíz tiene que llegar a otra: lo que se decidió sobre un cliente en la raíz de su proveedor y el cliente necesita en la suya, o al revés. Solo ocurre si lo pide la persona que trabaja, pieza a pieza, hacia una raíz donde puede escribir. Antes de escribir se le enseña el texto exacto que pasaría, a qué archivo de la otra raíz iría y qué se queda fuera y por qué (datos personales, contratos, credenciales, cifras internas, lo de otros clientes); se escribe solo cuando lo confirma. En el destino entra reescrito para su contexto y por la puerta que le toque: una decisión se registra como decisión de quien la asume ahí, y un documento entra por `fuentes/` o como entregable de quien lo hace suyo. La sesión del proyecto de destino anota qué vino, de qué raíz, quién lo pidió y cuándo. El origen no se toca. Credenciales, y datos de una organización hacia la raíz de otra que no tiene que ver con ellos, no pasan nunca, aunque se pida: se dice por qué. Lo demás lo decide quien pide el traspaso, que tiene la última palabra.
-
-Eso fija dónde vive cada cosa cuando una organización adopta el método. **El registro de la migración es de quien migra**: las auditorías, los planes y los manifiestos van a su raíz, en un proyecto por organización nombrado por la organización y no por el trabajo. Cuentan lo que hizo el proveedor y hablan del sistema del que se migró, que la organización que estrena el método no usó nunca y no le dice nada.
-
-En la raíz de la organización entra solo lo que su equipo necesita para operar, y entra donde se usa, no en un proyecto aparte: las decisiones recuperadas de su material anterior, cada una en el `decisiones.md` del proyecto al que pertenecen y marcadas como pendientes de confirmar; y el material confidencial que quedó fuera de alcance, con su fila en el `fuentes/enlaces.md` que corresponda. Nada más: su raíz no guarda rastro del sistema del que se migró, ni en las rutas, ni en el vocabulario, ni en los nombres de sus archivos.
+Se trabaja en una raíz a la vez: con más de una conectada, antes de leer o escribir se pregunta en cuál, cada escritura dice en qué raíz se hace y cambiar de raíz se anuncia. Nada que se escriba en una raíz usa hechos de otra, ni del repo del plugin, salvo por un traspaso que la persona pide y confirma pieza a pieza; y el repo del plugin no guarda hechos de ninguna organización. Cómo es un traspaso y dónde vive el registro de una migración lo dice `raices.md`, junto a este archivo, que se lee con más de una raíz conectada, cuando se pide un traspaso y al migrar.
 
 ### Permisos en Drive
 
@@ -81,7 +75,7 @@ Se restringe en tres sitios y en ninguno más:
 
 Lo que decide dónde va cada cosa es quién puede leerla, no de qué trata: da igual que sea una cuenta de cliente, recursos humanos, finanzas o legal.
 
-**Un proyecto no se parte.** Sigue siendo uno, con un dueño, un `proyecto.md`, un `decisiones.md` y un `sesiones.md`. Lo que no puede leer todo el equipo va a `restringido/`, **una carpeta plana** con su propio `enlaces.md`. No repite dentro las carpetas del proyecto: un espejo cuesta más de mantener de lo que ordena, y lo que vive ahí suele ser un puñado de archivos. Si hace falta saber si uno de ellos es un entregable o material de taller, lo dice su fila en ese `enlaces.md`.
+**Un proyecto no se parte.** Sigue siendo uno, con un dueño, un `proyecto.md`, un `decisiones.md` y un `sesiones.md`. Lo que no puede leer todo el equipo va a `restringido/`, **una carpeta plana** con su propio `enlaces.md`. No repite dentro las carpetas del proyecto. Si hace falta saber si uno de ellos es un entregable o material de taller, lo dice su fila en ese `enlaces.md`.
 
 En el `fuentes/enlaces.md` público queda la fila que dice que ese material existe y dónde está, nunca lo que dice. Sin ella nadie sabe que hay algo ni a quién pedirlo, que es lo mismo que busca el método al dejar visible el nombre de una carpeta restringida.
 
@@ -191,7 +185,7 @@ Un proyecto produce dos cosas y solo una sale. La prueba para saber cuál es cad
 
 La secuencia las ordena sin que haya que pensarlo: **`fuentes/` es lo que entra, `taller/` es donde se trabaja, `entregables/` es lo que sale.**
 
-Sin esa separación, un proyecto con un diagnóstico largo y una propuesta corta acaba con un entregable de verdad y treinta archivos que no lo son en la misma carpeta, y el índice del área y la lectura de nivel 1 dejan de servir. El taller no lleva estado propio ni carpeta de borradores: sus archivos llevan la misma cabecera que cualquier otro, casi siempre en `borrador`.
+El taller no lleva estado propio ni carpeta de borradores: sus archivos llevan la misma cabecera que cualquier otro, casi siempre en `borrador`.
 
 En el taller **no se abren registros**. Las decisiones y las sesiones del proyecto, incluidas las que ocurren trabajando ahí dentro, van a `decisiones.md` y a `sesiones.md`, que son del proyecto entero. Lo único con forma de registro que puede vivir en el taller es material adoptado de otro sitio, congelado, al que no se le añaden entradas.
 
@@ -235,7 +229,7 @@ Consumen esto: [áreas o personas]
 
 Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
 
-Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. El desglose existe para saber sobre qué se puede construir hoy; en un proyecto que ya no evoluciona solo añade líneas que nadie lee, y uno con quince entregables llega a ocupar más del índice que el resto del área junta. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
+Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
 
 Un proyecto cerrado no se borra ni se saca de la raíz. Se sigue citando, sus entregables vigentes se siguen consumiendo y su `decisiones.md` sigue explicando por qué las cosas están como están.
 
@@ -330,7 +324,7 @@ Inmediatamente después va el título en `#`, para que quien abra el archivo sin
 - `vigente`: aprobado, se puede construir encima
 - `reemplazado`: superado. Requiere una cuarta clave, `reemplazado_por`, con la ruta del sustituto
 
-El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y tiene requisitos: los aplica la skill `revisar`. Ninguna otra skill cambia ese estado por su cuenta. Que un borrador esté a medias o terminado se dice en `Estado actual` de `proyecto.md`, que es un archivo vivo y sirve para eso; no hacía falta un estado para distinguirlo, y el que había no lo usaba nadie.
+El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y tiene requisitos: los aplica la skill `revisar`. Ninguna otra skill cambia ese estado por su cuenta. Que un borrador esté a medias o terminado se dice en `Estado actual` de `proyecto.md`.
 
 **actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real.
 
@@ -348,7 +342,7 @@ El nombre de un archivo es estable durante toda su vida. La versión la lleva Dr
 
 ### El nombre de una carpeta compartida
 
-La raíz es una carpeta compartida y su nombre se ve en Drive, así que ese sí lleva mayúsculas y espacios: `Acme`. Solo letras, números, espacios y guiones, y los acentos y las eñes que traiga el nombre propio. Ningún otro signo: el nombre de una carpeta compartida se escribe a mano muchas veces, al buscarla, al pedir acceso, al nombrarla en un correo, al usarla en la terminal o en un script, y cualquier signo que no esté en el teclado se copia mal, se escribe distinto cada vez y obliga a comprobar si una herramienta lo admite. Si una organización ya tiene una carpeta con un signo así, se propone renombrarla; el método no depende del nombre, porque ninguna instrucción usa rutas absolutas.
+La raíz es una carpeta compartida y su nombre se ve en Drive, así que ese sí lleva mayúsculas y espacios: `Acme`. Solo letras, números, espacios y guiones, y los acentos y las eñes que traiga el nombre propio. Ningún otro signo, porque ese nombre se escribe a mano muchas veces y un signo raro se copia mal. Si una organización ya tiene una carpeta con un signo así, se propone renombrarla; el método no depende del nombre, porque ninguna instrucción usa rutas absolutas.
 
 ## 7. Qué es público
 
@@ -393,7 +387,7 @@ Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o cambia el a�
 - Un archivo por decisión
 - Enlaces wiki `[[asi]]`, callouts propietarios, archivos `.canvas`
 - Rutas absolutas dentro de cualquier archivo
-- Estado del método guardado en la memoria del modelo ni en la memoria de proyecto de Claude, que hoy sí existe como función y viene activada. Es por persona y por proyecto, no se comparte con el equipo, no se audita, no se ve, y puede contradecir un archivo sin que nadie lo note. Si un dato importa, está en un `.md`
+- Estado del método guardado en la memoria del modelo ni en la memoria de proyecto de Claude: es por persona, no se comparte, no se ve y puede contradecir un archivo sin que nadie lo note. Si un dato importa, está en un `.md`
 - Cualquier archivo que el usuario tenga que rellenar a mano
 
 ## 10. Prohibiciones
@@ -424,9 +418,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 
 ## 11. Actualización del método
 
-El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
-
-Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que este documento declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
+El método se actualiza publicando una versión nueva del plugin, y cada raíz recibe su `metodo.md` sola: su primera línea lleva la versión y una huella del contenido, y la sesión del responsable de contexto lo copia cuando la raíz está atrasada (skill `sesion`). Nadie edita `metodo.md` dentro de la carpeta de una organización. Cómo se publica una versión y cómo se verifica una raíz con sus scripts lo dice `montaje.md`, junto a este archivo.
 
 ## 12. Cómo se lee
 
@@ -461,11 +453,43 @@ La única operación que recorre la raíz entera es la búsqueda de las líneas 
 
 Si el camino lleva a una carpeta restringida sin acceso, la lectura falla. Eso no es un error ni un hueco: se dice qué área o qué proyecto es y quién es su dueño, y ahí se para. No se deduce lo que hay dentro por los nombres de las carpetas ni se da por hecho que no hay nada.
 
-## 13. Cowork y programadores
+## 13. Montaje
 
-**Cowork.** El uso principal del método es Claude Cowork con la raíz conectada y el plugin instalado. El montaje tiene dos reglas.
+Se conecta la raíz completa, nunca la carpeta de un área: `guia.md`, `metodo.md` y `base/` viven en la raíz y la lectura cruza áreas. Cada persona trabaja desde su cuenta, y dónde escribe sale de su fila en `guia.md`. El plugin trae un aviso de arranque que inyecta las instrucciones en cada sesión, así que nadie pega nada en el proyecto de Claude. El tablero es opcional y personal (skill `tablero`). El montaje en detalle, el bloque de instrucciones para quien use otro modelo sin el plugin y lo que vale para programadores están en `montaje.md`, junto a este archivo.
 
-**Un proyecto de Claude por persona**, nombrado por su área, para que cada quien trabaje con su cuenta y el aviso de «esto le toca a otra área» tenga a quién señalar.
+## Anexo: Varias raíces y traspasos
+
+Anexo del contrato (`convenciones`, sección 1). Se lee cuando hay más de una raíz conectada, cuando alguien pide pasar algo de una raíz a otra y al migrar.
+
+### Independencia entre raíces
+
+Una sesión puede tener conectada más de una raíz a la vez, o una raíz y el repo del plugin. Se trabaja en una a la vez: si hay más de una carpeta con `guia.md` y `metodo.md`, antes de leer o escribir nada se pregunta en cuál, cada escritura dice en qué raíz se hace y cambiar de raíz se anuncia. Cada raíz sigue siendo de una sola organización: nada que se escriba en una raíz usa hechos, cifras, nombres o decisiones de otra raíz, ni del repo del plugin, salvo por un traspaso; y nada que se escriba en el repo del plugin usa hechos de una organización en particular, porque el plugin es idéntico para todas. Comparar la forma de dos raíces (¿tienen las mismas piezas?, ¿la misma cabecera?) no es tocar su contenido, y ese trabajo no se guarda dentro de ninguna de las dos. Lo que una organización guarda sobre otra, por ejemplo quien mantiene el método guardando el historial de una migración que hizo para un cliente, se limita a lo operativo de quien lo guarda: qué se entregó y cuándo, nunca el contenido del trabajo del cliente.
+
+### Traspaso entre raíces
+
+ A veces algo de una raíz tiene que llegar a otra: lo que se decidió sobre un cliente en la raíz de su proveedor y el cliente necesita en la suya, o al revés. Solo ocurre si lo pide la persona que trabaja, pieza a pieza, hacia una raíz donde puede escribir. Antes de escribir se le enseña el texto exacto que pasaría, a qué archivo de la otra raíz iría y qué se queda fuera y por qué (datos personales, contratos, credenciales, cifras internas, lo de otros clientes); se escribe solo cuando lo confirma. En el destino entra reescrito para su contexto y por la puerta que le toque: una decisión se registra como decisión de quien la asume ahí, y un documento entra por `fuentes/` o como entregable de quien lo hace suyo. La sesión del proyecto de destino anota qué vino, de qué raíz, quién lo pidió y cuándo. El origen no se toca. Credenciales, y datos de una organización hacia la raíz de otra que no tiene que ver con ellos, no pasan nunca, aunque se pida: se dice por qué. Lo demás lo decide quien pide el traspaso, que tiene la última palabra.
+
+### Dónde vive el registro de una migración
+
+Eso fija dónde vive cada cosa cuando una organización adopta el método. **El registro de la migración es de quien migra**: las auditorías, los planes y los manifiestos van a su raíz, en un proyecto por organización nombrado por la organización y no por el trabajo. Cuentan lo que hizo el proveedor y hablan del sistema del que se migró, que la organización que estrena el método no usó nunca y no le dice nada.
+
+En la raíz de la organización entra solo lo que su equipo necesita para operar, y entra donde se usa, no en un proyecto aparte: las decisiones recuperadas de su material anterior, cada una en el `decisiones.md` del proyecto al que pertenecen y marcadas como pendientes de confirmar; y el material confidencial que quedó fuera de alcance, con su fila en el `fuentes/enlaces.md` que corresponda. Nada más: su raíz no guarda rastro del sistema del que se migró, ni en las rutas, ni en el vocabulario, ni en los nombres de sus archivos.
+
+## Anexo: Montaje, publicación y otros modelos
+
+Anexo del contrato (`convenciones`, secciones 11 y 13). Lo leen `nuevo` al montar una raíz, `tablero`, y quien pregunte cómo se monta o se publica el método. El bloque de instrucciones de abajo es el que inyecta el aviso de arranque del plugin en cada sesión.
+
+### Actualización del método
+
+El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
+
+Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que el contrato declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
+
+### Montaje en Claude
+
+El uso principal del método es Claude con la raíz conectada y el plugin instalado. El montaje tiene dos reglas.
+
+**Un proyecto de Claude por persona**, nombrado por su área, o por la organización si esa persona lleva todas las áreas. Dónde escribe no lo decide el nombre del proyecto sino su cuenta en `guia.md`, así que un solo proyecto sirve para todas las áreas de quien las lleva todas.
 
 **Se conecta la raíz completa, nunca la carpeta de un área.** `guia.md`, `metodo.md` y `base/` viven en la raíz; la lectura cruza áreas; `consulta` busca en lo que produjo cualquier área y `sesion` avisa de las decisiones de otras que afectan al proyecto. Conectada solo un área, el método se rompe en la primera llamada. Conectar de más no abre ningún riesgo: quién puede leer y escribir dónde lo fijan los permisos de las carpetas, no el alcance de la conexión, y lo restringido sigue restringido dentro de una carpeta conectada.
 
@@ -490,7 +514,7 @@ El bloque es idéntico en cualquier organización: no nombra a ninguna, no lleva
 
 La skill `nuevo` escribe todo esto en `guia.md` como una receta corta: crear el proyecto con el nombre del área, instalar el plugin desde el marketplace, conectar la raíz, comprobar con «abre sesión en...» y, si se quiere, montar el tablero, para que cada persona lo monte sola sin preguntarle a nadie.
 
-**Otros modelos.** Gemini u otro modelo sin plugin leen `metodo.md`. Contiene este contrato, el estilo y el índice de skills, así que saben qué reglas seguir aunque no puedan ejecutarlas como skills.
+**Otros modelos.** Gemini u otro modelo sin plugin leen `metodo.md`. Contiene el contrato con sus dos anexos, el estilo y el índice de skills, así que saben qué reglas seguir aunque no puedan ejecutarlas como skills.
 
 **Programadores.** El `CLAUDE.md` de un repositorio enlaza la carpeta del proyecto en la raíz (`area/proyecto`). Las decisiones de código que dependen de un diseño se anclan en `decisiones.md` y en los entregables vigentes de ese proyecto, no en comentarios del código. Para saber qué se decidió antes de escribir código, usan la skill `consulta`.
 
@@ -595,11 +619,11 @@ Lo que hace cada una, en una línea. Con el plugin instalado se activan solas po
 
 - **convenciones**: Contrato base del metodo de trabajo: estructura de carpetas, cabecera de los archivos, estados, como se lee la raiz, que es publico y que se restringe. Consultala antes de crear o modificar cualquier archivo dentro de la memoria de una organizacion, y cuando pregunten como se organiza algo, donde va, que significa un estado o quien puede escribir donde.
 - **estilo**: Normas de estilo y de lectura rapida. Aplicala por defecto al redactar o revisar cualquier texto que se vaya a firmar o compartir, y tambien a las respuestas en el chat, sin que la invoquen; y de forma explicita cuando pidan 'que suene menos a IA', 'mas ejecutivo', 'mas al grano', 'mas compacto', 'que se lea rapido' o 'revisa el estilo'.
-- **sesion**: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos', 'cierra el proyecto' u 'ordena Claude outputs'.
+- **sesion**: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto'.
 - **nuevo**: Da de alta lo que falte en la memoria de la organizacion: monta la raiz si la carpeta no tiene guia.md, crea el area si no existe y crea el paquete completo de un proyecto. Usala cuando digan 'nuevo proyecto', 'arranca un proyecto para...', 'necesito documentar esto como proyecto', 'nueva area', 'crea el area de...', 'monta la carpeta de...', 'nueva organizacion', 'arranca el metodo para este cliente', o cuando se trabaje en algo que todavia no tiene carpeta.
 - **entregable**: Crea o actualiza un entregable de un proyecto. Usala cuando pidan 'prepara el documento de...', 'necesito un documento con...', 'documenta lo que decidimos sobre...', o 'actualiza el entregable X'.
 - **revisar**: Revisa un entregable, detecta lo que quedo desfasado y lo publica de borrador a vigente. Usala con 'revisa X', 'esto esta listo?', 'que esta desactualizado?', 'pasalo a vigente' o 'ya lo aprobo...'.
-- **donde-va**: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, o aparezca un archivo suelto en la raiz.
+- **donde-va**: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, aparezca un archivo suelto en la raiz, o digan 'ordena Claude outputs'.
 - **consulta**: Responde preguntas sobre lo que la organizacion ya sabe, leyendo solo la superficie publica de la raiz y sin escribir nada. Usala cuando pregunten 'que sabemos de X?', 'alguien ya trabajo esto?', 'que se decidio sobre...?', 'hay algo hecho sobre...?' o 'quien lleva...?'.
 - **tablero**: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia por una tarea diaria. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista' o pregunten por que el tablero no muestra algo.
 - **migrar**: Adopta una carpeta que sigue otra estructura y la trae al metodo sin borrar los originales. Usala cuando digan 'migra esta carpeta', 'trae esto al metodo', 'adopta lo que hay en...', 'convierte estos documentos a la estructura' o cuando aparezca una carpeta con ADR, logs de sesion o carpetas numeradas.

@@ -1,6 +1,6 @@
 ---
 name: donde-va
-description: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, o aparezca un archivo suelto en la raiz.
+description: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, aparezca un archivo suelto en la raiz, o digan 'ordena Claude outputs'.
 ---
 
 # Dónde va
@@ -9,7 +9,7 @@ Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la s
 
 ## Cuándo
 
-"¿Dónde guardo esto?", "me llegó este correo, ¿qué hago con él?", o cuando alguien pega un documento, un enlace o unas notas sin decir dónde van.
+"¿Dónde guardo esto?", "me llegó este correo, ¿qué hago con él?", o cuando alguien pega un documento, un enlace o unas notas sin decir dónde van. También "ordena Claude outputs", o la frase que copia el tablero: va al final de esta skill.
 
 También cuando aparece un archivo suelto en la raíz o en una carpeta que no le corresponde.
 
@@ -67,6 +67,18 @@ Nada se queda en la raíz ni en la carpeta del área. Un archivo huérfano hoy e
 Una ruta concreta y un nombre de archivo propuesto. Un solo destino, no un menú de opciones. Si de verdad hay ambigüedad entre dos proyectos, una sola pregunta para desempatar.
 
 Después de colocarlo, se dice en una línea qué es lo siguiente que hay que hacer con ese material, si es que hay algo.
+
+## Ordenar «Claude outputs»
+
+Es la carpeta donde la app de Claude deja lo que produce, fuera de cualquier proyecto (`convenciones`, sección 1). Ordenarla es llevar cada archivo a su proyecto.
+
+1. Se listan los archivos de «Claude outputs» con su fecha, sin abrirlos. Por el nombre, la fecha y las sesiones de esos días en los `sesiones.md` de la raíz, se propone a qué proyecto va cada uno y si va a `entregables/` (se puede dar a alguien de fuera) o a `taller/`. Lo que no tiene proyecto claro se pregunta; lo que ya existe dentro de un proyecto con el mismo contenido es una copia y se propone quitarlo.
+2. La persona confirma la lista. Solo se mueve a las áreas que son suyas; lo que le toca a otra área se dice, con el nombre de su dueño, y se queda donde está.
+3. Antes de mover, se pregunta lo de siempre: si algo trae datos personales, contratos, facturación o algo que no todos deban ver, va a `restringido/` del proyecto, con el sí de la persona.
+4. Cada archivo se mueve con un nombre en minúsculas y guiones y entra como `borrador`. En cada proyecto que recibió algo se deja una entrada en `sesiones.md`, «Ordenado desde Claude outputs», con lo que llegó.
+5. Lo que sobra (copias, pruebas, capturas sin uso) no se borra sin el sí de la persona.
+
+Se responde en dos o tres líneas: cuántos archivos fueron a qué proyectos, cuántos quedan y de quién son.
 
 ## Lo que nunca hago
 

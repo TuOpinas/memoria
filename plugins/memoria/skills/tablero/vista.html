@@ -36,18 +36,15 @@ h2{font:600 22px/1.2 var(--f-display);margin:0;text-wrap:balance}
 h3{font:600 17px/1.25 var(--f-display);margin:0}
 p{margin:0}
 .sub{color:var(--ink-soft)}
-
 /* migas */
 .crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13.5px;color:var(--muted)}
 .crumbs button{all:unset;cursor:pointer;color:var(--signal);font-weight:500;border-radius:3px}
 .crumbs button:hover{text-decoration:underline;text-underline-offset:3px}
 .crumbs button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .crumbs .sep{color:var(--rule)}
-
 header{display:grid;gap:8px}
 .meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
 .meta b{color:var(--ink-soft);font-weight:500}
-
 /* pastillas */
 .pill{display:inline-flex;align-items:center;gap:5px;font:500 11.5px/1 var(--f-mono);letter-spacing:.02em;padding:5px 8px;border-radius:999px;white-space:nowrap;background:var(--rule-soft);color:var(--ink-soft)}
 .pill.ok{background:var(--signal-dim);color:var(--signal)}
@@ -56,7 +53,6 @@ header{display:grid;gap:8px}
 .pill.none{background:var(--pause-dim);color:var(--pause)}
 .pill.closed{background:transparent;border:1px solid var(--rule);color:var(--muted)}
 .pill.draft{background:transparent;border:1px dashed var(--rule);color:var(--muted)}
-
 /* franja: lo que vence */
 .due{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:10px}
 .due .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -68,7 +64,6 @@ header{display:grid;gap:8px}
 .due-item:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .due-item .t{min-width:0;font-size:14px;color:var(--ink)}
 .due-item .w{grid-column:2;font-size:12.5px;color:var(--muted)}
-
 /* áreas en la raíz */
 .areas{display:grid;gap:14px}
 .area{background:var(--surface);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
@@ -76,8 +71,6 @@ header{display:grid;gap:8px}
 .area-h:hover h2{text-decoration:underline;text-underline-offset:4px}
 .area-h:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
 .area-h .d{color:var(--ink-soft);font-size:14px;max-width:70ch}
-.area-h .who{font-size:13px;color:var(--muted);display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:2px}
-.area-h .who b{font-weight:500;color:var(--ink-soft)}
 .plist{display:grid}
 .prow{all:unset;cursor:pointer;display:grid;grid-template-columns:1fr;gap:8px;align-items:start;box-sizing:border-box;padding:12px 16px;border-top:1px solid var(--rule-soft)}
 .prow:first-child{border-top:none}
@@ -92,8 +85,6 @@ header{display:grid;gap:8px}
 .prow .s .nx span{min-width:0}
 .prow.closed .n b,.prow.closed .s{color:var(--muted)}
 .prow.restricted{background:repeating-linear-gradient(135deg,transparent 0 8px,var(--rule-soft) 8px 9px)}
-
-
 /* nivel área */
 .prios{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
 .prios ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--ink-soft);font-size:14px}
@@ -128,7 +119,6 @@ body.modal-open{overflow:hidden}
 .ent b{font-weight:600}
 .ent .d{grid-column:1/-1;font-size:13.5px;color:var(--ink-soft)}
 .ent .f{font:500 11.5px var(--f-mono);color:var(--muted)}
-
 /* nivel proyecto */
 .card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;display:grid;gap:12px}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;margin:0}
@@ -161,20 +151,8 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 @media (max-width:480px){.dec dl{grid-template-columns:1fr}}
 .more{font-size:13px;color:var(--muted)}
 .empty{color:var(--muted);font-size:14px;padding:6px 0}
-
 /* navegador de la raíz */
 .nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
-.nav-a{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px 12px 8px;display:grid;gap:8px;align-content:start;min-width:0}
-.nav-h{all:unset;cursor:pointer;display:grid;gap:2px;border-radius:4px}
-.nav-h b{font:600 17px/1.2 var(--f-display)}
-.nav-h small{font-size:12px;color:var(--muted)}
-.nav-h:hover b{text-decoration:underline;text-underline-offset:3px}
-.nav-h:focus-visible,.nav-p:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-.nav-l{display:grid;gap:2px;border-top:1px solid var(--rule-soft);padding-top:6px}
-.nav-p{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;font-size:13.5px;padding:4px 2px;border-radius:4px;min-width:0}
-.nav-p span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nav-p:hover span{text-decoration:underline;text-underline-offset:3px}
-.nav-p.closed span{color:var(--muted)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--rule);flex:none}
 .dot.ok{background:var(--signal)}.dot.soon{background:var(--warn-fill)}.dot.late{background:var(--alert)}.dot.none{background:var(--rule);box-shadow:inset 0 0 0 1px var(--muted)}.dot.closed{background:transparent;box-shadow:inset 0 0 0 1px var(--rule)}.dot.pause{background:var(--pause)}.dot.risk{outline:2px solid var(--alert);outline-offset:1.5px}
 .pill.est{font-weight:600}
@@ -183,11 +161,8 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 [data-tip]:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 #tip{position:fixed;z-index:1000;background:var(--ink);color:var(--surface);font:400 12.5px/1.45 var(--f-body);letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:6px;max-width:300px;box-shadow:0 4px 14px rgba(0,0,0,.2);pointer-events:none;left:0;top:0}
 #tip[hidden]{display:none}
-.legend{font-size:12.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
-.legend span{display:inline-flex;align-items:center;gap:6px}
 .gh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--rule);padding-bottom:6px;margin-top:8px}
 .gh p{margin-left:auto;font-size:13px;color:var(--muted)}
-
 /* pasos con controles */
 .step{grid-template-columns:auto minmax(0,1fr) auto;align-items:start}
 .step.h{grid-template-columns:1fr}
@@ -234,7 +209,6 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 .due-item.static{cursor:default}
 .due-item.static .t{text-decoration:none}
 .flash{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--ground);padding:10px 14px;border-radius:6px;font-size:14px}
-
 /* dos columnas: índice fijo a la izquierda, contenido a la derecha */
 body{padding-inline:0;padding-block:0}
 .app{display:grid;grid-template-columns:272px minmax(0,1fr);min-height:100dvh}
@@ -268,12 +242,7 @@ body{padding-inline:0;padding-block:0}
 .pane > #main{width:100%;max-width:none;margin:0}
 .side-toggle{display:none}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.tile{all:unset;cursor:pointer;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;display:grid;gap:4px;min-width:0;align-content:start}
-.tile b{font:600 17px/1.2 var(--f-display)}
-.tile small{font-size:12.5px;color:var(--muted)}
 .tile-s{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.tile:hover{border-color:var(--ink-soft)}
-.tile:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 @media (max-width:860px){
   .app{grid-template-columns:1fr}
   .side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:20;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.2);padding-top:calc(56px + env(safe-area-inset-top,0px))}
@@ -283,25 +252,15 @@ body{padding-inline:0;padding-block:0}
   .pane{padding-top:calc(56px + env(safe-area-inset-top,0px))}
 }
 @media (prefers-reduced-motion:reduce){.side{transition:none}}
-
 /* naturaleza, importancia, enfoque, regularizar */
 .pill.nat{background:transparent;border:1px solid var(--rule);color:var(--muted);font-weight:500}
 .pill.nat.rutina,.pill.nat.caducidad{border-style:dashed}
 .pill.imp{background:var(--signal-dim);color:var(--signal);font-weight:600}
 .step-t .tags{margin-top:2px}
 .enf{border-color:var(--signal)}
-.enf-l{display:grid;gap:14px}
-.enf-g{display:grid;gap:6px;padding-top:12px;border-top:1px solid var(--rule-soft)}
-.enf-g:first-child{border-top:none;padding-top:0}
-.enf-h{display:flex;gap:10px;align-items:baseline}
 .enf-n{font:600 12px var(--f-mono);color:var(--on-signal);background:var(--signal);border-radius:999px;width:22px;height:22px;display:inline-grid;place-items:center;flex:none}
-.enf-r{color:var(--ink-soft);font-size:14px}
-.enf-p{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13.5px;color:var(--ink-soft)}
 .frase{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
 .frase-t{flex:1 1 280px;min-width:0;font:13px/1.5 var(--f-mono);background:var(--code);padding:8px 10px;border-radius:6px;white-space:normal;overflow-wrap:anywhere}
-.reg-l{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px;color:var(--ink-soft)}
-.reg-l b{color:var(--ink)}
-
 /* inicio: barra de acciones y enfoque compacto */
 .acc-bar{display:flex;gap:8px;flex-wrap:wrap}
 .acc-k{all:unset;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--ink-soft)}
@@ -317,17 +276,14 @@ body{padding-inline:0;padding-block:0}
 .enf-mini li>span{color:var(--ink-soft)}
 .enf-mini-p{font-size:12.5px;color:var(--muted)}
 .enf-mini .chip{justify-self:start;font-size:12.5px;margin-top:2px}
-
 .prow .n small{font-size:12.5px;color:var(--muted)}
 .steps.one{display:grid}
 .steps.one .step{border-top:none;padding:0}
 .steps.one .tx{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cnt{display:flex;gap:6px 10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-left:auto}
 .cnt .late{color:var(--alert);font-weight:600}.cnt .soon{color:var(--warn);font-weight:600}.cnt .muted{color:var(--muted)}
-
 /* búsqueda, línea de tiempo, correcciones, aviso de datos viejos */
 .side-search{width:100%;box-sizing:border-box;margin:0 0 8px;padding:7px 10px;font-size:13.5px}
-.tl{display:grid;gap:4px}
 .tl-d{font:500 11.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 2px}
 .tl-d:first-child{padding-top:0}
 .tl-i{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:6px 0;border-radius:4px}
@@ -337,9 +293,6 @@ body{padding-inline:0;padding-block:0}
 .tl-t b{font-weight:600}
 .tl-t>span{color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
-.corr-btn{all:unset;cursor:pointer;font:500 11.5px var(--f-mono);color:var(--muted);padding:4px 6px;border-radius:999px;border:1px dashed transparent}
-.corr-btn:hover,.corr-btn[aria-expanded="true"]{border-color:var(--rule);color:var(--ink-soft)}
-.corr-btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .corr-form{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 2px 28px}
 .due-item.orf{background:var(--alert-dim);border-radius:6px;padding-inline:8px}
 .stale{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--warn-dim);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:10px 14px;font-size:14px}
@@ -351,7 +304,6 @@ footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 footer{font-size:12.5px;color:var(--muted)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:no-preference){.prow,.area-h,.due-item{transition:background .12s}}
-
 /* filas de paso compactas: etiquetas y procedencia en una sola línea; corregir en el menú «⋯» */
 .step-r{display:inline-flex;gap:4px;align-items:center}
 .step-x{all:unset;cursor:pointer;width:26px;height:26px;display:inline-grid;place-items:center;border-radius:999px;color:var(--muted);font:600 15px/1 var(--f-body);opacity:0}
@@ -369,7 +321,6 @@ footer{font-size:12.5px;color:var(--muted)}
 .pill.rev{background:transparent;border:1px dashed var(--rule);color:var(--ink-soft)}
 .pill.new{background:var(--signal);color:var(--on-signal);font-weight:600}
 .corr-form .lbl{font-size:12.5px;color:var(--muted);flex-basis:100%}
-
 /* pendientes por proyecto */
 .pg{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:12px 16px;display:grid;gap:6px}
 .pg-h{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap}
@@ -381,7 +332,6 @@ footer{font-size:12.5px;color:var(--muted)}
 .pg-more:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .hint{font-size:13.5px;color:var(--muted)}
 .hint .lnk{font-size:13.5px}
-
 /* decisiones plegadas */
 .dl{display:grid}
 .dl-m{font:500 11.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 0 4px}
@@ -397,13 +347,11 @@ footer{font-size:12.5px;color:var(--muted)}
 .dl-i .dec{border-top:none;padding:0 0 14px calc(4.2em + 12px)}
 @media (max-width:480px){.dl-b{grid-template-columns:minmax(0,1fr) auto}.dl-b time{grid-column:1/-1}.dl-w{grid-column:1/-1}.dl-i .dec{padding-left:0}}
 .chip.on{border-color:var(--signal);background:var(--signal-dim);color:var(--signal);font-weight:600}
-
 /* ficha del proyecto */
 .ficha dd .pill{margin-left:6px;vertical-align:1px}
 .leer{all:unset;cursor:pointer;color:var(--signal);font-weight:500;font-size:13.5px;justify-self:start;border-radius:3px}
 .leer:hover{text-decoration:underline;text-underline-offset:3px}
 .leer:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-
 /* inicio */
 .crumbs:empty{display:none}
 .tile-p{font-size:13px;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px}
@@ -464,7 +412,7 @@ button.est-btn{all:unset;cursor:pointer}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.12.5"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.13.0"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -511,11 +459,19 @@ function md(text){
 // ---- la cola de cambios ----
 const isHeader = s => /^[A-Za-zÁÉÍÓÚáéíóúñÑ][^.]{0,30}:$/.test(s.texto.trim());
 const key = (pid, texto) => pid + "||" + texto;
+// índice de la cola por paso: se rehace solo cuando llega una cola nueva, no en cada consulta
+let _PEND_SRC = null, _PEND_IDX = null;
+const _PEND_VACIO = Object.freeze({fecha:null, hecho:null, corregir:null});
 function pend(pid, texto){
-  const out = {fecha:null, hecho:null, corregir:null};
-  for(const c of CAMBIOS){ if(c.proyecto===pid && c.paso===texto){ if(c.tipo==="fecha") out.fecha = c; if(c.tipo==="hecho") out.hecho = c; if(c.tipo==="corregir") out.corregir = c; } }
-  return out;
+  if(_PEND_SRC !== CAMBIOS){
+    _PEND_SRC = CAMBIOS; _PEND_IDX = new Map();
+    for(const c of CAMBIOS){ if(!["fecha","hecho","corregir"].includes(c.tipo)) continue; const k = c.proyecto + "||" + c.paso; let o = _PEND_IDX.get(k); if(!o){ o = {fecha:null, hecho:null, corregir:null}; _PEND_IDX.set(k, o); } o[c.tipo] = c; }
+  }
+  return _PEND_IDX.get(pid + "||" + texto) || _PEND_VACIO;
 }
+// caché por repintado: lo que se calcula muchas veces con los mismos datos dentro de un render() se calcula una
+let _M = null;
+const _memo1 = (nombre, fn) => x => { if(!_M) return fn(x); let m = _M.get(nombre); if(!m){ m = new Map(); _M.set(nombre, m); } if(m.has(x)) return m.get(x); const r = fn(x); m.set(x, r); return r; };
 const effDate = (p, s) => { const q = pend(p.id, s.texto); if(q.corregir && q.corregir.propuesta==="sin-plazo") return null; return q.fecha ? (q.fecha.fecha_nueva||null) : (s.fecha||null); };
 const effNat = (p, s) => { const c = pend(p.id, s.texto).corregir; return c && c.propuesta!=="sin-plazo" ? c.propuesta : (s.naturaleza||"accion"); };
 const huerfano = c => { if(c.tipo==="prioridad") return !(areaBy[c.area]&&(areaBy[c.area].prioridades||[])[c.indice-1]===c.texto); const p = byId[c.proyecto]; return !p || (!!c.paso && !(p.pasos||[]).some(s=>s.texto===c.paso)); };
@@ -531,7 +487,7 @@ async function corregir(p, s, propuesta){
 }
 const isDone = (p, s) => !!pend(p.id, s.texto).hecho;
 const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
-const stepsLive = p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s));
+const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s)));
 const CORR_OPC = [["rutina","Es una rutina, no un paso"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
 async function addCambio(data){
   try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"}); }
@@ -666,6 +622,10 @@ const RIESGO = {label:"En riesgo", desc:"Marca que se suma a cualquier estado: d
 const EST_ORDEN = ["bloqueado","parado","encurso","sininiciar","cerrado"];
 const EST_OPC = [["encurso","En curso"],["bloqueado","Bloqueado"],["parado","Parado"],["sininiciar","Sin iniciar"]];
 const estRank = p => { const e = projStatus(p); return (e.riesgo ? 0 : 10) + EST_ORDEN.indexOf(e.k); };
+projStatus = _memo1("estado", projStatus);
+afectan = _memo1("afectan", afectan);
+mtDatos = _memo1("mt", mtDatos);
+entIdx = _memo1("ents", entIdx);
 function projStatus(p){
   if(p.restringido) return {k:"sininiciar", ...EST.sininiciar, label:"Restringido", regla:"No se lee", riesgo:false};
   if(p.cerrado) return {k:"cerrado", ...EST.cerrado, regla:"Estado actual dice «Proyecto terminado»", riesgo:false};
@@ -1330,7 +1290,8 @@ function renderProj(p){
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); renderProj(p); });
 }
-function render(){
+function render(){ _M = new Map(); try{ _render(); } finally { _M = null; } }
+function _render(){
   try{
     if(ready.a && ready.p) visita();
     crumbs(); renderSide();
@@ -1370,7 +1331,9 @@ function render(){
 
 document.getElementById("side-toggle").addEventListener("click", ()=>{ SIDE_OPEN = !SIDE_OPEN; document.body.classList.toggle("side-open", SIDE_OPEN); renderSide(); });
 
-document.addEventListener("input", e => { if(e.target.id==="side-q"){ QUERY = e.target.value; if(QUERY.trim().length>=2){ if(view.lvl!=="buscar"){ view = {lvl:"buscar"}; } render(); } else if(view.lvl==="buscar"){ view = {lvl:"root"}; render(); } } });
+// la búsqueda repinta cuando se deja de teclear un momento, no con cada letra
+let _BUSCA_T = null;
+document.addEventListener("input", e => { if(e.target.id==="side-q"){ QUERY = e.target.value; clearTimeout(_BUSCA_T); _BUSCA_T = setTimeout(()=>{ if(QUERY.trim().length>=2){ if(view.lvl!=="buscar"){ view = {lvl:"buscar"}; } render(); } else if(view.lvl==="buscar"){ view = {lvl:"root"}; render(); } }, 150); } });
 
 // ---- tooltip propio: el nativo no aparece dentro del artifact y el CSS se recorta en el índice ----
 (function(){
