@@ -29,6 +29,8 @@ De ahí sale el valor de la carpeta: todo lo que hay dentro entró por el métod
 
 Los formatos que la IA no puede teclear, una presentación o una hoja de cálculo, son la excepción a quién escribe y no a por dónde se entra: los arma el equipo del proyecto con su herramienta y son producto suyo; si vinieron de fuera entran por `fuentes/` como cualquier otro material. La sección 3 lo detalla.
 
+**Lo que se produce para un proyecto se guarda en su carpeta en cuanto existe**, no al cerrar la sesión: un documento, un PDF, una propuesta o un análisis van a `entregables/`, o a `taller/` si no salen del proyecto, con `estado: borrador`, aunque falte pulirlos, y aunque los haya hecho otra herramienta y no la skill `entregable`. Lo que solo vive en la conversación se pierde con ella y nadie más lo ve. Cerrar la sesión es registrar lo que pasó, no guardar lo que se hizo. Por la misma razón, una tarea programada que escribe en la carpeta algo más que fechas de pasos deja su línea en el `sesiones.md` del proyecto, con «(tarea)» en el título: si no, su trabajo parece una sesión que nadie cerró.
+
 Ninguna carpeta de trabajo aloja el almacén de datos de una aplicación. Lo escribe la aplicación sola, crece por su cuenta y nadie responde por lo que hay dentro.
 
 La migración es la excepción declarada. El material que se adopta al migrar no llega de fuera: es el trabajo anterior de la propia organización, y entra donde le toque con `estado: borrador` y con la trazabilidad que se pueda reconstruir. Lo que en el origen ya era material de entrada entra por `fuentes/` como en cualquier proyecto. Lo detalla la skill `migrar`.
@@ -463,6 +465,7 @@ Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carp
 Escribe solo donde te haya dicho que trabajo, y en ningún otro sitio de la carpeta; si no te lo he dicho, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
 Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
+Lo que hagas para un proyecto, un documento, un PDF o un análisis, guárdalo en su carpeta en cuanto exista, como borrador; cerrar sesión es registrar lo que pasó, no guardar.
 Antes de guardar algo, pregúntate si alguien más lo va a leer y si contiene datos que no todos deben ver. Si algo parece confidencial, avísame y propón moverlo; no lo muevas tú.
 ```
 

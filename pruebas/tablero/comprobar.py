@@ -48,5 +48,11 @@ decs = com["proyectos"]["ventas--cuentas"]["decisiones"]
 ok(decs[0].get("por_confirmar") is True and not decs[1].get("por_confirmar"), "se marca la decisión pendiente de confirmar, y solo esa")
 ok(com["proyectos"]["operacion--soporte"]["estado_cabecera"] == "borrador", "el estado de proyecto.md llega a la página")
 
+print("Trabajo sin sesión")
+ss = com["proyectos"]["ventas--cuentas"].get("sin_sesion")
+ok(bool(ss) and ss.get("donde") == {"entregables": 1}, "un entregable tocado después de la última sesión se avisa, y solo ese")
+ok(not com["proyectos"]["operacion--soporte"].get("sin_sesion"), "un proyecto sin cambios desde su última sesión no se avisa")
+ok(not pub["proyectos"]["ventas--precios"].get("sin_sesion"), "público: de un proyecto restringido no se dice nada")
+
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)

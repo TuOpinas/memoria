@@ -53,13 +53,14 @@ Tres bloques, en este orden y sin encabezados largos.
 
 **Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
-**Avisos**, solo si aplican. Cinco comprobaciones:
+**Avisos**, solo si aplican. Seis comprobaciones:
 
 - La primera línea del `metodo.md` de la raíz no coincide con la del `metodo.md` del plugin (versión y huella). La raíz se quedó atrás. Si quien abre la sesión es el responsable de contexto según `guia.md`, se le pregunta «¿lo copio?» y, con su sí, se copia el `metodo.md` del plugin sobre el de la raíz: es lo único que se escribe al abrir. Si no lo es, se le dice que se lo pida a él
 - Alguna decisión de otro proyecto de la raíz nombra este proyecto en `Afecta a:`. Se cita la entrada con su fecha, quién decidió y de qué proyecto viene
 - `base/contexto.md` lleva más de 90 días sin actualizarse, mirando solo su fecha `actualizado`, sin abrirlo
 - Algún entregable tiene en `basado_en` un archivo cuya fecha `actualizado` es posterior a la suya, y por tanto puede estar desfasado
 - Algún entregable lleva más de 30 días en `borrador`
+- Algún entregable tiene una fecha `actualizado` posterior a la última entrada de `sesiones.md`: hubo trabajo que ninguna sesión registró, seguramente una que no se cerró. Se dice qué cambió y se propone registrarlo hoy, preguntando qué pasó
 
 Si no hay avisos, no se menciona que no los hay.
 
@@ -75,7 +76,9 @@ Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabaj
 
 **0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea, una prioridad ya quitada de «Prioridades ahora» de `area.md` porque el dueño del área lo pidió en esta sesión. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
 
-**1. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
+**1. Lo que se hizo y aún no está en la carpeta.** Lo producido se guarda al crearlo, así que esto no debería pasar; si algo de la sesión (un documento, un PDF, un análisis) solo existe en la conversación, se guarda ahora en `entregables/` o en `taller/` como borrador, antes de registrar nada.
+
+**2. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
 
 ```markdown
 ## 2026-08-29
@@ -86,7 +89,7 @@ Pendiente: confirmar con Finanzas el tope de 5.000 MXN.
 
 Tres líneas. Si una sesión no cabe en tres líneas, es que hubo decisiones y esas van a su archivo.
 
-**2. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas y se pide confirmación explícita. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. Formato:
+**3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas y se pide confirmación explícita. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. Formato:
 
 ```markdown
 ## 2026-08-29 · Las órdenes bajo 5.000 MXN no pasan por aprobación
@@ -104,17 +107,17 @@ Si `Afecta a` nombra un proyecto de otra área, se dice al usuario a quién tien
 
 Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a un proyecto restringido, `Afecta a` lleva su nombre y nada más, porque ese nombre ya está listado: ni sus archivos, ni lo que contiene. Al revés, una decisión que se registra dentro de una carpeta restringida sí puede nombrar cualquier proyecto al que afecte.
 
-**3. `proyecto.md`.** Se reescriben `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula.
+**4. `proyecto.md`.** Se reescriben `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula.
 
-**4. Bloque `Proyectos` de `area.md`.** Se reescribe la línea de este proyecto y, debajo, una línea por cada entregable `vigente` con su fecha `actualizado`. Solo esa parte del bloque; las líneas de los demás proyectos no se tocan. `Prioridades ahora` solo se reescribe si el dueño lo pide en esta sesión.
+**5. Bloque `Proyectos` de `area.md`.** Se reescribe la línea de este proyecto y, debajo, una línea por cada entregable `vigente` con su fecha `actualizado`. Solo esa parte del bloque; las líneas de los demás proyectos no se tocan. `Prioridades ahora` solo se reescribe si el dueño lo pide en esta sesión.
 
-**5. Cabeceras de lo que se tocó.** Se actualiza `actualizado` en cada archivo modificado y se añade a `basado_en` cualquier fuente nueva que se haya usado.
+**6. Cabeceras de lo que se tocó.** Se actualiza `actualizado` en cada archivo modificado y se añade a `basado_en` cualquier fuente nueva que se haya usado.
 
-**6. Lo que entró en `fuentes/` o en `taller/`.** Si durante la sesión se guardó algo en `fuentes/` sin haber pasado por la pregunta de si es confidencial, se pregunta ahora: si trae datos personales, facturación, contratos, credenciales o cualquier cosa que no todos deban ver, se propone llevarlo a `restringido/` del mismo proyecto y dejar su fila en el `fuentes/enlaces.md` público. El usuario decide; nada se mueve sin que lo confirme.
+**7. Lo que entró en `fuentes/` o en `taller/`.** Si durante la sesión se guardó algo en `fuentes/` sin haber pasado por la pregunta de si es confidencial, se pregunta ahora: si trae datos personales, facturación, contratos, credenciales o cualquier cosa que no todos deban ver, se propone llevarlo a `restringido/` del mismo proyecto y dejar su fila en el `fuentes/enlaces.md` público. El usuario decide; nada se mueve sin que lo confirme.
 
-**7. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
+**8. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
 
-**8. Rotación.** Si `sesiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`) y se abre uno nuevo. Sin preguntar.
+**9. Rotación.** Si `sesiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`) y se abre uno nuevo. Sin preguntar.
 
 ## Qué respondo al terminar
 

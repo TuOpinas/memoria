@@ -406,6 +406,33 @@ for a in areas_guia:
         pdoc["sesiones_total"] = len(ses)
         pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
         pdoc["ultima_sesion"] = ses[0]["fecha"] if ses else None
+        # trabajo sin sesión: archivos que cambiaron después de la última sesión registrada. Solo se mira
+        # la fecha de modificación, nunca el contenido; proyecto.md no cuenta, porque la tarea del tablero
+        # lo toca al aplicar fechas sin abrir sesión, y restringido/ no se mira.
+        if pdoc["ultima_sesion"] and not pdoc["cerrado"]:
+            donde, ultimo = {}, None
+            objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
+            for nombre, d in objetivos:
+                for raiz_, dirs, files in os.walk(d) if d.exists() else []:
+                    dirs[:] = [x for x in dirs if not x.startswith(".")]
+                    for f in files:
+                        if f.startswith("."):
+                            continue
+                        try:
+                            fm_ = datetime.datetime.fromtimestamp(os.stat(os.path.join(raiz_, f)).st_mtime, TZ).date().isoformat()
+                        except OSError:
+                            continue
+                        if fm_ > pdoc["ultima_sesion"]:
+                            donde[nombre] = donde.get(nombre, 0) + 1
+                            ultimo = max(ultimo or fm_, fm_)
+            try:
+                fd = datetime.datetime.fromtimestamp(os.stat(pc / "decisiones.md").st_mtime, TZ).date().isoformat()
+                if fd > pdoc["ultima_sesion"]:
+                    donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
+            except OSError:
+                pass
+            if donde:
+                pdoc["sin_sesion"] = {"desde": pdoc["ultima_sesion"], "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
         docs["proyectos"][pid] = pdoc

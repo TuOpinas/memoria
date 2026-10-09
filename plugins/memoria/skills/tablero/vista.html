@@ -868,6 +868,8 @@ function mtDatos(){
     if(sinD.length){ it.push({k:"desc", ents: sinD, txt:`${sinD.length} entregable${sinD.length===1?"":"s"} vigente${sinD.length===1?"":"s"} sin descripción en el índice del área`}); fr.push("describe en el índice del área los entregables vigentes que no la tienen"); }
     const conf = (p.decisiones||[]).filter(d=>d.por_confirmar);
     if(conf.length){ it.push({k:"conf", decs: conf, txt:`${conf.length} decisi${conf.length===1?"ón":"ones"} por confirmar`}); fr.push("confirma con su dueño las decisiones pendientes de confirmar"); }
+    const ss = p.sin_sesion;
+    if(ss){ it.push({k:"sinses", ss, txt:`${ss.archivos} archivo${ss.archivos===1?"":"s"} cambi${ss.archivos===1?"ó":"aron"} después de la última sesión (${fmtD(ss.desde)})`}); fr.push(`registra la sesión que no se cerró: mira qué cambió en la carpeta desde el ${fmtD(ss.desde)} y pregúntame qué se hizo y qué se decidió`); }
     const idx = entIdx();
     const desf = (p.entregables||[]).filter(e=>["vigente","borrador"].includes(e.estado)).map(e=>({e, d: desfase(p, e, idx)})).filter(x=>x.d.ents.length);
     if(desf.length){ it.push({k:"desf", desf, txt:`${desf.length} entregable${desf.length===1?"":"s"} con una base que cambió después`}); fr.push("revisa los entregables cuya base cambió después y ponlos al día o confirma que siguen valiendo"); }
@@ -877,6 +879,7 @@ function mtDatos(){
     if(afe.length){ it.push({k:"afe", afe, txt:`${afe.length} decisi${afe.length===1?"ón":"ones"} de otros proyectos posterior${afe.length===1?"":"es"} a su última sesión`}); fr.push("repasa las decisiones de otros proyectos que le afectan y llegaron después de su última sesión"); }
     const cola = CAMBIOS.filter(c=>c.proyecto===p.id && (c.tipo==="nota" || c.tipo==="corregir" || (c.tipo==="hecho" && !c.nota)));
     if(cola.length){ it.push({k:"cola", cola, txt:`${cola.length} cosa${cola.length===1?"":"s"} marcada${cola.length===1?"":"s"} aquí espera${cola.length===1?"":"n"} sesión`}); fr.push("registra lo que se marcó en el tablero"); }
+    it.sort((a,b)=>(b.k==="sinses")-(a.k==="sinses"));
     if(it.length) filas.push({id:p.id, p, it, frase:`abre sesión en ${p.area}/${p.slug} y pon al día su memoria: ${fr.join("; ")}`});
   }
   filas.sort((a,b)=>(b.it.length-a.it.length) || (estRank(a.p)-estRank(b.p)));
@@ -908,6 +911,8 @@ function mtModal(){
     if(x.k==="par") return `<h3>Proyecto parado</h3><p class="more" style="margin:0">${esc(x.txt.charAt(0).toUpperCase()+x.txt.slice(1))}. La sesión decide si sigue, se pausa o se cierra. ${ir("pasos","Ver las acciones ›")}</p>`;
     if(x.k==="desc") return `<h3>Entregables vigentes sin descripción</h3><div class="ents">${x.ents.map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.actualizado?fmtD(e.actualizado):""}</span></div>`).join("")}</div>`;
     if(x.k==="conf") return `<h3>Decisiones por confirmar <span class="c">${x.decs.length}</span></h3><div class="dl">${x.decs.map(d=>decItem(d,p,false)).join("")}</div>`;
+    if(x.k==="sinses"){ const lugares = {entregables:"entregables", taller:"taller", fuentes:"fuentes", decisiones:"decisiones"}; const det = Object.entries(x.ss.donde).map(([k,n])=>k==="decisiones"?"las decisiones":`${n} archivo${n===1?"":"s"} en ${lugares[k]||k}`).join(", ").replace(/, ([^,]*)$/," y $1");
+      return `<h3>Trabajo sin sesión registrada</h3><p class="more" style="margin:0">La última sesión registrada es del ${fmtL(x.ss.desde)}, y después ${x.ss.archivos===1?"cambió":"cambiaron"} ${det}; lo último, el ${fmtD(x.ss.ultimo)}. Seguramente una sesión no se cerró. Si tienes abierto el chat de esos días, búscalo y pídele «cierra la sesión». Si ya no lo tienes, la frase de abajo abre una sesión que lo reconstruye desde la carpeta.</p>`; }
     if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Se construyen sobre otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
     if(x.k==="bor") return `<h3>Borradores de más de 30 días <span class="c">${x.bor.length}</span></h3><ul class="ent-l">${x.bor.map(e=>`<li>${entBtn(p,e)} <span class="more">· sin tocar desde hace ${diasDesde(e.actualizado)} días</span></li>`).join("")}</ul>`;
     if(x.k==="afe") return `<h3>Decisiones de otros proyectos que le afectan <span class="c">${x.afe.length}</span></h3><p class="more" style="margin:0">Las registraron después de la última sesión de este proyecto y lo citan en «Afecta a».</p><div class="dl">${x.afe.map(({q,d})=>decItem(d,q,true)).join("")}</div>`;
@@ -1285,6 +1290,7 @@ function renderProj(p){
     const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length;
     const ir = (t, txt) => `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${p.id}" data-tab="${t}">${txt}</button>`;
     const filas = [
+      p.sin_sesion ? `<dt>Sin sesión</dt><dd><span class="pill soon">${p.sin_sesion.archivos} archivo${p.sin_sesion.archivos===1?"":"s"}</span> cambi${p.sin_sesion.archivos===1?"ó":"aron"} después de la última sesión, la del ${fmtD(p.sin_sesion.desde)}. <button type="button" class="lnk" style="font-size:13px" data-mt-open="${p.id}">Revisar ›</button></dd>` : "",
       nLate ? `<dt>Vencidos</dt><dd><span class="pill late">${nLate}</span> ${ir("pasos","Atenderlos ›")}</dd>` : "",
       esperas.length ? `<dt>Espera a alguien de fuera</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
       (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);

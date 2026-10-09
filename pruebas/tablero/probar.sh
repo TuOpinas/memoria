@@ -9,8 +9,18 @@ TABLERO="$AQUI/../../plugins/memoria/skills/tablero"
 OUT="${1:-$(mktemp -d)}"
 VERSION="$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' "$TABLERO/../../.claude-plugin/plugin.json" 2>/dev/null | head -n 1)"
 mkdir -p "$OUT/capturas"
-python3 "$TABLERO/generar_vista.py" "$AQUI/raiz" "$OUT/publico" --modo publico --version "${VERSION:-prueba}" >/dev/null
-python3 "$TABLERO/generar_vista.py" "$AQUI/raiz" "$OUT/completo" --modo completo --version "${VERSION:-prueba}" >/dev/null
+# copia de la raíz con fechas de archivo fijas: todo del 2026-08-01 salvo un entregable tocado hoy,
+# para probar el aviso de trabajo sin sesión sin depender de cuándo se clonó el repo
+rm -rf "$OUT/raiz"; cp -R "$AQUI/raiz" "$OUT/raiz"
+python3 - "$OUT/raiz" <<'PY'
+import os, sys, time
+viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+for d, _, fs in os.walk(sys.argv[1]):
+    for f in fs: os.utime(os.path.join(d, f), (viejo, viejo))
+os.utime(os.path.join(sys.argv[1], "ventas/cuentas/entregables/kit-cuentas.md"), None)
+PY
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/publico" --modo publico --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/completo" --modo completo --version "${VERSION:-prueba}" >/dev/null
 python3 "$AQUI/comprobar.py" "$OUT/publico" "$OUT/completo"
 for m in publico completo; do python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/$m" "$OUT/$m.html"; done
 if command -v node >/dev/null && node -e "require('playwright')" 2>/dev/null; then
