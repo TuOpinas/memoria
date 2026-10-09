@@ -97,12 +97,15 @@ header{display:grid;gap:8px}
 .prios{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
 .prios ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--ink-soft);font-size:14px}
 .prios ol li::marker{font:500 12px var(--f-mono);color:var(--muted)}
-.prio-l{gap:14px}
-.prio{display:grid;gap:6px}
-.prio-t{display:grid;gap:2px;color:var(--ink)}
+.prio-l{gap:6px}
+.prio{display:grid;gap:4px}
+.prio-t{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;color:var(--ink-soft)}
 .prio.done .prio-t .tx{color:var(--muted);text-decoration:line-through}
-.prio-s{padding-left:4px}
-.prio .frase{margin-top:2px}
+.prio-pill{cursor:pointer;border:0}
+.prio-pill:hover{filter:brightness(.94)}
+.prio-pill:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.prio-d{display:grid;gap:8px;padding:6px 0 10px 0;border-bottom:1px solid var(--rule-soft)}
+.prio-s{padding-left:0}
 .ents{display:grid;gap:4px}
 .ent{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--rule-soft)}
 .ent:first-child{border-top:none}
@@ -461,7 +464,7 @@ function go(v){ view = v; EDIT = null; HECHO = null; if(v.lvl==="proj") tab = v.
 window.addEventListener("popstate", ()=>{ view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
-  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
+  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
   const b = t.closest("[data-go-area],[data-go-proj],[data-go-root],[data-go-pend],[data-go-dec],[data-go-ent]"); if(!b) return;
   e.preventDefault();
   if(b.dataset.goRoot!==undefined) go({lvl:"root"});
@@ -581,20 +584,26 @@ async function corregirEstado(p, propuesta){
 }
 // ---- prioridades del área: los pasos que las sirven y su cierre ----
 const prioPend = (area, i) => CAMBIOS.find(c=>c.tipo==="prioridad" && c.area===area && c.indice===i+1) || null;
+let PRIO_OPEN = null;
 function prioItem(a, ps, texto, i){
   const pasos = []; for(const p of ps){ if(p.cerrado||p.restringido) continue; for(const s of stepsLive(p)) if(s.prioridad_area===i+1) pasos.push({p,s}); }
-  const q = prioPend(a.slug, i), corto = texto.replace(/[.:].*$/,"").slice(0,80);
+  const q = prioPend(a.slug, i), k = a.slug+"#"+i, open = PRIO_OPEN===k, corto = texto.replace(/[.:].*$/,"").slice(0,80);
+  const tday = today(), nLate = pasos.filter(x=>{ const f = effDate(x.p,x.s); return f && f<tday; }).length;
   const lider = pasos.length ? pasos.map(x=>x.p).sort((x,y)=>pasos.filter(z=>z.p===y).length-pasos.filter(z=>z.p===x).length)[0] : (ps.find(p=>!p.cerrado&&!p.restringido)||null);
   const frase = lider ? `abre sesión en ${lider.area}/${lider.slug} y avanza la prioridad «${corto}»${pasos.length?"; trae los pasos de los demás proyectos del área que la sirven":": escribe los pasos que la sirven"}` : "";
-  return `<li class="prio${q?" done":""}"><div class="prio-t"><span class="tx">${inline(texto)}</span>${q?`<span class="pend-note">${q.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"}${q.nota?`: ${esc(q.nota)}`:""} · pendiente de registrar en sesión${CAN?` · <button type="button" class="lnk" data-undo="${q.id}">Deshacer</button>`:""}</span>`:""}</div>
-    ${pasos.length?`<div class="steps prio-s">${pasos.map(({p,s})=>stepRow(p,s,true)).join("")}</div>`:`<p class="empty">Ningún paso abierto la sirve hoy.</p>`}
-    <div class="frase">${frase?`<code class="frase-t">${esc(frase)}</code><button type="button" class="chip" data-copy="${esc(frase)}">Copiar</button>`:""}${CAN&&!q?`<button type="button" class="chip" data-prio-done="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Cumplida</button><button type="button" class="chip ghost" data-prio-drop="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Ya no es prioridad</button>`:""}</div></li>`;
+  const pill = q ? `<span class="pill soon">${q.propuesta==="cumplida"?"cumplida":"retirada"} ⟳</span>` : `<button type="button" class="pill ${pasos.length?(nLate?"late":"ok"):"none"} prio-pill" data-prio-toggle="${esc(k)}" aria-expanded="${open}" title="${open?"Plegar":"Ver los pasos que la sirven"}">${pasos.length?`${pasos.length} paso${pasos.length===1?"":"s"}${nLate?` · ${nLate} vencido${nLate===1?"":"s"}`:""}`:"sin pasos"} ${open?"▴":"▾"}</button>`;
+  return `<li class="prio${q?" done":""}"><div class="prio-t"><span class="tx">${inline(texto)}</span>${pill}</div>
+    ${q&&CAN?`<div class="prio-d"><span class="pend-note">${q.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"} · pendiente de registrar en la sesión del dueño del área · <button type="button" class="lnk" data-undo="${q.id}">Deshacer</button></span></div>`:""}
+    ${open ? `<div class="prio-d">${pasos.length?`<div class="steps prio-s">${pasos.map(({p,s})=>stepRow(p,s,true)).join("")}</div>`:`<p class="empty">Ningún paso abierto la sirve hoy.</p>`}
+      <div class="frase">${frase?`<code class="frase-t">${esc(frase)}</code><button type="button" class="chip" data-copy="${esc(frase)}">Copiar</button>`:""}</div>
+      ${CAN?`<div class="chips"><button type="button" class="chip" data-prio-done="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Marcar cumplida</button><button type="button" class="chip ghost" data-prio-drop="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Ya no es prioridad</button></div>`:""}</div>` : ""}</li>`;
 }
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-prio-toggle]"); if(b){ PRIO_OPEN = PRIO_OPEN===b.dataset.prioToggle ? null : b.dataset.prioToggle; render(); } });
 document.addEventListener("click", e => {
   if(!CAN || !DB) return;
   const b = e.target.closest && e.target.closest("[data-prio-done],[data-prio-drop]"); if(!b) return;
   const area = b.dataset.prioDone || b.dataset.prioDrop, propuesta = b.dataset.prioDone ? "cumplida" : "retirar";
-  addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
+  PRIO_OPEN = null; addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
 });
 // ---- naturaleza e importancia de un paso ----
 const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"condicional", rutina:"rutina", caducidad:"caducidad"};
@@ -870,7 +879,7 @@ function renderArea(a){
     <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e})));
   main.innerHTML = `
-    <section class="prios"><h2>Prioridades</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}${CAN?`<p class="more">Los pasos que sirven a cada prioridad salen de los proyectos del área. Marcar una prioridad como cumplida se registra en la siguiente sesión del dueño del área, que es quien reescribe <code>area.md</code>.</p>`:""}</section>
+    <section class="prios"><h2>Prioridades</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
