@@ -98,15 +98,30 @@ header{display:grid;gap:8px}
 .prios{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
 .prios ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--ink-soft);font-size:14px}
 .prios ol li::marker{font:500 12px var(--f-mono);color:var(--muted)}
-.prio-l{gap:6px}
-.prio{display:grid;gap:4px}
-.prio-t{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;color:var(--ink-soft)}
+.prio-l{gap:8px}
+.prio{display:list-item}
+.prio-t{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:baseline;color:var(--ink-soft)}
 .prio.done .prio-t .tx{color:var(--muted);text-decoration:line-through}
-.prio-pill{cursor:pointer;border:0}
-.prio-pill:hover{filter:brightness(.94)}
-.prio-pill:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-.prio-d{display:grid;gap:8px;padding:6px 0 10px 0;border-bottom:1px solid var(--rule-soft)}
-.prio-s{padding-left:0}
+.prio-a{display:inline-flex;align-items:baseline;gap:10px;white-space:nowrap}
+.prio-m{font:500 11.5px var(--f-mono);color:var(--muted)}
+.prio-m.late{color:var(--alert);font-weight:600}.prio-m.soon{color:var(--warn)}
+.prio-go{all:unset;cursor:pointer;font:600 13px var(--f-body);color:var(--signal);border-radius:4px;padding:2px 4px}
+.prio-go:hover{text-decoration:underline;text-underline-offset:3px}
+.prio-go:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+@media (max-width:600px){.prio-t{grid-template-columns:1fr}}
+body.modal-open{overflow:hidden}
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(10,12,13,.45);display:grid;place-items:center;padding:16px}
+.modal{background:var(--surface);color:var(--ink);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:min(760px,100%);max-height:calc(100dvh - 32px);overflow:auto;display:grid;gap:0;outline:none}
+.modal-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:20px 22px 14px;border-bottom:1px solid var(--rule-soft);position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-h h2{font-size:20px;margin-top:4px}
+.modal-h .sub{font-size:14px;margin-top:6px}
+.modal-x{all:unset;cursor:pointer;width:32px;height:32px;display:grid;place-items:center;border-radius:999px;color:var(--muted)}
+.modal-x:hover{background:var(--rule-soft)}
+.modal-x:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.modal-s{padding:16px 22px;display:grid;gap:10px;border-bottom:1px solid var(--rule-soft)}
+.modal-s h3{display:flex;gap:8px;align-items:baseline}
+.modal-s h3 .c{font:500 12px var(--f-mono);color:var(--muted)}
+.modal-f{padding:14px 22px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface)}
 .ents{display:grid;gap:4px}
 .ent{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--rule-soft)}
 .ent:first-child{border-top:none}
@@ -348,6 +363,7 @@ footer{font-size:12.5px;color:var(--muted)}
     <main id="main" class="wrap" style="gap:24px"></main>
     <footer id="foot"></footer>
   </div>
+  <div id="modal"></div>
   <div id="flash" class="flash" role="status" hidden></div>
 </div>
 
@@ -461,11 +477,11 @@ function parseHash(){
   if(h==="entregables") return {lvl:"ent"};
   return {lvl:"root"};
 }
-function go(v){ view = v; EDIT = null; HECHO = null; if(v.lvl==="proj") tab = v.tab || "estado"; const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
+function go(v){ view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; if(v.lvl==="proj") tab = v.tab || "estado"; const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
 window.addEventListener("popstate", ()=>{ view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
-  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
+  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],[data-modal-close],.modal-h,.modal-f,.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
   const b = t.closest("[data-go-area],[data-go-proj],[data-go-root],[data-go-pend],[data-go-dec],[data-go-ent]"); if(!b) return;
   e.preventDefault();
   if(b.dataset.goRoot!==undefined) go({lvl:"root"});
@@ -475,7 +491,7 @@ document.addEventListener("click", e => {
   else if(b.dataset.goArea) go({lvl:"area", id:b.dataset.goArea});
   else go({lvl:"proj", id:b.dataset.goProj, tab: b.dataset.tab || (t.closest("#view-pend, .enf, .due, .steps") ? "pasos" : "estado")});
 });
-document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
+document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && PRIO_OPEN && !EDIT && !HECHO){ PRIO_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
 
 // ---- controles de un paso ----
 let EDIT = null, HECHO = null, CALM = null, CORR = null;
@@ -586,25 +602,44 @@ async function corregirEstado(p, propuesta){
 // ---- prioridades del área: los pasos que las sirven y su cierre ----
 const prioPend = (area, i) => CAMBIOS.find(c=>c.tipo==="prioridad" && c.area===area && c.indice===i+1) || null;
 let PRIO_OPEN = null;
+function prioPasos(a, i){ const ps = (a.proyectos||[]).map(x=>byId[x]).filter(Boolean); const out = []; for(const p of ps){ if(p.cerrado||p.restringido) continue; for(const s of stepsLive(p)) if(s.prioridad_area===i+1) out.push({p,s}); } return {ps, pasos:out}; }
 function prioItem(a, ps, texto, i){
-  const pasos = []; for(const p of ps){ if(p.cerrado||p.restringido) continue; for(const s of stepsLive(p)) if(s.prioridad_area===i+1) pasos.push({p,s}); }
-  const q = prioPend(a.slug, i), k = a.slug+"#"+i, open = PRIO_OPEN===k, corto = texto.replace(/[.:].*$/,"").slice(0,80);
-  const tday = today(), nLate = pasos.filter(x=>{ const f = effDate(x.p,x.s); return f && f<tday; }).length;
-  const lider = pasos.length ? pasos.map(x=>x.p).sort((x,y)=>pasos.filter(z=>z.p===y).length-pasos.filter(z=>z.p===x).length)[0] : (ps.find(p=>!p.cerrado&&!p.restringido)||null);
-  const frase = lider ? `abre sesión en ${lider.area}/${lider.slug} y avanza la prioridad «${corto}»${pasos.length?"; trae los pasos de los demás proyectos del área que la sirven":": escribe los pasos que la sirven"}` : "";
-  const pill = q ? `<span class="pill soon">${q.propuesta==="cumplida"?"cumplida":"retirada"} ⟳</span>` : `<button type="button" class="pill ${pasos.length?(nLate?"late":"ok"):"none"} prio-pill" data-prio-toggle="${esc(k)}" aria-expanded="${open}" title="${open?"Plegar":"Ver los pasos que la sirven"}">${pasos.length?`${pasos.length} paso${pasos.length===1?"":"s"}${nLate?` · ${nLate} vencido${nLate===1?"":"s"}`:""}`:"sin pasos"} ${open?"▴":"▾"}</button>`;
-  return `<li class="prio${q?" done":""}"><div class="prio-t"><span class="tx">${inline(texto)}</span>${pill}</div>
-    ${q&&CAN?`<div class="prio-d"><span class="pend-note">${q.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"} · pendiente de registrar en la sesión del dueño del área · <button type="button" class="lnk" data-undo="${q.id}">Deshacer</button></span></div>`:""}
-    ${open ? `<div class="prio-d">${pasos.length?`<div class="steps prio-s">${pasos.map(({p,s})=>stepRow(p,s,true)).join("")}</div>`:`<p class="empty">Ningún paso abierto la sirve hoy.</p>`}
-      <div class="frase">${frase?`<code class="frase-t">${esc(frase)}</code><button type="button" class="chip" data-copy="${esc(frase)}">Copiar</button>`:""}</div>
-      ${CAN?`<div class="chips"><button type="button" class="chip" data-prio-done="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Marcar cumplida</button><button type="button" class="chip ghost" data-prio-drop="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Ya no es prioridad</button></div>`:""}</div>` : ""}</li>`;
+  const {pasos} = prioPasos(a, i), q = prioPend(a.slug, i), tday = today();
+  const nLate = pasos.filter(x=>{ const f = effDate(x.p,x.s); return f && f<tday; }).length;
+  const meta = q ? `<span class="prio-m soon">${q.propuesta==="cumplida"?"Cumplida":"Retirada"} · por registrar</span>`
+    : `<span class="prio-m${nLate?" late":""}">${pasos.length?`${pasos.length} paso${pasos.length===1?"":"s"}${nLate?` · ${nLate} vencido${nLate===1?"":"s"}`:""}`:"Sin pasos"}</span>`;
+  return `<li class="prio${q?" done":""}"><div class="prio-t"><span class="tx">${inline(texto)}</span><span class="prio-a">${meta}<button type="button" class="prio-go" data-prio-toggle="${esc(a.slug+"#"+i)}">Atender<span aria-hidden="true"> ›</span></button></span></div></li>`;
 }
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-prio-toggle]"); if(b){ PRIO_OPEN = PRIO_OPEN===b.dataset.prioToggle ? null : b.dataset.prioToggle; render(); } });
+function prioModal(){
+  if(!PRIO_OPEN) return "";
+  const [slug, si] = PRIO_OPEN.split("#"), i = Number(si), a = areaBy[slug]; if(!a) return "";
+  const texto = (a.prioridades||[])[i]; if(texto===undefined) return "";
+  const {ps, pasos} = prioPasos(a, i), q = prioPend(slug, i);
+  const titulo = texto.split(/(?<=\.)\s/)[0], resto = texto.slice(titulo.length).trim();
+  const porProy = {}; for(const x of pasos) porProy[x.p.id] = (porProy[x.p.id]||0)+1;
+  const lider = pasos.length ? byId[Object.keys(porProy).sort((x,y)=>porProy[y]-porProy[x])[0]] : (ps.find(p=>!p.cerrado&&!p.restringido)||null);
+  const otros = Object.keys(porProy).filter(id=>lider && id!==lider.id).map(id=>byId[id]);
+  const corto = titulo.replace(/\.$/,"");
+  const frase = lider ? `abre sesión en ${lider.area}/${lider.slug} y avanza la prioridad del área «${corto}»${otros.length?`; trae los pasos que la sirven de ${otros.map(p=>p.area+"/"+p.slug).join(", ")}`:""}${pasos.length?"":"; escribe los pasos que la sirven"}` : "";
+  return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="prio-h">
+    <header class="modal-h"><span class="enf-n">${i+1}</span><div><div class="eyebrow">${esc(a.nombre)} · prioridad</div><h2 id="prio-h">${inline(titulo)}</h2>${resto?`<p class="sub">${inline(resto)}</p>`:""}</div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
+    <section class="modal-s"><h3>Pasos que la sirven <span class="c">${pasos.length}</span></h3>
+      ${pasos.length?`<div class="steps">${pasos.map(({p,s})=>stepRow(p,s,true)).join("")}</div>`:`<p class="empty">Ningún paso abierto de los proyectos del área la sirve todavía.</p>`}</section>
+    ${frase?`<section class="modal-s"><h3>Para avanzarla en una sesión</h3><p class="more" style="margin:0">Una sola frase para toda la prioridad${pasos.length>1?", no para un paso":""}: abre la sesión en ${lider?`<b>${esc(lider.nombre)}</b>`:"el proyecto"}${otros.length?" y trae los pasos de los demás proyectos":""}.</p>
+      <div class="frase"><code class="frase-t">${esc(frase)}</code><button type="button" class="chip" data-copy="${esc(frase)}">Copiar</button></div></section>`:""}
+    <footer class="modal-f">${CAN ? (q ? `<span class="pend-note">${q.propuesta==="cumplida"?"Marcada cumplida":"Marcada como ya no prioritaria"}: lo registra la sesión del dueño del área.</span><button type="button" class="chip" data-undo="${q.id}">Deshacer</button>` : `<button type="button" class="btn" data-prio-done="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Marcar cumplida</button><button type="button" class="chip ghost" data-prio-drop="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Ya no es prioridad</button>`) : ""}<button type="button" class="chip" data-modal-close style="margin-left:auto">Cerrar</button></footer>
+  </div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-prio-toggle]"); if(b){ PRIO_OPEN = b.dataset.prioToggle; render(); const m = document.querySelector(".modal"); if(m) m.focus(); return; }
+  const c = e.target.closest && e.target.closest("[data-modal-close]");
+  if(c && (e.target===c || e.target.closest(".modal-x,.modal-f [data-modal-close]"))){ PRIO_OPEN = null; render(); }
+});
 document.addEventListener("click", e => {
   if(!CAN || !DB) return;
   const b = e.target.closest && e.target.closest("[data-prio-done],[data-prio-drop]"); if(!b) return;
   const area = b.dataset.prioDone || b.dataset.prioDrop, propuesta = b.dataset.prioDone ? "cumplida" : "retirar";
-  PRIO_OPEN = null; addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
+  addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
 });
 // ---- naturaleza e importancia de un paso ----
 const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"condicional", rutina:"rutina", caducidad:"caducidad"};
@@ -938,6 +973,7 @@ function render(){
     console.error(err);
     document.getElementById("main").innerHTML = `<p class="empty">No se pudo pintar esta vista (${esc(err && err.message || err)}). Vuelve a cargar la página; si sigue, avisa a quien administra la carpeta.</p>`;
   }
+  const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal(); document.body.classList.toggle("modal-open", !!PRIO_OPEN); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
   f.innerHTML = META ? esc(`Vista al ${fmtL(META.snapshot)} · generada desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}. Lee guia.md, cada area.md y, de cada proyecto, proyecto.md, decisiones.md, sesiones.md y las cabeceras de sus entregables. Nunca fuentes, taller ni lo restringido. La carpeta es la fuente; lo que se toca aquí espera en una cola hasta que la sincronización lo escribe allí.`) : "";
