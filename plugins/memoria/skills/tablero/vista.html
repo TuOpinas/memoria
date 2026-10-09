@@ -102,8 +102,7 @@ header{display:grid;gap:8px}
 .ent:first-child{border-top:none}
 .ent b{font-weight:600}
 .ent .d{grid-column:1/-1;font-size:13.5px;color:var(--ink-soft)}
-.ent .f{font:500 11.5px var(--f-mono);color:var(--muted);display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ent .f .chip{font:500 11px var(--f-mono);padding:3px 8px}
+.ent .f{font:500 11.5px var(--f-mono);color:var(--muted)}
 
 /* nivel proyecto */
 .card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;display:grid;gap:12px}
@@ -154,8 +153,8 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--rule);flex:none}
 .dot.ok{background:var(--signal)}.dot.soon{background:var(--warn-fill)}.dot.late{background:var(--alert)}.dot.none{background:var(--rule);box-shadow:inset 0 0 0 1px var(--muted)}.dot.closed{background:transparent;box-shadow:inset 0 0 0 1px var(--rule)}.dot.pause{background:var(--pause)}.dot.risk{outline:2px solid var(--alert);outline-offset:1.5px}
 .pill.est{font-weight:600}
-.side-leg{grid-template-columns:1fr 1fr}.side-leg span{cursor:help;border-radius:3px}
-[data-tip]{cursor:help;border-radius:3px}
+.side-leg{grid-template-columns:1fr 1fr}.side-leg span{border-radius:3px}
+[data-tip]{border-radius:3px}
 [data-tip]:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 #tip{position:fixed;z-index:1000;background:var(--ink);color:var(--surface);font:400 12.5px/1.45 var(--f-body);letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:6px;max-width:300px;box-shadow:0 4px 14px rgba(0,0,0,.2);pointer-events:none;left:0;top:0}
 #tip[hidden]{display:none}
@@ -585,8 +584,6 @@ async function copiar(txt, btn){
   catch(e){ const r = document.createRange(); const el = btn.previousElementSibling; if(el){ r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); flash("Selecciona y copia el texto."); } }
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-copy]"); if(b){ e.preventDefault(); copiar(b.dataset.copy, b); } });
-const rutaEnt = (p, e) => (META && META.raiz ? META.raiz.replace(/\/$/,"") + "/" : "") + p.area + "/" + p.slug + "/entregables/" + e.archivo;
-const copiaRuta = (p, e) => `<button type="button" class="chip" data-copy="${esc(rutaEnt(p,e))}" title="Copiar la ruta del archivo para abrirlo en el Finder, en Claude o en tu editor">Copiar ruta</button>`;
 function sesionFrase(p){ return `abre sesión en ${p.area}/${p.slug} y regulariza sus siguientes pasos con la propuesta de la vista`; }
 function regularizar(p){
   const live = stepsLive(p); if(live.length < 8 && !live.some(s=>["rutina","condicional","caducidad"].includes(s.naturaleza))) return "";
@@ -750,7 +747,7 @@ function renderEnt(){
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e})));
     total += vig.length;
     if(!vig.length) return "";
-    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""} · ${copiaRuta(p,e)}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
+    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
   }).join("");
   head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Entregables vigentes</h1><p class="sub">Sobre lo que se puede construir hoy, por área. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
   main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`);
@@ -852,7 +849,7 @@ function renderArea(a){
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
-      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""} · ${copiaRuta(p,e)}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
+      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
 }
 // ---- proyecto ----
 let tab = "estado";
@@ -883,7 +880,7 @@ function renderProj(p){
     body = `<div class="card">${(p.decisiones||[]).length ? p.decisiones.map(d=>`<article class="dec"><div class="hd"><time>${fmtL(d.fecha)}</time><h3>${inline(d.titulo)}</h3></div><dl>${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl></article>`).join("") + (nD>p.decisiones.length?`<p class="more">Se muestran las ${p.decisiones.length} más recientes de ${nD}. El registro completo está en <code>decisiones.md</code>.</p>`:"") : `<p class="empty">Sin decisiones registradas.</p>`}</div>`;
   } else if(tab==="entregables"){
     const ents = (p.entregables||[]);
-    const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.map(e=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"} · ${copiaRuta(p,e)}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
+    const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.map(e=>`<div class="ent"><b>${esc(e.nombre)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
     body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin cabecera", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
