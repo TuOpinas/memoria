@@ -790,7 +790,7 @@ function syncBtn(){
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
-  if(META.modo === "completo") out += `<div class="stale"><span><b>Tablero completo.</b> Incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».</span></div>`;
+  if(META.modo === "completo" && view.lvl === "root") out += `<div class="stale"><span><b>Tablero completo.</b> Incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».</span></div>`;
   if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el plugin que la regenera corre la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY);
   if(dias >= 2) out += `<div class="stale"><span>La vista lleva <b>${dias} días</b> sin regenerarse (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Lo que ves puede no ser lo que hay en la carpeta.</span>${syncBtn()}</div>`;
