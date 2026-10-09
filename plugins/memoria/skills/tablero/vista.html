@@ -420,6 +420,8 @@ footer{font-size:12.5px;color:var(--muted)}
 .ent-t:hover{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
 .ent-t:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .ent-l{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+.aviso{background:var(--warn-dim);color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13.5px}
+.aviso.suave{background:var(--rule-soft);color:var(--ink-soft)}
 .mt-i .prio-go{justify-self:end}
 .ar{display:grid}
 .ar-i{all:unset;cursor:pointer;box-sizing:border-box;display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:6px 16px;align-items:center;padding:10px 0;border-top:1px solid var(--rule-soft);border-radius:4px}
@@ -818,6 +820,28 @@ function pospuestos(){
   return MT_POS;
 }
 function posponer(k, dias){ const m = pospuestos(); if(dias) m[k] = addDays(dias); else delete m[k]; try{ localStorage.setItem(POS_KEY(), JSON.stringify(m)); }catch(e){} }
+// ---- lo que la sesión avisa al abrir, visto desde el tablero ----
+const diasDesde = f => f ? Math.round((new Date(today()+"T12:00:00") - new Date(f+"T12:00:00"))/DAY) : 0;
+function desfase(p, e, idx){
+  // fuerte: un entregable que cita a otro actualizado después; blando: decisiones o encuadre del proyecto posteriores
+  const out = {ents:[], blandos:[]};
+  if(!e.actualizado || !(e.basado_en||[]).length) return out;
+  for(const b of e.basado_en){
+    const r = b.replace(/^\.?\//,""), x = idx[r];
+    if(x){ if(x.e.actualizado && x.e.actualizado > e.actualizado) out.ents.push(x); continue; }
+    const seg = r.split("/"), q = byId[seg[0]+"--"+seg[1]]; if(!q) continue;
+    if(/decisiones\.md$/.test(r)){ const f = (q.decisiones||[])[0]?.fecha; if(f && f > e.actualizado) out.blandos.push(`hay decisiones de ${q.nombre} posteriores (la última, del ${fmtD(f)})`); }
+    else if(/proyecto\.md$/.test(r) && q.actualizado && q.actualizado > e.actualizado) out.blandos.push(`el encuadre de ${q.nombre} cambió el ${fmtD(q.actualizado)}`);
+  }
+  return out;
+}
+const tagDe = p => p.area+"/"+p.slug;
+function afectan(p){
+  const re = new RegExp("(^|[\\s(·`/.])"+tagDe(p).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![\\w-])");
+  const out = [];
+  for(const q of PROJ){ if(q.id===p.id || q.restringido) continue; for(const d of (q.decisiones||[])) if(re.test(d.afecta||"")) out.push({q, d, nueva: !p.ultima_sesion || (d.fecha||"") > p.ultima_sesion}); }
+  return out.sort((a,b)=>(b.d.fecha||"").localeCompare(a.d.fecha||""));
+}
 function mtDatos(){
   const tday = today(), filas = [];
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
@@ -835,6 +859,13 @@ function mtDatos(){
     if(sinD.length){ it.push({k:"desc", ents: sinD, txt:`${sinD.length} entregable${sinD.length===1?"":"s"} vigente${sinD.length===1?"":"s"} sin descripción en el índice del área`}); fr.push("describe en el índice del área los entregables vigentes que no la tienen"); }
     const conf = (p.decisiones||[]).filter(d=>d.por_confirmar);
     if(conf.length){ it.push({k:"conf", decs: conf, txt:`${conf.length} decisi${conf.length===1?"ón":"ones"} por confirmar`}); fr.push("confirma con su dueño las decisiones pendientes de confirmar"); }
+    const idx = entIdx();
+    const desf = (p.entregables||[]).filter(e=>["vigente","borrador"].includes(e.estado)).map(e=>({e, d: desfase(p, e, idx)})).filter(x=>x.d.ents.length);
+    if(desf.length){ it.push({k:"desf", desf, txt:`${desf.length} entregable${desf.length===1?"":"s"} con una base que cambió después`}); fr.push("revisa los entregables cuya base cambió después y ponlos al día o confirma que siguen valiendo"); }
+    const bor = (p.entregables||[]).filter(e=>e.estado==="borrador" && e.actualizado && !e.fecha_de_archivo && diasDesde(e.actualizado) > 30);
+    if(bor.length){ it.push({k:"bor", bor, txt:`${bor.length} borrador${bor.length===1?"":"es"} de más de 30 días`}); fr.push("decide qué pasa con los borradores de más de 30 días: publicarlos, seguir con ellos o darlos por reemplazados"); }
+    const afe = afectan(p).filter(x=>x.nueva);
+    if(afe.length){ it.push({k:"afe", afe, txt:`${afe.length} decisi${afe.length===1?"ón":"ones"} de otros proyectos posterior${afe.length===1?"":"es"} a su última sesión`}); fr.push("repasa las decisiones de otros proyectos que le afectan y llegaron después de su última sesión"); }
     const cola = CAMBIOS.filter(c=>c.proyecto===p.id && (c.tipo==="nota" || c.tipo==="corregir" || (c.tipo==="hecho" && !c.nota)));
     if(cola.length){ it.push({k:"cola", cola, txt:`${cola.length} cosa${cola.length===1?"":"s"} marcada${cola.length===1?"":"s"} aquí espera${cola.length===1?"":"n"} sesión`}); fr.push("registra lo que se marcó en el tablero"); }
     if(it.length) filas.push({id:p.id, p, it, frase:`abre sesión en ${p.area}/${p.slug} y pon al día su memoria: ${fr.join("; ")}`});
@@ -868,6 +899,9 @@ function mtModal(){
     if(x.k==="par") return `<h3>Proyecto parado</h3><p class="more" style="margin:0">${esc(x.txt.charAt(0).toUpperCase()+x.txt.slice(1))}. La sesión decide si sigue, se pausa o se cierra. ${ir("pasos","Ver las acciones ›")}</p>`;
     if(x.k==="desc") return `<h3>Entregables vigentes sin descripción</h3><div class="ents">${x.ents.map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.actualizado?fmtD(e.actualizado):""}</span></div>`).join("")}</div>`;
     if(x.k==="conf") return `<h3>Decisiones por confirmar <span class="c">${x.decs.length}</span></h3><div class="dl">${x.decs.map(d=>decItem(d,p,false)).join("")}</div>`;
+    if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Citan en su cabecera otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
+    if(x.k==="bor") return `<h3>Borradores de más de 30 días <span class="c">${x.bor.length}</span></h3><ul class="ent-l">${x.bor.map(e=>`<li>${entBtn(p,e)} <span class="more">· sin tocar desde hace ${diasDesde(e.actualizado)} días</span></li>`).join("")}</ul>`;
+    if(x.k==="afe") return `<h3>Decisiones de otros proyectos que le afectan <span class="c">${x.afe.length}</span></h3><p class="more" style="margin:0">Las registraron después de la última sesión de este proyecto y lo citan en «Afecta a».</p><div class="dl">${x.afe.map(({q,d})=>decItem(d,q,true)).join("")}</div>`;
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
     return "";
   };
@@ -904,6 +938,7 @@ function entModal(){
   if(!ENT_OPEN) return "";
   const idx = entIdx(), x = idx[ENT_OPEN]; if(!x){ ENT_OPEN = null; return ""; }
   const {p, e} = x, a = areaBy[p.area];
+  const df = desfase(p, e, idx);
   const usan = Object.entries(idx).filter(([k,y])=>k!==ENT_OPEN && (y.e.basado_en||[]).some(b=>b.replace(/^\.?\//,"")===ENT_OPEN)).map(([,y])=>y);
   const pill = e.estado==="vigente" ? "ok" : e.estado==="reemplazado" ? "closed" : e.estado ? "draft" : "none";
   const reemp = e.reemplazado_por || (/\*\*reemplazad[oa]s?\*\*\s*por\s*([^;.]*)/i.exec(e.descripcion||"")||[])[1];
@@ -911,6 +946,7 @@ function entModal(){
   return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ent-h" tabindex="-1">
     <header class="modal-h"><span></span><div><div class="eyebrow">${esc(a?.nombre||"")} · ${esc(p.nombre)} · entregable</div><h2 id="ent-h">${inline(e.titulo||e.nombre)}</h2>${e.descripcion?`<p class="sub">${inline(e.descripcion)}</p>`:""}</div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
     <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(e.estado || "sin cabecera")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
+    ${df.ents.length || df.blandos.length ? `<section class="modal-s"><div class="aviso${df.ents.length?"":" suave"}"><b>${df.ents.length ? "Posiblemente desfasado" : "Para tener en cuenta"}.</b> ${[...df.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)}, en el que se basa, cambió el ${fmtD(y.e.actualizado)}`), ...df.blandos.map(esc)].join("; ")}; este es del ${fmtD(e.actualizado)}.</div></section>` : ""}
     <section class="modal-s"><h3>Construido sobre <span class="c">${base ? base.length : ""}</span></h3>${base ? (base.length ? `<ul class="ent-l">${base.map(b=>origen(b, idx)).join("")}</ul>` : `<p class="more" style="margin:0">Su cabecera no cita nada: es material adoptado sin trazabilidad. Antes de publicarlo de nuevo, «revisar» pide completarla.</p>`) : `<p class="more" style="margin:0">${e.formato && e.formato!=="md" ? "Es un archivo sin cabecera: de qué se construyó lo cuenta proyecto.md o la decisión que lo produjo." : "Sin datos de origen en su cabecera."}</p>`}</section>
     <section class="modal-s"><h3>Lo usan <span class="c">${usan.length}</span></h3>${usan.length ? `<p class="more" style="margin:0">Se construyen sobre este: si cambia, conviene revisarlos.</p><ul class="ent-l">${usan.map(y=>`<li>${entBtn(y.p,y.e)} <span class="more">· ${esc(y.e.estado||"")} · ${esc(areaBy[y.p.area]?.nombre||"")} · ${esc(y.p.nombre)}</span></li>`).join("")}</ul>` : `<p class="more" style="margin:0">Ningún otro entregable lo cita en su cabecera.</p>`}</section>
     <footer class="modal-f"><button type="button" class="lnk" data-go-proj="${p.id}" data-tab="entregables">Ir al proyecto ›</button><button type="button" class="chip" data-modal-close style="margin-left:auto">Cerrar</button></footer>
@@ -1208,7 +1244,8 @@ function renderArea(a){
       <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
 }
 // ---- proyecto ----
-let tab = "estado", EST_FULL = new Set();
+let tab = "estado", EST_FULL = new Set(), AF_ALL = new Set();
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-af-all]"); if(!b) return; const id = b.dataset.afAll; AF_ALL.has(id) ? AF_ALL.delete(id) : AF_ALL.add(id); render(); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-est-full]"); if(!b) return; const id = b.dataset.estFull; EST_FULL.has(id) ? EST_FULL.delete(id) : EST_FULL.add(id); render(); });
 function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
@@ -1235,6 +1272,8 @@ function renderProj(p){
       nx ? `<dt>Siguiente paso</dt><dd>${inline(nx.texto)}${effDate(p,nx)?` <span class="pill ${due(effDate(p,nx)).cls}">${due(effDate(p,nx)).label}</span>`:""}<br>${ir("pasos", `Ver las ${live.length} acciones ›`)}</dd>` : `<dt>Siguiente paso</dt><dd>Ninguno escrito.</dd>`,
       nLate ? `<dt>Vencidos</dt><dd><span class="pill late">${nLate}</span> ${ir("pasos","Atenderlos ›")}</dd>` : "",
       esperas.length ? `<dt>Espera a terceros</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
+      (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);
+        return `<dt>Le afectan</dt><dd>${nu.length?`<span class="pill soon">${nu.length} desde su última sesión</span> `:""}<span class="more">${af.length} decisi${af.length===1?"ón":"ones"} de otros proyectos lo citan</span><ul class="ent-l" style="margin-top:6px">${ver.map(({q,d,nueva})=>`<li>${inline(d.titulo)} <span class="more">· ${esc(q.nombre)} · ${fmtD(d.fecha)}${nueva?" · nueva":""}</span> <button type="button" class="lnk" style="font-size:12.5px" data-go-proj="${q.id}" data-tab="decisiones">Ver ›</button></li>`).join("")}</ul>${af.length>ver.length||AF_ALL.has(p.id)?`<button type="button" class="leer" data-af-all="${p.id}">${AF_ALL.has(p.id)?"Ver menos":`Ver las ${af.length}`}</button>`:""}</dd>`; })(),
       ud ? `<dt>Última decisión</dt><dd>${inline(ud.titulo)} <span class="more">· ${fmtD(ud.fecha)}</span></dd>` : "",
       ue ? `<dt>Último entregable</dt><dd>${inline(ue.titulo||ue.nombre)} <span class="more">· ${esc(ue.estado)}${ue.actualizado?` · ${fmtD(ue.actualizado)}`:""}</span></dd>` : "",
       nc ? `<dt>Por registrar</dt><dd><span class="pill soon">${nc}</span> marcados aquí; los recoge la siguiente sesión</dd>` : ""
