@@ -349,7 +349,8 @@ for a in areas_guia:
         pid = f"{a['slug']}--{slug}"
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-        declarado = "restringid" in ref["descripcion"].lower()
+        # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta
+        declarado = bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I))
         tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,

@@ -45,7 +45,7 @@ Cuatro comprobaciones, y en la primera que falle se dice qué falta y se para:
 3. **La cuenta tiene lo que hace falta**: la herramienta `Artifact` con las capacidades de base de datos, usuario y conector; `ArtifactData`; la herramienta de tareas programadas (`create_trigger`) con el conector «Claude Code Remote»; y el shell de la computadora (`device_bash`), porque el generador corre contra la carpeta sincronizada en ella. Se comprueba con `ToolSearch`; lo que no esté se nombra.
 4. **La computadora está disponible** y la raíz se ve en `$HOME/mnt/` del shell. Si no, se pide con `device_request_folder_access` por su ruta.
 
-Si el modo es público y la cuenta de la sesión lee áreas o proyectos restringidos, se avisa de una cosa antes de seguir: lo restringido queda fuera solo si está declarado (la columna «Quién la lee» en `guia.md`, la palabra «restringido» en la línea del proyecto en `area.md`); un proyecto restringido en Drive que nadie declaró entraría en el tablero público. Si hay duda, se monta el completo y no se comparte.
+Si el modo es público y la cuenta de la sesión lee áreas o proyectos restringidos, se avisa de una cosa antes de seguir: lo restringido queda fuera solo si está declarado (la columna «Quién la lee» en `guia.md`, la palabra «restringido» al inicio de la línea del proyecto en `area.md`); un proyecto restringido en Drive que nadie declaró entraría en el tablero público. Si hay duda, se monta el completo y no se comparte.
 
 ## Montar
 

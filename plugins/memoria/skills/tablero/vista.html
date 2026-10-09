@@ -19,12 +19,12 @@
   --ground:#0E1112; --surface:#171A1B; --ink:#E8EAEB; --ink-soft:#B0B6B8; --muted:#868D90;
   --rule:#272C2E; --rule-soft:#1D2122; --signal:#3FD69B; --signal-dim:#10261E; --on-signal:#0E1112;
   --warn:#F5C542; --warn-dim:#3A2F0A; --warn-fill:#F5C542; --alert:#E5484D; --alert-dim:#2C1714; --on-alert:#FFFFFF;
-  --pause:#A7AEB1; --pause-dim:#202527; --code:#1F2425; color-scheme:dark}}
+  --pause:#A7AEB1; --pause-dim:#202527; --code:#1F2425; --velo:rgba(0,0,0,.7); color-scheme:dark}}
 :root[data-theme="dark"]{
   --ground:#0E1112; --surface:#171A1B; --ink:#E8EAEB; --ink-soft:#B0B6B8; --muted:#868D90;
   --rule:#272C2E; --rule-soft:#1D2122; --signal:#3FD69B; --signal-dim:#10261E; --on-signal:#0E1112;
   --warn:#F5C542; --warn-dim:#3A2F0A; --warn-fill:#F5C542; --alert:#E5484D; --alert-dim:#2C1714; --on-alert:#FFFFFF;
-  --pause:#A7AEB1; --pause-dim:#202527; --code:#1F2425; color-scheme:dark}
+  --pause:#A7AEB1; --pause-dim:#202527; --code:#1F2425; --velo:rgba(0,0,0,.7); color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:24px 64px}
 .wrap{max-width:960px;margin:0 auto;display:grid;gap:24px}
@@ -110,7 +110,7 @@ header{display:grid;gap:8px}
 .prio-go:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 @media (max-width:600px){.prio-t{grid-template-columns:1fr}}
 body.modal-open{overflow:hidden}
-.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(10,12,13,.45);display:grid;place-items:center;padding:16px}
+.modal-bg{position:fixed;inset:0;z-index:50;background:var(--velo,rgba(10,12,13,.45));display:grid;place-items:center;padding:16px}
 .modal{background:var(--surface);color:var(--ink);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:min(760px,100%);max-height:calc(100dvh - 32px);overflow:auto;display:grid;gap:0;outline:none}
 .modal-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:20px 22px 14px;border-bottom:1px solid var(--rule-soft);position:sticky;top:0;background:var(--surface);z-index:1}
 .modal-h h2{font-size:20px;margin-top:4px}
@@ -1235,6 +1235,7 @@ function renderArea(a){
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
   head.innerHTML = `<div class="eyebrow">Área</div><h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
     <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
+  if(a.legible===false){ main.innerHTML = `<div class="card"><p class="sub">Área restringida. Existe y responde por ella ${esc(a.dueno||"su dueño")}; su contenido no se muestra en este tablero${META && META.modo==="completo" ? " porque la cuenta que lo genera no puede leerla" : ""}. Para pedir acceso, habla con quien administra la carpeta.</p></div>`; return; }
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
   main.innerHTML = `
     <section class="prios"><h2>Prioridades</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
