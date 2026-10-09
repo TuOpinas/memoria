@@ -33,9 +33,11 @@ descripcion() {
 # Orden del índice: contrato y estilo primero, después el ciclo de trabajo, al final la migración
 INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta tablero migrar"
 
+# El cuerpo se genera aparte para sacarle una huella: la primera línea lleva versión y huella,
+# así que cualquier cambio de texto cambia esa línea aunque el número sea el mismo.
+CUERPO="$(mktemp)"
+trap 'rm -f "$CUERPO"' EXIT
 {
-  echo "# Método de trabajo · versión $VERSION · generado desde el plugin memoria, no se edita a mano"
-  echo
   echo "Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin \`memoria\`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz."
   echo
   echo "---"
@@ -60,6 +62,12 @@ INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta ta
     fi
     echo "- **$s**: $(descripcion "$f")"
   done
+} > "$CUERPO"
+HUELLA="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest()[:7])' "$CUERPO")"
+{
+  echo "# Método de trabajo · versión $VERSION · huella $HUELLA · generado desde el plugin memoria, no se edita a mano"
+  echo
+  cat "$CUERPO"
 } > "$OUT"
 
-echo "Generado $OUT (versión $VERSION, $(wc -l < "$OUT") líneas)"
+echo "Generado $OUT (versión $VERSION, huella $HUELLA, $(wc -l < "$OUT") líneas)"

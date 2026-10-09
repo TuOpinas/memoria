@@ -27,7 +27,7 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`.
 
 **Nivel 0**, siempre:
 
-1. La primera línea de `metodo.md`, para la versión de la raíz
+1. La primera línea de `metodo.md`, para la versión y la huella de la raíz
 2. `guia.md` entero, para el mapa de áreas, quién responde por cada una y las reglas propias de la casa
 3. El bloque `Proyectos` de `<area>/area.md`
 
@@ -55,7 +55,7 @@ Tres bloques, en este orden y sin encabezados largos.
 
 **Avisos**, solo si aplican. Cinco comprobaciones:
 
-- La versión de la primera línea de `metodo.md` es anterior a la del plugin. La raíz se quedó atrás y hay que regenerar `metodo.md`
+- La primera línea del `metodo.md` de la raíz no coincide con la del `metodo.md` del plugin (versión y huella). La raíz se quedó atrás. Si quien abre la sesión es el responsable de contexto según `guia.md`, se le pregunta «¿lo copio?» y, con su sí, se copia el `metodo.md` del plugin sobre el de la raíz: es lo único que se escribe al abrir. Si no lo es, se le dice que se lo pida a él
 - Alguna decisión de otro proyecto de la raíz nombra este proyecto en `Afecta a:`. Se cita la entrada con su fecha, quién decidió y de qué proyecto viene
 - `base/contexto.md` lleva más de 90 días sin actualizarse, mirando solo su fecha `actualizado`, sin abrirlo
 - Algún entregable tiene en `basado_en` un archivo cuya fecha `actualizado` es posterior a la suya, y por tanto puede estar desfasado
@@ -126,7 +126,7 @@ Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. 
 
 Además de las prohibiciones de `convenciones`:
 
-- Escribir algo al abrir sesión. Abrir es solo lectura
+- Escribir algo al abrir sesión. Abrir es solo lectura, salvo copiar `metodo.md` con el sí del responsable de contexto
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto

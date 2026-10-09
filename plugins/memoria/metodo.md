@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.11.0 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.11.0 · huella 23c3908 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -407,7 +407,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 
 ## 11. Actualización del método
 
-El método se actualiza publicando una versión nueva del plugin. La versión vive en el plugin y en la primera línea legible del `metodo.md` de cada raíz. Al abrir sesión se comparan las dos y se avisa si la raíz se quedó atrás; ponerla al día es volver a generar `metodo.md` desde el plugin. Nadie edita `metodo.md` dentro de la carpeta de una organización.
+El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin y, si no coincide, se avisa. Si quien abre la sesión es el responsable de contexto de la raíz, se le ofrece copiarlo en el momento; si no, se le dice que se lo pida a él. Ponerla al día es copiar el `metodo.md` del plugin sobre el de la raíz, sin tocar nada más. Nadie edita `metodo.md` dentro de la carpeta de una organización.
 
 Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: sube el número en los tres sitios donde vive, comprueba que este documento declare la mayor.menor, regenera `metodo.md` y dice qué queda por hacer a mano. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No lee el contenido de ningún archivo y no escribe nada.
 
@@ -417,7 +417,7 @@ Nunca se lee todo, y casi nunca se lee `base/`. Al abrir, se carga lo justo para
 
 **Nivel 0, siempre, y nada más que esto.** Tres lecturas cortas:
 
-1. La primera línea de `metodo.md`, para la versión de la raíz.
+1. La primera línea de `metodo.md`, para la versión y la huella de la raíz.
 2. `guia.md` entero. Es el mapa: qué áreas hay, quién responde por cada una y con qué cuenta, quién mantiene el contexto, quién administra la carpeta y las reglas propias de la casa. Cabe en una pantalla.
 3. El bloque `Proyectos` del `area.md` que toca. Dice qué proyectos hay y qué entregables vigentes tiene cada uno.
 
