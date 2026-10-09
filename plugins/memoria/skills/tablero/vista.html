@@ -477,7 +477,7 @@ function parseHash(){
   if(h==="entregables") return {lvl:"ent"};
   return {lvl:"root"};
 }
-function go(v){ view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; if(v.lvl==="proj") tab = v.tab || "estado"; const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
+function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "estado"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
 window.addEventListener("popstate", ()=>{ view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
@@ -489,7 +489,7 @@ document.addEventListener("click", e => {
   else if(b.dataset.goDec!==undefined) go({lvl:"dec"});
   else if(b.dataset.goEnt!==undefined) go({lvl:"ent"});
   else if(b.dataset.goArea) go({lvl:"area", id:b.dataset.goArea});
-  else go({lvl:"proj", id:b.dataset.goProj, tab: b.dataset.tab || (t.closest("#view-pend, .enf, .due, .steps") ? "pasos" : "estado")});
+  else go({lvl:"proj", id:b.dataset.goProj, tab: b.dataset.tab || (t.closest("#view-pend, .enf, .due, .steps") ? "pasos" : undefined)});
 });
 document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && PRIO_OPEN && !EDIT && !HECHO){ PRIO_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
 
