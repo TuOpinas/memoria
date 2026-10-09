@@ -143,7 +143,10 @@ def parse_decisiones(texto):
                 actual = "afecta"; campos[actual] = s.split(":", 1)[1].strip()
             elif actual and s:
                 campos[actual] += "\n" + s
-        out.append({"fecha": fecha, "titulo": titulo, **campos})
+        d_ = {"fecha": fecha, "titulo": titulo, **campos}
+        if re.search(r"pendientes? de confirma(r|ción)", (titulo + " " + " ".join(campos.values())).lower()):
+            d_["por_confirmar"] = True
+        out.append(d_)
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
 
@@ -187,7 +190,7 @@ def parse_indice_proyectos(texto_area):
         m2 = re.match(r"^\s+- (.*)$", l)
         if m2 and actual:
             item = m2.group(1).strip()
-            m3 = re.match(r"^([\w\-, ]+?)\s*[—-]\s*(.*?)(?:\s*·\s*actualizado\s*(20\d\d-\d\d-\d\d))?\s*$", item)
+            m3 = re.match(r"^([\w\-, ]+?)\s+[—–-]\s+(.*?)(?:\s*·\s*actualizado\s*(20\d\d-\d\d-\d\d))?\s*$", item)
             if m3 and m3.group(3):
                 for stem in [s.strip() for s in m3.group(1).split(",")]:
                     idx[actual]["entregables"][stem] = {"descripcion": m3.group(2).strip(), "actualizado": m3.group(3)}
@@ -213,7 +216,8 @@ def entregables_de(carpeta, indice):
         if n.endswith(".md"):
             t = leer(p)
             if t is not None:
-                fm, _ = frontmatter(t)
+                fm, cuerpo_e = frontmatter(t)
+                ent["titulo"] = titulo_h1(cuerpo_e) or None
                 ent["estado"] = fm.get("estado")
                 ent["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
@@ -272,12 +276,20 @@ PLAZO_ANTES = r"(antes del|antes de|para el|hasta el|a más tardar el|fecha lím
 CONTEXTO_ANTES = r"(compartió(?: por \w+)? el|compartid[oa]s? el|mandó el|envió el|respondió el|dijo el|llegó el|salió el|arrancó el|se montó el|quedó el|hizo el|cambió el|pasó el|enviad[oa]s? el|rehech[oa]s? el|comprobad[oa] el|publicad[oa] el|puest[oa] al día el|decisión del|desde el|montó el|creado el|creada el|firmad[oa] el|registrad[oa] el|actualizad[oa] el|del día|abierta el|cerrad[oa] el|entregad[oa] el|presentad[oa] el|hallazgo del|sesión del|propuesta del|criterio del|detectad[oa] el|revisad[oa] el|contestó el|escribió el|quedaron el)\s*"
 def plazos_en(texto):
     out = []
+    previa = None   # cómo se leyó la fecha anterior, para «el 2026-09-01 y el 2026-09-02»
     for m in re.finditer(r"\b(20\d\d-\d\d-\d\d)\b", texto):
         f = m.group(1); antes = texto[max(0, m.start()-40):m.start()].lower()
         despues = texto[m.end():m.end()+12].lower()
-        if m.start() <= 2: out.append(f); continue                      # «2026-10-13: buscar a…»
+        if m.start() <= 2: out.append(f); previa = True; continue          # «2026-10-13: buscar a…»
+        if previa is not None and re.search(r"20\d\d-\d\d-\d\d\s*(y|o|,)\s*(el\s*)?$", antes):
+            if previa: out.append(f)
+            continue
+        previa = False
         if re.search(r"(?<![\wáéíóú])" + CONTEXTO_ANTES + r"$", antes): continue             # «enviada el 2026-09-21»
-        if re.search(r"(?<![\wáéíóú])" + PLAZO_ANTES + r"$", antes) or despues.startswith(" a las") or despues.startswith(":"): out.append(f)
+        mp = re.search(r"([a-záéíóúñ]+)\s+el\s*$", antes)
+        if mp and re.search(r"((ad|id|ech|ich|uest|uelt|biert|scrit|suelt)[oa]s?|ó|aron|ieron|é|ía|ían)$", mp.group(1)): continue   # «registradas el», «quedó el»: contexto
+        if re.search(r"(?<![\wáéíóú])" + PLAZO_ANTES + r"$", antes) or despues.startswith(" a las") or (despues.startswith(":") and not re.search(r"\bdel\s*$", antes)):
+            out.append(f); previa = True
     return out
 
 def senales(paso_texto, area_doc, pdoc, todos):
@@ -368,6 +380,9 @@ for a in areas_guia:
                 p_["naturaleza"] = naturaleza(texto)
                 p_["temas"] = sorted(tokens_tema(texto))
                 p_.update(senales(texto, area_doc, pdoc, None))
+                if p_["naturaleza"] in ("rutina", "caducidad") and p_["fecha"]:
+                    # una revisión periódica o una caducidad no vence: se revisa; el tablero la muestra aparte
+                    p_["revisar"] = p_["fecha"]; p_["fecha"] = None
             pasos.append(p_)
         pdoc["pasos"] = pasos
         pdoc["decisiones_total"] = 0
