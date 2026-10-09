@@ -6,6 +6,8 @@ La cola ("cambios" en la base de la página) trae tres tipos:
 - hecho: un paso marcado como hecho, con nota opcional. NO se aplica: cerrarlo bien pide
   quitar el paso, contar qué pasó en sesiones.md y a veces una decisión. Se reporta.
 - nota: algo anotado para la próxima sesión. NO se aplica. Se reporta.
+- prioridad: una prioridad del área marcada como cumplida o retirada. NO se aplica: area.md lo reescribe
+  la sesión del dueño del área. Se reporta.
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
 
@@ -85,8 +87,8 @@ for c in cargar():
     if t == "fecha":
         estado, detalle = aplicar_fecha(c)
         rep[estado].append({"id": c["id"], "proyecto": c["proyecto"], "detalle": detalle})
-    elif t in ("hecho", "nota", "corregir"):
-        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "creado")})
+    elif t in ("hecho", "nota", "corregir", "prioridad"):
+        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "creado", "area", "indice", "texto")})
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})
 print(json.dumps(rep, ensure_ascii=False, indent=1))

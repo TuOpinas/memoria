@@ -37,7 +37,7 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`.
 5. `decisiones.md` del proyecto, las 5 entradas más recientes
 6. `sesiones.md`, las 3 entradas más recientes
 7. `entregables/`, solo las cabeceras de cada archivo: nombre, estado, actualizado. `taller/` no se lee al abrir: entra a demanda, por su disparador de la sección 12
-8. La cola del tablero, si la cuenta tiene uno: con `Artifact` (`list`, los de la cuenta) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo», con la organización del título de `guia.md`; si no hay ninguno, no hay tablero y no se pregunta. De cada uno, con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` con `proyecto` igual a `<area>--<proyecto>`. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
+8. La cola del tablero, si la cuenta tiene uno: con `Artifact` (`list`, los de la cuenta) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo», con la organización del título de `guia.md`; si no hay ninguno, no hay tablero y no se pregunta. De cada uno, con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` con `proyecto` igual a `<area>--<proyecto>`, y otra con `tipo` igual a `prioridad` y `area` igual al área del proyecto: son prioridades del área marcadas como cumplidas o retiradas desde el tablero, que solo puede reescribir en `area.md` la sesión de su dueño. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
 
 **El barrido de avisos**, que es lo único que recorre la raíz entera:
 
@@ -73,7 +73,7 @@ Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabaj
 
 ## Qué escribo y dónde
 
-**0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
+**0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea, una prioridad ya quitada de «Prioridades ahora» de `area.md` porque el dueño del área lo pidió en esta sesión. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
 
 **1. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
 

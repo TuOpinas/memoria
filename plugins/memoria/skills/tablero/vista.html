@@ -97,6 +97,12 @@ header{display:grid;gap:8px}
 .prios{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
 .prios ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--ink-soft);font-size:14px}
 .prios ol li::marker{font:500 12px var(--f-mono);color:var(--muted)}
+.prio-l{gap:14px}
+.prio{display:grid;gap:6px}
+.prio-t{display:grid;gap:2px;color:var(--ink)}
+.prio.done .prio-t .tx{color:var(--muted);text-decoration:line-through}
+.prio-s{padding-left:4px}
+.prio .frase{margin-top:2px}
 .ents{display:grid;gap:4px}
 .ent{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--rule-soft)}
 .ent:first-child{border-top:none}
@@ -398,7 +404,7 @@ function pend(pid, texto){
 }
 const effDate = (p, s) => { const q = pend(p.id, s.texto); if(q.corregir && q.corregir.propuesta==="sin-plazo") return null; return q.fecha ? (q.fecha.fecha_nueva||null) : (s.fecha||null); };
 const effNat = (p, s) => { const c = pend(p.id, s.texto).corregir; return c && c.propuesta!=="sin-plazo" ? c.propuesta : (s.naturaleza||"accion"); };
-const huerfano = c => { const p = byId[c.proyecto]; return !p || (!!c.paso && !(p.pasos||[]).some(s=>s.texto===c.paso)); };
+const huerfano = c => { if(c.tipo==="prioridad") return !(areaBy[c.area]&&(areaBy[c.area].prioridades||[])[c.indice-1]===c.texto); const p = byId[c.proyecto]; return !p || (!!c.paso && !(p.pasos||[]).some(s=>s.texto===c.paso)); };
 async function corregir(p, s, propuesta){
   CORR = null;
   const prev = pend(p.id, s.texto).corregir;
@@ -455,7 +461,7 @@ function go(v){ view = v; EDIT = null; HECHO = null; if(v.lvl==="proj") tab = v.
 window.addEventListener("popstate", ()=>{ view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
-  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
+  if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
   const b = t.closest("[data-go-area],[data-go-proj],[data-go-root],[data-go-pend],[data-go-dec],[data-go-ent]"); if(!b) return;
   e.preventDefault();
   if(b.dataset.goRoot!==undefined) go({lvl:"root"});
@@ -573,6 +579,23 @@ async function corregirEstado(p, propuesta){
   }catch(e){ flash("No se pudo guardar la corrección."); }
   render();
 }
+// ---- prioridades del área: los pasos que las sirven y su cierre ----
+const prioPend = (area, i) => CAMBIOS.find(c=>c.tipo==="prioridad" && c.area===area && c.indice===i+1) || null;
+function prioItem(a, ps, texto, i){
+  const pasos = []; for(const p of ps){ if(p.cerrado||p.restringido) continue; for(const s of stepsLive(p)) if(s.prioridad_area===i+1) pasos.push({p,s}); }
+  const q = prioPend(a.slug, i), corto = texto.replace(/[.:].*$/,"").slice(0,80);
+  const lider = pasos.length ? pasos.map(x=>x.p).sort((x,y)=>pasos.filter(z=>z.p===y).length-pasos.filter(z=>z.p===x).length)[0] : (ps.find(p=>!p.cerrado&&!p.restringido)||null);
+  const frase = lider ? `abre sesión en ${lider.area}/${lider.slug} y avanza la prioridad «${corto}»${pasos.length?"; trae los pasos de los demás proyectos del área que la sirven":": escribe los pasos que la sirven"}` : "";
+  return `<li class="prio${q?" done":""}"><div class="prio-t"><span class="tx">${inline(texto)}</span>${q?`<span class="pend-note">${q.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"}${q.nota?`: ${esc(q.nota)}`:""} · pendiente de registrar en sesión${CAN?` · <button type="button" class="lnk" data-undo="${q.id}">Deshacer</button>`:""}</span>`:""}</div>
+    ${pasos.length?`<div class="steps prio-s">${pasos.map(({p,s})=>stepRow(p,s,true)).join("")}</div>`:`<p class="empty">Ningún paso abierto la sirve hoy.</p>`}
+    <div class="frase">${frase?`<code class="frase-t">${esc(frase)}</code><button type="button" class="chip" data-copy="${esc(frase)}">Copiar</button>`:""}${CAN&&!q?`<button type="button" class="chip" data-prio-done="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Cumplida</button><button type="button" class="chip ghost" data-prio-drop="${a.slug}" data-i="${i}" data-txt="${esc(texto)}">Ya no es prioridad</button>`:""}</div></li>`;
+}
+document.addEventListener("click", e => {
+  if(!CAN || !DB) return;
+  const b = e.target.closest && e.target.closest("[data-prio-done],[data-prio-drop]"); if(!b) return;
+  const area = b.dataset.prioDone || b.dataset.prioDrop, propuesta = b.dataset.prioDone ? "cumplida" : "retirar";
+  addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
+});
 // ---- naturaleza e importancia de un paso ----
 const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"condicional", rutina:"rutina", caducidad:"caducidad"};
 const NAT_HINT = {
@@ -643,6 +666,8 @@ function pendientes(){
 }
 function colaRows(){
   return CAMBIOS.slice().sort((a,b)=>(b.creado||"").localeCompare(a.creado||"")).map(c => {
+    if(c.tipo==="prioridad"){ const ar = areaBy[c.area]; if(!ar || (PEND_AREA && view.lvl==="pend" && c.area!==PEND_AREA)) return "";
+      return `<div class="due-item static"><span class="pill soon">prioridad</span><span class="t">${c.propuesta==="cumplida"?"Cumplida":"Ya no es prioridad"}: ${inline(c.texto||"")}</span><span class="w">${esc(ar.nombre)} · <button type="button" class="lnk" data-go-area="${ar.slug}">prioridades del área</button> · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${c.id}">Deshacer</button>`:""}</span></div>`; }
     const p = byId[c.proyecto]; if(!p) return "";
     if(PEND_AREA && view.lvl==="pend" && p.area!==PEND_AREA) return "";
     const que = c.tipo==="fecha" ? `Fecha ${c.fecha_anterior?fmtD(c.fecha_anterior):"sin fecha"} → ${c.fecha_nueva?fmtD(c.fecha_nueva):"sin fecha"}: ${inline(c.paso)}`
@@ -671,7 +696,7 @@ function renderPendientes(){
       ${g.sesion?`<div class="frase"><code class="frase-t">${esc(g.sesion)}</code><button type="button" class="chip" data-copy="${esc(g.sesion)}">Copiar</button></div>`:""}</article>`).join("")}</div>
     <p class="more">Lo escribe la tarea diaria con los tres criterios de arriba; vencido no suma. Es una sugerencia: la sesión decide.</p></section>` : "";
   return areaChips(PEND_AREA, "pend-area") + enfoque + `<p class="sub" style="font-size:14px">Los «Siguientes pasos» de cada <code>proyecto.md</code>, todos juntos. Nada viene de fuera de las áreas. ${CAN?"Puedes cambiar fechas y marcar hechos aquí; se escriben en la carpeta con la sincronización diaria, y lo que necesite contexto se cierra en la siguiente sesión del proyecto.":""}</p>`
-    + (CAMBIOS.some(c=>!PEND_AREA || (byId[c.proyecto]||{}).area===PEND_AREA) ? `<section class="due"><div class="top"><h2>Por registrar en la carpeta</h2><span class="c">${CAMBIOS.filter(c=>!PEND_AREA || (byId[c.proyecto]||{}).area===PEND_AREA).length}</span><span class="c" style="margin-left:auto">Lo tocado aquí que la carpeta aún no refleja</span></div><div class="due-list">${colaRows()}</div></section>` : "")
+    + (CAMBIOS.some(c=>!PEND_AREA || (c.area||(byId[c.proyecto]||{}).area)===PEND_AREA) ? `<section class="due"><div class="top"><h2>Por registrar en la carpeta</h2><span class="c">${CAMBIOS.filter(c=>!PEND_AREA || (c.area||(byId[c.proyecto]||{}).area)===PEND_AREA).length}</span><span class="c" style="margin-left:auto">Lo tocado aquí que la carpeta aún no refleja</span></div><div class="due-list">${colaRows()}</div></section>` : "")
     + grp("Vencidos", late, "Con fecha ya pasada y aún abiertos")
     + grp("Próximos 14 días", soon)
     + grp("Más adelante", later)
@@ -845,7 +870,7 @@ function renderArea(a){
     <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e})));
   main.innerHTML = `
-    <section class="prios"><h2>Prioridades ahora</h2>${a.prioridades?.length?`<ol>${a.prioridades.map(x=>`<li>${inline(x)}</li>`).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
+    <section class="prios"><h2>Prioridades</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}${CAN?`<p class="more">Los pasos que sirven a cada prioridad salen de los proyectos del área. Marcar una prioridad como cumplida se registra en la siguiente sesión del dueño del área, que es quien reescribe <code>area.md</code>.</p>`:""}</section>
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
