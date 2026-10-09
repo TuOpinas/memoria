@@ -15,6 +15,8 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Ordenar «Claude outputs»**: "ordena Claude outputs", o la frase que copia el tablero. Va al final de esta skill.
 
+Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado.
+
 Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso (`convenciones`, sección 1).
 
 ---

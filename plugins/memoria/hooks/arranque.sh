@@ -9,7 +9,7 @@ VERSION="$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' "$RAIZ/.claude-plugin/p
 BLOQUE="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar algo/p' "$CONTRATO" 2>/dev/null)"
 [ -n "$BLOQUE" ] || exit 0
 
-TEXTO="Plugin memoria ${VERSION}. Esta sesión puede tener conectada una carpeta que sigue el método Memoria: se reconoce porque su primer nivel tiene guia.md y metodo.md. Compruébalo con las herramientas de carpetas conectadas antes de dar nada por hecho. Si no hay ninguna carpeta así, ignora este aviso. Si la hay, aplica esto, que vale como instrucciones del proyecto aunque el proyecto no tenga ninguna:
+TEXTO="Plugin memoria ${VERSION}. Esta sesión puede tener conectada una carpeta que sigue el método Memoria: se reconoce porque su primer nivel tiene guia.md y metodo.md. Compruébalo antes de dar nada por hecho, y antes de responder al primer mensaje: lista las carpetas conectadas con las herramientas del dispositivo. Pueden estar sin cargar aunque la conversación empiece como un chat corriente: si no las ves, búscalas primero (en Claude son las de remote-devices, como get_device_info o device_list_dir). Una carpeta vinculada al proyecto está ahí aunque nadie la mencione. Solo si después de buscarlas no hay ninguna carpeta así, ignora este aviso; y si la persona pide algo del método («abre sesión», un área, un proyecto), dile que esta conversación no tiene la carpeta y que la añada con «+». Si la hay, aplica esto, que vale como instrucciones del proyecto aunque el proyecto no tenga ninguna:
 
 ${BLOQUE}
 
