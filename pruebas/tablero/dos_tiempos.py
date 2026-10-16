@@ -93,17 +93,36 @@ r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", 
 ok(r.returncode != 0 and "modo" in (r.stderr + r.stdout), "un inventario sacado en otro modo se rechaza")
 
 # huella de la raíz: la misma raíz da la misma huella; tocar un archivo que el tablero lee la cambia; llega a meta/estado
-r_a = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
-r_b = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
+RAIZ2 = TRAB / "raiz-tocada"; shutil.rmtree(RAIZ2, ignore_errors=True); shutil.copytree(RAIZ, RAIZ2)   # copy2 conserva las fechas
+_s_a = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)
+r_a, _leer = _s_a["inventario"], _s_a["leer"]
+r_b = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)["inventario"]
 ok(bool(r_a.get("huella_raiz")) and r_a["huella_raiz"] == r_b["huella_raiz"], "huella de la raíz: dos inventarios seguidos dan la misma")
-tocado = RAIZ / json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["leer"][1]
+_al = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo", "--lineas", "--si-cambia", r_a["huella_raiz"]], capture_output=True, text=True).stdout.strip()
+ok(_al == "AL DIA", "con la huella guardada igual, el inventario solo dice «AL DIA»")
+_ln = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo", "--lineas", "--si-cambia", "otra"], capture_output=True, text=True).stdout.split("\n")
+ok(json.loads(_ln[0]).get("sello") == r_a["sello"] and int(_ln[1]) == len(_leer) and _ln[2] == _leer[0], "con otra huella, el inventario sale en líneas: inventario, cuántos archivos y sus rutas")
+tocado = RAIZ2 / _leer[1]
 _st = tocado.stat()
 os.utime(tocado, (_st.st_atime, _st.st_mtime + 120))
-r_c = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
-os.utime(tocado, (_st.st_atime, _st.st_mtime))
+r_c = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)["inventario"]
 ok(r_c["huella_raiz"] != r_a["huella_raiz"], "huella de la raíz: cambiar la fecha de un archivo que el tablero lee la cambia")
 _est = json.loads((TRAB / "dos-completo" / "meta" / "estado.json").read_text(encoding="utf-8"))
 ok(_est.get("huella_raiz") == json.loads((TRAB / "inv-completo.json").read_text(encoding="utf-8"))["huella_raiz"], "huella de la raíz: la generación la deja en meta/estado")
+
+# la huella guardada vale solo si la versión del plugin, la tarea y «sin horario» siguen igual
+_g = TRAB / "guardada"; (_g / "meta").mkdir(parents=True, exist_ok=True)
+(_g / "meta" / "estado.json").write_text(json.dumps({"huella_raiz": "h1", "version_tablero": "9.9.9", "tarea": "trig_x", "tarea_manual": True}), encoding="utf-8")
+def _guard(*a): return subprocess.run([sys.executable, PLAN, "--guardada", _g, *a], capture_output=True, text=True).stdout.strip()
+ok(_guard("--version", "9.9.9", "--tarea", "trig_x", "--manual") == "h1", "huella guardada: misma versión y misma tarea, vale")
+ok(_guard("--version", "9.9.10", "--tarea", "trig_x", "--manual") == "-", "huella guardada: con otra versión del plugin hay que regenerar")
+ok(_guard("--version", "9.9.9", "--tarea", "trig_x") == "-", "huella guardada: si la tarea pasó a tener horario, hay que regenerar")
+ok(_guard("--version", "9.9.9") == "-", "huella guardada: sin tarea, hay que regenerar")
+ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.strip() == "-", "huella guardada: con la base vacía (al montar), hay que regenerar")
+# la cola retenida llega a meta/estado
+(TRAB / "ret.json").write_text('["c9", "c3"]', encoding="utf-8")
+correr(TRAB / "copia-completo", TRAB / "dos-ret", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo", "--version", "prueba", "--cola-retenida", TRAB / "ret.json")
+ok(json.loads((TRAB / "dos-ret" / "meta" / "estado.json").read_text(encoding="utf-8")).get("cola_retenida") == ["c3", "c9"], "lo que la sincronización deja en la cola a propósito llega a meta/estado")
 
 # plan de subida: con la base igual a la salida, solo meta/estado; con un proyecto cambiado, ese y meta; lo que sobra se borra
 salida = TRAB / "dos-completo"
@@ -126,6 +145,7 @@ ok(any(e["doc_id"] == uno.stem and e["op"] == "set" and e["existe"] for e in esc
 ok(any(e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: un proyecto que ya no sale de la raíz se borra")
 ok(all(pathlib.Path(e["file_path"]).is_file() for e in escr if e["op"] != "delete"), "plan: cada escritura apunta a un archivo que existe")
 ok(all(len(l) <= 50 for l in plan["lotes"]), "plan: ningún lote pasa de 50 entradas")
+ok([e for l in plan["lotes"] for e in l][-1]["doc_id"] == "estado", "plan: meta/estado va el último, para que un lote que falla no deje la huella nueva")
 
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

@@ -2,6 +2,10 @@
 """Qué hay que subir a la base del tablero, sin traer ningún documento a la conversación.
 
 Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000]
+     plan_subida.py --guardada <volcado-de-la-base> --version <versión del plugin> [--tarea <id>] [--manual]
+
+Con --guardada no planea nada: imprime la huella de la raíz que guardó la última puesta al día si el tablero
+sigue valiendo tal cual (misma versión del plugin, misma tarea, mismo «sin horario»), o «-» si hay que regenerar.
 
 <volcado-de-la-base> es la carpeta donde ArtifactData dejó, con out_dir, lo que hay hoy en la base
 (<volcado>/areas/*.json, <volcado>/proyectos/*.json, <volcado>/meta/estado.json).
@@ -16,6 +20,21 @@ Compara huellas e imprime un JSON con:
 No escribe nada.
 """
 import sys, json, pathlib, re
+
+if "--guardada" in sys.argv:
+    def _a(n):
+        return sys.argv[sys.argv.index(n) + 1] if n in sys.argv and len(sys.argv) > sys.argv.index(n) + 1 else None
+    p = pathlib.Path(_a("--guardada")) / "meta" / "estado.json"
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        d = d.get("data", d) if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        d = {}
+    tarea = _a("--tarea")
+    vale = (bool(d.get("huella_raiz")) and d.get("version_tablero") == _a("--version")
+            and (d.get("tarea") or None) == tarea and bool(d.get("tarea_manual")) == (bool(tarea) and "--manual" in sys.argv))
+    print(d["huella_raiz"] if vale else "-")
+    sys.exit(0)
 
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
@@ -61,9 +80,12 @@ for col in COLECCIONES:
         if (col, p.stem) not in salen and ID_VALIDO.match(p.stem):
             borrar.append({"op": "delete", "collection": col, "doc_id": p.stem})
 
-# lotes por tamaño: el cuerpo de un lote no puede pasar de 1 MiB
+# meta/estado va el último: lleva la huella de la raíz, y si un lote anterior falla, la siguiente
+# puesta al día no debe creer que el tablero ya estaba al día
+_meta = [e for e in escrituras if (e["collection"], e["doc_id"]) == ("meta", "estado")]
+orden = [e for e in escrituras if e not in _meta] + borrar + _meta
 lotes, actual, peso = [], [], 0
-for e in escrituras + borrar:
+for e in orden:
     b = e.get("bytes", 200) + 300
     if actual and (peso + b > MAX or len(actual) >= 50):
         lotes.append(actual); actual, peso = [], 0

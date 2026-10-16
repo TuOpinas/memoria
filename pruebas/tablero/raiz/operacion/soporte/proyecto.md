@@ -6,9 +6,10 @@ actualizado: 2026-10-05
 # Soporte
 
 ## En corto
-**El viernes 30 queda listo el manual de soporte para el equipo nuevo.**
+2026-10-05 · **Terminamos la lista de casos frecuentes; el 30 de octubre queda listo el manual de soporte para el equipo nuevo.**
 - **Se completó:** la lista de casos frecuentes, revisada con Beto el 14 de agosto.
-- **Siguiente:** Ana escribe las respuestas tipo antes del jueves; Beto las prueba el viernes.
+- **Siguiente:** Ana escribe las respuestas tipo antes del 23 de octubre;
+  Beto las prueba el 24.
 - **Falta decidir:** si el horario de guardia es de lunes a sábado; lo decide Beto.
 
 ## Objetivo

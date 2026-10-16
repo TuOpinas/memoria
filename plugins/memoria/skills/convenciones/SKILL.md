@@ -223,7 +223,7 @@ Fija, porque varias skills escriben en ella:
 # [Nombre del proyecto]
 
 ## En corto
-**[Dos frases: lo último que se completó, y lo que sigue y cuándo.]**
+AAAA-MM-DD · **[Lo último que se completó, y lo que sigue y cuándo.]**
 - **Se completó:** [lo terminado desde el estatus anterior, con su fecha, y para qué sirve ya]
 - **Siguiente:** [hasta tres pasos, cada uno con quién y para cuándo]
 - **Falta decidir:** [qué, y quién lo decide]
@@ -252,7 +252,7 @@ Consumen esto: [áreas o personas]
 
 `En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
 
-`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho: la frase en negrita dice lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe, como el `Panorama` del área, y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, también en el tablero que se comparte: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
@@ -445,7 +445,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el dueño del proyecto; y `migrar`, con lo que su dueño en el origen pide publicar al migrar. `area.md` y los registros nacen `vigente` (sección 5).
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
-4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones son de la sesión del responsable de contexto, que escribe `guia.md` y `base/` y pone al día `metodo.md` (sección 11).
+4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
 5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos de las áreas de la cuenta: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en las áreas de otra cuenta.
 6. No leer `sesiones.md`, `taller/`, `fuentes/` ni lo restringido de otra área. Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
@@ -466,7 +466,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 
 ## 11. Actualización del método
 
-El método se actualiza publicando una versión nueva del plugin, y cada raíz recibe su `metodo.md` sola: su primera línea lleva la versión y una huella del contenido, y la sesión del responsable de contexto lo copia cuando la raíz está atrasada (skill `sesion`). Nadie edita `metodo.md` dentro de la carpeta de una organización. Cómo se publica una versión y cómo se verifica una raíz con sus scripts lo dice `montaje.md`, junto a este archivo.
+El método se actualiza publicando una versión nueva del plugin, y cada raíz recibe su `metodo.md` sola, de la primera cuenta con el plugin más nuevo que abre sesión o pone al día un tablero. Nadie edita `metodo.md` dentro de la carpeta de una organización. La regla completa (cuándo se copia, quién, qué pasa sin permiso), cómo se publica una versión y cómo se verifica una raíz están en `montaje.md`, junto a este archivo.
 
 ## 12. Cómo se lee
 

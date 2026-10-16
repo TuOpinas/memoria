@@ -29,7 +29,7 @@ Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el �
 
 # Abrir sesión
 
-Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al día `metodo.md` cuando abre el responsable de contexto (ver «Puesta al día del método»).
+Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al día `metodo.md` cuando la raíz está atrasada (ver «Puesta al día del método»).
 
 ## Qué leo antes de responder
 
@@ -60,7 +60,7 @@ No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistem
 
 Si es la primera sesión que se abre en esta conversación, la respuesta empieza con la línea «Memoria activa · <organización> · método <versión> · escribes en <áreas de la cuenta>», como pide el aviso de arranque. Después, tres bloques, en este orden y sin encabezados largos.
 
-**Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero. Si la sesión se abrió por una pregunta de estado, este bloque es la respuesta y empieza por ella: en qué está y qué espera.
+**Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero. Si la sesión se abrió por una pregunta de estado, este bloque es la respuesta y empieza por ella: si el proyecto tiene `En corto`, por él, tal cual o casi, y si hubo sesiones después de su fecha, se dice; si no, en qué está y qué espera.
 
 **Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
@@ -78,7 +78,7 @@ Si no hay avisos, no se menciona que no los hay.
 
 **Puesta al día del método.** Se compara la primera línea del `metodo.md` de la raíz con la del `metodo.md` del plugin, versión y huella. Si coinciden, no se dice nada. Si no:
 
-- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar (escrito directo desde el plugin como dice «Los archivos del plugin en la computadora» en la skill `tablero`, nunca pegado), porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <versión del plugin>. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
+- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Lo abra quien lo abra, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar (escrito directo desde el plugin como dice «Los archivos del plugin en la computadora» en la skill `tablero`, nunca pegado), porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <versión del plugin>. No cambia nada de lo que hay en ella.» Si la escritura falla por permisos (la cuenta no puede escribir en el primer nivel de la carpeta), no se dice nada: la pondrá al día la siguiente cuenta que abra
 - **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.»
 - **Misma versión con huellas distintas**: no se toca ni se dice nada. Solo pasa entre dos publicaciones y lo resuelve la siguiente versión
 
@@ -156,7 +156,7 @@ Si `Afecta a` nombra un proyecto de otra área, se dice al usuario a quién tien
 
 Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a un proyecto restringido, `Afecta a` lleva su nombre y nada más, porque ese nombre ya está listado: ni sus archivos, ni lo que contiene. Al revés, una decisión que se registra dentro de una carpeta restringida sí puede nombrar cualquier proyecto al que afecte.
 
-**4. `proyecto.md`.** Se reescriben `En corto`, `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula. `En corto` va el último, cuando lo demás ya está escrito, y con la voz del director: es el reporte de un director: la frase de arriba dice lo que completamos y lo que sigue y cuándo; debajo, siempre «Se completó» (lo terminado, con su fecha) y «Siguiente» (hasta tres pasos, con quién y cuándo), y solo si tienen algo, «Falta decidir» (qué y quién) y «Preocupa». Se escribe para alguien que no abrirá nada más: personas y fechas, no rutas ni nombres de archivo; cinco líneas como mucho (`convenciones`, sección 3). Si el proyecto no lo tenía, se crea debajo del título.
+**4. `proyecto.md`.** Se reescriben `En corto`, `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula. `En corto` se escribe en la misma reescritura, con la voz del director y la forma de `convenciones`, sección 3: la fecha de hoy, la frase de lo completado y lo que sigue, y debajo «Se completó», «Siguiente» y, si tienen algo, «Falta decidir» y «Preocupa». Para alguien que no abrirá nada más y que puede verlo en un tablero compartido: personas y fechas absolutas, sin rutas, sin nada de `restringido/` ni datos personales. Si el proyecto no lo tenía, se crea debajo del título.
 
 **5. Bloque `Proyectos` de `area.md`.** Se reescribe la línea de este proyecto y, debajo, una línea por cada entregable `vigente` con su fecha `actualizado`. Solo esa parte del bloque; las líneas de los demás proyectos no se tocan. `Prioridades ahora` solo se reescribe si el dueño lo pide en esta sesión.
 
@@ -194,7 +194,7 @@ Nada se borra ni se mueve: los entregables siguen con su estado y se siguen cita
 
 Además de las prohibiciones de `convenciones`:
 
-- Escribir algo al abrir sesión. Abrir es solo lectura, salvo poner al día `metodo.md` cuando abre el responsable de contexto y la raíz está atrasada
+- Escribir algo al abrir sesión. Abrir es solo lectura, salvo poner al día `metodo.md` cuando la raíz está atrasada
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto
