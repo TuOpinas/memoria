@@ -49,7 +49,9 @@ ok(paso("Decidir")["naturaleza"] == "decision", "«Decidir…» es decisión")
 ok(paso("Esperar")["naturaleza"] == "espera", "«Esperar…» es espera")
 
 print("Lectura de la carpeta")
-ok(len(com["areas"]) == 4 and "operacion" in com["areas"], "un área cuya descripción dice «Área» no se pierde")
+ok(len(com["areas"]) == 5 and "operacion" in com["areas"], "un área cuya descripción dice «Área» no se pierde")
+ok(com["proyectos"]["archivo--historia"]["cerrado"] and com["areas"]["archivo"]["legible"], "un área con todos sus proyectos cerrados se lee entera (la página la trata como archivada)")
+ok(com["meta"]["estado"].get("tarea_manual") is False, "sin --tarea no hay tarea, ni con botón ni diaria")
 ok(com["areas"]["futura"]["legible"] is False and com["areas"]["futura"]["motivo"] == "sin-carpeta", "un área del mapa sin carpeta se marca «sin carpeta», no restringida")
 ok(pub["areas"]["personas"]["motivo"] == "declarada" and com["areas"]["personas"]["legible"], "público: el área restringida se marca «declarada»; completo la lee")
 sop = com["proyectos"]["operacion--soporte"]

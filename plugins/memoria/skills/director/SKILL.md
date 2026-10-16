@@ -17,7 +17,7 @@ Mira un área entera como la miraría quien la dirige: cómo está, qué se movi
 
 **Panorama**: al cerrar una sesión en el área (skill `sesion`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
 
-Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, eso es `sesion` o `consulta`, no esta skill.
+Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, no es esta skill: si es su dueño, se abre sesión (`sesion`); si no, es `consulta`.
 
 ## Qué leo
 

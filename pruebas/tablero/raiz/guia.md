@@ -10,6 +10,7 @@ Raíz inventada para probar el tablero. Ningún dato es real.
 | `personas/` | Nómina y contratos del equipo | Beto Prueba | beto@ejemplo.test | Restringida: dirección |
 | `operacion/` | Área de soporte y entregas | Ana Prueba | ana@ejemplo.test | Todo el equipo |
 | `futura/` | Área en el mapa cuya carpeta aún no existe | Ana Prueba | ana@ejemplo.test | Todo el equipo |
+| `archivo/` | Archivada: el sistema anterior, cerrado | Ana Prueba | ana@ejemplo.test | Todo el equipo |
 
 ## Quién responde por qué
 

@@ -25,7 +25,7 @@ ok([x["id"] for x in r1["aplicados"]] == ["f1"] and "antes del 2026-10-09" in pm
 ok("actualizado: 2026-10-01" in pm, "aplicar una fecha no mueve «actualizado»")
 ok({x["id"] for x in r1["sin_match"]} == {"f2", "f3"}, "un cambio sin paso o sin proyecto no rompe nada: queda sin aplicar")
 ok(r1["para_sesion"] and r1["para_sesion"][0].get("campo") == "paso", "las correcciones llegan a la sesión con su campo")
-ok({x["id"] for x in r1["para_su_dueno"]} == {"o1", "o2"} and r1["mis_areas"] == ["futura", "operacion", "ventas"], "lo de un área de otra cuenta no se toca y se devuelve aparte")
+ok({x["id"] for x in r1["para_su_dueno"]} == {"o1", "o2"} and r1["mis_areas"] == ["archivo", "futura", "operacion", "ventas"], "lo de un área de otra cuenta no se toca y se devuelve aparte")
 r2 = corre("--cuenta", "Ana@Ejemplo.test")
 ok([x["id"] for x in r2["aplicados"]] == ["f1"] and r2["aplicados"][0]["detalle"] == "ya estaba aplicada", "si una corrida anterior ya la aplicó, se da por aplicada")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))

@@ -82,7 +82,7 @@ for nombre in ls(raiz):
         continue
     areas.append((nombre, ruta))
     if not nombre_ok(nombre) or nombre_con_orden_version_o_fecha(nombre):
-        h("nombre de carpeta", nombre)
+        h("nombre de carpeta", nombre, *([] if nombre_ok(nombre) else ["con espacios, mayúsculas o acentos, las referencias a sus decisiones («Afecta a», «Cuestiona a», «Responde a») dejan de funcionar"]))
 
 # --- áreas y proyectos ---
 for area, aruta in areas:
@@ -101,7 +101,7 @@ for area, aruta in areas:
         if not os.path.isdir(pruta) or proj.startswith("."):
             continue
         if not nombre_ok(proj) or nombre_con_orden_version_o_fecha(proj):
-            h("nombre de carpeta", rel(pruta))
+            h("nombre de carpeta", rel(pruta), *([] if nombre_ok(proj) else ["con espacios, mayúsculas o acentos, las referencias a sus decisiones («Afecta a», «Cuestiona a», «Responde a») dejan de funcionar"]))
         if not os.path.exists(os.path.join(pruta, "proyecto.md")):
             h("carpeta en un área que no es un proyecto", rel(pruta)); continue
 

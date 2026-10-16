@@ -236,6 +236,8 @@ body{padding-inline:0;padding-block:0}
 .side-i:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
 .side-n{font:600 11px var(--f-mono);background:var(--rule-soft);color:var(--ink-soft);border-radius:999px;padding:2px 7px}
 .side-n.late,.side-i[aria-current="page"] .side-n.late{background:var(--alert);color:var(--on-alert)}
+.side-arch{padding:10px 8px 0}
+.side-arch .lnk{font-size:12.5px;color:var(--muted)}
 .side-leg{display:grid;gap:4px;margin-top:18px;padding:10px 8px 0;border-top:1px solid var(--rule-soft);font-size:12px;color:var(--muted)}
 .side-leg span{display:inline-flex;align-items:center;gap:6px}
 .pane{min-width:0;display:grid;gap:24px;align-content:start;padding:24px clamp(16px,3vw,40px) 64px;max-width:1040px}
@@ -424,9 +426,11 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
 .hq:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .hc{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:28px;align-items:start}
-.hc-toc{position:sticky;top:12px;display:grid;gap:14px;max-height:calc(100vh - 24px);overflow:auto;padding-right:4px}
-.hc-g{display:grid;gap:2px}
-.hc-g .eyebrow{margin:4px 0 4px}
+.hc-toc{position:sticky;top:12px;align-self:start;display:grid;gap:14px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable;padding:2px 4px 12px 0}
+#hc-list{display:grid;gap:22px}
+.hc-toc #hc-q{position:sticky;top:0;z-index:1;box-shadow:0 -4px 0 var(--ground)}
+.hc-g{display:grid;gap:1px}
+.hc-g .eyebrow{padding:0 8px 8px;margin-bottom:2px;border-bottom:1px solid var(--rule-soft)}
 .hc-i{all:unset;cursor:pointer;font-size:14px;line-height:1.35;color:var(--ink-soft);padding:5px 8px;border-radius:6px}
 .hc-i:hover{background:var(--rule-soft);color:var(--ink)}
 .hc-i[aria-current="page"]{background:var(--signal-dim);color:var(--signal);font-weight:500}
@@ -471,6 +475,32 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hc-arbol li{display:grid;gap:2px}
 .hc-arbol li > span{font-size:13.5px;color:var(--ink-soft)}
 .hc-toc summary{display:none}
+/* diagrama de la ayuda: la carpeta, la puesta al día y el tablero; se apila cuando el artículo es estrecho */
+.hc-art{container-type:inline-size}
+.hc-flujo{margin:4px 0;display:grid;gap:10px}
+.hc-flujo-g{display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr) minmax(110px,150px);gap:10px 14px;align-items:stretch}
+.hc-nodo{grid-row:1 / span 2;background:var(--surface);border:1.5px solid var(--ink);border-radius:10px;padding:12px;display:grid;align-content:center;gap:4px;text-align:center}
+.hc-nodo b{font:700 17px/1.15 var(--f-display);color:var(--ink)}
+.hc-nodo small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.hc-nodo.carpeta{grid-column:1}
+.hc-nodo.tablero{grid-column:3;border-style:dashed}
+.hc-via{grid-column:2;display:grid;gap:6px;align-content:center}
+.hc-carril{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;font-size:13.5px;line-height:1.4}
+.hc-carril .t{min-width:0}
+.hc-carril .t b{display:block}
+.hc-carril .t span{color:var(--muted);font-size:12.5px}
+.hc-flecha{width:44px;height:14px;color:var(--ink-soft);flex:none}
+.hc-via.ida .hc-flecha{color:var(--signal)}
+.hc-via.vuelta{border-top:1px dashed var(--rule);padding-top:10px}
+.hc-cola{font:500 12px var(--f-mono);color:var(--warn);background:var(--warn-dim);border-radius:999px;padding:3px 9px;justify-self:start}
+.hc-flujo figcaption{font-size:13px;color:var(--muted)}
+@container (max-width:520px){
+  .hc-flujo-g{grid-template-columns:1fr}
+  .hc-nodo{grid-row:auto;grid-column:1!important}
+  .hc-via{grid-column:1}
+  .hc-flujo-g .carpeta{order:0}.hc-flujo-g .ida{order:1}.hc-flujo-g .tablero{order:2}.hc-flujo-g .vuelta{order:3}
+  .hc-flecha{transform:rotate(90deg);width:28px}
+}
 .hc-sig{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;border-top:1px solid var(--rule-soft);padding-top:12px}
 @media (max-width:760px){
   .hc{grid-template-columns:1fr;gap:16px}
@@ -506,7 +536,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.1"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1068,7 +1098,7 @@ function crumbs(){
   const el = document.getElementById("crumbs");
   const org = META ? META.organizacion : "…";
   if(view.lvl==="root"){ el.innerHTML = ""; return; }
-  const simple = {pend:"Pendientes", dec:"Decisiones", ent:"Biblioteca", buscar:"Búsqueda", ayuda:"Ayuda"};
+  const simple = {pend:"Pendientes", dec:"Decisiones", ent:"Entregables", buscar:"Búsqueda", ayuda:"Ayuda"};
   if(simple[view.lvl]){ el.innerHTML = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span><span>${simple[view.lvl]}</span>`; return; }
   const a = view.lvl==="area" ? areaBy[view.id] : areaBy[byId[view.id]?.area];
   let h = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span>`;
@@ -1135,8 +1165,8 @@ function renderPendientes(){
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pend-more]"); if(!b) return; const id = b.dataset.pendMore; PEND_OPEN.has(id) ? PEND_OPEN.delete(id) : PEND_OPEN.add(id); render(); });
 function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.riesgo?" risk":""}" ${tip(e.label+(e.riesgo?" · en riesgo":"")+": "+e.regla+(e.riesgo?"; "+e.riesgoRegla:"")+". "+((EST[e.k]||{}).desc||""))}></i>`; }
 function renderResumen(){
-  const tday = today();
-  const filas = AREAS.map(a => {
+  const tday = today(), nArch = AREAS.filter(archivada).length;
+  const filas = areasVis().map(a => {
     if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span><span class="ar-p">Responde ${esc(a.dueno||"su dueño")}</span></button>`;
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido && !p.cerrado);
     const cnt = {}; let nR = 0; for(const p of ps){ const e = projStatus(p); cnt[e.k] = (cnt[e.k]||0)+1; if(e.riesgo) nR++; }
@@ -1144,9 +1174,9 @@ function renderResumen(){
     const nLate = ps.reduce((n,p)=>n+stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length, 0);
     const p1 = (a.prioridades||[])[0], p1t = p1 ? p1.split(/(?<=\.)\s/)[0] : "";
     const pan = a.panorama && a.panorama.texto ? `<span class="ar-dir">${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(primeraFrase(a.panorama.texto))}${primeraFrase(a.panorama.texto).length < a.panorama.texto.trim().length ? ` <i>más ›</i>` : ""}</span>` : `<span class="ar-dir"><em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em></span>`;
-    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}${spark(ps.flatMap(p=>p.sesiones_fechas||[]), a.nombre)}</span><span class="ar-pan"><span class="ar-ln">${areaLinea(a)}</span>${pan}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
+    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${archivada(a)?`<span class="pill closed">Archivada</span>`:pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}${spark(ps.flatMap(p=>p.sesiones_fechas||[]), a.nombre)}</span><span class="ar-pan"><span class="ar-ln">${areaLinea(a)}</span>${pan}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
   }).join("");
-  return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length}</span><span class="c" style="margin-left:auto">Cómo está cada una, lo que dice su director y su primera prioridad</span></div><div class="ar">${filas}</div></section>`;
+  return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length - (VER_ARCH ? 0 : nArch)}</span><span class="c" style="margin-left:auto">Cómo está cada una, lo que dice su director y su primera prioridad</span></div><div class="ar">${filas}</div>${nArch?`<p class="more" style="margin:8px 0 0">${archBtn(nArch)}</p>`:""}</section>`;
 }
 function renderLoUltimo(n){
   const ev = [];
@@ -1234,8 +1264,8 @@ function renderEnt(){
     if(!vig.length) return "";
     return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${isNew("e",p.id,entKey(p,e))?`<span class="pill new">nuevo</span> `:""}${entBtn(p,e)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${esc(p.id)}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}<span class="d" style="font-size:12.5px;color:var(--muted)">Responde ${esc(p.dueno||"—")}${p.consumen?` · lo usan: ${inline(p.consumen)}`:""}</span></div>`).join("")}</div></section>`;
   }).join("");
-  head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Biblioteca</h1><p class="sub">Lo que la organización ya sabe y se puede usar hoy: los entregables vigentes, por área, con quién responde y quién los usa. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
-  main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`);
+  head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Entregables</h1><p class="sub">Lo que la organización ya sabe y se puede usar hoy: los entregables publicados, por área, con quién responde y quién los usa. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> publicados</span></div>`;
+  main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable publicado todavía.</p>`);
   main.querySelectorAll("[data-ent-area]").forEach(b=>b.onclick=()=>{ ENT_AREA = b.dataset.entArea; renderEnt(); });
 }
 // ---- búsqueda ----
@@ -1290,11 +1320,11 @@ function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
   if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale" style="background:var(--signal-dim);color:var(--signal);border-color:var(--signal)"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.</span></div>`;
-  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>Hay instrucciones nuevas para la tarea que pone el tablero al día cada mañana y cambiarlas pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero».</span></div>`;
+  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>Hay instrucciones nuevas para la tarea que pone el tablero al día y cambiarlas pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero».</span></div>`;
   if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el método instalado es la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   // Desde la 1.14 el tablero se pone al día al cerrar cada sesión de su dueño; la tarea diaria es opcional.
   // Sin tarea, pasar días sin ponerse al día es normal si nadie trabajó: se avisa con más margen y se dice cómo traer lo de otros.
-  const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea ? 2 : 7;
+  const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea && !META.tarea_manual ? 2 : 7;
   if(dias >= umbral) out += `<div class="stale"><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Se pone al día cuando cierras una sesión; si otras personas trabajaron en la carpeta, dile a Claude con la carpeta conectada «sincroniza el tablero».${OWNER&&MCP&&META.tarea?" También con el icono junto al nombre, arriba a la izquierda.":""} <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
   return out;
 }
@@ -1362,7 +1392,7 @@ function ayudaArts(){
     <div class="hc-tbl"><table>
       <thead><tr><th>Dices</th><th>Pasa</th></tr></thead>
       <tbody>
-        <tr><td>${F("abre sesión en X")}<br>${F("¿en qué quedamos con X?")}</td><td>Te pone al día y propone por dónde seguir. Solo lee.</td></tr>
+        <tr><td>${F("abre sesión en X")}<br>${F("¿en qué quedamos con X?")}<br>${F("¿cómo va X?")}</td><td>Te pone al día y propone por dónde seguir. Solo lee. Si X es un proyecto tuyo, preguntar cómo va ya abre la sesión.</td></tr>
         <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó (las decisiones, con tu confirmación) y pone tu tablero al día.</td></tr>
         <tr><td>${F("¿qué sabemos de X?")}</td><td>Busca en toda la carpeta y te dice qué hay y dónde. No escribe nada.</td></tr>
         <tr><td>${F("¿dónde guardo esto?")} y pegas o adjuntas</td><td>Lo coloca en su sitio y te dice dónde quedó.</td></tr>
@@ -1403,7 +1433,7 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
     <dl class="hc-def">
       <dt>Inicio</dt><dd><b>Por dónde empezar</b> (grupos de pasos que avanzan varias cosas a la vez), lo que cambió desde tu última visita, lo que tiene fecha y lo que la memoria tiene flojo. Junto a cada cosa hay un botón para copiar la frase que abre la sesión: la pegas en tu proyecto y empiezas.</dd>
-      <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con una línea de estado, lo que dice su director y su primera prioridad. Cada proyecto abre por su Resumen, con «Dónde está» arriba: en qué va, la última sesión, lo último decidido y a qué espera. La Biblioteca reúne todo lo publicado.</dd>
+      <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con una línea de estado, lo que dice su director y su primera prioridad. Cada proyecto abre por su Resumen, con «Dónde está» arriba: en qué va, la última sesión, lo último decidido y a qué espera. Entregables reúne todo lo publicado.</dd>
       <dt>Dos voces</dt><dd>La línea de estado de un área o un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el panorama, que escribe el director del área al cerrar sesión. Las barras pequeñas junto a cada área son sus sesiones por semana, las últimas ocho.</dd>
       <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su resumen, lo que toca ahora, sus acciones, sus entregables, sus decisiones y su bitácora.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
@@ -1411,10 +1441,24 @@ function ayudaArts(){
     </dl>`},
   {g:"El tablero", id:"ponerse-al-dia", t:"Cómo se pone al día", h:`
     <p>El tablero no lee la carpeta en vivo: muestra lo que había la última vez que se puso al día. El pie de la página dice cuándo fue.</p>
+    <figure class="hc-flujo" aria-label="Cómo viaja la información entre la carpeta y el tablero">
+      <div class="hc-flujo-g">
+        <div class="hc-nodo carpeta"><b>La carpeta</b><small>La memoria. Lo que está escrito aquí es lo que vale.</small></div>
+        <div class="hc-via ida"><div class="hc-carril"><svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="t"><b>La puesta al día</b><span>Al cerrar cada sesión, o cuando la pides. Lee la carpeta y rehace el tablero.</span></span></div></div>
+        <div class="hc-nodo tablero"><b>El tablero</b><small>Una ventana a la carpeta en la que se puede apuntar.</small></div>
+        <div class="hc-via vuelta">
+          <span class="hc-cola">Lo que tocas queda pendiente</span>
+          <div class="hc-carril"><svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M42 7H6M12 2L5 7l7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="t"><b>Lo mecánico</b><span>Lo escribe la siguiente puesta al día: fechas y pasos hechos con nota.</span></span></div>
+          <div class="hc-carril"><svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M42 7H6M12 2L5 7l7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3"/></svg><span class="t"><b>Lo que pide criterio</b><span>Lo escribe la siguiente sesión del proyecto, con una persona delante.</span></span></div>
+        </div>
+      </div>
+      <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
+    </figure>
     <dl class="hc-def">
       <dt>Al cerrar una sesión</dt><dd>Cada vez que cierras una sesión, en cualquier proyecto, Claude rehace tu tablero completo con lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Es lo normal: no tienes que hacer nada.</dd>
       <dt>Lo que escriben otros</dt><dd>Se rehace el tablero de quien cierra, no el de los demás. Si otras personas trabajaron en la carpeta, dile a Claude ${F("sincroniza el tablero")} y lo verás ahora.</dd>
-      <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir una tarea que lo ponga al día cada mañana: pídela con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta, y añade a la página el botón «Sincronizar ahora».</dd>
+      <dt>Con un botón, si lo pides</dt><dd>Si quieres ponerlo al día tú, cuando quieras, sin pedírselo a Claude: pide ${F("pon el botón de sincronizar")}. La página gana el botón «Sincronizar ahora», junto al nombre, arriba a la izquierda. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta.</dd>
+      <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. También trae el botón. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Inicio lo avisa una semana.</dd>
     </dl>`},
   {g:"El tablero", id:"del-tablero", t:"Lo que tocas aquí", h:`
@@ -1565,7 +1609,30 @@ function renderAyuda(id){
     </details></nav>
     <article class="hc-art">${a.h}${sig?`<p class="hc-sig"><span class="eyebrow">Siguiente</span><button type="button" class="lnk" data-help="${sig.id}">${esc(sig.t)} ›</button></p>`:""}</article>
   </div>`;
+  requestAnimationFrame(hcToc);
 }
+// el índice de la ayuda cabe siempre en la pantalla y se recorre con su propio scroll, sin mover el artículo;
+// al cambiar de artículo conserva dónde estaba y deja a la vista el artículo actual
+let HC_Y = 0;
+function hcFit(full){
+  const t = document.querySelector(".hc-toc"), a = document.querySelector(".hc-art"); if(!t || !a) return;
+  if(window.innerWidth <= 760){ t.style.maxHeight = ""; a.style.minHeight = ""; return; }
+  // el artículo llena al menos la primera pantalla, para que el índice tenga dónde quedarse fijo
+  if(full) a.style.minHeight = Math.max(0, window.innerHeight - (a.getBoundingClientRect().top + window.scrollY) - 12) + "px";
+  const r = a.getBoundingClientRect(), top = Math.max(12, r.top);
+  t.style.maxHeight = Math.max(160, Math.min(window.innerHeight - 12, r.bottom) - top) + "px";
+}
+function hcToc(){
+  const t = document.querySelector(".hc-toc"); if(!t) return;
+  hcFit(true); t.scrollTop = HC_Y;
+  const c = t.querySelector('[aria-current="page"]'); if(!c) return;
+  const y = c.getBoundingClientRect().top - t.getBoundingClientRect().top;
+  if(y < 0 || y + c.offsetHeight > t.clientHeight) t.scrollTop += y - t.clientHeight/3;
+  HC_Y = t.scrollTop;
+}
+window.addEventListener("scroll", ()=>{ if(view && view.lvl==="ayuda") hcFit(); }, {passive:true});
+window.addEventListener("resize", ()=>{ if(view && view.lvl==="ayuda") hcFit(true); });
+document.addEventListener("scroll", e=>{ if(e.target && e.target.classList && e.target.classList.contains("hc-toc")) HC_Y = e.target.scrollTop; }, {capture:true, passive:true});
 // «?» junto a un bloque del tablero: abre el artículo que lo explica
 const hq = (id, que) => `<button type="button" class="hq" data-help="${id}" aria-label="Ayuda: ${esc(que)}" ${tip("Qué es esto")}>?</button>`;
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-help],[data-go-help]"); if(!b) return; e.preventDefault(); go({lvl:"ayuda", id: b.dataset.help || "empezar"}); });
@@ -1652,6 +1719,13 @@ function cuestAbiertos(filtro){
       return `<div class="cq"><span class="t">${inline(c.titulo)}</span><span class="w">${esc(c.planteo||"Alguien")} cuestiona ${objetivo} · ${fmtD(c.fecha)}${de?` · desde <button type="button" class="lnk" data-go-proj="${esc(de.id)}" data-tab="decisiones">${esc(de.nombre)}</button>`:""}${a?` · <button type="button" class="lnk" data-go-proj="${esc(a.id)}" data-tab="decisiones">Ver la decisión ›</button>`:""}</span></div>`; }).join("")}</div></section>`;
 }
 const panTxt = a => a.panorama && a.panorama.texto ? `${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(a.panorama.texto)}` : `<em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em>`;
+// ---- áreas archivadas: todos sus proyectos cerrados; se ocultan de Inicio y del lateral salvo que se pidan ----
+// sus entregables siguen en Entregables y en la búsqueda: lo publicado de un proyecto cerrado se sigue usando
+let VER_ARCH = false; try{ VER_ARCH = localStorage.getItem("ver-archivadas")==="1"; }catch(e){}
+function archivada(a){ if(!a || a.legible===false) return false; const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean); return ps.length>0 && ps.every(p=>p.cerrado && !p.restringido); }
+const areasVis = () => VER_ARCH ? AREAS : AREAS.filter(a=>!archivada(a));
+const archBtn = n => `<button type="button" class="lnk" data-arch>${VER_ARCH ? `Ocultar ${n===1?"el área archivada":`las ${n} áreas archivadas`}` : `Mostrar ${n===1?"el área archivada":`las ${n} áreas archivadas`}`}</button>`;
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-arch]"); if(!b) return; VER_ARCH = !VER_ARCH; try{ localStorage.setItem("ver-archivadas", VER_ARCH?"1":"0"); }catch(err){} render(); });
 // ---- lateral ----
 let SIDE_OPEN = false;
 function renderSide(){
@@ -1665,13 +1739,15 @@ function renderSide(){
     <button type="button" class="side-i top" data-go-root${cur("root")}><span>Inicio</span></button>
     <button type="button" class="side-i top" data-go-pend${cur("pend")}><span>Pendientes</span>${nLate?`<span class="side-n late">${nLate}</span>`:all.length?`<span class="side-n">${all.filter(i=>i.f).length}</span>`:""}</button>
     <button type="button" class="side-i top" data-go-dec${cur("dec")}><span>Decisiones</span><span class="side-n">${nDec}</span></button>
-    <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Biblioteca</span><span class="side-n">${nEnt}</span></button>
+    <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Entregables</span><span class="side-n">${nEnt}</span></button>
     <button type="button" class="side-i top" data-go-help${cur("ayuda")}><span>Ayuda</span></button>`;
-  h += AREAS.map(a => {
+  const nArch = AREAS.filter(archivada).length;
+  h += areasVis().map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
     return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
       ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${dot(p)}<span>${esc(p.nombre)}</span></button>`).join("")}</div>`;
   }).join("");
+  if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
   h += `<div class="side-leg">${["encurso","bloqueado","parado","sininiciar","cerrado"].map(k=>`<span ${tip(EST[k].desc)}><i class="dot ${EST[k].dot}"></i>${EST[k].label.toLowerCase()}</span>`).join("")}<span ${tip(RIESGO.desc)}><i class="dot ok risk"></i>en riesgo</span></div>`;
   const hadFocus = document.activeElement && document.activeElement.id==="side-q", pos = hadFocus ? document.activeElement.selectionStart : 0;
   el.innerHTML = h;

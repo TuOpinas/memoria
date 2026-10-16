@@ -6,7 +6,8 @@ proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
 Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
-Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
+Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--manual] [--version <versión del plugin que lo ejecuta>]
+--manual: la tarea no tiene horario y solo corre desde el botón «Sincronizar ahora»
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
@@ -30,6 +31,8 @@ OUT = pathlib.Path(sys.argv[2])
 def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
 TAREA = _arg("--tarea")
+# una tarea sin horario solo corre desde el botón: el tablero no espera que se ponga al día cada mañana
+TAREA_MANUAL = bool(TAREA) and "--manual" in sys.argv
 VERSION_PLUGIN = _arg("--version")
 # --ruta se acepta por compatibilidad con tareas viejas y no se guarda: la ruta de Drive lleva el correo de la persona
 MODO = (_arg("--modo") or "publico").lower()
@@ -618,7 +621,7 @@ for n in sueltas:
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
-    "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
+    "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
     "fuera": fuera, "premisas": premisas, "cuestionamientos": cuestionamientos,
 }

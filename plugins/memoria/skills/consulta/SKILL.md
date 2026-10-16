@@ -13,7 +13,7 @@ Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dón
 
 También cuando en medio de otra tarea hace falta saber qué hizo otra área antes de construir encima.
 
-No es abrir sesión. Si la pregunta es sobre el proyecto en el que el usuario va a trabajar hoy, eso es la skill `sesion`.
+No es abrir sesión. Si la pregunta es sobre el proyecto en el que el usuario va a trabajar hoy, eso es la skill `sesion`. Tampoco cuando el dueño de un proyecto pregunta cómo va el suyo («¿en qué estatus está X?», «¿cómo va X?», «¿qué falta en X?»): eso abre sesión, porque su respuesta necesita lo que la consulta no lee, su bitácora y lo que marcó en el tablero. Consulta es para lo de otros, o para quien no es su dueño.
 
 ## Qué leo antes de responder
 

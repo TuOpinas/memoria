@@ -50,6 +50,25 @@ const path = require('path');
     await p.click('[data-ent-open]'); await p.waitForTimeout(250);
     await p.click('.modal-f [data-go-proj]'); await p.waitForTimeout(300);
     if(!(await p.evaluate(() => location.hash.startsWith('#p-') && !document.querySelector('.modal')))) errores.push(`${etiqueta}: un enlace dentro de una ventana no navega`);
+    // un área con todos sus proyectos cerrados no sale en Inicio ni en el lateral hasta pedirla; sus entregables siguen
+    await p.goto(url + '#'); await p.waitForTimeout(400);
+    const arch = await p.evaluate(() => ({ inicio: [...document.querySelectorAll('.ar-i b')].some(x=>x.textContent==='Archivo'), lateral: [...document.querySelectorAll('.side-i.area span')].some(x=>x.textContent==='Archivo'), boton: !!document.querySelector('[data-arch]') }));
+    if(arch.inicio || arch.lateral || !arch.boton) errores.push(`${etiqueta}: el área archivada se ve sin pedirla o falta el botón para mostrarla (${JSON.stringify(arch)})`);
+    await p.click('.ar + .more [data-arch]'); await p.waitForTimeout(300);
+    if(!(await p.evaluate(() => [...document.querySelectorAll('.ar-i b')].some(x=>x.textContent==='Archivo')))) errores.push(`${etiqueta}: «Mostrar el área archivada» no la muestra`);
+    await p.click('.ar + .more [data-arch]'); await p.waitForTimeout(200);
+    await p.goto(url + '#entregables'); await p.waitForTimeout(400);
+    if(!(await p.evaluate(() => document.body.textContent.includes('Inventario del sistema anterior') && document.querySelector('h1').textContent==='Entregables'))) errores.push(`${etiqueta}: la vista Entregables no se llama así o perdió lo publicado de un área archivada`);
+    // el índice de la ayuda se recorre con su propio scroll sin mover el artículo (solo en escritorio)
+    if((opciones.viewport||{}).width > 760){
+      await p.goto(url + '#ayuda-ponerse-al-dia'); await p.waitForTimeout(400);
+      const toc = await p.$('.hc-toc'); const bx = await toc.boundingBox();
+      const y0 = await p.evaluate(() => scrollY);
+      await p.mouse.move(bx.x + 40, bx.y + Math.min(200, bx.height/2));
+      for(let i = 0; i < 6; i++){ await p.mouse.wheel(0, 150); await p.waitForTimeout(80); }
+      const r = await p.evaluate(() => ({ y: scrollY, toc: document.querySelector('.hc-toc').scrollTop, flujo: !!document.querySelector('.hc-flujo') }));
+      if(r.y !== y0 || !(r.toc > 0) || !r.flujo) errores.push(`${etiqueta}: recorrer el índice de la ayuda movió el artículo o falta el diagrama (${JSON.stringify(r)})`);
+    }
     await p.goto(url + '#ayuda'); await p.waitForTimeout(300);
     await p.evaluate(() => { const d = document.getElementById('hc-det'); if(d) d.open = true; });
     await p.fill('#hc-q', 'restringido'); await p.waitForTimeout(150);

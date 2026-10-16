@@ -1,6 +1,6 @@
 ---
 name: sesion
-description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto'.
+description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto', y cuando el dueño de un proyecto pregunte por el suyo: '¿como va X?', '¿en que estatus esta X?', '¿que falta en X?'.
 ---
 
 # Sesión
@@ -10,6 +10,8 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 ## Cuándo
 
 **Abrir**: "abre sesión en compras", "retomamos automatización de órdenes", "¿en qué quedamos con X?", o cualquier arranque de trabajo sobre un proyecto existente.
+
+**Abrir sin que lo pidan**: cuando el dueño de un proyecto pregunta cómo va el suyo: "¿en qué estatus está X?", "¿cómo va X?", "¿qué falta en X?", "¿qué sigue en X?". Dueño es quien tiene su cuenta junto al área del proyecto en `guia.md`, o figura como `Dueño` en su `proyecto.md`. Se abre sin preguntar, porque quien pregunta por lo suyo casi siempre va a trabajar en ello, y abrir no registra nada. Si quien pregunta no es el dueño, es `consulta`. Si solo preguntó y no trabaja, no hay nada que cerrar: nada se registra sin «cierra la sesión».
 
 **Cerrar**: "cierra la sesión", "guarda lo de hoy", "terminamos".
 
@@ -58,7 +60,7 @@ No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistem
 
 Si es la primera sesión que se abre en esta conversación, la respuesta empieza con la línea «Memoria activa · <organización> · método <versión> · escribes en <áreas de la cuenta>», como pide el aviso de arranque. Después, tres bloques, en este orden y sin encabezados largos.
 
-**Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero.
+**Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero. Si la sesión se abrió por una pregunta de estado, este bloque es la respuesta y empieza por ella: en qué está y qué espera.
 
 **Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
@@ -76,7 +78,7 @@ Si no hay avisos, no se menciona que no los hay.
 
 **Puesta al día del método.** Se compara la primera línea del `metodo.md` de la raíz con la del `metodo.md` del plugin, versión y huella. Si coinciden, no se dice nada. Si no:
 
-- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <mayor.menor del plugin>. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
+- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar (llevándolo a la computadora como dice «Los archivos del plugin en la computadora» en la skill `tablero`: descargado y comprobado, nunca pegado), porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <mayor.menor del plugin>. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
 - **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.»
 - **Misma versión con huellas distintas**: no se toca ni se dice nada. Solo pasa entre dos publicaciones y lo resuelve la siguiente versión
 

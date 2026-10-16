@@ -377,6 +377,8 @@ Minúsculas, guiones en vez de espacios, sin acentos ni eñes, sin fechas ni nú
 
 El nombre de un archivo es estable durante toda su vida. El historial de versiones lo lleva la carpeta compartida (Drive, OneDrive…), el estado lo lleva la cabecera y el orden de las fases lo cuenta `proyecto.md`.
 
+Las carpetas de área y de proyecto siguen la misma regla, y por una razón más: una referencia `area/proyecto#AAAA-MM-DD` en `Afecta a`, `Cuestiona a` o `Responde a` solo se resuelve con nombres así. `Ventas Norte/cuentas` no la encuentra nadie, y sin dar error.
+
 ### El nombre de una carpeta compartida
 
 La raíz es una carpeta compartida y su nombre se ve en Drive, así que ese sí lleva mayúsculas y espacios: `Acme`. Solo letras, números, espacios y guiones, y los acentos y las eñes que traiga el nombre propio. Ningún otro signo, porque ese nombre se escribe a mano muchas veces y un signo raro se copia mal. Si una organización ya tiene una carpeta con un signo así, se propone renombrarla; el método no depende del nombre, porque ninguna instrucción usa rutas absolutas.

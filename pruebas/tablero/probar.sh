@@ -22,6 +22,15 @@ PY
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/publico" --modo publico --version "${VERSION:-prueba}" >/dev/null
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/completo" --modo completo --version "${VERSION:-prueba}" >/dev/null
 python3 "$AQUI/comprobar.py" "$OUT/publico" "$OUT/completo"
+# una tarea sin horario: el tablero lo sabe, para no esperar que se ponga al día cada mañana
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/manual" --modo publico --tarea trig_prueba --manual --version "${VERSION:-prueba}" >/dev/null
+python3 - "$OUT/manual/meta/estado.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1], encoding="utf-8"))
+ok = m.get("tarea") == "trig_prueba" and m.get("tarea_manual") is True
+print(("  bien  " if ok else "  FALLA ") + "una tarea sin horario (--manual) queda marcada como tal")
+sys.exit(0 if ok else 1)
+PY
 rm -rf "$OUT/raiz-cola"; cp -R "$OUT/raiz" "$OUT/raiz-cola"
 python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 for m in publico completo; do python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/$m" "$OUT/$m.html"; done
