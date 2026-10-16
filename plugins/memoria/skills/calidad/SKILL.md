@@ -1,6 +1,6 @@
 ---
 name: calidad
-description: Revision de calidad a fondo de algo que se esta construyendo - el contenido de un proyecto, un entregable, un desarrollo o plugin, o la carpeta entera (auditoria) - contra su objetivo, con revisores independientes, para encontrar errores, inconsistencias, riesgos y oportunidades. Usala cuando digan 'revision de calidad', 'revisa a fondo...', 'audita la carpeta', 'que no cuadra en...', 'revisalo todo contra el objetivo' o cuando toque la revision periodica de un proyecto.
+description: Revision de calidad a fondo de algo que se esta construyendo - el contenido de un proyecto, un entregable, un desarrollo o plugin, o la carpeta entera (auditoria) - contra su objetivo, con revisores independientes, para encontrar errores, inconsistencias, riesgos, oportunidades y lo que cuesta de mas (tiempo, llamadas, tokens). Usala cuando digan 'revision de calidad', 'revisa a fondo...', 'audita la carpeta', 'que no cuadra en...', 'revisalo todo contra el objetivo' o cuando toque la revision periodica de un proyecto.
 ---
 
 # Revisión de calidad
@@ -19,7 +19,7 @@ Antes de leer nada, en una sola pregunta (con `AskUserQuestion` si está), lo qu
 
 1. **Qué se revisa.** El contenido de un proyecto; un entregable concreto; un desarrollo, un repo o un plugin; o la carpeta entera de la organización, que es la auditoría.
 2. **Sobre qué tema**, si no es todo: un flujo, una decisión, una parte del código, una versión.
-3. **Qué buscar.** Por defecto, las cinco lentes de abajo; la persona puede quitar o añadir.
+3. **Qué buscar.** Por defecto, las seis lentes de abajo; la persona puede quitar o añadir.
 4. **Qué tan a fondo.** Rápida (una lectura y los hallazgos más claros), normal, o a fondo (todo, con revisores independientes por lente y cada hallazgo comprobado).
 
 ## Paso 2 · Recomendar el modelo
@@ -39,7 +39,7 @@ Se escribe en tres o cuatro líneas qué tendría que ser cierto si el objetivo 
 
 ## Paso 4 · Revisar por lentes
 
-Cinco lentes, cada una con su pregunta:
+Seis lentes, cada una con su pregunta:
 
 | Lente | Pregunta |
 |---|---|
@@ -48,12 +48,15 @@ Cinco lentes, cada una con su pregunta:
 | Objetivo | ¿Qué falta para cumplir el objetivo, qué se está construyendo que no lo sirve, qué cumple la letra y no la intención? |
 | Riesgos | ¿Qué fallaría en manos de otra persona, con otros datos, a otra escala, o en silencio? |
 | Lo que sobra | ¿Qué se podría quitar o juntar sin perder nada? |
+| Eficiencia | ¿Qué cuesta cada operación en tiempo, llamadas, bytes y tokens; qué se carga que la tarea no necesita; cómo crece ese coste con el tamaño de lo revisado? |
+
+La lente de eficiencia se mide, no se estima: bytes que entran al contexto por operación (instrucciones y datos por separado), número de llamadas, tiempo de carga o de repintado de una página, tamaño de lo que se escribe; y se compara con la versión anterior cuando la hay. Pesa sobre todo en un desarrollo o un plugin; en un proyecto es cuánto hay que leer para trabajar en él.
 
 En la auditoría de la carpeta, además: lo duplicado (dos proyectos que son el mismo, dos documentos con la misma verdad), lo mal colocado (un proyecto que es un área, material de fuera fuera de `fuentes/`), lo que el contrato no permite, y lo que `verificar.sh` ya detecta, que se corre primero.
 
-**A fondo, con revisores independientes.** Se lanza un revisor por lente con la herramienta de agentes, todos a la vez, cada uno con el objetivo del paso 3, el material y solo su lente. Ninguno ha visto el trabajo mientras se hacía, para que nadie se califique a sí mismo. Si la herramienta de agentes no está, se hace una pasada por lente y se dice que la revisión no fue independiente.
+**A fondo, con revisores independientes.** Se lanza un revisor por lente con la herramienta de agentes, todos a la vez, cada uno con el objetivo del paso 3, el material, solo su lente y las reglas de lectura del párrafo siguiente. Ninguno ha visto el trabajo mientras se hacía, para que nadie se califique a sí mismo. Si la herramienta de agentes no está, se hace una pasada por lente y se dice que la revisión no fue independiente.
 
-Lo que se lee sigue las reglas de siempre: de otras áreas, solo su superficie pública; lo restringido sin acceso se nombra y se salta.
+Lo que se lee sigue las reglas de siempre, y cada revisor las recibe con su encargo: de otras áreas, solo su superficie pública; lo restringido sin acceso se nombra y se salta; `sesiones.md`, `taller/` y `fuentes/` no se leen.
 
 ## Paso 5 · Comprobar cada hallazgo
 
@@ -92,7 +95,7 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta:**
 
-> Antes de empezar, tres cosas: ¿reviso el plugin entero o una parte (el tablero, las skills, los scripts)? ¿Con las cinco lentes (errores, inconsistencias, objetivo, riesgos, lo que sobra)? ¿Rápida, normal o a fondo?
+> Antes de empezar, tres cosas: ¿reviso el plugin entero o una parte (el tablero, las skills, los scripts)? ¿Con las seis lentes (errores, inconsistencias, objetivo, riesgos, lo que sobra, eficiencia)? ¿Rápida, normal o a fondo?
 
 **Usuario:** entero, todas, a fondo
 
