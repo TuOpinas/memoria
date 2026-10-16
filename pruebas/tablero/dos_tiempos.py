@@ -177,6 +177,16 @@ for modo in ("completo", "publico"):
     ok(r3.returncode == 5 and "sin --sin-cambios" in r3.stderr, f"{modo}: si a la base le falta un proyecto que se reutiliza, se para con código 5 y dice qué hacer")
     r4 = _gen(TRAB / f"inc4-{modo}", s2)
     ok(r4.returncode == 5, f"{modo}: sin --previos, un inventario que reutiliza se rechaza")
+# un proyecto cuyo id la base no admite (acentos) no guarda huella: nunca se pide reutilizarlo
+R4 = TRAB / "raiz-acento"; shutil.rmtree(R4, ignore_errors=True); shutil.copytree(RAIZ, R4)
+_area = next(R4.glob("*/area.md")).parent
+(_area / "diseño").mkdir(); (_area / "diseño" / "proyecto.md").write_text("---\nestado: vigente\nactualizado: 2026-08-01\n---\n\n# Diseño\n", encoding="utf-8")
+_i = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)
+_pid = f"{_area.name}--diseño"
+_i2 = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--modo", "completo", "--sin-cambios", ",".join(_i["inventario"]["huellas"].values())], capture_output=True, text=True).stdout)
+ok(_pid not in _i["inventario"]["huellas"] and _pid not in _i2["inventario"].get("reusar", []) and f"{_area.name}/diseño/proyecto.md" in _i2["leer"],
+   "un proyecto con acentos en su carpeta no guarda huella y se trae siempre")
+
 _g2 = TRAB / "guardada2"; (_g2 / "meta").mkdir(parents=True, exist_ok=True)
 (_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "huellas": ["aa", "bb"]}}), encoding="utf-8")
 _o = lambda *a: subprocess.run([sys.executable, PLAN, "--guardada", _g2, *a], capture_output=True, text=True).stdout.split("\n")

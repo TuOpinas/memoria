@@ -154,6 +154,10 @@ def primer_parrafo(texto):
 def fechas_en(texto):
     return re.findall(r"\b(20\d\d-\d\d-\d\d)\b", texto)
 
+# lo que la base del tablero admite: un doc_id sin espacios ni acentos y un documento de menos de 1 MB (plan_subida.py)
+ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")
+LIMITE_DOC = 1_000_000
+
 # ---------- guia.md ----------
 guia = leer(RAIZ / "guia.md") or ""
 version_metodo = ""
@@ -577,7 +581,7 @@ if INVENTARIO:
     inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
     _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
-    huellas, reusar, por_proyecto = [], [], {}   # por_proyecto: {pid: (sus archivos, sus entregables, su trabajo sin sesión)}
+    huellas, reusar, por_proyecto = {}, [], {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
     def _si_legible(p, lista=None):
         if leer(p) is not None:
             (leer_ if lista is None else lista).append(rel(p)); return True
@@ -628,16 +632,20 @@ if INVENTARIO:
             # su trabajo sin sesión, el modo y este script. Del día solo cuenta lo que lo usa: qué sesiones caen en los últimos
             # 90 días y, si no tiene sesiones ni «actualizado», la fecha de hoy. Así un proyecto que no se tocó no se vuelve a traer
             # aunque cambie el día.
-            reales_ = [s_["fecha"] for s_ in ses if not es_sesion_de_tarea(s_["titulo"]) and fecha_valida(s_["fecha"])]
+            _reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
+            reales_ = [s_["fecha"] for s_ in _reales if fecha_valida(s_["fecha"])]
             _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
-            sin_ref = not reales_ and not fecha_valida(fm_p.get("actualizado"))
+            # igual que la generación: la última sesión es la primera de la lista aunque su fecha no sea válida
+            sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
             h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
                                  [(r_, os.path.getsize(RAIZ / r_), int(os.path.getmtime(RAIZ / r_))) for r_ in suyos],
                                  sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_)
             pid = f"{a['slug']}--{slug}"
-            huellas.append(h)
             por_proyecto[rel(pc)] = (suyos, fe, ss_)
-            if h in SIN_CAMBIOS:
+            # un id que la base no admite (espacios, acentos) nunca llega a ella: no se puede reutilizar
+            if ID_VALIDO.match(pid):
+                huellas[pid] = h
+            if pid in huellas and h in SIN_CAMBIOS:
                 reusar.append(pid)
                 continue
             leer_.extend(suyos)
@@ -647,7 +655,7 @@ if INVENTARIO:
                 inv["entregables"][rel(pc)] = fe
     fuera_ = fuera_de_la_memoria()
     h_fuera = "f" + _huella_proyecto(_script, MODO, fuera_)[1:]
-    huellas.append(h_fuera)
+    huellas["meta/fuera"] = h_fuera
     if h_fuera in SIN_CAMBIOS:
         inv["fuera_reusar"] = True
     else:
@@ -667,7 +675,7 @@ if INVENTARIO:
     leer_ = list(dict.fromkeys(leer_))       # un área repetida en guia.md no trae dos veces lo mismo
     inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
     inv["archivos_leer"] = len(leer_)
-    inv["huellas"] = sorted(set(huellas))
+    inv["huellas"] = huellas
     if reusar:
         inv["reusar"] = reusar
     inv["sello"] = sello(inv)
@@ -916,8 +924,11 @@ docs["meta"]["estado"] = {
 if INV is not None and INV.get("huella_raiz"):
     docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]
 if INV is not None and INV.get("huellas"):
-    # las huellas de cada proyecto y de lo que queda fuera: la próxima puesta al día las pasa con --sin-cambios
-    docs["meta"]["estado"]["huellas"] = INV["huellas"]
+    # las huellas de cada proyecto y de lo que queda fuera: la próxima puesta al día las pasa con --sin-cambios.
+    # Las de los documentos que la base rechazaría por tamaño no se guardan: no llegan a ella y no se pueden reutilizar.
+    _gr = {pid for pid, d_ in docs["proyectos"].items()
+           if len(json.dumps(d_, ensure_ascii=False, indent=1).encode("utf-8")) > LIMITE_DOC}
+    docs["meta"]["estado"]["huellas"] = sorted({h for k, h in INV["huellas"].items() if k not in _gr})
 if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 
