@@ -10,6 +10,15 @@ Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--ta
 --manual: la tarea no tiene horario y solo corre desde el botón «Sincronizar ahora»
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
+En dos tiempos, cuando la raíz está en otra computadora y el resultado tiene que llegar a Claude sin pasar por la conversación:
+  1. En la computadora:  generar_vista.py <raiz> --inventario [--modo …]
+     Imprime un JSON con «leer» (las rutas, relativas a la raíz, de los archivos que hay que traer) e «inventario» (lo poco
+     que el generador necesita y no está dentro de esos archivos: fechas de modificación, lo que no se pudo leer, la lista
+     de proyectos y las carpetas sueltas). No escribe nada.
+  2. Donde se tenga la copia de esos archivos, con su misma estructura:
+     generar_vista.py <copia> <carpeta-de-salida> --desde-inventario <inventario.json> [--modo …] [--tarea …] [--version …]
+     Comprueba que la copia trae exactamente los archivos de «leer» y genera lo mismo que el modo de un tiempo en la computadora.
+
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
 «Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md empieza por «restringido» o que no está en ese índice,
 solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo fecha y título.
@@ -27,9 +36,15 @@ except Exception:
     TZ = datetime.timezone.utc
 
 RAIZ = pathlib.Path(sys.argv[1])
-OUT = pathlib.Path(sys.argv[2])
 def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
+# primer tiempo: solo inventario, sin carpeta de salida; segundo tiempo: la raíz es una copia y lo demás viene del inventario
+INVENTARIO = "--inventario" in sys.argv
+_inv_ruta = _arg("--desde-inventario")
+INV = json.loads(pathlib.Path(_inv_ruta).read_text(encoding="utf-8")) if _inv_ruta else None
+if INV is not None and INV.get("formato") != 1:
+    sys.exit("El inventario no es de este generador (formato distinto de 1): vuelve a sacarlo en la computadora con esta misma versión.")
+OUT = None if INVENTARIO else pathlib.Path(sys.argv[2])
 TAREA = _arg("--tarea")
 # una tarea sin horario solo corre desde el botón: el tablero no espera que se ponga al día cada mañana
 TAREA_MANUAL = bool(TAREA) and "--manual" in sys.argv
@@ -39,6 +54,8 @@ MODO = (_arg("--modo") or "publico").lower()
 if MODO not in ("publico", "completo"):
     sys.exit("--modo admite publico o completo")
 PUBLICO = MODO == "publico"
+if INV is not None and INV.get("modo") != MODO:
+    sys.exit(f"El inventario se sacó en modo {INV.get('modo')} y esto se genera en modo {MODO}: tienen que coincidir.")
 HOY = datetime.datetime.now(TZ).date().isoformat()
 
 def leer(p):
@@ -125,12 +142,20 @@ def fechas_en(texto):
 
 # ---------- guia.md ----------
 guia = leer(RAIZ / "guia.md") or ""
-metodo = leer(RAIZ / "metodo.md") or ""
 version_metodo = ""
-m = re.search(r"(\d+\.\d+(?:\.\d+)?)", metodo.split("\n")[0]) if metodo else None
-if m:
-    version_metodo = m.group(1)
-org = titulo_h1(guia).split("·")[0].strip() or RAIZ.name
+if INV is not None:
+    version_metodo = INV.get("version_metodo", "")
+else:
+    # de metodo.md solo importa su primera línea
+    try:
+        with open(RAIZ / "metodo.md", encoding="utf-8-sig", errors="replace") as f_:
+            m = re.search(r"(\d+\.\d+(?:\.\d+)?)", f_.readline())
+        if m:
+            version_metodo = m.group(1)
+    except OSError:
+        pass
+NOMBRE_RAIZ = INV.get("raiz_nombre") if INV is not None else RAIZ.name
+org = titulo_h1(guia).split("·")[0].strip() or NOMBRE_RAIZ
 
 areas_guia = []
 tabla = seccion(guia, "Áreas")
@@ -288,18 +313,62 @@ def parse_indice_proyectos(texto_area):
                 idx[actual]["notas"].append(item)
     return idx
 
-def entregables_de(carpeta, indice):
-    out = []
-    d = carpeta / "entregables"
-    if not d.exists():
-        return out
+def fecha_de(p):
+    """Fecha de modificación de p (día, hora de Ciudad de México), o None."""
     try:
-        nombres = sorted(os.listdir(d))
+        return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date().isoformat()
+    except OSError:
+        return None
+
+def rel(p):
+    return pathlib.Path(p).relative_to(RAIZ).as_posix()
+
+def fechas_de_entregables(carpeta):
+    """{archivo: fecha} de los entregables cuya fecha solo puede salir del archivo: los que no son .md, los .md que
+    no se dejan leer y los que no traen «actualizado» en su cabecera. Es lo que el inventario lleva de cada proyecto."""
+    d = carpeta / "entregables"
+    out = {}
+    try:
+        nombres = sorted(os.listdir(d)) if d.exists() else []
     except PermissionError:
         return out
     for n in nombres:
         p = d / n
         if n.startswith(".") or p.is_dir():
+            continue
+        if n.endswith(".md"):
+            t = leer(p)
+            if t is not None and frontmatter(t)[0].get("actualizado"):
+                continue
+        f = fecha_de(p)
+        if f:
+            out[n] = f
+        else:
+            out[n] = None
+    return out
+
+def entregables_de(carpeta, indice):
+    out = []
+    d = carpeta / "entregables"
+    fechas_inv = None
+    if INV is not None:
+        # la copia trae solo los .md legibles; los demás nombres y sus fechas vienen del inventario
+        fechas_inv = INV.get("entregables", {}).get(rel(carpeta), {})
+        try:
+            copiados = [n for n in os.listdir(d) if not n.startswith(".") and n.endswith(".md")] if d.exists() else []
+        except PermissionError:
+            copiados = []
+        nombres = sorted(set(copiados) | set(fechas_inv))
+    else:
+        if not d.exists():
+            return out
+        try:
+            nombres = sorted(os.listdir(d))
+        except PermissionError:
+            return out
+    for n in nombres:
+        p = d / n
+        if n.startswith(".") or (fechas_inv is None and p.is_dir()):
             continue
         stem = pathlib.Path(n).stem
         ent = {"archivo": n, "nombre": stem, "estado": None, "actualizado": None, "descripcion": "", "formato": pathlib.Path(n).suffix.lstrip(".")}
@@ -320,11 +389,10 @@ def entregables_de(carpeta, indice):
             if not ent["actualizado"]:
                 ent["actualizado"] = ref["actualizado"]
         if not ent["actualizado"]:
-            try:
-                ent["actualizado"] = datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
+            f = fechas_inv.get(n) if fechas_inv is not None else fecha_de(p)
+            if f:
+                ent["actualizado"] = f
                 ent["fecha_de_archivo"] = True
-            except OSError:
-                pass
         out.append(ent)
     return out
 
@@ -395,6 +463,156 @@ def senales(paso_texto, area_doc, pdoc, todos):
     cliente = pdoc["area"] == "clientes" or bool(re.search(r"\b(cliente|propuesta|contrato|firma|factur\w*|cobro|precio|impi|acuerdo de confidencialidad)\b", paso_texto.lower()))
     return {"prioridad_area": prio, "cliente_o_dinero": cliente}
 
+def sin_sesion_de(pc, ses, cerrado):
+    """Trabajo sin sesión de un proyecto, mirando solo fechas de archivo (nunca contenido), o None.
+    Con inventario, viene ya calculado de la computadora, donde están las fechas de verdad."""
+    if INV is not None:
+        return INV.get("sin_sesion", {}).get(rel(pc))
+    ultima_entrada = ses[0]["fecha"] if ses and fecha_valida(ses[0]["fecha"]) else None
+    if not ultima_entrada or cerrado:
+        return None
+    donde, ultimo = {}, None
+    objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
+    for nombre, d in objetivos:
+        for raiz_, dirs, files in os.walk(d) if d.exists() else []:
+            dirs[:] = [x for x in dirs if not x.startswith(".")]
+            for f in files:
+                if f.startswith("."):
+                    continue
+                fm_ = fecha_de(os.path.join(raiz_, f))
+                if not fm_:
+                    continue
+                if fm_ > ultima_entrada:
+                    donde[nombre] = donde.get(nombre, 0) + 1
+                    ultimo = max(ultimo or fm_, fm_)
+    fd = fecha_de(pc / "decisiones.md")
+    if fd and fd > ultima_entrada:
+        donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
+    if donde:
+        return {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
+    return None
+
+def motivo_de(p):
+    """Por qué no se leyó p: en la computadora se pregunta al disco; con inventario, lo dice el inventario."""
+    if INV is not None:
+        return INV.get("motivos", {}).get(rel(p), "sin-leer")
+    return por_que_no(p) or "sin-leer"
+
+def proyectos_de(carpeta, indice):
+    """Los proyectos de un área: los de su índice más cualquier carpeta con proyecto.md, en ese orden."""
+    if INV is not None:
+        return list(INV.get("proyectos", {}).get(rel(carpeta), list(indice.keys())))
+    slugs = list(indice.keys())
+    try:
+        for n in sorted(os.listdir(carpeta)):
+            if (carpeta / n).is_dir() and not n.startswith(".") and n not in slugs and (carpeta / n / "proyecto.md").exists():
+                slugs.append(n)
+    except PermissionError:
+        pass
+    return slugs
+
+def fuera_de_la_memoria():
+    """Carpetas de la raíz que no son de ningún área: «Claude outputs» es donde la app de Claude deja lo que produce;
+    cualquier otra carpeta suelta también queda fuera. Solo se cuentan archivos y fechas; los nombres, solo en completo."""
+    if INV is not None:
+        return INV.get("fuera", [])
+    fuera_ = []
+    slugs_area = {a["slug"] for a in areas_guia}
+    try:
+        sueltas = [n for n in sorted(os.listdir(RAIZ)) if (RAIZ / n).is_dir() and not n.startswith(".") and n not in slugs_area and n != "base"]
+    except OSError:
+        sueltas = []
+    for n in sueltas:
+        arch = []
+        for raiz_, dirs, files in os.walk(RAIZ / n):
+            dirs[:] = [x for x in dirs if not x.startswith(".")]
+            for f in files:
+                if f.startswith("."): continue
+                fecha = fecha_de(os.path.join(raiz_, f))
+                if not fecha:
+                    continue
+                arch.append((fecha, os.path.relpath(os.path.join(raiz_, f), RAIZ / n)))
+        if not arch: continue
+        arch.sort(reverse=True)
+        item = {"carpeta": n, "de_claude": n.lower() == "claude outputs", "archivos": len(arch), "ultimo": arch[0][0], "primero": arch[-1][0]}
+        if not PUBLICO:
+            item["nombres"] = [{"fecha": f_, "nombre": n_} for f_, n_ in arch[:40]]
+        fuera_.append(item)
+    return fuera_
+
+def es_declarado(ref, slug, indice):
+    # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta.
+    # En público, un proyecto que no está en el índice del área tampoco se muestra: sin su línea no se sabe si es restringido
+    return bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I)) or (PUBLICO and slug not in indice)
+
+# ---------- primer tiempo: el inventario, en la computadora ----------
+if INVENTARIO:
+    leer_ = []
+    inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
+           "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
+    def _si_legible(p):
+        if leer(p) is not None:
+            leer_.append(rel(p)); return True
+        return False
+    _si_legible(RAIZ / "guia.md")
+    _si_legible(RAIZ / "base" / "premisas.md")
+    for a in areas_guia:
+        carpeta = RAIZ / a["slug"]
+        restringida = "restring" in a["lectores"].lower()
+        if PUBLICO and restringida:
+            continue                      # en público, de un área restringida no se trae nada
+        texto = leer(carpeta / "area.md")
+        if texto is None:
+            inv["motivos"][rel(carpeta / "area.md")] = por_que_no(carpeta / "area.md") or "sin-leer"
+            continue
+        leer_.append(rel(carpeta / "area.md"))
+        indice = parse_indice_proyectos(frontmatter(texto)[1])
+        slugs = proyectos_de(carpeta, indice)
+        inv["proyectos"][rel(carpeta)] = slugs
+        for slug in slugs:
+            pc = carpeta / slug
+            ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
+            if PUBLICO and es_declarado(ref, slug, indice):
+                continue                  # ni se lee ni se trae
+            tp = leer(pc / "proyecto.md")
+            if tp is None:
+                inv["motivos"][rel(pc / "proyecto.md")] = por_que_no(pc / "proyecto.md") or "sin-leer"
+                continue
+            leer_.append(rel(pc / "proyecto.md"))
+            ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md") else []
+            _si_legible(pc / "decisiones.md")
+            cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(frontmatter(tp)[1], "Estado actual")))
+            ss_ = sin_sesion_de(pc, ses, cerrado)
+            if ss_:
+                inv["sin_sesion"][rel(pc)] = ss_
+            d = pc / "entregables"
+            try:
+                for n in sorted(os.listdir(d)) if d.exists() else []:
+                    if n.endswith(".md") and not n.startswith(".") and (d / n).is_file():
+                        _si_legible(d / n)
+            except PermissionError:
+                pass
+            fe = fechas_de_entregables(pc)
+            if fe:
+                inv["entregables"][rel(pc)] = fe
+    inv["fuera"] = fuera_de_la_memoria()
+    inv["huella_leer"] = hashlib.sha1("\n".join(sorted(leer_)).encode("utf-8")).hexdigest()[:16]
+    inv["archivos_leer"] = len(leer_)
+    print(json.dumps({"leer": leer_, "inventario": inv}, ensure_ascii=False, separators=(",", ":")))
+    sys.exit(0)
+
+# ---------- segundo tiempo: la copia tiene que ser exactamente la de «leer» ----------
+if INV is not None:
+    _copiados = []
+    for raiz_, dirs, files in os.walk(RAIZ):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        _copiados += [rel(os.path.join(raiz_, f)) for f in files if not f.startswith(".")]
+    _h = hashlib.sha1("\n".join(sorted(_copiados)).encode("utf-8")).hexdigest()[:16]
+    if _h != INV.get("huella_leer"):
+        sys.stderr.write(f"La copia no coincide con el inventario: trae {len(_copiados)} archivos y el inventario pide {INV.get('archivos_leer')}. "
+                         "Vacía la carpeta de la copia, vuelve a traer los archivos de «leer» y espera a que lleguen todos.\n")
+        sys.exit(3)
+
 docs = {"meta": {}, "areas": {}, "proyectos": {}}
 orden_area = 0
 for a in areas_guia:
@@ -409,7 +627,7 @@ for a in areas_guia:
     if texto is None or (PUBLICO and area_doc["restringido"]):
         area_doc["legible"] = False
         # por qué no se muestra: declarada restringida, sin acceso, o la carpeta no está en esta computadora
-        area_doc["motivo"] = "declarada" if (PUBLICO and area_doc["restringido"]) else (por_que_no(carpeta / "area.md") or "sin-leer")
+        area_doc["motivo"] = "declarada" if (PUBLICO and area_doc["restringido"]) else motivo_de(carpeta / "area.md")
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -421,14 +639,7 @@ for a in areas_guia:
     mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*·\s*(.+)$", pan, re.S)
     area_doc["panorama"] = {"fecha": mpan.group(1), "texto": mpan.group(2).strip()} if mpan else ({"fecha": None, "texto": pan} if pan else None)
     indice = parse_indice_proyectos(cuerpo)
-    # proyectos: los del índice más cualquier carpeta con proyecto.md
-    slugs = list(indice.keys())
-    try:
-        for n in sorted(os.listdir(carpeta)):
-            if (carpeta / n).is_dir() and not n.startswith(".") and n not in slugs and (carpeta / n / "proyecto.md").exists():
-                slugs.append(n)
-    except PermissionError:
-        pass
+    slugs = proyectos_de(carpeta, indice)
     orden_p = 0
     for slug in slugs:
         orden_p += 1
@@ -436,9 +647,7 @@ for a in areas_guia:
         pid = f"{a['slug']}--{slug}"
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-        # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta.
-        # En público, un proyecto que no está en el índice del área tampoco se muestra: sin su línea no se sabe si es restringido
-        declarado = bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I)) or (PUBLICO and slug not in indice)
+        declarado = es_declarado(ref, slug, indice)
         tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
@@ -446,7 +655,7 @@ for a in areas_guia:
             "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
-            pdoc["motivo"] = "declarado" if (PUBLICO and declarado) else (por_que_no(pc / "proyecto.md") or "sin-leer")
+            pdoc["motivo"] = "declarado" if (PUBLICO and declarado) else motivo_de(pc / "proyecto.md")
             docs["proyectos"][pid] = pdoc
             continue
         fm, cuerpo = frontmatter(tp)
@@ -502,31 +711,9 @@ for a in areas_guia:
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
         # contenido; proyecto.md no cuenta, porque la tarea del tablero lo toca al aplicar fechas, y restringido/ no se mira.
-        ultima_entrada = ses[0]["fecha"] if ses and fecha_valida(ses[0]["fecha"]) else None
-        if ultima_entrada and not pdoc["cerrado"]:
-            donde, ultimo = {}, None
-            objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
-            for nombre, d in objetivos:
-                for raiz_, dirs, files in os.walk(d) if d.exists() else []:
-                    dirs[:] = [x for x in dirs if not x.startswith(".")]
-                    for f in files:
-                        if f.startswith("."):
-                            continue
-                        try:
-                            fm_ = datetime.datetime.fromtimestamp(os.stat(os.path.join(raiz_, f)).st_mtime, TZ).date().isoformat()
-                        except OSError:
-                            continue
-                        if fm_ > ultima_entrada:
-                            donde[nombre] = donde.get(nombre, 0) + 1
-                            ultimo = max(ultimo or fm_, fm_)
-            try:
-                fd = datetime.datetime.fromtimestamp(os.stat(pc / "decisiones.md").st_mtime, TZ).date().isoformat()
-                if fd > ultima_entrada:
-                    donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
-            except OSError:
-                pass
-            if donde:
-                pdoc["sin_sesion"] = {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
+        ss_ = sin_sesion_de(pc, ses, pdoc["cerrado"])
+        if ss_:
+            pdoc["sin_sesion"] = ss_
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
         docs["proyectos"][pid] = pdoc
@@ -591,32 +778,7 @@ _prios = {s_: docs["areas"][s_].get("prioridades", []) for s_ in sorted(docs["ar
 _huella_cand = hashlib.sha1(json.dumps([candidatos[:25], _prios], ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candidatos[:25]}
 
-# ---------- carpetas de la raíz que no son de ningún área ----------
-# «Claude outputs» es donde la app de Claude deja lo que produce; cualquier otra carpeta suelta en la
-# raíz también queda fuera de la memoria. Solo se cuentan archivos y fechas; los nombres, solo en completo.
-fuera = []
-slugs_area = {a["slug"] for a in areas_guia}
-try:
-    sueltas = [n for n in sorted(os.listdir(RAIZ)) if (RAIZ / n).is_dir() and not n.startswith(".") and n not in slugs_area and n != "base"]
-except OSError:
-    sueltas = []
-for n in sueltas:
-    arch = []
-    for raiz_, dirs, files in os.walk(RAIZ / n):
-        dirs[:] = [x for x in dirs if not x.startswith(".")]
-        for f in files:
-            if f.startswith("."): continue
-            try:
-                fecha = datetime.datetime.fromtimestamp(os.stat(os.path.join(raiz_, f)).st_mtime, TZ).date().isoformat()
-            except OSError:
-                continue
-            arch.append((fecha, os.path.relpath(os.path.join(raiz_, f), RAIZ / n)))
-    if not arch: continue
-    arch.sort(reverse=True)
-    item = {"carpeta": n, "de_claude": n.lower() == "claude outputs", "archivos": len(arch), "ultimo": arch[0][0], "primero": arch[-1][0]}
-    if not PUBLICO:
-        item["nombres"] = [{"fecha": f_, "nombre": n_} for f_, n_ in arch[:40]]
-    fuera.append(item)
+fuera = fuera_de_la_memoria()
 
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
