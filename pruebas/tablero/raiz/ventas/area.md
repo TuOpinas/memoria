@@ -19,3 +19,6 @@ Clientes, propuestas y precios.
   - propuesta-base — plantilla de propuesta con su estructura · actualizado 2026-09-20
 - `precios/` — restringido: política de precios y márgenes
 - `margenes/` – restringido: márgenes por cliente, con el guion medio que pone el autocorrector
+
+## Panorama
+2026-10-03 · Ventas tiene una sola cuenta grande abierta, Cliente Uno, con la propuesta enviada en dos fases y una respuesta que no llega. Lo que preocupa: el plazo de la llamada venció y Soporte cuestionó que la fase 2 quede sin precio.

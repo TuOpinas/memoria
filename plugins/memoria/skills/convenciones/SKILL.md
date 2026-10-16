@@ -104,6 +104,7 @@ RAIZ/
     contexto.md
     glosario.md
     sistemas.md
+    premisas.md       (opcional: las premisas que confirmó la dirección)
   <area>/
     area.md
     <proyecto>/
@@ -129,8 +130,23 @@ Tres niveles: área, proyecto, carpeta del proyecto. Un cuarto nivel significa q
 | `contexto.md` | Quién es la organización, criterios transversales, qué datos son sensibles |
 | `glosario.md` | Vocabulario de la casa: siglas, nombres internos, qué significa cada cosa |
 | `sistemas.md` | Una tabla con cuatro columnas: sistema, para qué, quién da acceso, antes de usarlo |
+| `premisas.md` | Las premisas que la dirección dio por confirmadas: sobre qué apuesta la organización y qué no está en discusión ahora. Solo existe si hay alguna |
 
-Los tres se leen a demanda, no al abrir sesión: `glosario.md` cuando aparece vocabulario de la casa, `sistemas.md` cuando el trabajo toca un sistema, `contexto.md` cuando la pregunta es sobre la organización. La sección 12 lo fija.
+Los tres primeros se leen a demanda, no al abrir sesión: `glosario.md` cuando aparece vocabulario de la casa, `sistemas.md` cuando el trabajo toca un sistema, `contexto.md` cuando la pregunta es sobre la organización. `premisas.md` se lee siempre al abrir, porque todo el trabajo se ancla en ella. La sección 12 lo fija.
+
+### Las premisas
+
+Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Las decide quien dirige la organización, las escribe el responsable de contexto en su sesión, y viven en `base/premisas.md`, que es un registro: se añaden líneas y las que hay no se editan.
+
+```markdown
+## Premisas
+
+- P1 · Este año se vende solo en México · Confirmó: Nombre Apellido · 2026-10-15
+- P2 · El producto se construye en inglés · Confirmó: Nombre Apellido · 2026-10-11
+- P3 · Se vende en México y en Estados Unidos · Confirmó: Nombre Apellido · 2027-01-10 · Reemplaza a P1
+```
+
+El identificador `P<n>` es correlativo y no se reutiliza. Una premisa que cambia no se corrige: se añade otra con `Reemplaza a P<n>`, y la anterior queda como historia. Una premisa se cita como `premisa P<n>` desde una decisión, un entregable o un cuestionamiento (sección 4).
 
 Las reglas propias de una organización no llevan archivo: van en `guia.md`, que es donde vive todo lo suyo. Son las que este contrato no puede prever, como un tipo de dato adicional que cuenta como confidencial, una convención de nombres para las áreas o vocabulario que conviene fijar antes de que cada quien lo escriba distinto. No pueden cambiar ni contradecir nada de lo que dice este documento; si alguna lo hace, manda este documento y se avisa al responsable de contexto.
 
@@ -153,10 +169,15 @@ Fija, porque varias skills leen y escriben en ella:
 - `nombre-del-proyecto/` — qué es
   - nombre-del-entregable — qué es · actualizado AAAA-MM-DD
 
+## Panorama
+AAAA-MM-DD · [Tres a cinco líneas del director del área: cómo está, qué se movió, qué preocupa]
+
 ## Quién participa
 Dueño: [nombre y apellido]
 [Otras personas y su papel]
 ```
+
+`Panorama` es el resumen ejecutivo del área, con la fecha en que se escribió. Lo escribe la skill `director` al cerrar una sesión en esa área, se reescribe entero cada vez y no lleva historia: lo que pasó está en los registros de los proyectos. Si no existe, el área todavía no tiene resumen; no se escribe a mano.
 
 El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. Un proyecto cerrado ocupa solo su línea, sin desglose. Lo escriben el cierre de sesión y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de esas líneas son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
 
@@ -267,6 +288,21 @@ Descartamos: …
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
 
+Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`, y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
+
+**Identificador de una decisión.** Cada entrada se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
+
+**Cuestionamientos.** Cualquiera puede cuestionar una decisión de otro proyecto o una premisa. El cuestionamiento se escribe en el `decisiones.md` de un proyecto propio, desde una sesión de quien cuestiona, porque nadie escribe en el área de otro:
+
+```markdown
+## AAAA-MM-DD · Cuestionamiento: el tope de 5.000 MXN deja fuera las compras recurrentes
+Planteó: Nombre Apellido
+Por qué: … (qué no cuadra, con su dato o su fuente)
+Cuestiona a: compras/automatizacion-ordenes#2026-08-29
+```
+
+`Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el dueño de lo cuestionado registra en su proyecto una decisión con `Responde a: <proyecto de quien cuestionó>#<fecha del cuestionamiento>`, que confirma lo decidido o lo reemplaza. Una premisa la responde el responsable de contexto, con una premisa nueva o con una entrada en el `decisiones.md` que él elija. Un cuestionamiento no es una decisión, aunque viva en el mismo registro: no se cuenta como tal ni se cita como tal.
+
 Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su dueño con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
 Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir nada más. El análisis que respalda la decisión (opciones, tablas, cifras) no va en la entrada: va a un entregable del proyecto y la entrada lo cita en `Afecta a` o en `Por qué`.
@@ -290,7 +326,7 @@ Las entradas escritas antes de adoptar este formato se dejan tal cual; el format
 
 ### Aviso entre áreas
 
-La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` que nombren el proyecto activo. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su dueño.
+La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo (y, en la sesión del responsable de contexto, las que nombren una premisa). Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su dueño.
 
 ## 5. Cabecera
 
@@ -313,7 +349,7 @@ Inmediatamente después va el título en `#`, para que quien abra el archivo sin
 | Entregables | sí | sí | sí, obligatoria |
 | `taller/` | sí, casi siempre `borrador` | sí | si se usó algo |
 | `proyecto.md`, `base/` | sí | sí | no |
-| `area.md`, `decisiones.md`, `sesiones.md`, los `enlaces.md` | `vigente` siempre | sí | no |
+| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no |
 
 `area.md` y los registros llevan `vigente` desde que se crean y no lo cambian: son índice y registro, no algo que se publique. Lo que pasa de `borrador` a `vigente` es lo demás.
 
@@ -397,7 +433,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
 4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones son de la sesión del responsable de contexto, que escribe `guia.md` y `base/` y pone al día `metodo.md` (sección 11).
-5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, y `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión.
+5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión (skill `director`), y `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión.
 6. No leer `sesiones.md`, `taller/`, `fuentes/` ni lo restringido de otra área. Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
@@ -423,11 +459,12 @@ El método se actualiza publicando una versión nueva del plugin, y cada raíz r
 
 Nunca se lee todo, y casi nunca se lee `base/`. Al abrir, se carga lo justo para saber qué existe y dónde está cada cosa; el resto entra cuando el trabajo del día lo pide, y por su nombre.
 
-**Nivel 0, siempre, y nada más que esto.** Tres lecturas cortas:
+**Nivel 0, siempre, y nada más que esto.** Cuatro lecturas cortas:
 
 1. La primera línea de `metodo.md`, para la versión y la huella de la raíz.
 2. `guia.md` entero. Es el mapa: qué áreas hay, quién responde por cada una y con qué cuenta, quién mantiene el contexto, quién administra la carpeta y las reglas propias de la casa. Cabe en una pantalla.
 3. El bloque `Proyectos` del `area.md` que toca. Dice qué proyectos hay y qué entregables vigentes tiene cada uno.
+4. `base/premisas.md`, si existe: las premisas vigentes, las que ninguna otra reemplaza. Es corta y todo se ancla en ella.
 
 Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se pide por su nombre.
 
@@ -448,7 +485,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 
 Ningún nivel se salta: no se abre el cuerpo de un entregable sin haber visto su cabecera, ni un proyecto sin haber visto el bloque `Proyectos` de su área. Y se para en el primer nivel que responde: si `guia.md` ya dice quién lleva algo, ahí termina la lectura.
 
-La única operación que recorre la raíz entera es la búsqueda de las líneas `Afecta a:` que nombran el proyecto activo, al abrir sesión. Busca un patrón de línea, no lee archivos, y las carpetas restringidas sin acceso fallan y se saltan.
+La única operación que recorre la raíz entera es la búsqueda de las líneas `Afecta a:` y `Cuestiona a:` que nombran el proyecto activo, al abrir sesión. Busca un patrón de línea, no lee archivos, y las carpetas restringidas sin acceso fallan y se saltan.
 
 Si el camino lleva a una carpeta restringida sin acceso, la lectura falla. Eso no es un error ni un hueco: se dice qué área o qué proyecto es y quién es su dueño, y ahí se para. No se deduce lo que hay dentro por los nombres de las carpetas ni se da por hecho que no hay nada.
 

@@ -3,7 +3,7 @@
 
 Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
 proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
-Nunca abre fuentes/, taller/, restringido/ ni base/: de fuentes/ y taller/ solo mira las fechas
+Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
 Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--ruta <ruta de la raíz en la computadora de la persona>] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
@@ -139,6 +139,26 @@ for l in quien.split("\n"):
     if l.lower().startswith("administra"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
 
+# ---------- premisas: el único archivo de base/ que lee el tablero ----------
+premisas = []
+for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
+    mm = re.match(r"^\s*-\s*(P\d+)\s*·\s*(.+)$", l)
+    if not mm:
+        continue
+    partes = [x.strip() for x in mm.group(2).split("·")]
+    pr = {"id": mm.group(1).upper(), "texto": partes[0], "confirmo": "", "fecha": "", "reemplaza": ""}
+    for x in partes[1:]:
+        if x.lower().startswith("confirmó:") or x.lower().startswith("confirmo:"):
+            pr["confirmo"] = x.split(":", 1)[1].strip()
+        elif re.match(r"^20\d\d-\d\d-\d\d$", x):
+            pr["fecha"] = x
+        elif x.lower().startswith("reemplaza a"):
+            mr = re.search(r"P\d+", x, re.I); pr["reemplaza"] = mr.group(0).upper() if mr else ""
+    premisas.append(pr)
+reemplazadas = {p_["reemplaza"] for p_ in premisas if p_["reemplaza"]}
+for p_ in premisas:
+    p_["vigente"] = p_["id"] not in reemplazadas
+
 # ---------- proyectos ----------
 def parse_decisiones(texto):
     out = []
@@ -152,7 +172,7 @@ def parse_decisiones(texto):
             fecha, titulo = mm.group(1), mm.group(2).strip()
         else:
             fecha, titulo = (fechas_en(cab) or [""])[0], cab.strip()
-        campos = {"decidio": "", "porque": "", "descartamos": "", "afecta": ""}
+        campos = {"decidio": "", "porque": "", "descartamos": "", "afecta": "", "planteo": "", "cuestiona": "", "responde": ""}
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
@@ -165,14 +185,40 @@ def parse_decisiones(texto):
                 actual = "descartamos"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("afecta a:"):
                 actual = "afecta"; campos[actual] = s.split(":", 1)[1].strip()
+            elif low.startswith("planteó:") or low.startswith("planteo:"):
+                actual = "planteo"; campos[actual] = s.split(":", 1)[1].strip()
+            elif low.startswith("cuestiona a:"):
+                actual = "cuestiona"; campos[actual] = s.split(":", 1)[1].strip()
+            elif low.startswith("responde a:"):
+                actual = "responde"; campos[actual] = s.split(":", 1)[1].strip()
             elif actual and s:
                 campos[actual] += "\n" + s
         d_ = {"fecha": fecha, "titulo": titulo, **campos}
         if re.search(r"pendientes? de confirma(r|ción)", (titulo + " " + " ".join(campos.values())).lower()):
             d_["por_confirmar"] = True
+        if campos["cuestiona"] or re.match(r"cuestionamiento\b", titulo, re.I):
+            d_["tipo"] = "cuestionamiento"
+            t_ = re.sub(r"^cuestionamiento\s*:\s*", "", titulo, flags=re.I) or titulo
+            d_["titulo"] = t_[:1].upper() + t_[1:]
+        for k in ("planteo", "cuestiona", "responde"):
+            if not d_[k]: del d_[k]
         out.append(d_)
+    # identificador: la fecha y, si ese día hay más de una entrada, -2, -3… contando desde la de más abajo (la más antigua)
+    cuenta = {}
+    for d_ in reversed(out):
+        n = cuenta[d_["fecha"]] = cuenta.get(d_["fecha"], 0) + 1
+        d_["id"] = d_["fecha"] + ("" if n == 1 else f"-{n}")
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
+
+def ref_decision(texto):
+    """De «area/proyecto#2026-10-15-2 (…)» devuelve («area--proyecto», «2026-10-15-2»); de «premisa P3», («premisa», «P3»)."""
+    t = (texto or "").strip()
+    mp = re.search(r"\bpremisa\s+(P\d+)", t, re.I)
+    if mp:
+        return ("premisa", mp.group(1).upper())
+    m = re.search(r"`?([a-z0-9][\w.-]*)/([a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", t)
+    return (f"{m.group(1)}--{m.group(2)}", m.group(3)) if m else (None, None)
 
 def parse_sesiones(texto):
     out = []
@@ -349,6 +395,9 @@ for a in areas_guia:
     area_doc["actualizado"] = fm.get("actualizado")
     area_doc["prioridades"] = bullets(seccion(cuerpo, "Prioridades ahora"))
     area_doc["que_largo"] = seccion(cuerpo, "Qué es")
+    pan = seccion(cuerpo, "Panorama").strip()
+    mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*·\s*(.+)$", pan, re.S)
+    area_doc["panorama"] = {"fecha": mpan.group(1), "texto": mpan.group(2).strip()} if mpan else ({"fecha": None, "texto": pan} if pan else None)
     indice = parse_indice_proyectos(cuerpo)
     # proyectos: los del índice más cualquier carpeta con proyecto.md
     slugs = list(indice.keys())
@@ -419,7 +468,7 @@ for a in areas_guia:
             pasos.append(p_)
         pdoc["pasos"] = pasos
         dec = parse_decisiones(leer(pc / "decisiones.md"))
-        pdoc["decisiones_total"] = len(dec)
+        pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(ses)
         pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
@@ -456,6 +505,31 @@ for a in areas_guia:
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
         docs["proyectos"][pid] = pdoc
     docs["areas"][a["slug"]] = area_doc
+
+# ---------- cuestionamientos: quién cuestionó qué, y si el dueño ya respondió ----------
+respuestas = set()
+for pid, pdoc in docs["proyectos"].items():
+    for d_ in pdoc.get("decisiones") or []:
+        if d_.get("responde"):
+            q, i = ref_decision(d_["responde"])
+            if q: respuestas.add((q, i))
+cuestionamientos = []
+for pid, pdoc in docs["proyectos"].items():
+    for d_ in pdoc.get("decisiones") or []:
+        if d_.get("tipo") != "cuestionamiento":
+            continue
+        q, i = ref_decision(d_.get("cuestiona"))
+        c = {"desde": pid, "id": d_["id"], "fecha": d_["fecha"], "titulo": d_["titulo"], "planteo": d_.get("planteo", ""),
+             "porque": d_.get("porque", ""), "a_proyecto": q, "a_id": i, "abierto": (pid, d_["id"]) not in respuestas}
+        d_["abierto"] = c["abierto"]
+        cuestionamientos.append(c)
+        if q and q != "premisa" and q in docs["proyectos"]:
+            for t in docs["proyectos"][q].get("decisiones") or []:
+                if t["id"] == i:
+                    t.setdefault("cuestionado_por", []).append({k: c[k] for k in ("desde", "id", "fecha", "titulo", "planteo", "abierto")})
+            if c["abierto"]:
+                docs["proyectos"][q]["cuestionamientos_abiertos"] = docs["proyectos"][q].get("cuestionamientos_abiertos", 0) + 1
+cuestionamientos.sort(key=lambda c: c["fecha"], reverse=True)
 
 # ---------- grupos candidatos: pasos de proyectos distintos que comparten un tema ----------
 por_tema = {}
@@ -514,7 +588,7 @@ docs["meta"]["estado"] = {
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
-    "fuera": fuera,
+    "fuera": fuera, "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
 
 # ---------- escribir ----------

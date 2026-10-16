@@ -61,8 +61,26 @@ ok(ents["kit-cuentas"]["descripcion"].startswith("guía para preparar"), "la des
 ok(ents["kit-cuentas"].get("basado_en", [])[:1] == ["ventas/cuentas/entregables/propuesta-base.md"], "basado_en se lee como lista")
 ok(ents["propuesta-base"].get("basado_en") == [], "basado_en vacío en línea («[]»)")
 decs = com["proyectos"]["ventas--cuentas"]["decisiones"]
-ok(decs[0].get("por_confirmar") is True and not decs[1].get("por_confirmar"), "se marca la decisión pendiente de confirmar, y solo esa")
+ok([d["titulo"] for d in decs if d.get("por_confirmar")] == ["La propuesta de Cliente Uno va en dos fases"], "se marca la decisión pendiente de confirmar, y solo esa")
 ok(com["proyectos"]["operacion--soporte"]["estado_cabecera"] == "borrador", "el estado de proyecto.md llega a la página")
+
+print("Premisas, identificadores y cuestionamientos")
+prem = {x["id"]: x for x in com["meta"]["estado"]["premisas"]}
+ok(set(prem) == {"P1", "P2", "P3"} and not prem["P1"]["vigente"] and prem["P3"]["vigente"] and prem["P3"]["reemplaza"] == "P1", "las premisas se leen y la reemplazada deja de estar vigente")
+ok(prem["P2"]["confirmo"] == "Ana Prueba" and prem["P2"]["fecha"] == "2026-08-01", "cada premisa trae quién la confirmó y cuándo")
+ok(pub["meta"]["estado"]["premisas"] == com["meta"]["estado"]["premisas"], "público: las premisas se ven, son de toda la organización")
+idde = lambda t: next(d["id"] for d in decs if d["titulo"].startswith(t))
+ok(idde("La propuesta de Cliente Uno") == "2026-09-21" and idde("El anexo de Cliente Uno") == "2026-09-21-2", "dos decisiones el mismo día: la más antigua sin sufijo y la siguiente con -2")
+cq = {(c["a_proyecto"], c["a_id"]): c for c in com["meta"]["estado"]["cuestionamientos"]}
+ok(cq[("ventas--cuentas", "2026-09-21")]["abierto"] and cq[("premisa", "P2")]["abierto"], "un cuestionamiento sin respuesta queda abierto, también el de una premisa")
+ok(not cq[("ventas--cuentas", "2026-09-20")]["abierto"], "un cuestionamiento con una decisión que lo responde se cierra")
+d0920 = next(d for d in decs if d["id"] == "2026-09-20")
+ok(d0920.get("cuestionado_por") and d0920["cuestionado_por"][0]["desde"] == "operacion--soporte", "la decisión cuestionada sabe quién la cuestionó")
+ok(com["proyectos"]["ventas--cuentas"].get("cuestionamientos_abiertos") == 1, "el proyecto cuenta sus cuestionamientos abiertos")
+ok(com["proyectos"]["operacion--soporte"]["decisiones_total"] == 0, "un cuestionamiento no cuenta como decisión")
+pan = com["areas"]["ventas"].get("panorama") or {}
+ok(pan.get("fecha") == "2026-10-03" and pan.get("texto", "").startswith("Ventas tiene"), "el panorama del área se lee con su fecha")
+ok(com["areas"]["operacion"].get("panorama") is None, "un área sin panorama no inventa uno")
 
 print("Trabajo sin sesión")
 ss = com["proyectos"]["ventas--cuentas"].get("sin_sesion")

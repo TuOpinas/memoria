@@ -34,6 +34,7 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`,
 1. La primera línea de `metodo.md`, para la versión y la huella de la raíz
 2. `guia.md` entero, para el mapa de áreas, quién responde por cada una y las reglas propias de la casa
 3. El bloque `Proyectos` de `<area>/area.md`
+4. `base/premisas.md`, si existe: las premisas vigentes, las que ninguna otra reemplaza
 
 **Nivel 1**, del proyecto ya identificado:
 
@@ -45,7 +46,7 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`,
 
 **El barrido de avisos**, que es lo único que recorre la raíz entera:
 
-9. Las líneas `Afecta a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
+9. Las líneas `Afecta a:` y `Cuestiona a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo (y `premisa P` si quien abre es el responsable de contexto). De cada `Cuestiona a:` que nombre este proyecto, se mira si alguna decisión de este proyecto lo responde con `Responde a:`; si no, está abierto. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
 
 No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistemas.md`, ni el resto de `area.md`. Entran cuando el trabajo del día los pida, por sus disparadores de la sección 12.
 
@@ -57,9 +58,11 @@ Si es la primera sesión que se abre en esta conversación, la respuesta empieza
 
 **Lo que llegó del tablero**, solo si la cola trae algo de este proyecto. Una línea por cambio, con su fecha: el paso marcado hecho y su nota si la trae, la nota suelta, la corrección propuesta, la fecha que la tarea no encontró dónde aplicar. Termina preguntando qué pasó con cada hecho sin nota y si cada corrección va, porque eso es lo primero que se resuelve en la sesión: un hecho se cierra quitando el paso y contándolo en `sesiones.md`, y a veces trae una decisión.
 
-**Avisos**, solo si aplican. Cinco comprobaciones:
+**Avisos**, solo si aplican. Estas comprobaciones:
 
+- Alguien cuestionó una decisión de este proyecto y nadie lo ha respondido. Va primero, porque espera al dueño: se cita qué decisión, quién lo planteó, su por qué en una línea y de qué proyecto viene. Si quien abre es el responsable de contexto, lo mismo con los cuestionamientos a una premisa
 - Alguna decisión de otro proyecto de la raíz nombra este proyecto en `Afecta a:`. Se cita la entrada con su fecha, quién decidió y de qué proyecto viene
+- Alguna decisión reciente de este proyecto choca con una premisa vigente. Se dice cuál y por qué, sin darlo por resuelto
 - `base/contexto.md` lleva más de 90 días sin actualizarse, mirando solo su fecha `actualizado`, sin abrirlo
 - Algún entregable tiene en `basado_en` un archivo cuya fecha `actualizado` es posterior a la suya, y por tanto puede estar desfasado
 - Algún entregable lleva más de 30 días en `borrador`
@@ -108,6 +111,10 @@ Descartamos: tope acumulado mensual por proveedor, porque el ERP no expone el ac
 Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a todas) · finanzas/cierre-mensual (menos órdenes que conciliar)
 ```
 
+**Responder un cuestionamiento.** Si en la sesión se resolvió un cuestionamiento abierto, la decisión que lo resuelve lleva `Responde a: <identificador del cuestionamiento>` y dice si confirma lo cuestionado o lo reemplaza. Se dice al usuario a quién avisar: a quien lo planteó.
+
+**Plantear un cuestionamiento.** Si la persona quiere cuestionar una decisión de otro proyecto o una premisa, se escribe en el `decisiones.md` del proyecto activo, con el formato de la sección 4 de `convenciones` (`Planteó`, `Por qué`, `Cuestiona a`), después de enseñárselo y con su confirmación, como una decisión. Se le dice a quién avisar: al dueño de lo cuestionado.
+
 Una decisión es un compromiso que cambia lo que se va a construir. Una preferencia expresada en voz alta no lo es. Ante la duda, se pregunta.
 
 Si la decisión trae análisis detrás (opciones comparadas, tablas, cifras), el análisis va a un entregable del proyecto y la entrada lo cita. La entrada se queda con lo justo para entenderla sin abrir nada más.
@@ -128,7 +135,9 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 
 **9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`, o `sesiones-2026-2.md` si ya hay uno de ese año) y se abre uno nuevo con su cabecera. Sin preguntar.
 
-**10. El tablero, al día.** Si la cuenta tiene tablero (el que se buscó al abrir), se pone al día después de escribir todo lo anterior, para que muestre lo que esta sesión dejó en la carpeta: es «Sincronizar» de la skill `tablero`, con el tablero entero y no solo este proyecto. Se hace aunque la sesión no haya tocado la cola, y con cada tablero de la cuenta si tiene los dos modos. Si la computadora o la herramienta de artifacts no responden, se dice en una línea y la sesión queda cerrada igual: el tablero se pondrá al día en el próximo cierre o con «sincroniza el tablero».
+**10. El Panorama del área.** Se reescribe `Panorama` de `<area>/area.md` con la skill `director`, en tres a cinco líneas con la fecha de hoy: cómo está el área después de esta sesión. Solo si el área es de la cuenta que cierra; si no, se salta.
+
+**11. El tablero, al día.** Si la cuenta tiene tablero (el que se buscó al abrir), se pone al día después de escribir todo lo anterior, para que muestre lo que esta sesión dejó en la carpeta: es «Sincronizar» de la skill `tablero`, con el tablero entero y no solo este proyecto. Se hace aunque la sesión no haya tocado la cola, y con cada tablero de la cuenta si tiene los dos modos. Si la computadora o la herramienta de artifacts no responden, se dice en una línea y la sesión queda cerrada igual: el tablero se pondrá al día en el próximo cierre o con «sincroniza el tablero».
 
 ## Qué respondo al terminar
 

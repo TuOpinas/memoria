@@ -392,6 +392,28 @@ button.est-btn{all:unset;cursor:pointer}
 .nv-k b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 .ent b small{font:500 11.5px var(--f-mono);color:var(--muted);margin-left:8px}
 @media (max-width:600px){.mt-i{grid-template-columns:1fr}.mt-i .chip,.mt-i .prio-go{justify-self:start}}
+/* lo que explica: premisas, panorama por área, cuestionamientos y el resumen de un proyecto */
+.prem{display:grid;gap:8px}
+.prem-l{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.prem-l li{display:grid;grid-template-columns:2.6em minmax(0,1fr);gap:2px 10px;align-items:baseline}
+.prem-l .pid{font:600 12px var(--f-mono);color:var(--signal)}
+.prem-l .pt{font-weight:500}
+.prem-l .pm{grid-column:2;font-size:12.5px;color:var(--muted)}
+.ar-pan{grid-column:1/-1;font-size:14px;line-height:1.55;color:var(--ink-soft);white-space:normal}
+.ar-pan time{font:500 11.5px var(--f-mono);color:var(--muted);margin-right:8px}
+.ar-pan em{font-style:normal;color:var(--muted)}
+.pan{display:grid;gap:8px}
+.pan p{color:var(--ink-soft);line-height:1.6}
+.pan time{font:500 12px var(--f-mono);color:var(--muted);margin-right:8px}
+.cq{display:grid;gap:4px;padding:10px 12px;border:1px solid var(--warn-fill);border-left-width:4px;border-radius:6px;background:var(--surface)}
+.cq .t{font-weight:500}
+.cq .w{font-size:12.5px;color:var(--muted)}
+.cq .w .lnk{font-size:12.5px}
+.did{font:500 11px var(--f-mono);color:var(--muted)}
+.prow .n .prow-st{flex-basis:100%;font-size:13.5px;color:var(--ink-soft);line-height:1.45}
+.res-ents{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.res-ents li{display:grid;gap:2px}
+.res-ents .d{font-size:13.5px;color:var(--ink-soft)}
 /* ayuda: índice de artículos a un lado y el artículo al otro; en el teléfono, el índice arriba */
 .hq{all:unset;cursor:pointer;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--rule);color:var(--muted);font:600 11px/1 var(--f-mono);vertical-align:2px;margin-left:6px;flex:none}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
@@ -595,7 +617,7 @@ function parseHash(){
   if(h==="ayuda" || h.startsWith("ayuda-")) return {lvl:"ayuda", id: h.slice(6) || "empezar"};
   return {lvl:"root"};
 }
-function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "estado"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="ayuda" ? "ayuda-"+(v.id||"empezar") : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
+function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "resumen"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="ayuda" ? "ayuda-"+(v.id||"empezar") : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
 window.addEventListener("popstate", ()=>{ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; view = parseHash(); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
@@ -1022,7 +1044,7 @@ function projRow(p){
   const nx = mainStep(p), f = nx ? effDate(p, nx) : null;
   const counts = `<span class="cnt"><span>${live.length} ${live.length===1?"acción abierta":"acciones abiertas"}</span>${nLate?`<span class="late">${nLate} vencida${nLate===1?"":"s"}</span>`:""}${nSoon?`<span class="soon">${nSoon} esta semana</span>`:""}${nNone?`<span class="muted">${nNone} sin fecha</span>`:""}</span>`;
   return `<div class="prow" role="button" tabindex="0" data-go-proj="${esc(p.id)}">
-    <span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span>${p.ultima_sesion?`<small>Última sesión ${fmtD(p.ultima_sesion)}</small>`:""}${counts}</span>
+    <span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span>${p.ultima_sesion?`<small>Última sesión ${fmtD(p.ultima_sesion)}</small>`:""}${counts}${p.estado_resumen?`<span class="prow-st">${inline((p.estado_resumen||"").split(/(?<=\.)\s/)[0])}</span>`:""}</span>
     ${nx ? `<span class="steps one">${stepRow(p, nx, false)}</span>` : `<span class="nx"><span class="pill none">Sin acciones</span><span></span></span>`}
   </div>`;
 }
@@ -1030,7 +1052,7 @@ function crumbs(){
   const el = document.getElementById("crumbs");
   const org = META ? META.organizacion : "…";
   if(view.lvl==="root"){ el.innerHTML = ""; return; }
-  const simple = {pend:"Pendientes", dec:"Decisiones", ent:"Entregables", buscar:"Búsqueda", ayuda:"Ayuda"};
+  const simple = {pend:"Pendientes", dec:"Decisiones", ent:"Biblioteca", buscar:"Búsqueda", ayuda:"Ayuda"};
   if(simple[view.lvl]){ el.innerHTML = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span><span>${simple[view.lvl]}</span>`; return; }
   const a = view.lvl==="area" ? areaBy[view.id] : areaBy[byId[view.id]?.area];
   let h = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span>`;
@@ -1103,22 +1125,22 @@ function renderResumen(){
     const pills = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`<span class="pill ${EST[k].pill}">${cnt[k]} ${EST[k].label.toLowerCase()}</span>`).join("") + (nR?`<span class="pill late">${nR} en riesgo</span>`:"");
     const nLate = ps.reduce((n,p)=>n+stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length, 0);
     const p1 = (a.prioridades||[])[0], p1t = p1 ? p1.split(/(?<=\.)\s/)[0] : "";
-    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
+    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}</span><span class="ar-pan">${panTxt(a)}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
   }).join("");
-  return `<section class="due"><div class="top"><h2>Áreas</h2><span class="c">${AREAS.length}</span><span class="c" style="margin-left:auto">Estado de sus proyectos y su primera prioridad</span></div><div class="ar">${filas}</div></section>`;
+  return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length}</span><span class="c" style="margin-left:auto">Cómo está cada una según su director, y su primera prioridad</span></div><div class="ar">${filas}</div></section>`;
 }
 function renderLoUltimo(n){
   const ev = [];
   for(const p of PROJ){
     if(p.restringido) continue;
-    for(const d of (p.decisiones||[]).slice(0,3)) if(d.fecha) ev.push({f:d.fecha, k:"Decisión", p, t:inline(d.titulo||""), tab:"decisiones"});
+    for(const d of (p.decisiones||[]).slice(0,3)) if(d.fecha) ev.push({f:d.fecha, k:d.tipo==="cuestionamiento"?"Cuestionamiento":"Decisión", p, t:inline(d.titulo||""), tab:"decisiones"});
     for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && !e.fecha_de_archivo) ev.push({f:e.actualizado, k:"Entregable", p, t:inline(e.titulo||e.nombre||e.archivo||""), tab:"entregables"});
   }
   ev.sort((a,b)=>b.f.localeCompare(a.f));
   const top = ev.slice(0,n);
   if(!top.length) return "";
   return `<section class="due"><div class="top"><h2>Lo último</h2><span class="c">${top.length} de ${ev.length}</span><span class="c" style="margin-left:auto">Decisiones y entregables vigentes más recientes</span></div>
-    <div class="due-list">${top.map(x=>`<button type="button" class="due-item" data-go-proj="${esc(x.p.id)}" data-tab="${x.tab}"><span class="pill ${x.k==="Decisión"?"ok":x.k==="Entregable"?"closed":"none"}">${x.k}</span><span class="t">${x.t}</span><span class="w">${esc(areaBy[x.p.area]?.nombre||"")} · ${esc(x.p.nombre)} · ${fmtD(x.f)}</span></button>`).join("")}</div></section>`;
+    <div class="due-list">${top.map(x=>`<button type="button" class="due-item" data-go-proj="${esc(x.p.id)}" data-tab="${x.tab}"><span class="pill ${x.k==="Decisión"?"ok":x.k==="Entregable"?"closed":x.k==="Cuestionamiento"?"soon":"none"}">${x.k}</span><span class="t">${x.t}</span><span class="w">${esc(areaBy[x.p.area]?.nombre||"")} · ${esc(x.p.nombre)} · ${fmtD(x.f)}</span></button>`).join("")}</div></section>`;
 }
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
@@ -1132,7 +1154,7 @@ function renderRoot(){
   const barra = `<section class="acc-bar"><button type="button" class="acc-k" data-go-pend><b>${all.length}</b><span>pasos abiertos</span></button><button type="button" class="acc-k${nLate?" late":""}" data-go-pend><b>${nLate}</b><span>vencido${nLate===1?"":"s"}</span></button><button type="button" class="acc-k${nSoon?" soon":""}" data-go-pend><b>${nSoon}</b><span>esta semana</span></button>${CAMBIOS.length?`<button type="button" class="acc-k soon" data-go-pend><b>${CAMBIOS.length}</b><span>por registrar</span></button>`:""}</section>`;
   const enf = ENFOQUE && ENFOQUE.grupos && ENFOQUE.grupos.length ? `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2><span class="c">${esc(ENFOQUE.generado||"")}</span><span class="c" style="margin-left:auto">Grupos de pasos que avanzan varias cosas a la vez</span></div>
     <ol class="enf-mini">${ENFOQUE.grupos.map(g=>`<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${(g.pasos||[]).length} pasos · ${[...new Set((g.pasos||[]).map(x=>byId[x.proyecto]?.nombre).filter(Boolean))].map(esc).join(", ")}</span>${g.sesion?`<button type="button" class="chip" data-copy="${esc(g.sesion)}">Copiar la frase para abrir la sesión</button>`:""}</li>`).join("")}</ol></section>` : "";
-  main.innerHTML = barra + enf + renderNovedades() + memoriaAlDia() + renderResumen();
+  main.innerHTML = premisasCard() + cuestAbiertos() + renderResumen() + barra + enf + renderNovedades() + memoriaAlDia();
 }
 function renderPend(){
   const head = document.getElementById("head"), main = document.getElementById("main");
@@ -1151,9 +1173,10 @@ const decKey = (p, d) => p.id+"|"+(d.fecha||"")+"|"+(d.titulo||"");
 const MES_L = _fmt({month:"long",year:"numeric"}, "Sin fecha");
 function decItem(d, p, conProy){
   const k = decKey(p, d), open = DEC_OPEN.has(k);
-  const w = [isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su dueño. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
+  const esC = d.tipo==="cuestionamiento", cqA = (d.cuestionado_por||[]).filter(c=>c.abierto);
+  const w = [esC?`<span class="pill ${d.abierto?"soon":"closed"}">cuestionamiento${d.abierto?" abierto":" respondido"}</span>`:"", cqA.length?`<span class="pill soon">cuestionada</span>`:"", isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su dueño. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
   return `<div class="dl-i"><button type="button" class="dl-b" data-dec-open="${esc(k)}" aria-expanded="${open}"><time>${d.fecha?fmtD(d.fecha):""}</time><span class="dl-t">${inline(d.titulo)}</span><span class="dl-c" aria-hidden="true">${open?"−":"+"}</span>${w?`<span class="dl-w">${w}</span>`:""}</button>
-    ${open?`<article class="dec"><dl>${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
+    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
 }
 function decList(items, conProy, limite){
   let mes = null, out = "";
@@ -1189,9 +1212,9 @@ function renderEnt(){
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     total += vig.length;
     if(!vig.length) return "";
-    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${isNew("e",p.id,entKey(p,e))?`<span class="pill new">nuevo</span> `:""}${entBtn(p,e)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${esc(p.id)}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></section>`;
+    return `<section class="card"><h2>${esc(a.nombre)}</h2><div class="ents">${vig.map(({p,e})=>`<div class="ent"><b>${isNew("e",p.id,entKey(p,e))?`<span class="pill new">nuevo</span> `:""}${entBtn(p,e)}</b><span class="f"><button type="button" class="lnk" data-go-proj="${esc(p.id)}" data-tab="entregables">${esc(p.nombre)}</button>${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}<span class="d" style="font-size:12.5px;color:var(--muted)">Responde ${esc(p.dueno||"—")}${p.consumen?` · lo usan: ${inline(p.consumen)}`:""}</span></div>`).join("")}</div></section>`;
   }).join("");
-  head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Entregables vigentes</h1><p class="sub">Sobre lo que se puede construir hoy, por área. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
+  head.innerHTML = `<div class="eyebrow">Toda la raíz</div><h1>Biblioteca</h1><p class="sub">Lo que la organización ya sabe y se puede usar hoy: los entregables vigentes, por área, con quién responde y quién los usa. Los borradores y lo reemplazado están en cada proyecto.</p><div class="meta"><span><b>${total}</b> vigentes</span></div>`;
   main.innerHTML = areaChips(ENT_AREA, "ent-area") + (bloques || `<p class="empty">Ningún entregable vigente todavía.</p>`);
   main.querySelectorAll("[data-ent-area]").forEach(b=>b.onclick=()=>{ ENT_AREA = b.dataset.entArea; renderEnt(); });
 }
@@ -1323,6 +1346,8 @@ function ayudaArts(){
         <tr><td>${F("ya lo aprobó…")} y el nombre del dueño</td><td>Lo publica como vigente, si cumple los requisitos.</td></tr>
         <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas. Pide antes un dueño con nombre y apellido.</td></tr>
         <tr><td>${F("cierra el proyecto")}</td><td>Comprueba que está terminado y lo deja cerrado. No borra nada.</td></tr>
+        <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su panorama, lo que pide atención y lo que no cuadra.</td></tr>
+        <tr><td>${F("quiero cuestionar…")}</td><td>Deja escrito qué no cuadra de una decisión o una premisa, para que su dueño responda.</td></tr>
         <tr><td>${F("sincroniza el tablero")}</td><td>Pone el tablero al día ahora, con lo que otras personas hayan escrito.</td></tr>
         <tr><td>${F("ordena Claude outputs")}</td><td>Lleva a su proyecto lo que la app dejó en la carpeta «Claude outputs».</td></tr>
       </tbody>
@@ -1346,7 +1371,8 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
     <dl class="hc-def">
       <dt>Inicio</dt><dd><b>Por dónde empezar</b> (grupos de pasos que avanzan varias cosas a la vez), lo que cambió desde tu última visita, lo que tiene fecha y lo que la memoria tiene flojo. Junto a cada cosa hay un botón para copiar la frase que abre la sesión: la pegas en tu proyecto y empiezas.</dd>
-      <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su estado, lo siguiente, sus entregables, sus decisiones y su bitácora.</dd>
+      <dt>Lo que explica</dt><dd>Arriba de Inicio, las premisas, los cuestionamientos abiertos y el panorama de cada área. Cada proyecto abre por su Resumen: para qué es, en qué está, lo que ya produjo y sus decisiones clave. La Biblioteca reúne todo lo vigente.</dd>
+      <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su resumen, lo que toca ahora, sus acciones, sus entregables, sus decisiones y su bitácora.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
       <dt>Compartirlo</dt><dd>Desde el menú de la página: como contribuidor a quien vaya a fechar o marcar pasos, como lector al resto. El completo no se comparte.</dd>
     </dl>`},
@@ -1409,6 +1435,31 @@ function ayudaArts(){
       <dt>Restringido</dt><dd>Lo que está declarado así en el mapa de la carpeta o en la ficha de su área. Si un proyecto sale como restringido, tu cuenta no puede leerlo: pide acceso a su dueño.</dd>
       <dt>Al compartirlo</dt><dd>Quien lo recibe como lector, solo mira. Quien lo recibe como contribuidor puede además fechar, marcar, anotar y corregir, siempre como pendiente.</dd>
     </dl>`},
+  {g:"Anclar y cuestionar", id:"premisas", t:"Las premisas", h:`
+    <p>Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Van arriba de todo en Inicio, y Claude las tiene presentes en cada sesión.</p>
+    <dl class="hc-def">
+      <dt>Dónde viven</dt><dd>En <code>base/premisas.md</code>, una por línea: su identificador (P1, P2…), qué dice, quién la confirmó y cuándo.</dd>
+      <dt>Quién las escribe</dt><dd>El responsable del contexto, en su sesión, cuando la dirección confirma una. Dile ${F("registra como premisa que…")}.</dd>
+      <dt>Cuando cambian</dt><dd>No se corrigen: se añade otra que dice «Reemplaza a P1», y la anterior queda como historia.</dd>
+      <dt>Si no estás de acuerdo</dt><dd>Se cuestiona como cualquier decisión (<button type="button" class="lnk" data-help="cuestionar">Cuestionar algo</button>).</dd>
+    </dl>`},
+  {g:"Anclar y cuestionar", id:"cuestionar", t:"Cuestionar algo", h:`
+    <p>Cualquiera puede cuestionar una decisión de otro proyecto o una premisa. No es una queja: es dejar escrito qué no cuadra, con su dato, para que quien decidió lo confirme o lo cambie.</p>
+    <ol class="hc-pasos">
+      <li><b>Lo planteas en una sesión tuya</b><span>Abre sesión en un proyecto de tu área y dile ${F("quiero cuestionar la decisión de … porque …")}. Claude lo redacta y te lo enseña; con tu sí, queda escrito en el registro de decisiones de tu proyecto. Nadie escribe en el área de otro.</span></li>
+      <li><b>Le llega a quien decidió</b><span>La próxima vez que el dueño abra sesión en su proyecto, Claude se lo enseña primero. Aquí sale en «Cuestionamientos abiertos», en Inicio y en el área.</span></li>
+      <li><b>Lo responde con una decisión</b><span>El dueño registra una decisión que confirma lo decidido o lo cambia, y dice a qué cuestionamiento responde. Con eso se cierra.</span></li>
+    </ol>
+    <p class="hc-nota">Una decisión cuestionada sigue valiendo hasta que su dueño responde, pero quien vaya a construir encima lo ve.</p>`},
+  {g:"Anclar y cuestionar", id:"director", t:"El director de cada área", h:`
+    <p>Cada área tiene un director: Claude mirando el área entera como la miraría quien la dirige.</p>
+    <dl class="hc-def">
+      <dt>El panorama</dt><dd>Tres a cinco frases con fecha: cómo está el área, qué se movió y qué preocupa. Se escribe solo al cerrar una sesión en el área y sale en Inicio y en la página del área.</dd>
+      <dt>Pregúntale</dt><dd>${F("¿cómo va el área X?")} te da el resumen, cada proyecto en una frase y hasta cuatro cosas que piden atención.</dd>
+      <dt>Que cuestione</dt><dd>${F("cuestiona el área")} busca lo que no cuadra: decisiones que chocan con una premisa, decisiones sin porqué, proyectos sin final claro y trabajo que otra área ya hizo.</dd>
+      <dt>Lo de otras áreas</dt><dd>${F("¿qué de otras áreas me afecta?")} reúne lo que otras áreas decidieron o publicaron que te toca, y te ayuda a cuestionarlo si hace falta.</dd>
+    </dl>
+    <p class="hc-nota">El director solo escribe el panorama. Decisiones, pasos y estados siguen siendo cosa de la sesión de cada proyecto.</p>`},
   {g:"Cómo funciona", id:"ordenada", t:"Cómo está ordenada la carpeta", h:`
     <p>Un área por cada parte de la organización, con un dueño con nombre y apellido. Dentro de cada área, un proyecto por cada trabajo. Todos los proyectos tienen las mismas piezas, así que quien sabe moverse en uno sabe moverse en todos.</p>
     <div class="hc-arbol"><ul>
@@ -1462,7 +1513,7 @@ function ayudaArts(){
     <p>Así cada conversación empieza con el contexto justo, tarda menos y consume menos.</p>`},
   ];
 }
-const _norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const _norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 let HQ = "";
 function ayudaToc(arts, cur){
   const q = _norm(HQ.trim()), vis = q.length>=2 ? arts.filter(a => _norm(a.t+" "+a.h.replace(/<[^>]+>/g," ")).includes(q)) : arts;
@@ -1486,6 +1537,26 @@ function renderAyuda(id){
 const hq = (id, que) => `<button type="button" class="hq" data-help="${id}" aria-label="Ayuda: ${esc(que)}" ${tip("Qué es esto")}>?</button>`;
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-help],[data-go-help]"); if(!b) return; e.preventDefault(); go({lvl:"ayuda", id: b.dataset.help || "empezar"}); });
 document.addEventListener("input", e => { if(e.target.id!=="hc-q") return; HQ = e.target.value; const l = document.getElementById("hc-list"); if(l) l.innerHTML = ayudaToc(ayudaArts(), view.id); });
+// ---- lo que explica: premisas, panoramas y cuestionamientos ----
+const refDec = (p, d) => `${p.area}/${p.slug}#${d.id}`;
+function premisasCard(){
+  const ps = (META && META.premisas) || [], vig = ps.filter(x=>x.vigente);
+  if(!vig.length) return "";
+  const cuest = ((META && META.cuestionamientos) || []).filter(c=>c.a_proyecto==="premisa" && c.abierto);
+  const nRe = ps.length - vig.length;
+  return `<section class="due prem"><div class="top"><h2>Premisas${hq("premisas","Premisas")}</h2><span class="c">${vig.length}</span><span class="c" style="margin-left:auto">Lo que la dirección confirmó y sobre lo que se construye todo</span></div>
+    <ul class="prem-l">${vig.map(x=>{ const cq = cuest.filter(c=>c.a_id===x.id); return `<li><span class="pid">${esc(x.id)}</span><span class="pt">${inline(x.texto)}</span><span class="pm">Confirmó ${esc(x.confirmo||"—")}${x.fecha?` · ${fmtD(x.fecha)}`:""}${x.reemplaza?` · reemplaza a ${esc(x.reemplaza)}`:""}${cq.length?` · <span class="pill soon">${cq.length} cuestionamiento${cq.length===1?"":"s"} abierto${cq.length===1?"":"s"}</span>`:""}</span></li>`; }).join("")}</ul>
+    ${nRe?`<p class="more">${nRe} premisa${nRe===1?" reemplazada queda":"s reemplazadas quedan"} como historia en <code>base/premisas.md</code>.</p>`:""}</section>`;
+}
+function cuestAbiertos(filtro){
+  const cs = ((META && META.cuestionamientos) || []).filter(c=>c.abierto && (!filtro || filtro(c)));
+  if(!cs.length) return "";
+  return `<section class="due"><div class="top"><h2>Cuestionamientos abiertos${hq("cuestionar","Cuestionamientos")}</h2><span class="c">${cs.length}</span><span class="c" style="margin-left:auto">Esperan respuesta de quien decidió</span></div>
+    <div class="due-list">${cs.map(c=>{ const de = byId[c.desde], a = c.a_proyecto==="premisa" ? null : byId[c.a_proyecto];
+      const objetivo = c.a_proyecto==="premisa" ? `la premisa ${esc(c.a_id)}` : a ? `una decisión de ${esc(a.nombre)} (${esc(fmtD((c.a_id||"").slice(0,10)))})` : "una decisión que este tablero no muestra";
+      return `<div class="cq"><span class="t">${inline(c.titulo)}</span><span class="w">${esc(c.planteo||"Alguien")} cuestiona ${objetivo} · ${fmtD(c.fecha)}${de?` · desde <button type="button" class="lnk" data-go-proj="${esc(de.id)}" data-tab="decisiones">${esc(de.nombre)}</button>`:""}${a?` · <button type="button" class="lnk" data-go-proj="${esc(a.id)}" data-tab="decisiones">Ver la decisión ›</button>`:""}</span></div>`; }).join("")}</div></section>`;
+}
+const panTxt = a => a.panorama && a.panorama.texto ? `${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(a.panorama.texto)}` : `<em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em>`;
 // ---- lateral ----
 let SIDE_OPEN = false;
 function renderSide(){
@@ -1499,7 +1570,7 @@ function renderSide(){
     <button type="button" class="side-i top" data-go-root${cur("root")}><span>Inicio</span></button>
     <button type="button" class="side-i top" data-go-pend${cur("pend")}><span>Pendientes</span>${nLate?`<span class="side-n late">${nLate}</span>`:all.length?`<span class="side-n">${all.filter(i=>i.f).length}</span>`:""}</button>
     <button type="button" class="side-i top" data-go-dec${cur("dec")}><span>Decisiones</span><span class="side-n">${nDec}</span></button>
-    <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Entregables</span><span class="side-n">${nEnt}</span></button>
+    <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Biblioteca</span><span class="side-n">${nEnt}</span></button>
     <button type="button" class="side-i top" data-go-help${cur("ayuda")}><span>Ayuda</span></button>`;
   h += AREAS.map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
@@ -1520,15 +1591,21 @@ function renderArea(a){
     <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card"><p class="sub">Área restringida. Existe y responde por ella ${esc(a.dueno||"su dueño")}; su contenido no se muestra en este tablero${META && META.modo==="completo" ? " porque la cuenta que lo genera no puede leerla" : ""}. Para pedir acceso, habla con quien administra la carpeta.</p></div>`; return; }
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
+  const hace30 = addDays(-30);
+  const recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
+  const cuestArea = cuestAbiertos(c => c.a_proyecto && c.a_proyecto!=="premisa" && byId[c.a_proyecto] && byId[c.a_proyecto].area===a.slug);
   main.innerHTML = `
+    <section class="card pan"><h2>Panorama${hq("director","El panorama del área")}</h2><p>${panTxt(a)}</p>${a.que_largo && a.que_largo.trim()!==(a.que||"").trim()?`<details class="mas"><summary>Qué es el área</summary><div class="md">${md(a.que_largo)}</div></details>`:""}</section>
+    ${cuestArea}
     <section class="prios"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
-      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>`;
+      <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>
+    <section class="card"><h2>Decidido en el último mes</h2>${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Ninguna decisión en los últimos 30 días.</p>`}</section>`;
 }
 // ---- proyecto ----
-let tab = "estado", EST_FULL = new Set(), AF_ALL = new Set();
+let tab = "resumen", EST_FULL = new Set(), AF_ALL = new Set();
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-af-all]"); if(!b) return; const id = b.dataset.afAll; AF_ALL.has(id) ? AF_ALL.delete(id) : AF_ALL.add(id); render(); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-est-full]"); if(!b) return; const id = b.dataset.estFull; EST_FULL.has(id) ? EST_FULL.delete(id) : EST_FULL.add(id); render(); });
 function renderProj(p){
@@ -1548,9 +1625,19 @@ function renderProj(p){
   const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
   const nP = stepsLive(p).length;
   const nV = p.entregables_vigentes||0;
-  const tabs = [["estado","Estado",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones","Decisiones",nD],["bitacora","Bitácora",nS]];
+  const tabs = [["resumen","Resumen",""],["estado","Ahora",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones","Decisiones",nD],["bitacora","Bitácora",nS]];
   let body = "";
-  if(tab==="estado"){
+  if(tab==="resumen"){
+    const vigs = (p.entregables||[]).filter(e=>e.estado==="vigente").sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||""));
+    const nBor = (p.entregables||[]).filter(e=>e.estado==="borrador").length;
+    const clave = (p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento").slice(0,3);
+    const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
+    body = `${cuest}
+      <div class="card"><h3>Para qué</h3><dl class="facts"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Lo usan</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>
+      <div class="card"><h3>En qué está</h3><div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div></div>
+      <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada vigente todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
+      <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
+  } else if(tab==="estado"){
     const live = stepsLive(p), nx = mainStep(p), tday = today();
     const nLate = live.filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length;
     const esperas = live.filter(s=>effNat(p,s)==="espera");
@@ -1571,8 +1658,7 @@ function renderProj(p){
     const largo = (p.estado_actual||"").trim().length > (p.estado_resumen||"").trim().length + 20, full = EST_FULL.has(p.id);
     const top = live.filter(x=>["accion","decision","espera"].includes(effNat(p,x))).sort(stepOrder(p)).slice(0,3);
     body = `<div class="card ficha"><h3>Lo siguiente</h3>${top.length ? `<div class="steps">${top.map(x=>stepRow(p,x,false)).join("")}</div>` : `<p class="empty">Ningún paso por hacer escrito.</p>`}${live.length>top.length ? ir("pasos", `Ver las ${live.length} acciones ›`) : ""}${filas.trim() ? `<dl class="facts" style="border-top:1px solid var(--rule-soft);padding-top:12px">${filas}</dl>` : ""}</div>
-      <div class="card"><h3>Estado actual</h3><div class="md">${(full ? md(p.estado_actual) : md(p.estado_resumen)) || `<p class="empty">Sin estado escrito.</p>`}</div>${largo?`<button type="button" class="leer" data-est-full="${esc(p.id)}">${full?"Leer menos":"Leer el estado completo"}</button>`:""}</div>
-      <div class="card"><h3>Objetivo y alcance</h3><dl class="facts"><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Consumen esto</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>`;
+      `;
   } else if(tab==="pasos"){
     const notas = notasDe(p.id);
     const pasos = (p.pasos||[]);

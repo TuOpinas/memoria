@@ -24,7 +24,7 @@ Por los niveles de la sección 12 de `convenciones`, parándome en el primero qu
 3. Solo si hace falta, del proyecto que toque: `proyecto.md`, `decisiones.md` completo y las cabeceras de `entregables/`. `taller/`, `fuentes/` y `sesiones.md` no: son taller privado y no se consultan desde fuera de su área
 4. El cuerpo de un entregable `vigente`, solo si la pregunta pide el contenido y no basta con saber que existe
 
-De `base/` no leo nada por defecto. `glosario.md` entra si la pregunta trae una sigla o un nombre interno que no entiendo; `contexto.md`, si la pregunta es sobre la organización; `sistemas.md`, si es sobre un sistema.
+`base/premisas.md` se lee siempre que exista: si una premisa vigente toca la pregunta, la respuesta la nombra primero, porque todo lo demás se apoya en ella. Del resto de `base/` no leo nada por defecto. `glosario.md` entra si la pregunta trae una sigla o un nombre interno que no entiendo; `contexto.md`, si la pregunta es sobre la organización; `sistemas.md`, si es sobre un sistema.
 
 Un entregable en `borrador` se menciona si existe, con su estado, pero no se cita su contenido como si fuera verdad de la organización.
 
@@ -41,6 +41,8 @@ Respuesta corta y primero la respuesta, no el recorrido. Después, una línea po
 > De dónde sale: `compras/automatizacion-ordenes/decisiones.md`, entrada del 2026-08-29. El flujo completo está en `compras/automatizacion-ordenes/entregables/flujo-aprobacion.md`, vigente desde el 2026-08-30.
 
 Si hay varias fuentes que se contradicen, se dicen las dos con su fecha y no se elige una.
+
+Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, sección 4 de `convenciones`). Si una decisión de la respuesta tiene un cuestionamiento abierto (una línea `Cuestiona a:` que la nombra y ninguna `Responde a:` que la cierre), se dice: quién la cuestionó y por qué, en una línea. Una decisión cuestionada sigue vigente hasta que su dueño responde, pero quien va a construir encima tiene que saberlo.
 
 Si no hay nada escrito sobre el tema, se dice en una línea y se propone dónde debería vivir: qué área y, si aplica, si merece un proyecto nuevo con la skill `nuevo` o una entrada en `base/`. No se inventa una respuesta con lo que parece razonable.
 
