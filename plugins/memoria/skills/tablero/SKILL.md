@@ -66,7 +66,7 @@ Con eso el dueño lo ve y lanza la sincronización; si lo comparte, un lector le
 
 **3. Generar y cargar.** Es el paso 5 de `tarea.md` tal cual, con la base todavía vacía: inventario en la computadora, copia de los archivos con `device_stage_files`, generación en Claude, `plan_subida.py` (con la base vacía lo propone todo) y lotes de `ArtifactData` con `file_path`. Ningún documento pasa por la conversación. En `meta/estado` se añade `pagina_actualizada: {version: <versión del plugin>, fecha: <hoy>}`, que es como la puesta al día sabe qué versión de la página hay publicada sin leerla.
 
-**4. El primer «Por dónde empezar».** Es el paso 6 de `tarea.md` y se hace aquí mismo, porque la página saldría sin esa sección hasta el primer cierre de sesión: se leen los grupos candidatos de `salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe `enfoque/actual`.
+**4. El primer «Por dónde empezar».** Es el paso 6 de `tarea.md` y se hace aquí mismo, porque la página saldría sin esa sección hasta el primer cierre de sesión: se leen los grupos candidatos de `<trabajo>/salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe `enfoque/actual`.
 
 **5. Comprobar.** Se abre el artifact (`Artifact` con `open`) y se mira que pinte la raíz con sus áreas y que `meta/estado` tenga el modo y la versión.
 
@@ -110,7 +110,7 @@ Al terminar se dicen dos cosas. **El modelo de la tarea:** nace con el de la ses
 
 La computadora no ve el plugin, y cada sesión empieza con el `$HOME` de su VM vacío. Hay dos casos:
 
-- **`metodo.md`, al poner al día una raíz** (skill `sesion`): va directo, sin descargar nada. Se copia el del plugin a `/mnt/user-data/outputs/metodo.md` del contenedor y se escribe sobre el de la raíz con `device_commit_files` (`devicePath`: la ruta de la raíz en la computadora, la de `get_device_info`, más `/metodo.md`). Si esa herramienta no está, se usa la descarga de abajo.
+- **`metodo.md`, al poner al día una raíz** (skill `sesion`): va directo, sin descargar nada. Se copia el del plugin a la carpeta de salidas del contenedor (`/mnt/project-files/` si existe, porque la conversación es de un proyecto; si no, `/mnt/user-data/outputs/`) y se escribe sobre el de la raíz con `device_commit_files` (`stagedPath`: esa copia; `devicePath`: la ruta de la raíz en la computadora, la de `get_device_info`, más `/metodo.md`). Si esa herramienta no está o rechaza la escritura, se usa la descarga de abajo, sin preguntar.
 - **Los dos scripts que corren en la computadora** (`generar_vista.py`, para el inventario, y `aplicar_cambios.py`): `device_commit_files` solo escribe dentro de carpetas conectadas y los scripts no pueden ir a la raíz, así que se descargan.
 
 Para descargar no se pega el contenido en un comando: cuesta decenas de miles de tokens y el control de permisos puede frenarlo como código nuevo. Se descarga del repositorio público del plugin, en la versión instalada, y se comprueba que es idéntico:

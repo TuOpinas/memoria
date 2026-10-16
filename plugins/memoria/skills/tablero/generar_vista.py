@@ -28,7 +28,7 @@ Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
 proyectos/<area>--<slug>.json, cada uno con una huella de su contenido; un indice.json con la lista de archivos, huellas y
 tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta al día para «Por dónde empezar».
 """
-import sys, os, re, json, datetime, pathlib, hashlib
+import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 try:
     from zoneinfo import ZoneInfo
     TZ = ZoneInfo("America/Mexico_City")
@@ -298,6 +298,8 @@ def parse_indice_proyectos(texto_area):
     actual = None
     for l in bloque.split("\n"):
         m1 = re.match(r"^- `([^`]+?)/?`\s*[—–:-]?\s*(.*)$", l)
+        if m1 and ("/" in m1.group(1) or m1.group(1).startswith(".")):
+            actual = None; continue          # un proyecto es una carpeta del área: «../otra-area/…» no es un proyecto y no se sigue
         if m1:
             actual = m1.group(1)
             idx[actual] = {"descripcion": m1.group(2).strip(), "entregables": {}, "notas": []}
@@ -330,7 +332,7 @@ def fechas_de_entregables(carpeta):
     out = {}
     try:
         nombres = sorted(os.listdir(d)) if d.exists() else []
-    except PermissionError:
+    except OSError:
         return out
     for n in nombres:
         p = d / n
@@ -356,7 +358,7 @@ def entregables_de(carpeta, indice):
         fechas_inv = INV.get("entregables", {}).get(rel(carpeta), {})
         try:
             copiados = [n for n in os.listdir(d) if not n.startswith(".") and n.endswith(".md")] if d.exists() else []
-        except PermissionError:
+        except OSError:
             copiados = []
         nombres = sorted(set(copiados) | set(fechas_inv))
     else:
@@ -364,7 +366,7 @@ def entregables_de(carpeta, indice):
             return out
         try:
             nombres = sorted(os.listdir(d))
-        except PermissionError:
+        except OSError:
             return out
     for n in nombres:
         p = d / n
@@ -507,7 +509,7 @@ def proyectos_de(carpeta, indice):
         for n in sorted(os.listdir(carpeta)):
             if (carpeta / n).is_dir() and not n.startswith(".") and n not in slugs and (carpeta / n / "proyecto.md").exists():
                 slugs.append(n)
-    except PermissionError:
+    except OSError:
         pass
     return slugs
 
@@ -544,6 +546,16 @@ def es_declarado(ref, slug, indice):
     # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta.
     # En público, un proyecto que no está en el índice del área tampoco se muestra: sin su línea no se sabe si es restringido
     return bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I)) or (PUBLICO and slug not in indice)
+
+def huella_copia(tamanos):
+    """Huella de una copia: cada ruta (en NFC, para que los acentos de macOS no la cambien) con su tamaño."""
+    lineas = sorted(f"{unicodedata.normalize('NFC', r)}\t{t}" for r, t in tamanos.items())
+    return hashlib.sha1("\n".join(lineas).encode("utf-8")).hexdigest()[:16]
+
+def sello(inv):
+    """Sello del inventario: detecta que se copió mal al pasarlo de la computadora a Claude."""
+    sin = {k: v for k, v in inv.items() if k != "sello"}
+    return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
 
 # ---------- primer tiempo: el inventario, en la computadora ----------
 if INVENTARIO:
@@ -590,27 +602,33 @@ if INVENTARIO:
                 for n in sorted(os.listdir(d)) if d.exists() else []:
                     if n.endswith(".md") and not n.startswith(".") and (d / n).is_file():
                         _si_legible(d / n)
-            except PermissionError:
+            except OSError:
                 pass
             fe = fechas_de_entregables(pc)
             if fe:
                 inv["entregables"][rel(pc)] = fe
     inv["fuera"] = fuera_de_la_memoria()
-    inv["huella_leer"] = hashlib.sha1("\n".join(sorted(leer_)).encode("utf-8")).hexdigest()[:16]
+    leer_ = list(dict.fromkeys(leer_))       # un área repetida en guia.md no trae dos veces lo mismo
+    inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
     inv["archivos_leer"] = len(leer_)
+    inv["sello"] = sello(inv)
     print(json.dumps({"leer": leer_, "inventario": inv}, ensure_ascii=False, separators=(",", ":")))
     sys.exit(0)
 
 # ---------- segundo tiempo: la copia tiene que ser exactamente la de «leer» ----------
 if INV is not None:
-    _copiados = []
+    if INV.get("sello") != sello(INV):
+        sys.stderr.write("El inventario no llegó entero o se copió con algún cambio: vuelve a escribir la primera línea del paso del inventario, tal cual.\n")
+        sys.exit(4)
+    _copiados = {}
     for raiz_, dirs, files in os.walk(RAIZ):
         dirs[:] = [x for x in dirs if not x.startswith(".")]
-        _copiados += [rel(os.path.join(raiz_, f)) for f in files if not f.startswith(".")]
-    _h = hashlib.sha1("\n".join(sorted(_copiados)).encode("utf-8")).hexdigest()[:16]
-    if _h != INV.get("huella_leer"):
-        sys.stderr.write(f"La copia no coincide con el inventario: trae {len(_copiados)} archivos y el inventario pide {INV.get('archivos_leer')}. "
-                         "Vacía la carpeta de la copia, vuelve a traer los archivos de «leer» y espera a que lleguen todos.\n")
+        for f in files:
+            if not f.startswith("."):
+                _copiados[rel(os.path.join(raiz_, f))] = os.path.getsize(os.path.join(raiz_, f))
+    if huella_copia(_copiados) != INV.get("huella_leer"):
+        sys.stderr.write(f"La copia no coincide con el inventario: trae {len(_copiados)} archivos y el inventario pide {INV.get('archivos_leer')}, "
+                         "o alguno llegó con otro tamaño. Espera unos segundos y repite; si sigue, vacía la carpeta de la copia y vuelve a traer los archivos.\n")
         sys.exit(3)
 
 docs = {"meta": {}, "areas": {}, "proyectos": {}}

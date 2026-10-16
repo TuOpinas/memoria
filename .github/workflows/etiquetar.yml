@@ -12,11 +12,10 @@ permissions:
   contents: write
 jobs:
   etiquetar:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Crear la etiqueta si falta
         run: |
           VERSION="$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' plugins/memoria/.claude-plugin/plugin.json | head -n 1)"
@@ -24,8 +23,8 @@ jobs:
           if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
             echo "v$VERSION ya existe"; exit 0
           fi
-          # la etiqueta va al último commit que cambió plugin.json, que es el de la publicación
-          COMMIT="$(git log -1 --format=%H -- plugins/memoria/.claude-plugin/plugin.json)"
-          git tag "v$VERSION" "$COMMIT"
+          # la etiqueta va al estado de main que se publica (el commit de la fusión), no al que subió el número:
+          # los arreglos que entraron después en la misma rama también son de esta versión
+          git tag "v$VERSION" "$GITHUB_SHA"
           git push origin "v$VERSION"
-          echo "Creada v$VERSION en $COMMIT"
+          echo "Creada v$VERSION en $GITHUB_SHA"

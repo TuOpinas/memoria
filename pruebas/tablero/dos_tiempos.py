@@ -41,7 +41,7 @@ def copiar(leer, destino):
     shutil.rmtree(destino, ignore_errors=True)
     for r in leer:
         (destino / r).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(RAIZ / r, destino / r)
+        shutil.copyfile(RAIZ / r, destino / r)   # como la herramienta: sin conservar las fechas
 
 
 print("Dos tiempos: inventario en la computadora, generación sobre la copia")
@@ -68,6 +68,17 @@ for modo in ("publico", "completo"):
         ok(not any(r.startswith(("ventas/precios/", "ventas/margenes/", "ventas/oculto/")) for r in leer),
            "público: de un proyecto declarado restringido, o fuera del índice, no se trae ningún archivo")
 
+# una copia con un archivo vaciado o truncado tampoco
+truncado = sorted(copia.rglob("sesiones.md"))[0] if (copia := TRAB / "copia-completo") else None
+_g = truncado.read_bytes(); truncado.write_bytes(b"")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo")
+ok(r.returncode == 3, "una copia con un archivo que llegó vacío o a medias se rechaza")
+truncado.write_bytes(_g)
+# un inventario copiado con un cambio se rechaza
+mal = json.loads((TRAB / "inv-completo.json").read_text(encoding="utf-8")); mal["version_metodo"] = "9.9"
+(TRAB / "inv-mal.json").write_text(json.dumps(mal), encoding="utf-8")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-mal.json", "--modo", "completo")
+ok(r.returncode == 4, "un inventario que se copió con algún cambio se rechaza")
 # una copia con un archivo de más (de una corrida anterior) o de menos no se acepta
 copia = TRAB / "copia-completo"
 extra = copia / "ventas" / "sobra.md"; extra.write_text("x", encoding="utf-8")
@@ -89,6 +100,10 @@ shutil.copytree(salida, volcado, ignore=shutil.ignore_patterns("indice.json", "e
 plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
 escr = [e for l in plan["lotes"] for e in l]
 ok([(e["collection"], e["doc_id"], e["op"]) for e in escr] == [("meta", "estado", "update")], "plan: sin cambios, solo se sube meta/estado (como update)")
+vacio = TRAB / "vacio"; vacio.mkdir(exist_ok=True)
+plan0 = json.loads(subprocess.run([sys.executable, PLAN, salida, vacio], capture_output=True, text=True).stdout)
+e0 = [e for l in plan0["lotes"] for e in l]
+ok(all(e["op"] == "set" and not e["existe"] for e in e0) and len(e0) == len(json.loads((salida / "indice.json").read_text())), "plan: con la base vacía (al montar) todo va como set, también meta/estado")
 uno = sorted((volcado / "proyectos").glob("*.json"))[0]
 d = json.loads(uno.read_text(encoding="utf-8")); d["huella"] = "otra"; uno.write_text(json.dumps(d), encoding="utf-8")
 (volcado / "proyectos" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
