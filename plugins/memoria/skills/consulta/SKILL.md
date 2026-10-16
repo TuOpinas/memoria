@@ -46,6 +46,8 @@ Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, secció
 
 Si no hay nada escrito sobre el tema, se dice en una línea y se propone dónde debería vivir: qué área y, si aplica, si merece un proyecto nuevo con la skill `nuevo` o una entrada en `base/`. No se inventa una respuesta con lo que parece razonable.
 
+Si la pregunta es cómo va un proyecto, la respuesta empieza por su `En corto`, tal cual o casi, y solo baja a `Estado actual` si piden más.
+
 Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre y apellido que dice `guia.md`, `area.md` o `proyecto.md`, nunca el nombre del área.
 
 ## Lo que nunca hago

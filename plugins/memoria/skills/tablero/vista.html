@@ -220,6 +220,10 @@ body{padding-inline:0;padding-block:0}
 .sync-ico:hover{background:var(--signal-dim);color:var(--signal)}
 .sync-ico:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .sync-ico.done{color:var(--signal)}
+.sync-ico.off{opacity:.45}
+.sync-ico{position:relative}
+.sync-ico.pend::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn-fill)}
+.sync-ico.ok{color:var(--signal)}
 .sync-ico.busy{color:var(--muted);cursor:progress}
 .sync-ico.busy svg{animation:gira 1s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
@@ -406,6 +410,9 @@ button.est-btn{all:unset;cursor:pointer}
 .ar-ln{color:var(--ink)}
 .ar-dir{color:var(--ink-soft)}.ar-dir time{font:600 12px var(--f-mono);color:var(--muted);margin-right:8px}.ar-dir i{font-style:normal;color:var(--signal);font-size:13px}.ar-dir em{font-style:normal;color:var(--muted)}
 .brief p{margin:0;font-size:15.5px;line-height:1.6}.brief h3{margin:0}
+.corto .corto-t{font-size:17px;font-weight:600;line-height:1.45;margin:4px 0 10px}
+.corto .corto-l{margin:0 0 10px;padding-left:18px;display:grid;gap:6px;font-size:15px;line-height:1.55}
+.corto .more{margin-top:6px}
 .spark{display:inline-block;vertical-align:middle;fill:var(--signal);margin-left:4px}
 p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .ar-pan time{font:500 11.5px var(--f-mono);color:var(--muted);margin-right:8px}
@@ -502,6 +509,24 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
   .hc-flujo-g .carpeta{order:0}.hc-flujo-g .ida{order:1}.hc-flujo-g .tablero{order:2}.hc-flujo-g .vuelta{order:3}
   .hc-flecha{transform:rotate(90deg);width:28px}
 }
+/* diagrama de las piezas: carpeta, computadora, Claude con el plugin y tablero, en fila; se apila cuando el artículo es estrecho */
+.hc-piezas{margin:4px 0;display:grid;gap:10px}
+.hc-piezas-g{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:stretch}
+.hc-pieza{background:var(--surface);border:1.5px solid var(--ink);border-radius:10px;padding:12px;display:grid;align-content:start;gap:4px}
+.hc-pieza b{font:700 16px/1.15 var(--f-display);color:var(--ink)}
+.hc-pieza small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.hc-pieza.compu{border-color:var(--warn-fill)}
+.hc-pieza.claude{border-color:var(--signal);background:var(--signal-dim)}
+.hc-pieza.tablero{border-style:dashed}
+.hc-piezas-g .hc-flecha{align-self:center;width:28px}
+.hc-piezas-v{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13.5px;line-height:1.4}
+.hc-piezas-v span{color:var(--muted);font-size:12.5px}
+.hc-piezas-v .hc-flecha{transform:rotate(90deg);width:28px}
+.hc-piezas figcaption{font-size:13px;color:var(--muted)}
+@container (max-width:620px){
+  .hc-piezas-g{grid-template-columns:1fr}
+  .hc-piezas-g .hc-flecha{transform:rotate(90deg);justify-self:center}
+}
 .hc-sig{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;border-top:1px solid var(--rule-soft);padding-top:12px}
 @media (max-width:760px){
   .hc{grid-template-columns:1fr;gap:16px}
@@ -537,7 +562,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.2"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.4"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1197,7 +1222,7 @@ function renderRoot(){
   const org = META ? META.organizacion : "";
   const modo = META && META.modo==="completo" ? `<span class="pill draft" ${tip("Tablero completo: incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».")}>Completo · no compartir</span>` : "";
   head.innerHTML = `<h1>${esc(org||"Tablero")}</h1>
-    <div class="meta">${modo}${META?`<span>Método <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
+    <div class="meta">${modo}${META?`<span ${tip("La versión del método que usa esta carpeta.")}>Versión <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero solo funciona dentro de Claude. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
   visita();
   const all = pendientes(), t = today(), nLate = all.filter(i=>i.f && i.f<t).length, nSoon = all.filter(i=>i.f && i.f>=t && i.f<=addDays(7)).length;
@@ -1298,7 +1323,9 @@ function renderBuscar(){
 // ---- sincronizar ahora ----
 let SYNC_STATE = null;
 async function sincronizar(){
-  if(!MCP || !META || !META.tarea) return;
+  if(!META) return;
+  if(!META.tarea){ flash("Este tablero todavía no tiene la tarea del botón. Dile a Claude con la carpeta conectada: «actualiza el tablero», y queda creada."); return; }
+  if(!MCP){ flash("Para sincronizar desde aquí falta el conector de tareas programadas (Claude Code Remote) en tu cuenta de Claude. Mientras tanto, se pone al día al cerrar cada sesión."); return; }
   SYNC_STATE = "corriendo"; render();
   try{
     await MCP.callTool("Claude Code Remote", "fire_trigger", {trigger_id: META.tarea});
@@ -1312,10 +1339,27 @@ async function sincronizar(){
 }
 document.addEventListener("click", e => { if(e.target.closest && e.target.closest("[data-sync]")) sincronizar(); });
 function syncBtn(){
-  if(!OWNER || !MCP || !META || !META.tarea) return "";
-  const tipTxt = SYNC_STATE==="corriendo" ? "Lanzando la sincronización…" : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar." : "Sincronizar ahora: pone el tablero al día con la carpeta y pasa a la carpeta lo que marcaste aquí. Es lo mismo que ocurre al cerrar una sesión; tarda unos minutos.";
+  // Desde la 1.14.3 el botón está siempre para el dueño; sin tarea o sin conector sale apagado y dice qué falta.
+  // Su estado sale de lo que la página sabe sin preguntar a nadie: la cola, la versión de la página y la hora de la última sincronización.
+  // Lo escrito en la carpeta después de esa hora no lo puede ver; si no cambió nada, la tarea lo comprueba al empezar y termina enseguida.
+  if(!OWNER || !META) return "";
+  const listo = !!(MCP && META.tarea);
+  const mec = CAMBIOS.filter(c => c.tipo==="fecha" || (c.tipo==="hecho" && c.nota)).length;
+  const pagVieja = !!(META.version_tablero && META.version_tablero !== VERSION_TABLERO);
+  const pend = listo && (mec > 0 || pagVieja);
+  const min = META.sincronizado ? Math.max(0, Math.round((Date.now() - new Date(META.sincronizado).getTime())/60000)) : null;
+  const cuando = min===null ? "" : min < 2 ? "hace un momento" : min < 60 ? `hace ${min} min` : min < 60*24 ? `hace ${Math.round(min/60)} h` : `hace ${Math.round(min/1440)} días`;
+  const reciente = listo && !pend && min !== null && min < 12*60;
+  const tipTxt = !META.tarea ? "Sincronizar ahora: este tablero todavía no tiene su tarea. Dile a Claude «actualiza el tablero»."
+    : !MCP ? "Sincronizar ahora: falta el conector de tareas programadas en tu cuenta de Claude."
+    : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
+    : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar. Si nada cambió en la carpeta, termina enseguida."
+    : pend ? (mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: esta página es de una versión anterior y la sincronización la pone al día.") + (cuando ? ` Última vez ${cuando}.` : "")
+    : reciente ? `Al día con la carpeta ${cuando}. Si alguien escribió en ella después, sincronizar lo trae; si no cambió nada, termina enseguida.`
+    : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
   const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
-  return `<button type="button" class="sync-ico${SYNC_STATE==="corriendo"?" busy":""}${SYNC_STATE==="lanzada"?" done":""}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
+  const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"") + (!SYNC_STATE && reciente?" ok":"");
+  return `<button type="button" class="sync-ico${cls}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora${pend?": hace falta":""}" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
 }
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
@@ -1434,7 +1478,7 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
     <dl class="hc-def">
       <dt>Inicio</dt><dd><b>Por dónde empezar</b> (grupos de pasos que avanzan varias cosas a la vez), lo que cambió desde tu última visita, lo que tiene fecha y lo que la memoria tiene flojo. Junto a cada cosa hay un botón para copiar la frase que abre la sesión: la pegas en tu proyecto y empiezas.</dd>
-      <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con una línea de estado, lo que dice su director y su primera prioridad. Cada proyecto abre por su Resumen, con «Dónde está» arriba: en qué va, la última sesión, lo último decidido y a qué espera. Entregables reúne todo lo publicado.</dd>
+      <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con una línea de estado, lo que dice su director y su primera prioridad. Cada proyecto abre por su Resumen, con «Cómo va» arriba: lo que se completó, lo que sigue y con quién, y lo que falta decidir. Entregables reúne todo lo publicado.</dd>
       <dt>Dos voces</dt><dd>La línea de estado de un área o un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el panorama, que escribe el director del área al cerrar sesión. Las barras pequeñas junto a cada área son sus sesiones por semana, las últimas ocho.</dd>
       <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su resumen, lo que toca ahora, sus acciones, sus entregables, sus decisiones y su bitácora.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
@@ -1458,8 +1502,8 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Al cerrar una sesión</dt><dd>Cada vez que cierras una sesión, en cualquier proyecto, Claude rehace tu tablero completo con lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Es lo normal: no tienes que hacer nada.</dd>
       <dt>Lo que escriben otros</dt><dd>Se rehace el tablero de quien cierra, no el de los demás. Si otras personas trabajaron en la carpeta, dile a Claude ${F("sincroniza el tablero")} y lo verás ahora.</dd>
-      <dt>Con un botón, si lo pides</dt><dd>Si quieres ponerlo al día tú, cuando quieras, sin pedírselo a Claude: pide ${F("pon el botón de sincronizar")}. La página gana el botón «Sincronizar ahora», junto al nombre, arriba a la izquierda. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta.</dd>
-      <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. También trae el botón. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
+      <dt>Con el botón, cuando quieras</dt><dd>Junto al nombre, arriba a la izquierda, está «Sincronizar ahora»: lo ve solo quien montó el tablero. Sirve para traer lo que escribieron otras personas sin esperar a tu siguiente cierre de sesión. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hay cosas marcadas aquí por pasar a la carpeta o la página es de una versión anterior. Sin punto, al pasar por encima dice cuándo se sincronizó por última vez; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, dice qué le falta.</dd>
+      <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Inicio lo avisa una semana.</dd>
     </dl>`},
   {g:"El tablero", id:"del-tablero", t:"Lo que tocas aquí", h:`
@@ -1486,6 +1530,9 @@ function ayudaArts(){
       <dt>Cerrado</dt><dd>Su estado dice «Proyecto terminado». Queda como registro.</dd>
       <dt>En riesgo</dt><dd>Se suma a cualquier estado: dos o más pasos vencidos, o una espera a alguien de fuera ya vencida.</dd>
     </dl>`},
+  {g:"El tablero", id:"en-corto", t:"Cómo va cada proyecto", h:`
+    <p>Arriba del Resumen de cada proyecto está «Cómo va»: como el reporte de un director: lo que se completó y lo que sigue, y debajo lo terminado con su fecha, los siguientes pasos con quién y cuándo, lo que falta decidir y lo que preocupa. Es lo que hay que leer si solo vas a leer una cosa.</p>
+    <p>Lo escribe Claude al cerrar cada sesión del proyecto, con la voz del director del área, y lo guarda en la sección «En corto» de su <code>proyecto.md</code>: el tablero solo lo muestra. Si no te parece bien, dilo en la siguiente sesión. El estado completo, para quien trabaja en el proyecto, sigue debajo, en «En detalle». Un proyecto sin sesión desde la versión 1.14.4 todavía no lo tiene, y el tablero enseña en su lugar «Dónde está».</p>`},
   {g:"El tablero", id:"pasos", t:"Cómo lee los pasos", h:`
     <p>El tablero mira cómo empieza cada paso para saber qué es: una rutina («mantener…», «cada semana…»), algo que depende de que pase otra cosa («cuando…», «tras…»), una decisión («decidir…», «definir…») o una espera a alguien de fuera.</p>
     <p>Una rutina con fecha no vence: se revisa. Si lee mal un paso, corrígelo con el botón ⋯ de su fila; queda pendiente para la siguiente sesión.</p>`},
@@ -1538,6 +1585,22 @@ function ayudaArts(){
       <dt>Lo de otras áreas</dt><dd>${F("¿qué de otras áreas me afecta?")} reúne lo que otras áreas decidieron o publicaron que te toca, y te ayuda a cuestionarlo si hace falta.</dd>
     </dl>
     <p class="hc-nota">El director solo escribe el panorama. Decisiones, pasos y estados siguen siendo cosa de la sesión de cada proyecto.</p>`},
+  {g:"Cómo funciona", id:"piezas", t:"Las piezas y cómo se conectan", h:`
+    <p>Son cuatro piezas, y solo la primera es la memoria. Las demás la leen, la escriben o la enseñan.</p>
+    <figure class="hc-piezas" aria-label="Las piezas de la memoria: la carpeta, tu computadora, Claude con el plugin y el tablero">
+      <div class="hc-piezas-g">
+        <div class="hc-pieza"><b>La carpeta</b><small>En Drive o en otra nube de la organización. Archivos de texto que se abren sin Claude. Lo que está escrito aquí es lo que vale.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza compu"><b>Tu computadora</b><small>Tiene la carpeta sincronizada y la app de Claude abierta. Por ella Claude lee y escribe.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza claude"><b>Claude, con el plugin</b><small>Lee por niveles y escribe en tus áreas con las reglas del método. El plugin se actualiza solo con cada versión.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza tablero"><b>El tablero</b><small>Una página de tu cuenta. Se pone al día al cerrar cada sesión o con su botón.</small></div>
+      </div>
+      <div class="hc-piezas-v"><svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M42 7H6M12 2L5 7l7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Y de vuelta</b><br><span>Lo que marcas en el tablero espera en su cola; la siguiente puesta al día o la siguiente sesión del proyecto lo escribe en la carpeta.</span></div></div>
+      <figcaption>Sin la computadora, desde el teléfono o la web, Claude puede leer la carpeta en Drive, pero no escribe nada en ella.</figcaption>
+    </figure>
+    <p>Si una pieza falla, las demás siguen: con la computadora apagada la carpeta sigue intacta y el tablero enseña lo último que tenía; sin el tablero, la memoria funciona igual. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día el tablero ›</button></p>`},
   {g:"Cómo funciona", id:"ordenada", t:"Cómo está ordenada la carpeta", h:`
     <p>Un área por cada parte de la organización, con un dueño con nombre y apellido. Dentro de cada área, un proyecto por cada trabajo. Todos los proyectos tienen las mismas piezas, así que quien sabe moverse en uno sabe moverse en todos.</p>
     <div class="hc-arbol"><ul>
@@ -1646,9 +1709,23 @@ const primeraClausula = s => primeraFrase(s).split(/[;:]\s/)[0].replace(/[.;:]$/
 const minus1 = s => s;   // los títulos y las frases de la bitácora se citan tal cual: bajar la inicial rompe nombres propios y siglas
 const ESTADO_E = {vigente:"publicado", borrador:"borrador", reemplazado:"reemplazado"};
 function haceTxt(f){ if(!f) return "sin sesiones"; const d = diasDesde(f); return d===0?"hoy":d===1?"ayer":d<14?`hace ${d} días`:`el ${fmtD(f)}`; }
+// «En corto» (desde la 1.14.4): el estatus que escribe el cierre de sesión para quien no va a leer más.
+// Una frase en negrita con lo próximo que pasa, y debajo «Listo», «Siguiente», «Falta decidir», «Preocupa» si los hay.
+function cortoPartes(p){
+  const ls = (p.en_corto||"").split("\n").map(l=>l.trim()).filter(Boolean);
+  if(!ls.length) return null;
+  const tit = ls[0].replace(/^[-*]\s+/,"").replace(/^\*\*(.*)\*\*$/,"$1").trim();
+  const items = ls.slice(1).map(l=>l.replace(/^[-*]\s+/,""));
+  return {tit, items};
+}
+function cortoCard(p){
+  const c = cortoPartes(p); if(!c) return "";
+  return `<div class="card brief corto"><h3>Cómo va${hq("en-corto","Qué es «Cómo va»")}</h3><p class="corto-t">${inline(c.tit)}</p>${c.items.length?`<ul class="corto-l">${c.items.map(i=>`<li>${inline(i)}</li>`).join("")}</ul>`:""}<p class="more">Lo escribe Claude al cerrar cada sesión del proyecto${p.ultima_sesion?`; la última, ${haceTxt(p.ultima_sesion)}`:""}.</p></div>`;
+}
 function projLinea(p, sinEstado){
   const est = projStatus(p), partes = [];
-  const e1 = primeraFrase(p.estado_resumen);
+  const _c = cortoPartes(p);
+  const e1 = _c ? _c.tit : primeraFrase(p.estado_resumen);
   if(!sinEstado) partes.push(e1 ? inline(e1) : `${esc(p.nombre)} está ${est.label.toLowerCase()}.`);
   const s0 = (p.sesiones||[])[0];
   if(p.ultima_sesion){ const tr = s0 && s0.trabajamos ? primeraClausula(s0.trabajamos) : ""; partes.push(`Última sesión ${haceTxt(p.ultima_sesion)}${tr?`: ${inline(minus1(tr))}`:""}.`); }
@@ -1806,9 +1883,9 @@ function renderProj(p){
     const clave = (p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento").slice(0,3);
     const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
     body = `${cuest}
-      <div class="card brief"><h3>Dónde está</h3><p>${projLinea(p)}</p></div>
+      ${cortoCard(p) || `<div class="card brief"><h3>Dónde está</h3><p>${projLinea(p)}</p></div>`}
       <div class="card"><h3>Para qué</h3><dl class="facts"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Lo usan</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>
-      <div class="card"><h3>En qué está</h3><div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div></div>
+      ${cortoPartes(p) ? `<div class="card"><h3>En detalle</h3>${EST_FULL.has(p.id) ? `<div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div><button type="button" class="leer" data-est-full="${esc(p.id)}">Ver menos</button>` : `<p class="more">El estado completo del proyecto, para quien trabaja en él.</p><button type="button" class="leer" data-est-full="${esc(p.id)}">Leer el detalle</button>`}</div>` : `<div class="card"><h3>En qué está</h3><div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div></div>`}
       <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada publicado todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
       <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
   } else if(tab==="estado"){

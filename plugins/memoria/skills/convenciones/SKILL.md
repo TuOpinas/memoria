@@ -222,6 +222,13 @@ Fija, porque varias skills escriben en ella:
 ```markdown
 # [Nombre del proyecto]
 
+## En corto
+**[Dos frases: lo último que se completó, y lo que sigue y cuándo.]**
+- **Se completó:** [lo terminado desde el estatus anterior, con su fecha, y para qué sirve ya]
+- **Siguiente:** [hasta tres pasos, cada uno con quién y para cuándo]
+- **Falta decidir:** [qué, y quién lo decide]
+- **Preocupa:** [lo que puede salir mal]
+
 ## Objetivo
 [Una frase. Qué problema resuelve y para quién.]
 
@@ -243,13 +250,15 @@ Consumen esto: [áreas o personas]
 - [Lista corta]
 ```
 
-`Estado actual` y `Siguientes pasos` son las dos únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+`En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho: la frase en negrita dice lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
 ### Un proyecto cerrado
 
-Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
+Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**; `En corto` queda en una línea, la frase en negrita, que dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
 
 Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
 

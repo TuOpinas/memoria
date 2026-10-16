@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.2 · huella 2b946eb · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.4 · huella 62061d9 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -223,6 +223,13 @@ Fija, porque varias skills escriben en ella:
 ```markdown
 # [Nombre del proyecto]
 
+## En corto
+**[Dos frases: lo último que se completó, y lo que sigue y cuándo.]**
+- **Se completó:** [lo terminado desde el estatus anterior, con su fecha, y para qué sirve ya]
+- **Siguiente:** [hasta tres pasos, cada uno con quién y para cuándo]
+- **Falta decidir:** [qué, y quién lo decide]
+- **Preocupa:** [lo que puede salir mal]
+
 ## Objetivo
 [Una frase. Qué problema resuelve y para quién.]
 
@@ -244,13 +251,15 @@ Consumen esto: [áreas o personas]
 - [Lista corta]
 ```
 
-`Estado actual` y `Siguientes pasos` son las dos únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+`En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho: la frase en negrita dice lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
 ### Un proyecto cerrado
 
-Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
+Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**; `En corto` queda en una línea, la frase en negrita, que dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
 
 Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
 
@@ -522,7 +531,7 @@ Anexo del contrato (`convenciones`, secciones 11 y 13). Lo leen `nuevo` al monta
 
 ### Actualización del método
 
-El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
+El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; la puesta al día de su tablero hace lo mismo, así que una versión nueva llega a la carpeta en el primer cierre de sesión, sincronización o tarea del responsable, sin esperar a que abra sesión; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
 
 Tres scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que el contrato declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
 
@@ -642,6 +651,7 @@ La fecha basta cuando el dato es de la propia organización y está en una fuent
 - **Entregables y cualquier texto que salga del proyecto:** los siete patrones y las ocho reglas de lectura rápida, sin excepción.
 - **Registros** (`sesiones.md`, `decisiones.md`): pueden ser más extensos, porque su función es dejar constancia del razonamiento. El metadiscurso y los rodeos sobran igual, y una cifra en `Por qué` también lleva su fecha o su fuente.
 - **Respuestas de la IA en el chat:** la respuesta primero y el detalle después, sin recapitular lo que el usuario acaba de decir y sin narrar lo que se va a hacer. El único límite es no perder información que el usuario necesita para decidir: entre una respuesta corta y una completa gana la completa, pero sin relleno.
+- **Archivos citados en el chat:** cada archivo de la carpeta que se nombra en una respuesta va enlazado para abrirlo con un clic, y el enlace va en el nombre, no en una línea aparte: `[plan-implementacion.md](computer:///Users/ana/Memoria/Acme/ventas/cuentas/entregables/plan-implementacion.md)`. La ruta es la de la raíz en la computadora (la que da `get_device_info`) más la ruta dentro de la raíz, con los espacios escritos `%20`. Sin la carpeta conectada, en solo lectura por Drive, el enlace es el `viewUrl` de Drive del archivo. Sin ninguno de los dos, la ruta en código, como hasta ahora.
 
 ## Al revisar un texto existente
 

@@ -13,7 +13,7 @@ const path = require('path');
     ['proyecto', '#p-ventas--cuentas-t-estado'], ['acciones', '#p-ventas--cuentas-t-pasos'],
     ['proy-entregables', '#p-ventas--cuentas-t-entregables'], ['proy-decisiones', '#p-ventas--cuentas-t-decisiones'], ['bitacora', '#p-ventas--cuentas-t-bitacora'],
     ['proy-restringido', '#p-ventas--precios'],
-    ['resumen', '#p-ventas--cuentas-t-resumen'], ['ayuda-cuestionar', '#ayuda-cuestionar'], ['ayuda', '#ayuda'], ['ayuda-pasar-al-dia', '#ayuda-ponerse-al-dia'], ['ayuda-frases', '#ayuda-frases'], ['ayuda-carpeta', '#ayuda-ordenada'],
+    ['resumen', '#p-ventas--cuentas-t-resumen'], ['ayuda-cuestionar', '#ayuda-cuestionar'], ['ayuda', '#ayuda'], ['ayuda-pasar-al-dia', '#ayuda-ponerse-al-dia'], ['ayuda-frases', '#ayuda-frases'], ['ayuda-carpeta', '#ayuda-ordenada'], ['ayuda-piezas', '#ayuda-piezas'],
   ];
   // ventanas y controles: se abren desde la vista indicada
   const acciones = [
@@ -46,6 +46,10 @@ const path = require('path');
     await p.goto(url + '#p-ventas--cuentas-t-resumen'); await p.waitForTimeout(400);
     const donde = await p.evaluate(() => [...document.querySelectorAll('.brief p')].map(x=>x.textContent).join(' | '));
     if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);
+    await p.goto(url + '#p-operacion--soporte-t-resumen'); await p.waitForTimeout(400);
+    const corto = await p.evaluate(() => ({ t: (document.querySelector('.corto .corto-t')||{}).textContent || '', n: document.querySelectorAll('.corto .corto-l li').length, detalle: !!document.querySelector('[data-est-full]') }));
+    if(!(corto.t.startsWith('El viernes 30') && corto.n === 3 && corto.detalle)) errores.push(`${etiqueta}: un proyecto con «En corto» no abre con «Cómo va» y el detalle plegado (${JSON.stringify(corto)})`);
+    if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-como-va.png`) });
     await p.goto(url + '#entregables'); await p.waitForTimeout(400);
     await p.click('[data-ent-open]'); await p.waitForTimeout(250);
     await p.click('.modal-f [data-go-proj]'); await p.waitForTimeout(300);
