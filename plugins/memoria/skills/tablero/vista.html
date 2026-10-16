@@ -399,7 +399,12 @@ button.est-btn{all:unset;cursor:pointer}
 .prem-l .pid{font:600 12px var(--f-mono);color:var(--signal)}
 .prem-l .pt{font-weight:500}
 .prem-l .pm{grid-column:2;font-size:12.5px;color:var(--muted)}
-.ar-pan{grid-column:1/-1;font-size:14px;line-height:1.55;color:var(--ink-soft);white-space:normal}
+.ar-pan{grid-column:1/-1;font-size:14px;line-height:1.55;color:var(--ink-soft);white-space:normal;display:grid;gap:3px}
+.ar-ln{color:var(--ink)}
+.ar-dir{color:var(--ink-soft)}.ar-dir time{font:600 12px var(--f-mono);color:var(--muted);margin-right:8px}.ar-dir i{font-style:normal;color:var(--signal);font-size:13px}.ar-dir em{font-style:normal;color:var(--muted)}
+.brief p{margin:0;font-size:15.5px;line-height:1.6}.brief h3{margin:0}
+.spark{display:inline-block;vertical-align:middle;fill:var(--signal);margin-left:4px}
+p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .ar-pan time{font:500 11.5px var(--f-mono);color:var(--muted);margin-right:8px}
 .ar-pan em{font-style:normal;color:var(--muted)}
 .pan{display:grid;gap:8px}
@@ -879,7 +884,7 @@ function renderNovedades(){
     ...salen.map(({p,txt})=>`<div class="due-item static"><span class="pill closed">Salió</span><span class="t" style="color:var(--muted)">${inline(txt)}${txt.length>=220?"…":""}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)} · cerrado o reescrito en sesión</span></div>`)
   ];
   const k = (x, uno, varios) => x ? `<span><b>${x}</b> ${x===1?uno:varios}</span>` : "";
-  return `<section class="due">${top}<div class="nv"><div class="nv-k">${k(decs.length,"decisión","decisiones")}${k(ents.length,"entregable vigente nuevo o actualizado","entregables vigentes nuevos o actualizados")}${k(nuevos.length,"paso nuevo","pasos nuevos")}${k(salen.length,"paso salió de la lista","pasos salieron de la lista")}</div>
+  return `<section class="due">${top}<div class="nv"><div class="nv-k">${k(decs.length,"decisión","decisiones")}${k(ents.length,"documento publicado nuevo o actualizado","documentos publicados nuevos o actualizados")}${k(nuevos.length,"paso nuevo","pasos nuevos")}${k(salen.length,"paso salió de la lista","pasos salieron de la lista")}</div>
     <div class="due-list">${(NOV_ALL ? filas : filas.slice(0,8)).join("")}</div>${filas.length>8?`<button type="button" class="pg-more" style="padding-left:0" data-nov-all>${NOV_ALL?"Ver menos":(((filas.length-8)===1)?"Ver el restante":`Ver los ${filas.length-8} restantes`)}</button>`:""}</div></section>`;
 }
 // ---- la memoria al día: dónde está floja, el detalle para decidir y la frase para arreglarlo en sesión ----
@@ -1027,7 +1032,7 @@ function entModal(){
   const base = e.basado_en;
   return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ent-h" tabindex="-1">
     <header class="modal-h"><span></span><div><div class="eyebrow">${esc(a?.nombre||"")} · ${esc(p.nombre)} · entregable</div><h2 id="ent-h">${inline(e.titulo||e.nombre)}</h2>${e.descripcion?`<p class="sub">${inline(e.descripcion)}</p>`:""}</div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
-    <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(e.estado || "sin estado")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
+    <section class="modal-s"><dl class="facts"><dt>Estado</dt><dd><span class="pill ${pill}">${esc(ESTADO_E[e.estado] || e.estado || "sin estado")}</span></dd>${e.actualizado?`<dt>Actualizado</dt><dd>${fmtL(e.actualizado)}${e.fecha_de_archivo?` <span class="more">(fecha del archivo)</span>`:""}</dd>`:""}<dt>Archivo</dt><dd><code>${esc(entPath(p,e))}</code></dd>${reemp?`<dt>Reemplazado por</dt><dd>${inline(reemp)}</dd>`:""}</dl></section>
     ${df.ents.length || df.blandos.length ? `<section class="modal-s"><div class="aviso${df.ents.length?"":" suave"}"><b>${df.ents.length ? "Posiblemente desfasado" : "Para tener en cuenta"}.</b> ${[...df.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)}, en el que se basa, cambió el ${fmtD(y.e.actualizado)}`), ...df.blandos.map(esc)].join("; ")}; este es del ${fmtD(e.actualizado)}.</div></section>` : ""}
     <section class="modal-s"><h3>Construido sobre <span class="c">${base ? base.length : ""}</span></h3>${base ? (base.length ? `<ul class="ent-l">${base.map(b=>origen(b, idx)).join("")}</ul>` : `<p class="more" style="margin:0">No dice de qué se construyó. Antes de volver a publicarlo, la revisión pedirá completarlo.</p>`) : `<p class="more" style="margin:0">${e.formato && e.formato!=="md" ? "Es un archivo (PDF, presentación, hoja) que no lleva estos datos: de qué se construyó lo cuenta el proyecto o la decisión que lo produjo." : "No dice de qué se construyó."}</p>`}</section>
     <section class="modal-s"><h3>Lo usan <span class="c">${usan.length}</span></h3>${usan.length ? `<p class="more" style="margin:0">Se construyen sobre este: si cambia, conviene revisarlos.</p><ul class="ent-l">${usan.map(y=>`<li>${entBtn(y.p,y.e)} <span class="more">· ${esc(y.e.estado||"")} · ${esc(areaBy[y.p.area]?.nombre||"")} · ${esc(y.p.nombre)}</span></li>`).join("")}</ul>` : `<p class="more" style="margin:0">Ningún otro entregable dice construirse sobre este.</p>`}</section>
@@ -1040,9 +1045,9 @@ const nextStep = p => { const live = stepsLive(p); return live.filter(s=>effDate
 function projTags(p){
   const t = [statusPill(p)];
   if(!p.restringido && !p.cerrado && p.estado_cabecera==="borrador") t.push(`<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>`);
-  if(p.entregables_vigentes) t.push(`<span class="pill ok">${p.entregables_vigentes} ${p.entregables_vigentes===1?"entregable vigente":"entregables vigentes"}</span>`);
+  if(p.entregables_vigentes) t.push(`<span class="pill ok">${p.entregables_vigentes} ${p.entregables_vigentes===1?"documento publicado":"documentos publicados"}</span>`);
   if(p.decisiones_total) t.push(`<span class="pill">${p.decisiones_total} ${p.decisiones_total===1?"decisión":"decisiones"}</span>`);
-  const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; if(nc) t.push(`<span class="pill soon">${nc} por registrar</span>`);
+  const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; if(nc) t.push(`<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>`);
   return t.join("");
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
@@ -1055,7 +1060,7 @@ function projRow(p){
   const nx = mainStep(p), f = nx ? effDate(p, nx) : null;
   const counts = `<span class="cnt"><span>${live.length} ${live.length===1?"acción abierta":"acciones abiertas"}</span>${nLate?`<span class="late">${nLate} vencida${nLate===1?"":"s"}</span>`:""}${nSoon?`<span class="soon">${nSoon} esta semana</span>`:""}${nNone?`<span class="muted">${nNone} sin fecha</span>`:""}</span>`;
   return `<div class="prow" role="button" tabindex="0" data-go-proj="${esc(p.id)}">
-    <span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span>${p.ultima_sesion?`<small>Última sesión ${fmtD(p.ultima_sesion)}</small>`:""}${counts}${p.estado_resumen?`<span class="prow-st">${inline((p.estado_resumen||"").split(/(?<=\.)\s/)[0])}</span>`:""}</span>
+    <span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span><span class="prow-st">${projLinea(p)}</span></span>
     ${nx ? `<span class="steps one">${stepRow(p, nx, false)}</span>` : `<span class="nx"><span class="pill none">Sin acciones</span><span></span></span>`}
   </div>`;
 }
@@ -1138,9 +1143,10 @@ function renderResumen(){
     const pills = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`<span class="pill ${EST[k].pill}">${cnt[k]} ${EST[k].label.toLowerCase()}</span>`).join("") + (nR?`<span class="pill late">${nR} en riesgo</span>`:"");
     const nLate = ps.reduce((n,p)=>n+stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length, 0);
     const p1 = (a.prioridades||[])[0], p1t = p1 ? p1.split(/(?<=\.)\s/)[0] : "";
-    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}</span><span class="ar-pan">${panTxt(a)}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
+    const pan = a.panorama && a.panorama.texto ? `<span class="ar-dir">${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(primeraFrase(a.panorama.texto))}${primeraFrase(a.panorama.texto).length < a.panorama.texto.trim().length ? ` <i>más ›</i>` : ""}</span>` : `<span class="ar-dir"><em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em></span>`;
+    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}${spark(ps.flatMap(p=>p.sesiones_fechas||[]), a.nombre)}</span><span class="ar-pan"><span class="ar-ln">${areaLinea(a)}</span>${pan}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
   }).join("");
-  return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length}</span><span class="c" style="margin-left:auto">Cómo está cada una según su director, y su primera prioridad</span></div><div class="ar">${filas}</div></section>`;
+  return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length}</span><span class="c" style="margin-left:auto">Cómo está cada una, lo que dice su director y su primera prioridad</span></div><div class="ar">${filas}</div></section>`;
 }
 function renderLoUltimo(n){
   const ev = [];
@@ -1152,7 +1158,7 @@ function renderLoUltimo(n){
   ev.sort((a,b)=>b.f.localeCompare(a.f));
   const top = ev.slice(0,n);
   if(!top.length) return "";
-  return `<section class="due"><div class="top"><h2>Lo último</h2><span class="c">${top.length} de ${ev.length}</span><span class="c" style="margin-left:auto">Decisiones y entregables vigentes más recientes</span></div>
+  return `<section class="due"><div class="top"><h2>Lo último</h2><span class="c">${top.length} de ${ev.length}</span><span class="c" style="margin-left:auto">Decisiones y documentos publicados más recientes</span></div>
     <div class="due-list">${top.map(x=>`<button type="button" class="due-item" data-go-proj="${esc(x.p.id)}" data-tab="${x.tab}"><span class="pill ${x.k==="Decisión"?"ok":x.k==="Entregable"?"closed":x.k==="Cuestionamiento"?"soon":"none"}">${x.k}</span><span class="t">${x.t}</span><span class="w">${esc(areaBy[x.p.area]?.nombre||"")} · ${esc(x.p.nombre)} · ${fmtD(x.f)}</span></button>`).join("")}</div></section>`;
 }
 function renderRoot(){
@@ -1160,14 +1166,15 @@ function renderRoot(){
   const org = META ? META.organizacion : "";
   const modo = META && META.modo==="completo" ? `<span class="pill draft" ${tip("Tablero completo: incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».")}>Completo · no compartir</span>` : "";
   head.innerHTML = `<h1>${esc(org||"Tablero")}</h1>
-    <div class="meta">${modo}${META?`<span>Método <b>${esc(META.version_metodo||"—")}</b></span><span>Contexto común: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
+    <div class="meta">${modo}${META?`<span>Método <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero solo funciona dentro de Claude. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
   visita();
   const all = pendientes(), t = today(), nLate = all.filter(i=>i.f && i.f<t).length, nSoon = all.filter(i=>i.f && i.f>=t && i.f<=addDays(7)).length;
-  const barra = `<section class="acc-bar"><button type="button" class="acc-k" data-go-pend><b>${all.length}</b><span>pasos abiertos</span></button><button type="button" class="acc-k${nLate?" late":""}" data-go-pend><b>${nLate}</b><span>vencido${nLate===1?"":"s"}</span></button><button type="button" class="acc-k${nSoon?" soon":""}" data-go-pend><b>${nSoon}</b><span>esta semana</span></button>${CAMBIOS.length?`<button type="button" class="acc-k soon" data-go-pend><b>${CAMBIOS.length}</b><span>por registrar</span></button>`:""}</section>`;
+  const barra = `<section class="acc-bar"><button type="button" class="acc-k" data-go-pend><b>${all.length}</b><span>pasos abiertos</span></button><button type="button" class="acc-k${nLate?" late":""}" data-go-pend><b>${nLate}</b><span>vencido${nLate===1?"":"s"}</span></button><button type="button" class="acc-k${nSoon?" soon":""}" data-go-pend><b>${nSoon}</b><span>esta semana</span></button>${CAMBIOS.length?`<button type="button" class="acc-k soon" data-go-pend><b>${CAMBIOS.length}</b><span>marcado${CAMBIOS.length===1?"":"s"} aquí, sin registrar</span></button>`:""}</section>`;
   const enf = ENFOQUE && ENFOQUE.grupos && ENFOQUE.grupos.length ? `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2><span class="c">${esc(ENFOQUE.generado||"")}</span><span class="c" style="margin-left:auto">Grupos de pasos que avanzan varias cosas a la vez</span></div>
     <ol class="enf-mini">${ENFOQUE.grupos.map(g=>`<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${(g.pasos||[]).length} pasos · ${[...new Set((g.pasos||[]).map(x=>byId[x.proyecto]?.nombre).filter(Boolean))].map(esc).join(", ")}</span>${g.sesion?`<button type="button" class="chip" data-copy="${esc(g.sesion)}">Copiar la frase para abrir la sesión</button>`:""}</li>`).join("")}</ol></section>` : "";
-  main.innerHTML = premisasCard() + cuestAbiertos() + renderResumen() + barra + enf + renderNovedades() + memoriaAlDia();
+  // en el orden en que lo contaría un director: cómo va la organización, cada área, lo que espera respuesta, lo que está fijado, por dónde empezar, y al final los contadores
+  main.innerHTML = orgLinea() + renderResumen() + cuestAbiertos() + premisasCard() + enf + barra + renderNovedades() + memoriaAlDia();
 }
 function renderPend(){
   const head = document.getElementById("head"), main = document.getElementById("main");
@@ -1396,7 +1403,8 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
     <dl class="hc-def">
       <dt>Inicio</dt><dd><b>Por dónde empezar</b> (grupos de pasos que avanzan varias cosas a la vez), lo que cambió desde tu última visita, lo que tiene fecha y lo que la memoria tiene flojo. Junto a cada cosa hay un botón para copiar la frase que abre la sesión: la pegas en tu proyecto y empiezas.</dd>
-      <dt>Lo que explica</dt><dd>Arriba de Inicio, las premisas, los cuestionamientos abiertos y el panorama de cada área. Cada proyecto abre por su Resumen: para qué es, en qué está, lo que ya produjo y sus decisiones clave. La Biblioteca reúne todo lo vigente.</dd>
+      <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con una línea de estado, lo que dice su director y su primera prioridad. Cada proyecto abre por su Resumen, con «Dónde está» arriba: en qué va, la última sesión, lo último decidido y a qué espera. La Biblioteca reúne todo lo publicado.</dd>
+      <dt>Dos voces</dt><dd>La línea de estado de un área o un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el panorama, que escribe el director del área al cerrar sesión. Las barras pequeñas junto a cada área son sus sesiones por semana, las últimas ocho.</dd>
       <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su resumen, lo que toca ahora, sus acciones, sus entregables, sus decisiones y su bitácora.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
       <dt>Compartirlo</dt><dd>Desde el menú de la página: como contribuidor a quien vaya a fechar o marcar pasos, como lector al resto. El completo no se comparte.</dd>
@@ -1479,7 +1487,7 @@ function ayudaArts(){
   {g:"Anclar y cuestionar", id:"director", t:"El director de cada área", h:`
     <p>Cada área tiene un director: Claude mirando el área entera como la miraría quien la dirige.</p>
     <dl class="hc-def">
-      <dt>El panorama</dt><dd>Tres a cinco frases con fecha: cómo está el área, qué se movió y qué preocupa. Se escribe al cerrar una sesión en el área, o cuando su dueño dice ${F("actualiza el panorama")}, y sale en Inicio y en la página del área.</dd>
+      <dt>El panorama</dt><dd>Tres a cinco frases con fecha: cómo está el área, qué se movió y qué preocupa. Se escribe al cerrar una sesión en el área, o cuando su dueño dice ${F("actualiza el panorama")}, y sale en Inicio y en la página del área, debajo de la línea de estado que el tablero calcula solo.</dd>
       <dt>Pregúntale</dt><dd>${F("¿cómo va el área X?")} te da el resumen, cada proyecto en una frase y hasta cuatro cosas que piden atención.</dd>
       <dt>Que cuestione</dt><dd>${F("cuestiona el área")} busca lo que no cuadra: decisiones que chocan con una premisa, decisiones sin porqué, proyectos sin final claro y trabajo que otra área ya hizo.</dd>
       <dt>Lo de otras áreas</dt><dd>${F("¿qué de otras áreas me afecta?")} reúne lo que otras áreas decidieron o publicaron que te toca, y te ayuda a cuestionarlo si hace falta.</dd>
@@ -1564,13 +1572,75 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 document.addEventListener("input", e => { if(e.target.id!=="hc-q") return; HQ = e.target.value; const l = document.getElementById("hc-list"); if(l) l.innerHTML = ayudaToc(ayudaArts(), view.id); });
 // ---- lo que explica: premisas, panoramas y cuestionamientos ----
 const refDec = (p, d) => `${p.area}/${p.slug}#${d.id}`;
+// ---- la voz del director: líneas de estado calculadas con campos que ya existen, sin inventar nada ----
+const primeraFrase = s => String(s||"").trim().split(/(?<=[.!?])\s/)[0] || "";
+const primeraClausula = s => primeraFrase(s).split(/[;:]\s/)[0].replace(/[.;:]$/,"");
+const minus1 = s => s;   // los títulos y las frases de la bitácora se citan tal cual: bajar la inicial rompe nombres propios y siglas
+const ESTADO_E = {vigente:"publicado", borrador:"borrador", reemplazado:"reemplazado"};
+function haceTxt(f){ if(!f) return "sin sesiones"; const d = diasDesde(f); return d===0?"hoy":d===1?"ayer":d<14?`hace ${d} días`:`el ${fmtD(f)}`; }
+function projLinea(p, sinEstado){
+  const est = projStatus(p), partes = [];
+  const e1 = primeraFrase(p.estado_resumen);
+  if(!sinEstado) partes.push(e1 ? inline(e1) : `${esc(p.nombre)} está ${est.label.toLowerCase()}.`);
+  const s0 = (p.sesiones||[])[0];
+  if(p.ultima_sesion){ const tr = s0 && s0.trabajamos ? primeraClausula(s0.trabajamos) : ""; partes.push(`Última sesión ${haceTxt(p.ultima_sesion)}${tr?`: ${inline(minus1(tr))}`:""}.`); }
+  else if(!p.cerrado) partes.push("Sin sesiones registradas todavía.");
+  const d0 = (p.decisiones||[]).find(d=>d.tipo!=="cuestionamiento" && d.fecha);
+  if(d0) partes.push(`Lo último decidido: «${inline(primeraFrase(d0.titulo).replace(/\.$/,""))}» (${fmtD(d0.fecha)}).`);
+  if(p.cerrado) return partes.join(" ");
+  const live = stepsLive(p), esperas = live.filter(x=>effNat(p,x)==="espera"), t = today();
+  const nLate = live.filter(x=>{ const f = effDate(p,x); return f && f<t; }).length, nNone = live.filter(x=>!effDate(p,x)).length;
+  if(esperas.length) partes.push(`Espera: ${esperas.slice(0,2).map(x=>inline(primeraClausula(x.texto).replace(/^(esperar|espera|esperando|pendiente de)\s+(a\s+|que\s+|de\s+)?/i,""))).join("; ")}${esperas.length>2?` y ${esperas.length-2} más`:""}.${nLate?` ${nLate} paso${nLate===1?"":"s"} vencido${nLate===1?"":"s"}.`:""}`);
+  else if(live.length) partes.push(`Espera: nada de fuera; ${live.length} paso${live.length===1?"":"s"} abierto${live.length===1?"":"s"}${nLate?`, ${nLate} vencido${nLate===1?"":"s"}`:""}${nNone?`, ${nNone} sin fecha`:""}.`);
+  else partes.push("Sin pasos abiertos.");
+  return partes.join(" ");
+}
+function areaLinea(a){
+  const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido), act = ps.filter(p=>!p.cerrado), partes = [];
+  const cnt = {}; for(const p of act){ const e = projStatus(p); cnt[e.k] = (cnt[e.k]||0)+1; }
+  const desglose = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).join(", ");
+  const nC = ps.length - act.length;
+  partes.push(act.length ? `${act.length} proyecto${act.length===1?"":"s"} abierto${act.length===1?"":"s"}${desglose?` (${desglose})`:""}${nC?` y ${nC} cerrado${nC===1?"":"s"}`:""}.` : ps.length ? "Todos sus proyectos están cerrados." : "Sin proyectos todavía.");
+  const ult = act.filter(p=>p.ultima_sesion).sort((x,y)=>y.ultima_sesion.localeCompare(x.ultima_sesion))[0];
+  if(ult) partes.push(`Última sesión ${haceTxt(ult.ultima_sesion)}, en ${esc(ult.nombre)}.`);
+  const hace30 = addDays(-30);
+  const decs = act.flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30)).sort((x,y)=>y.fecha.localeCompare(x.fecha));
+  partes.push(decs.length ? `Decidido en el último mes: ${decs.length}, lo último «${inline(primeraFrase(decs[0].titulo).replace(/\.$/,""))}» (${fmtD(decs[0].fecha)}).` : "Nada decidido en el último mes.");
+  const at = [], t = today();
+  if((a.prioridades||[])[0] && act.length && !act.some(p=>stepsLive(p).some(x=>x.prioridad_area===1))) at.push("su primera prioridad no tiene ningún paso que la avance");
+  const nLate = act.reduce((n,p)=>n+stepsLive(p).filter(x=>{ const f = effDate(p,x); return f && f<t; }).length, 0);
+  if(nLate) at.push(`${nLate} paso${nLate===1?"":"s"} vencido${nLate===1?"":"s"}`);
+  const nQ = act.reduce((n,p)=>n+(p.cuestionamientos_abiertos||0), 0);
+  if(nQ) at.push(`${nQ} cuestionamiento${nQ===1?"":"s"} sin responder`);
+  if(cnt.parado) at.push(`${cnt.parado} proyecto${cnt.parado===1?"":"s"} parado${cnt.parado===1?"":"s"}`);
+  if(at.length) partes.push(`Pide atención: ${at.slice(0,3).join("; ")}.`);
+  return partes.join(" ");
+}
+// actividad: sesiones por semana, las últimas ocho, como barras pequeñas (a lo Reflect: ver dónde hubo movimiento sin leer nada)
+function semanas(fechas, n){ const out = new Array(n).fill(0), t = new Date(today()+"T12:00:00"); for(const f of fechas||[]){ const w = Math.floor((t - new Date(f+"T12:00:00"))/(7*DAY)); if(w>=0 && w<n) out[n-1-w]++; } return out; }
+function spark(fechas, titulo){ const w = semanas(fechas, 8), mx = Math.max(1, ...w), tot = w.reduce((a,b)=>a+b,0); if(!tot) return ""; return `<svg class="spark" viewBox="0 0 46 14" width="46" height="14" role="img" aria-label="${esc(titulo||"")}: ${tot} sesiones en ocho semanas" ${tip(`${tot} sesión${tot===1?"":"es"} en las últimas ocho semanas, de la más antigua a la más reciente`)}>${w.map((v,i)=>`<rect x="${i*6}" y="${14-Math.max(1,Math.round(v/mx*13))}" width="4" height="${Math.max(1,Math.round(v/mx*13))}" rx="1"${v?"":' opacity="0.25"'}/>`).join("")}</svg>`; }
+function orgLinea(){
+  const d28 = addDays(-28), vis = PROJ.filter(p=>!p.restringido), porArea = {}; let nS = 0;
+  for(const p of vis){ const f = (p.sesiones_fechas||[]).filter(x=>x>=d28); nS += f.length; if(f.length) porArea[p.area] = (porArea[p.area]||0) + f.length; }
+  const top = Object.entries(porArea).sort((x,y)=>y[1]-x[1]), nom = x => esc(areaBy[x]?.nombre||x);
+  const nD = vis.reduce((n,p)=>n+(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=d28).length, 0);
+  const nE = vis.reduce((n,p)=>n+(p.entregables||[]).filter(e=>e.estado==="vigente" && e.actualizado && e.actualizado>=d28 && !e.fecha_de_archivo).length, 0);
+  const nQ = ((META && META.cuestionamientos) || []).filter(c=>c.abierto).length;
+  const sem = semanas(vis.flatMap(p=>p.sesiones_fechas||[]), 4), iMax = sem.indexOf(Math.max(...sem));
+  let txt = nS ? `En las últimas cuatro semanas: ${nS} sesión${nS===1?"":"es"} en ${top.length} área${top.length===1?"":"s"}${top.length>1?`, sobre todo en ${top.slice(0,2).map(([k,n])=>`${nom(k)} (${n})`).join(" y ")}`:top.length===1?` (${nom(top[0][0])})`:""}; ${nD} decisi${nD===1?"ón":"ones"} y ${nE} documento${nE===1?"":"s"} publicado${nE===1?"":"s"}.` : `Sin sesiones registradas en las últimas cuatro semanas${nD||nE?`, pero ${nD} decisi${nD===1?"ón":"ones"} y ${nE} documento${nE===1?"":"s"} publicado${nE===1?"":"s"}`:""}.`;
+  if(nS && sem[iMax] && sem.filter(x=>x).length>1) txt += ` La semana más activa fue la del ${fmtD(addDays(-7*(3-iMax)-6))}.`;
+  if(nQ) txt += ` ${nQ} cuestionamiento${nQ===1?" espera":"s esperan"} respuesta.`;
+  return `<section class="card brief"><p>${txt} ${spark(vis.flatMap(p=>p.sesiones_fechas||[]), META?META.organizacion:"")}</p></section>`;
+}
 function premisasCard(){
   const ps = (META && META.premisas) || [], vig = ps.filter(x=>x.vigente);
   if(!vig.length) return "";
   const cuest = ((META && META.cuestionamientos) || []).filter(c=>c.a_proyecto==="premisa" && c.abierto);
   const nRe = ps.length - vig.length;
   return `<section class="due prem"><div class="top"><h2>Premisas${hq("premisas","Premisas")}</h2><span class="c">${vig.length}</span><span class="c" style="margin-left:auto">Lo que la dirección confirmó y sobre lo que se construye todo</span></div>
-    <ul class="prem-l">${vig.map(x=>{ const cq = cuest.filter(c=>c.a_id===x.id); return `<li><span class="pid">${esc(x.id)}</span><span class="pt">${inline(x.texto)}</span><span class="pm">Confirmó ${esc(x.confirmo||"—")}${x.fecha?` · ${fmtD(x.fecha)}`:""}${x.reemplaza?` · reemplaza a ${esc(x.reemplaza)}`:""}${cq.length?` · <span class="pill soon">${cq.length} cuestionamiento${cq.length===1?"":"s"} abierto${cq.length===1?"":"s"}</span>`:""}</span></li>`; }).join("")}</ul>
+    ${(()=>{ const li = x => { const cq = cuest.filter(c=>c.a_id===x.id); return `<li><span class="pid">${esc(x.id)}</span><span class="pt">${inline(x.texto)}</span><span class="pm">Confirmó ${esc(x.confirmo||"—")}${x.fecha?` · ${fmtD(x.fecha)}`:""}${x.reemplaza?` · reemplaza a ${esc(x.reemplaza)}`:""}${cq.length?` · <span class="pill soon">${cq.length} cuestionamiento${cq.length===1?"":"s"} abierto${cq.length===1?"":"s"}</span>`:""}</span></li>`; };
+      const conQ = vig.filter(x=>cuest.some(c=>c.a_id===x.id)), resto = vig.filter(x=>!conQ.includes(x)), ver = conQ.concat(resto).slice(0, Math.max(3, conQ.length)), mas = vig.filter(x=>!ver.includes(x));
+      return `<ul class="prem-l">${ver.map(li).join("")}</ul>${mas.length?`<details class="mas"><summary>Y ${mas.length} más</summary><ul class="prem-l">${mas.map(li).join("")}</ul></details>`:""}`; })()}
     ${nRe?`<p class="more">${nRe} premisa${nRe===1?" reemplazada queda":"s reemplazadas quedan"} como historia en <code>base/premisas.md</code>.</p>`:""}</section>`;
 }
 function cuestAbiertos(filtro){
@@ -1620,12 +1690,12 @@ function renderArea(a){
   const recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
   const cuestArea = cuestAbiertos(c => c.a_proyecto && c.a_proyecto!=="premisa" && byId[c.a_proyecto] && byId[c.a_proyecto].area===a.slug);
   main.innerHTML = `
-    <section class="card pan"><h2>Panorama${hq("director","El panorama del área")}</h2><p>${panTxt(a)}</p>${a.que_largo && a.que_largo.trim()!==(a.que||"").trim()?`<details class="mas"><summary>Qué es el área</summary><div class="md">${md(a.que_largo)}</div></details>`:""}</section>
+    <section class="card pan"><h2>Panorama${hq("director","El panorama del área")}</h2><p class="ar-ln">${areaLinea(a)}</p><p>${panTxt(a)}</p>${a.que_largo && a.que_largo.trim()!==(a.que||"").trim()?`<details class="mas"><summary>Qué es el área</summary><div class="md">${md(a.que_largo)}</div></details>`:""}</section>
     ${cuestArea}
     <section class="prios"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
-    <section class="card"><h2>Entregables vigentes</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
+    <section class="card"><h2>Documentos publicados</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
       <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>
     <section class="card"><h2>Decidido en el último mes</h2>${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Ninguna decisión en los últimos 30 días.</p>`}</section>`;
 }
@@ -1643,7 +1713,7 @@ function renderProj(p){
   const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;
   const ses = hace===null ? "sin sesiones" : hace===0 ? "hoy" : hace===1 ? "ayer" : `hace ${hace} días`;
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
-  const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon">${nc} por registrar</span>` : ""; })()].join("");
+  const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
   head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span><span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
@@ -1659,9 +1729,10 @@ function renderProj(p){
     const clave = (p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento").slice(0,3);
     const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
     body = `${cuest}
+      <div class="card brief"><h3>Dónde está</h3><p>${projLinea(p)}</p></div>
       <div class="card"><h3>Para qué</h3><dl class="facts"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Lo usan</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>
       <div class="card"><h3>En qué está</h3><div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div></div>
-      <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada vigente todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
+      <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada publicado todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
       <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
   } else if(tab==="estado"){
     const live = stepsLive(p), nx = mainStep(p), tday = today();
@@ -1678,7 +1749,7 @@ function renderProj(p){
       (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);
         return `<dt>Le afectan</dt><dd>${nu.length?`<span class="pill soon">${nu.length} desde su última sesión</span> `:""}<span class="more">${af.length} decisi${af.length===1?"ón":"ones"} de otros proyectos lo citan</span><ul class="ent-l" style="margin-top:6px">${ver.map(({q,d,nueva})=>`<li>${inline(d.titulo)} <span class="more">· ${esc(q.nombre)} · ${fmtD(d.fecha)}${nueva?" · nueva":""}</span> <button type="button" class="lnk" style="font-size:12.5px" data-go-proj="${esc(q.id)}" data-tab="decisiones">Ver ›</button></li>`).join("")}</ul>${af.length>ver.length||AF_ALL.has(p.id)?`<button type="button" class="leer" data-af-all="${esc(p.id)}">${AF_ALL.has(p.id)?"Ver menos":`Ver las ${af.length}`}</button>`:""}</dd>`; })(),
       ud ? `<dt>Última decisión</dt><dd>${inline(ud.titulo)} <span class="more">· ${fmtD(ud.fecha)}</span></dd>` : "",
-      ue ? `<dt>Último entregable</dt><dd>${inline(ue.titulo||ue.nombre)} <span class="more">· ${esc(ue.estado)}${ue.actualizado?` · ${fmtD(ue.actualizado)}`:""}</span></dd>` : "",
+      ue ? `<dt>Último entregable</dt><dd>${inline(ue.titulo||ue.nombre)} <span class="more">· ${esc(ESTADO_E[ue.estado]||ue.estado)}${ue.actualizado?` · ${fmtD(ue.actualizado)}`:""}</span></dd>` : "",
       nc ? `<dt>Por registrar</dt><dd><span class="pill soon">${nc}</span> marcados aquí; los recoge la siguiente sesión</dd>` : ""
     ].join("");
     const largo = (p.estado_actual||"").trim().length > (p.estado_resumen||"").trim().length + 20, full = EST_FULL.has(p.id);
@@ -1696,7 +1767,7 @@ function renderProj(p){
   } else if(tab==="entregables"){
     const ents = (p.entregables||[]);
     const grp = (t, list) => list.length ? `<div class="card"><h3>${t}</h3><div class="ents">${list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(e=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${e.formato!=="md"?esc(e.formato.toUpperCase())+" · ":""}${e.actualizado?fmtD(e.actualizado):"sin fecha"}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("")}</div></div>` : "";
-    body = grp("Vigentes", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin estado", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
+    body = grp("Publicados", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin estado", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
     body = `<div class="card">${(p.sesiones||[]).length ? p.sesiones.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} sesiones más recientes de ${nS}.</p>`:"") + (META && META.modo!=="completo" && p.sesiones.length ? `<p class="more">La bitácora es taller privado del área: aquí solo fecha y título. El detalle está en <code>sesiones.md</code>.</p>` : "") : `<p class="empty">Sin sesiones registradas.</p>`}</div>`;

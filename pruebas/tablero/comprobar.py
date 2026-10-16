@@ -87,6 +87,8 @@ pan = com["areas"]["ventas"].get("panorama") or {}
 ok(pan.get("fecha") == "2026-10-03" and pan.get("texto", "").startswith("Ventas tiene"), "el panorama del área se lee con su fecha")
 ok(com["areas"]["operacion"].get("panorama") is None, "un área sin panorama no inventa uno")
 
+ok(com["proyectos"]["ventas--cuentas"].get("sesiones_fechas") == ["2026-10-01", "2026-09-20"] and pub["proyectos"]["ventas--cuentas"].get("sesiones_fechas") == ["2026-10-01", "2026-09-20"], "cada proyecto trae las fechas de sus sesiones de los últimos 90 días, también en público")
+
 print("Trabajo sin sesión")
 ss = com["proyectos"]["ventas--cuentas"].get("sin_sesion")
 ok(bool(ss) and ss.get("donde") == {"entregables": 1}, "un entregable tocado después de la última sesión se avisa, y solo ese")

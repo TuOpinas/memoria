@@ -491,6 +491,9 @@ for a in areas_guia:
         pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(ses)
+        # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
+        _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
+        pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
         pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una

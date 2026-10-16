@@ -40,6 +40,12 @@ const path = require('path');
       await p.screenshot({ path: path.join(out, `${etiqueta}-${nombre}.png`) });
       await p.keyboard.press('Escape');
     }
+    await p.goto(url + '#'); await p.waitForTimeout(400);
+    const voz = await p.evaluate(() => ({ brief: !!document.querySelector('.brief p'), lineas: document.querySelectorAll('.ar-ln').length, barras: document.querySelectorAll('.ar .spark').length }));
+    if(!(voz.brief && voz.lineas >= 2 && voz.barras >= 1)) errores.push(`${etiqueta}: Inicio no lleva el párrafo de la organización, las líneas de estado o las barras de actividad (${JSON.stringify(voz)})`);
+    await p.goto(url + '#p-ventas--cuentas-t-resumen'); await p.waitForTimeout(400);
+    const donde = await p.evaluate(() => [...document.querySelectorAll('.brief p')].map(x=>x.textContent).join(' | '));
+    if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);
     await p.goto(url + '#entregables'); await p.waitForTimeout(400);
     await p.click('[data-ent-open]'); await p.waitForTimeout(250);
     await p.click('.modal-f [data-go-proj]'); await p.waitForTimeout(300);
