@@ -24,7 +24,7 @@ Antes de leer nada, en una sola pregunta (con `AskUserQuestion` si está), lo qu
 
 ## Paso 2 · Recomendar el modelo
 
-La revisión rinde según el modelo que la haga. Antes de empezar se dice, en una línea, qué conviene para el alcance acordado: para «a fondo», el modelo más capaz que la persona tenga disponible y el mayor nivel de razonamiento; para «rápida», el que esté usando. Claude no puede cambiar su propio modelo: lo cambia la persona en el selector de la conversación. Se espera a que diga que siguió la recomendación o que siga con el actual.
+La revisión rinde según el modelo que la haga, y la recomendación se hace siempre, también cuando la respuesta es quedarse como está. En una línea propia, no escondida en otra pregunta: el modelo con el que corre la conversación, si se sabe, y lo que conviene para el alcance acordado (para «a fondo», el más capaz que la persona tenga y el mayor nivel de razonamiento; para «rápida», el que esté usando). Si coinciden, se dice que conviene seguir con el actual; si no, que conviene cambiar. Claude no puede cambiar su propio modelo: lo cambia la persona en el selector de la conversación. Se pregunta con las dos opciones (cambiar o seguir), la recomendada primero, y no se empieza hasta que conteste. Si el paso 1 se pregunta con `AskUserQuestion`, esta va como una pregunta más de la misma llamada.
 
 ## Paso 3 · Partir del objetivo
 

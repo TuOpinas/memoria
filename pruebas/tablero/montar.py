@@ -10,7 +10,11 @@ for f in glob.glob(os.path.join(salida, "*", "*.json")):
 D["cambios"] = {
     "c1": {"tipo": "nota", "proyecto": "ventas--cuentas", "nota": "Cliente Uno pidió mover la llamada", "creado": "2026-10-02T10:00:00-06:00"},
     "c2": {"tipo": "hecho", "proyecto": "ventas--cuentas", "paso": "Preparar el contrato de Cliente Uno con la plantilla de propuesta.", "nota": None, "creado": "2026-10-02T11:00:00-06:00"},
+    # una fecha que la sincronización dejó a propósito (de otra cuenta): el botón no la cuenta
+    "c3": {"tipo": "fecha", "proyecto": "ventas--cuentas", "paso": "Llamar a Cliente Uno", "fecha": "2026-10-30", "creado": "2026-10-02T12:00:00-06:00"},
 }
+# el tablero tiene su tarea del botón y la última sincronización retuvo c3
+D.setdefault("meta", {}).setdefault("estado", {}).update({"tarea": "trig_prueba", "tarea_manual": True, "cola_retenida": ["c3"]})
 D["enfoque"] = {"actual": {"generado": "2026-10-02", "criterios": ["prioridad del área", "cliente o dinero", "desbloquea"], "grupos": [
     {"titulo": "Cerrar Cliente Uno", "razon": "Es la primera prioridad de ventas y toca dinero. La sesión decide.", "sesion": "abre sesión en ventas/cuentas y cierra la propuesta de Cliente Uno",
      "pasos": [{"proyecto": "ventas--cuentas", "paso": "Llamar a Cliente Uno"}, {"proyecto": "operacion--soporte", "paso": "Abrir su canal de soporte"}]}]}}

@@ -49,6 +49,14 @@ TAREA = _arg("--tarea")
 # una tarea sin horario solo corre desde el botón: el tablero no espera que se ponga al día cada mañana
 TAREA_MANUAL = bool(TAREA) and "--manual" in sys.argv
 VERSION_PLUGIN = _arg("--version")
+# --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
+# --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
+LINEAS = "--lineas" in sys.argv
+SI_CAMBIA = _arg("--si-cambia")
+# --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al dueño de otra área,
+# a una sesión, o no encontraron su paso); el botón no los cuenta como «hace falta sincronizar».
+_ret = _arg("--cola-retenida")
+COLA_RETENIDA = json.loads(pathlib.Path(_ret).read_text(encoding="utf-8")) if _ret else None
 # --ruta se acepta por compatibilidad con tareas viejas y no se guarda: la ruta de Drive lleva el correo de la persona
 MODO = (_arg("--modo") or "publico").lower()
 if MODO not in ("publico", "completo"):
@@ -619,7 +627,15 @@ if INVENTARIO:
     inv["huella_raiz"] = hashlib.sha1(json.dumps([HOY, hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest(), _mt, _resto],
                                                  ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
     inv["sello"] = sello(inv)
-    print(json.dumps({"leer": leer_, "inventario": inv}, ensure_ascii=False, separators=(",", ":")))
+    if SI_CAMBIA and SI_CAMBIA == inv["huella_raiz"]:
+        print("AL DIA")
+        sys.exit(0)
+    if LINEAS:
+        print(json.dumps(inv, ensure_ascii=False, separators=(",", ":")))
+        print(len(leer_))
+        print("\n".join(leer_))
+    else:
+        print(json.dumps({"leer": leer_, "inventario": inv}, ensure_ascii=False, separators=(",", ":")))
     sys.exit(0)
 
 # ---------- segundo tiempo: la copia tiene que ser exactamente la de «leer» ----------
@@ -815,12 +831,14 @@ docs["meta"]["estado"] = {
 }
 if INV is not None and INV.get("huella_raiz"):
     docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]
+if COLA_RETENIDA is not None:
+    docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 
 # ---------- escribir ----------
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
 # suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
 def huella(data):
-    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz")}
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "cola_retenida")}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():

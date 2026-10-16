@@ -68,7 +68,8 @@ decs = com["proyectos"]["ventas--cuentas"]["decisiones"]
 ok(sorted(d["titulo"][:20] for d in decs if d.get("por_confirmar")) == ["Decisión recuperada ", "La propuesta de Clie"], "se marca pendiente de confirmar solo con el marcador en «Decidió», no por mencionarlo en el porqué")
 ok(next(d for d in decs if d["titulo"].startswith("Decisión recuperada"))["id"] == "" and all(d["id"] for d in decs if d["fecha"]), "una entrada sin fecha no tiene identificador y no desplaza a las demás")
 ok(com["proyectos"]["operacion--soporte"]["estado_cabecera"] == "borrador", "el estado de proyecto.md llega a la página")
-ok((com["proyectos"]["operacion--soporte"].get("en_corto") or "").startswith("**El viernes 30"), "«En corto» de proyecto.md llega a la página")
+ok((com["proyectos"]["operacion--soporte"].get("en_corto") or "").startswith("2026-10-05 · **Terminamos"), "«En corto» de proyecto.md llega a la página, con su fecha")
+ok("SECRETO-CORTO" not in json.dumps(pub, ensure_ascii=False), "público: el «En corto» de un proyecto restringido no llega")
 ok(not com["proyectos"]["ventas--cuentas"].get("en_corto"), "un proyecto sin «En corto» no lo inventa")
 
 print("Premisas, identificadores y cuestionamientos")
