@@ -29,7 +29,7 @@ Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el �
 
 # Abrir sesión
 
-Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al día `metodo.md` cuando abre el responsable de contexto (ver «Puesta al día del método»).
+Abrir es solo lectura. No se escribe ningún archivo al abrir, salvo poner al día `metodo.md` cuando la raíz está atrasada (ver «Puesta al día del método»).
 
 ## Qué leo antes de responder
 
@@ -78,7 +78,7 @@ Si no hay avisos, no se menciona que no los hay.
 
 **Puesta al día del método.** Se compara la primera línea del `metodo.md` de la raíz con la del `metodo.md` del plugin, versión y huella. Si coinciden, no se dice nada. Si no:
 
-- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar (escrito directo desde el plugin como dice «Los archivos del plugin en la computadora» en la skill `tablero`, nunca pegado), porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <versión del plugin>. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
+- **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Lo abra quien lo abra, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar (escrito directo desde el plugin como dice «Los archivos del plugin en la computadora» en la skill `tablero`, nunca pegado), porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <versión del plugin>. No cambia nada de lo que hay en ella.» Si la escritura falla por permisos (la cuenta no puede escribir en el primer nivel de la carpeta), no se dice nada: la pondrá al día la siguiente cuenta que abra
 - **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.»
 - **Misma versión con huellas distintas**: no se toca ni se dice nada. Solo pasa entre dos publicaciones y lo resuelve la siguiente versión
 
@@ -194,7 +194,7 @@ Nada se borra ni se mueve: los entregables siguen con su estado y se siguen cita
 
 Además de las prohibiciones de `convenciones`:
 
-- Escribir algo al abrir sesión. Abrir es solo lectura, salvo poner al día `metodo.md` cuando abre el responsable de contexto y la raíz está atrasada
+- Escribir algo al abrir sesión. Abrir es solo lectura, salvo poner al día `metodo.md` cuando la raíz está atrasada
 - Leer al abrir más de lo que dice el nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto
