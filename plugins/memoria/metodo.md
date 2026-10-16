@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.4 · huella 059f5c3 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.4 · huella 62061d9 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -224,9 +224,9 @@ Fija, porque varias skills escriben en ella:
 # [Nombre del proyecto]
 
 ## En corto
-**[Una frase: lo próximo que pasa y cuándo.]**
-- **Listo:** [lo que quedó hecho y ya sirve]
-- **Siguiente:** [qué, quién y para cuándo]
+**[Dos frases: lo último que se completó, y lo que sigue y cuándo.]**
+- **Se completó:** [lo terminado desde el estatus anterior, con su fecha, y para qué sirve ya]
+- **Siguiente:** [hasta tres pasos, cada uno con quién y para cuándo]
 - **Falta decidir:** [qué, y quién lo decide]
 - **Preocupa:** [lo que puede salir mal]
 
@@ -253,7 +253,7 @@ Consumen esto: [áreas o personas]
 
 `En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
 
-`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Cinco líneas como mucho: la frase en negrita dice lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; debajo, solo las líneas que tengan algo que decir, cada una de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho: la frase en negrita dice lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 

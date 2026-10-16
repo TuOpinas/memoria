@@ -7,8 +7,8 @@ actualizado: 2026-10-05
 
 ## En corto
 **El viernes 30 queda listo el manual de soporte para el equipo nuevo.**
-- **Listo:** la lista de casos frecuentes, revisada con Beto.
-- **Siguiente:** Ana escribe las respuestas tipo antes del jueves.
+- **Se completó:** la lista de casos frecuentes, revisada con Beto el 14 de agosto.
+- **Siguiente:** Ana escribe las respuestas tipo antes del jueves; Beto las prueba el viernes.
 - **Falta decidir:** si el horario de guardia es de lunes a sábado; lo decide Beto.
 
 ## Objetivo
