@@ -32,7 +32,7 @@ descripcion() {
 }
 
 # Orden del índice: contrato y estilo primero, después el ciclo de trabajo, al final la migración
-INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta tablero migrar"
+INDICE="convenciones estilo sesion nuevo entregable revisar donde-va consulta tablero migrar director calidad"
 
 # El cuerpo se genera aparte para sacarle una huella: la primera línea lleva versión y huella,
 # así que cualquier cambio de texto cambia esa línea aunque el número sea el mismo.

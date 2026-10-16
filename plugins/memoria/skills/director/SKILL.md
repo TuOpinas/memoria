@@ -29,6 +29,8 @@ Por los niveles de la sección 12 de `convenciones`, sin saltarse ninguno:
 4. La búsqueda de líneas `Afecta a:` y `Cuestiona a:` de toda la raíz que nombren un proyecto del área, como al abrir sesión.
 5. Para «otras áreas», de cada una: el bloque `Proyectos` de su `area.md` y, de lo que toque a esta área, sus decisiones y el cuerpo de sus entregables `vigentes`. Nada más: `sesiones.md`, `taller/`, `fuentes/` y lo restringido de otra área no se leen, igual que para cualquier persona de fuera.
 
+Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice `sesion` en «Sin carpeta: solo lectura», y el Panorama no se escribe: se guarda como nota en la cola del tablero para la siguiente sesión con la carpeta.
+
 Si quien pregunta es dueño del área, de sus propios proyectos se puede leer también `sesiones.md`. Lo restringido se trata como dice la sección 1 de `convenciones`: si no se puede leer, se dice qué es y de quién, y ahí se para.
 
 ## Qué respondo

@@ -15,7 +15,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Cerrar el proyecto**: "cierra el proyecto", "esto ya está". Va al final de esta skill.
 
-Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado, y nunca se sustituye por el conector de Google Drive (`convenciones`, sección 1).
+Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado, y con una carpeta conectada nunca se usa el conector de Google Drive (`convenciones`, sección 1). Si después de buscarlas no hay ninguna, se trabaja en solo lectura (abajo).
 
 Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso, que se hace como dice `raices.md`, junto al contrato.
 
@@ -79,6 +79,20 @@ Si no hay avisos, no se menciona que no los hay.
 **Propuesta de trabajo.** Dos o tres focos posibles, tomados de los siguientes pasos de `proyecto.md`, de lo que quedó pendiente en la última sesión y de los avisos de otras áreas, cada uno con una línea de por qué ahora. Se ordenan por lo que desbloquea a otros: primero lo que otra persona está esperando, después lo que cierra algo empezado, al final lo que abre frente nuevo. Termina preguntando por cuál empezamos, y espera respuesta.
 
 Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabajar sobre un entregable posiblemente desfasado sin avisar antes.
+
+---
+
+# Sin carpeta: solo lectura
+
+Cuando la sesión no tiene ninguna carpeta conectada (desde el teléfono, desde la web) y tiene el conector de Google Drive, se puede abrir sesión, consultar y preguntar al director leyendo la raíz en Drive. No se escribe nada en ella.
+
+**Encontrar la raíz.** Con el conector, se buscan archivos llamados `guia.md` (`title = 'guia.md'`) y se queda la carpeta que además tiene `metodo.md` en su primer nivel. Si hay más de una, se pregunta cuál, como con varias raíces conectadas. Si no hay ninguna, se dice que la raíz no está en Drive o que esta cuenta no la ve, y que la memoria se trabaja desde la computadora con la carpeta conectada.
+
+**Leer por niveles.** Los mismos niveles de la sección 12 de `convenciones`. Listar una carpeta con `parentId` devuelve cada archivo con un fragmento de su texto, que basta para las cabeceras y las fechas; un archivo entero se lee con `read_file_content`, que devuelve el Markdown con las marcas escapadas (`\#`, `\---`): se leen como si no lo estuvieran. La búsqueda de avisos se hace con `fullText contains 'Afecta a: <area>/<proyecto>'` y con `Cuestiona a:`, en lugar de recorrer los archivos.
+
+**Qué se dice.** La primera respuesta empieza con «Memoria en solo lectura · <organización> · método <versión> · desde aquí no se registra nada», en lugar de «Memoria activa». Después, lo mismo que al abrir con la carpeta.
+
+**Qué pasa con lo que sale de la sesión.** Nada se escribe en la raíz: ni decisiones, ni bitácora, ni pasos, ni el Panorama. Lo que haya que registrar se guarda, con el sí de la persona, como nota en la cola del tablero de su cuenta (colección `cambios`, `tipo: "nota"`, con el proyecto y el texto), y la siguiente sesión de ese proyecto con la carpeta lo enseña al abrir, como cualquier nota del tablero. Si la persona no tiene tablero, se le da el texto para que lo pegue al abrir la próxima sesión desde la computadora. Una decisión no se da por registrada hasta entonces.
 
 ---
 

@@ -1347,6 +1347,7 @@ function ayudaArts(){
         <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas. Pide antes un dueño con nombre y apellido.</td></tr>
         <tr><td>${F("cierra el proyecto")}</td><td>Comprueba que está terminado y lo deja cerrado. No borra nada.</td></tr>
         <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su panorama, lo que pide atención y lo que no cuadra.</td></tr>
+        <tr><td>${F("revisión de calidad de X")}<br>${F("audita la carpeta")}</td><td>Revisa a fondo un proyecto, un documento, un desarrollo o la carpeta entera contra su objetivo, y entrega lo que no cuadra, comprobado.</td></tr>
         <tr><td>${F("quiero cuestionar…")}</td><td>Deja escrito qué no cuadra de una decisión o una premisa, para que su dueño responda.</td></tr>
         <tr><td>${F("sincroniza el tablero")}</td><td>Pone el tablero al día ahora, con lo que otras personas hayan escrito.</td></tr>
         <tr><td>${F("ordena Claude outputs")}</td><td>Lleva a su proyecto lo que la app dejó en la carpeta «Claude outputs».</td></tr>
@@ -1354,8 +1355,12 @@ function ayudaArts(){
     </table></div>
     <p class="hc-nota"><b>Tres cosas que Claude no hace aunque se lo pidas de pasada:</b> dar un documento por aprobado sin que lo diga su dueño, cambiar lo ya registrado en decisiones o en la bitácora, y mover algo que parece confidencial. En los tres casos te lo dice y propone; decides tú o el dueño.</p>`},
   {g:"Cada día", id:"telefono", t:"Desde el teléfono", h:`
-    <p>Por ahora la memoria se trabaja desde la computadora, con la carpeta conectada: en el teléfono Claude no ve la carpeta y no puede abrir ni cerrar sesiones.</p>
-    <p>Lo que sí puedes hacer desde el teléfono es mirar este tablero, y fechar, marcar o anotar pasos. Lo que toques queda pendiente hasta que el tablero se ponga al día desde la computadora (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>).</p>`},
+    <p>Desde el teléfono o la web, sin la carpeta conectada, Claude puede leer la memoria si vive en Google Drive: abrir sesión para ponerte al día, preguntar ${F("¿qué sabemos de…?")} o pedirle al director cómo va un área. La respuesta empieza con «Memoria en solo lectura».</p>
+    <dl class="hc-def">
+      <dt>Lo que no hace</dt><dd>No escribe nada en la carpeta: ni decisiones, ni bitácora, ni pasos. Lo que salga de esa conversación se guarda, con tu sí, como nota en tu tablero, y la siguiente sesión desde la computadora lo registra.</dd>
+      <dt>Lo que necesitas</dt><dd>El conector de Google Drive activado en Claude, y que la carpeta de ${ORG} esté en Drive. Si está en iCloud o en tu computadora, desde el teléfono solo verás el tablero.</dd>
+      <dt>El tablero</dt><dd>Se ve en el teléfono, y desde él puedes fechar, marcar o anotar pasos; queda pendiente hasta que el tablero se ponga al día (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>).</dd>
+    </dl>`},
   {g:"Cada día", id:"si-algo-falla", t:"Si algo falla", h:`
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
