@@ -156,7 +156,7 @@ Si `Afecta a` nombra un proyecto de otra área, se dice al usuario a quién tien
 
 Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a un proyecto restringido, `Afecta a` lleva su nombre y nada más, porque ese nombre ya está listado: ni sus archivos, ni lo que contiene. Al revés, una decisión que se registra dentro de una carpeta restringida sí puede nombrar cualquier proyecto al que afecte.
 
-**4. `proyecto.md`.** Se reescriben `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula.
+**4. `proyecto.md`.** Se reescriben `En corto`, `Estado actual` y `Siguientes pasos`. Es un archivo vivo: se sustituye el contenido anterior, no se acumula. `En corto` va el último, cuando lo demás ya está escrito, y con la voz del director: la frase de arriba dice lo próximo que pasa y cuándo, y debajo, solo si tienen algo, «Listo», «Siguiente» (qué, quién, cuándo), «Falta decidir» (qué y quién) y «Preocupa». Se escribe para alguien que no abrirá nada más: personas y fechas, no rutas ni nombres de archivo; cinco líneas como mucho (`convenciones`, sección 3). Si el proyecto no lo tenía, se crea debajo del título.
 
 **5. Bloque `Proyectos` de `area.md`.** Se reescribe la línea de este proyecto y, debajo, una línea por cada entregable `vigente` con su fecha `actualizado`. Solo esa parte del bloque; las líneas de los demás proyectos no se tocan. `Prioridades ahora` solo se reescribe si el dueño lo pide en esta sesión.
 
@@ -182,7 +182,7 @@ Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. 
 
 Cuando el dueño dice que el proyecto terminó («cierra el proyecto», «esto ya está»). Antes se comprueba con él que se cumple lo que dice `Terminado significa`; si no, se dice qué falta y se espera.
 
-1. `Estado actual` de `proyecto.md` abre con «Proyecto terminado el AAAA-MM-DD» y una línea de cómo acabó; `Siguientes pasos` dice que no queda ninguno propio, y lo que siga vivo se nombra con el proyecto que lo recoge.
+1. `Estado actual` de `proyecto.md` abre con «Proyecto terminado el AAAA-MM-DD» y una línea de cómo acabó, y `En corto` queda solo con su frase en negrita, que lo dice en lenguaje llano; `Siguientes pasos` dice que no queda ninguno propio, y lo que siga vivo se nombra con el proyecto que lo recoge.
 2. La línea del proyecto en el bloque `Proyectos` de `area.md` se queda sola, sin desglosar sus entregables (`convenciones`, sección 3, «Un proyecto cerrado»).
 3. Una entrada en `sesiones.md` que lo cuenta, y en `decisiones.md` solo si cerrarlo fue una decisión que alguien tomó.
 

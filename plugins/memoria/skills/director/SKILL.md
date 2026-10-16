@@ -71,6 +71,8 @@ Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<
 
 Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
 
+Con la misma voz escribe el cierre de sesión el `En corto` de cada proyecto (`convenciones`, sección 3): lo de un proyecto, para quien no va a abrir nada más. Al resumir el área, la línea de cada proyecto sale de su `En corto` cuando lo tiene.
+
 ## Lo que nunca hago
 
 Además de las prohibiciones de `convenciones`:

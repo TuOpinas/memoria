@@ -692,6 +692,7 @@ for a in areas_guia:
             "alcance": seccion(cuerpo, "Alcance"),
             "quien": seccion(cuerpo, "Quién participa"),
             "estado_actual": seccion(cuerpo, "Estado actual"),
+            "en_corto": seccion(cuerpo, "En corto"),
             "siguientes_pasos": lineas_no_vacias(seccion(cuerpo, "Siguientes pasos")),
         })
         pdoc["estado_resumen"] = primer_parrafo(pdoc["estado_actual"])

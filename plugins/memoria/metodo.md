@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.3 · huella af2217d · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.4 · huella 059f5c3 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -223,6 +223,13 @@ Fija, porque varias skills escriben en ella:
 ```markdown
 # [Nombre del proyecto]
 
+## En corto
+**[Una frase: lo próximo que pasa y cuándo.]**
+- **Listo:** [lo que quedó hecho y ya sirve]
+- **Siguiente:** [qué, quién y para cuándo]
+- **Falta decidir:** [qué, y quién lo decide]
+- **Preocupa:** [lo que puede salir mal]
+
 ## Objetivo
 [Una frase. Qué problema resuelve y para quién.]
 
@@ -244,13 +251,15 @@ Consumen esto: [áreas o personas]
 - [Lista corta]
 ```
 
-`Estado actual` y `Siguientes pasos` son las dos únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+`En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Cinco líneas como mucho: la frase en negrita dice lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo; debajo, solo las líneas que tengan algo que decir, cada una de una o dos frases, con nombres de personas y fechas, sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` (anterior a la 1.14.4) sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
 ### Un proyecto cerrado
 
-Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
+Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**; `En corto` queda en una línea, la frase en negrita, que dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
 
 Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
 
