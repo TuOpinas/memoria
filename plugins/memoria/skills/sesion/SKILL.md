@@ -15,6 +15,10 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Antes de nada se carga 
 
 **Cerrar el proyecto**: "cierra el proyecto", "esto ya está". Va al final de esta skill.
 
+**Premisas**, solo en la sesión del responsable de contexto: "registra como premisa que…", "la premisa P2 cambia a…", "esa premisa ya no vale". Sección «Premisas», abajo.
+
+**Responder un cuestionamiento**: "respondo al cuestionamiento…", "lo mantengo", "lo cambio", cuando al abrir se avisó de uno abierto. Se registra al cerrar como una decisión (paso 3).
+
 Antes de nada se localiza la raíz entre las carpetas conectadas: la que tiene `guia.md` y `metodo.md` en su primer nivel. Si las herramientas de carpetas no están cargadas, se buscan y se cargan primero; nunca se dice que no hay carpeta sin haberlas listado, y con una carpeta conectada nunca se usa el conector de Google Drive (`convenciones`, sección 1). Si después de buscarlas no hay ninguna, se trabaja en solo lectura (abajo).
 
 Si no queda claro el proyecto, preguntarlo antes de leer nada. Nunca asumir el último proyecto usado. Si hay más de una raíz conectada, se pregunta también en cuál, y la sesión se queda en esa: lo que haga falta de otra entra solo por un traspaso, que se hace como dice `raices.md`, junto al contrato.
@@ -38,15 +42,15 @@ Por los niveles de la sección 12 de `convenciones`. Al abrir no se lee `base/`,
 
 **Nivel 1**, del proyecto ya identificado:
 
-4. `<area>/<proyecto>/proyecto.md`
-5. `decisiones.md` del proyecto, las 5 entradas más recientes
-6. `sesiones.md`, las 3 entradas más recientes
-7. `entregables/`, solo las cabeceras de cada archivo: nombre, estado, actualizado. `taller/` no se lee al abrir: entra a demanda, por su disparador de la sección 12
-8. La cola del tablero, si la cuenta tiene uno: con `Artifact` (`list`, los de la cuenta) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo», con la organización del título de `guia.md`; si no hay ninguno, no hay tablero y no se pregunta. De cada uno, con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` con `proyecto` igual a `<area>--<proyecto>`, y otra con `tipo` igual a `prioridad` y `area` igual al área del proyecto: son prioridades del área marcadas como cumplidas o retiradas desde el tablero, que solo puede reescribir en `area.md` la sesión de su dueño. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
+5. `<area>/<proyecto>/proyecto.md`
+6. `decisiones.md` del proyecto, las 5 entradas más recientes
+7. `sesiones.md`, las 3 entradas más recientes
+8. `entregables/`, solo las cabeceras de cada archivo: nombre, estado, actualizado. `taller/` no se lee al abrir: entra a demanda, por su disparador de la sección 12
+9. La cola del tablero, si la cuenta tiene uno: con `Artifact` (`list`, los de la cuenta) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo», donde <organización> es el nombre de la organización, lo que va antes del «·» en el título de `guia.md` (`convenciones`, sección 1); si no hay ninguno, no hay tablero y no se pregunta. De cada uno, con `ArtifactData` (se carga con `ToolSearch`), una consulta a la colección `cambios` con `proyecto` igual a `<area>--<proyecto>`, y otra con `tipo` igual a `prioridad` y `area` igual al área del proyecto: son prioridades del área marcadas como cumplidas o retiradas desde el tablero, que solo puede reescribir en `area.md` la sesión de su dueño. Trae fechas que la tarea no pudo aplicar, hechos con o sin nota, notas para la próxima sesión y correcciones de un paso o del estado del proyecto. Si la herramienta no está o el artifact no se deja leer, se dice en una línea y se sigue
 
 **El barrido de avisos**, que es lo único que recorre la raíz entera:
 
-9. Las líneas `Afecta a:` y `Cuestiona a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo (y `premisa P` si quien abre es el responsable de contexto). De cada `Cuestiona a:` que nombre este proyecto, se mira si alguna decisión de este proyecto lo responde con `Responde a:`; si no, está abierto. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
+10. Las líneas `Afecta a:` y `Cuestiona a:` de todos los `decisiones.md` de la raíz, buscando `area/proyecto` del proyecto activo (y `premisa P` si quien abre es el responsable de contexto). De cada `Cuestiona a:` que nombre este proyecto, se mira si alguna decisión de este proyecto lo responde con `Responde a:`; si no, está abierto. Es una búsqueda de un patrón de línea, no una lectura: solo se abre el encabezado de la entrada que dé positivo. Las carpetas restringidas a las que no tengo acceso fallan al leerse y se saltan sin más. Un aviso que salga de una carpeta restringida solo se da si el proyecto activo está dentro de ella
 
 No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistemas.md`, ni el resto de `area.md`. Entran cuando el trabajo del día los pida, por sus disparadores de la sección 12.
 
@@ -73,10 +77,10 @@ Si no hay avisos, no se menciona que no los hay.
 **Puesta al día del método.** Se compara la primera línea del `metodo.md` de la raíz con la del `metodo.md` del plugin, versión y huella. Si coinciden, no se dice nada. Si no:
 
 - **La raíz está atrasada**: la versión del plugin es más nueva, o es la misma y la raíz no lleva huella. Si quien abre es el responsable de contexto según `guia.md`, se copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, porque es una copia exacta que nadie edita y no toca nada más, y se dice en una línea al final de la respuesta, sin nombres de archivo: «He puesto al día las reglas del método en esta carpeta, a la versión <mayor.menor del plugin>. No cambia nada de lo que hay en ella.» Si no es el responsable de contexto, no se copia y no se dice nada: se pondrá al día en su próxima sesión
-- **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualiza el plugin memoria desde los ajustes de plugins de Claude, o pide ayuda a quien administra la carpeta.»
+- **El plugin de quien abre está atrasado**: la raíz lleva una versión más nueva. No se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.»
 - **Misma versión con huellas distintas**: no se toca ni se dice nada. Solo pasa entre dos publicaciones y lo resuelve la siguiente versión
 
-**Propuesta de trabajo.** Dos o tres focos posibles, tomados de los siguientes pasos de `proyecto.md`, de lo que quedó pendiente en la última sesión y de los avisos de otras áreas, cada uno con una línea de por qué ahora. Se ordenan por lo que desbloquea a otros: primero lo que otra persona está esperando, después lo que cierra algo empezado, al final lo que abre frente nuevo. Termina preguntando por cuál empezamos, y espera respuesta.
+**Propuesta de trabajo.** Dos o tres focos posibles, tomados de los siguientes pasos de `proyecto.md`, de lo que quedó pendiente en la última sesión y de los avisos de otras áreas, cada uno con una línea de por qué ahora. Se ordenan por lo que desbloquea a otros: primero lo que otra persona está esperando, después lo que cierra algo empezado, al final lo que abre frente nuevo. Si en los avisos hay un cuestionamiento abierto a este proyecto, responderlo es el primer foco, porque alguien espera; basta con que el dueño diga si lo mantiene o lo cambia, y por qué. Termina preguntando por cuál empezamos, y espera respuesta.
 
 Si un aviso afecta al foco propuesto, se dice ahí mismo. No se empieza a trabajar sobre un entregable posiblemente desfasado sin avisar antes.
 
@@ -92,7 +96,20 @@ Cuando la sesión no tiene ninguna carpeta conectada (desde el teléfono, desde 
 
 **Qué se dice.** La primera respuesta empieza con «Memoria en solo lectura · <organización> · método <versión> · desde aquí no se registra nada», en lugar de «Memoria activa». Después, lo mismo que al abrir con la carpeta.
 
-**Qué pasa con lo que sale de la sesión.** Nada se escribe en la raíz: ni decisiones, ni bitácora, ni pasos, ni el Panorama. Lo que haya que registrar se guarda, con el sí de la persona, como nota en la cola del tablero de su cuenta (colección `cambios`, `tipo: "nota"`, con el proyecto y el texto), y la siguiente sesión de ese proyecto con la carpeta lo enseña al abrir, como cualquier nota del tablero. Si la persona no tiene tablero, se le da el texto para que lo pegue al abrir la próxima sesión desde la computadora. Una decisión no se da por registrada hasta entonces.
+**Qué pasa con lo que sale de la sesión.** Nada se escribe en la raíz: ni decisiones, ni bitácora, ni pasos, ni el Panorama. Lo que haya que registrar se guarda, con el sí de la persona, como nota en la cola del tablero de su cuenta: un documento nuevo en la colección `cambios` con la forma exacta de las notas que escribe la página, `{tipo: "nota", proyecto: "<area>--<slug>", nota: "<texto>", creado: "<fecha y hora ISO>", estado: "pendiente"}`; si lo que sale es del área y no de un proyecto (un panorama, una prioridad), va con `area: "<slug del área>"` en lugar de `proyecto`, y lo enseña la siguiente sesión que su dueño abra en cualquier proyecto del área. La siguiente sesión con la carpeta lo enseña al abrir, como cualquier nota del tablero. Si la persona no tiene tablero, se le da el texto para que lo pegue al abrir la próxima sesión desde la computadora. Una decisión no se da por registrada hasta entonces.
+
+---
+
+# Premisas
+
+Solo en la sesión del responsable de contexto según `guia.md`; a cualquier otra persona se le dice que una premisa la registra él, y se le prepara el texto. Se hace en el momento en que se pide, no al cerrar, porque la dirección la confirma en voz alta y lo que importa es que quede.
+
+1. Se lee `base/premisas.md` entero si existe. Si no existe, se crea con su cabecera (`estado: vigente`, `actualizado` de hoy) y el título `# Premisas`.
+2. Se redacta la línea con el formato de la sección 2 de `convenciones`: `- P<n> · <texto> · Confirmó: <nombre y apellido> · <fecha de hoy>`, con el `P<n>` siguiente al mayor que haya en el archivo, aunque alguna esté reemplazada. Si cambia una que existe («la premisa P2 cambia a…», «ya no vale»), la línea nueva termina en `· Reemplaza a P<n>`; la antigua no se toca. Quien confirma es quien dirige la organización, no quien abre la sesión, salvo que sean la misma persona: se pregunta si no está claro.
+3. Se enseña la línea y se escribe solo con el sí. Se añade al final del archivo y se pone al día `actualizado`.
+4. Si la premisa nueva reemplaza a una con cuestionamientos abiertos (los del barrido al abrir), se dice que quedan respondidos y a quién avisar: a quien los planteó. Si la premisa se mantiene frente a un cuestionamiento, no hay línea nueva: la respuesta es una entrada con `Responde a:` en el `decisiones.md` de un proyecto del responsable de contexto, como cualquier otra (paso 3 de cerrar).
+
+Una premisa es algo que la dirección confirmó y sobre lo que todos construyen; un objetivo de un proyecto o una preferencia de un área no lo es. Ante la duda, se pregunta de quién es la confirmación.
 
 ---
 
@@ -125,7 +142,7 @@ Descartamos: tope acumulado mensual por proveedor, porque el ERP no expone el ac
 Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a todas) · finanzas/cierre-mensual (menos órdenes que conciliar)
 ```
 
-**Responder un cuestionamiento.** Si en la sesión se resolvió un cuestionamiento abierto, la decisión que lo resuelve lleva `Responde a: <identificador del cuestionamiento>` y dice si confirma lo cuestionado o lo reemplaza. Se dice al usuario a quién avisar: a quien lo planteó.
+**Responder un cuestionamiento.** Si al abrir se avisó de un cuestionamiento abierto a este proyecto y el dueño lo respondió en la sesión, la respuesta es una decisión más de esta lista, aunque solo mantenga lo que ya estaba: «lo mantengo» cambia algo, porque cierra una pregunta que alguien tenía abierta. La entrada lleva `Responde a: <identificador del cuestionamiento>` (el que se citó al abrir), dice en el título si mantiene o reemplaza lo cuestionado, y en `Por qué` la razón que dio el dueño. Se confirma como cualquier decisión y se dice a quién avisar: a quien lo planteó.
 
 **Plantear un cuestionamiento.** Si la persona quiere cuestionar una decisión de otro proyecto o una premisa, se escribe en el `decisiones.md` del proyecto activo, con el formato de la sección 4 de `convenciones` (`Planteó`, `Por qué`, `Cuestiona a`), después de enseñárselo y con su confirmación, como una decisión. Se le dice a quién avisar: al dueño de lo cuestionado.
 

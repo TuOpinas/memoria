@@ -6,7 +6,7 @@ proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
 Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
-Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--ruta <ruta de la raíz en la computadora de la persona>] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
+Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--version <versión del plugin que lo ejecuta>]
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
@@ -15,9 +15,10 @@ solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cad
 «completo»: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras. Un tablero completo no se comparte.
 En los dos modos, lo que la cuenta no puede leer sale como restringido.
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
-proyectos/<area>--<slug>.json, y un indice.json con la lista de archivos.
+proyectos/<area>--<slug>.json, cada uno con una huella de su contenido; un indice.json con la lista de archivos, huellas y
+tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta al día para «Por dónde empezar».
 """
-import sys, os, re, json, datetime, pathlib
+import sys, os, re, json, datetime, pathlib, hashlib
 try:
     from zoneinfo import ZoneInfo
     TZ = ZoneInfo("America/Mexico_City")
@@ -44,6 +45,18 @@ def leer(p):
         return p.read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
     except OSError:
         return None
+
+def por_que_no(p):
+    """Por qué no se pudo leer p: «sin-acceso» (permiso), «sin-carpeta» (la carpeta no existe en esta
+    computadora), «sin-archivo» (la carpeta existe y el archivo no), «sin-leer» (otro fallo: sin descargar…)."""
+    try:
+        p.read_bytes(); return None
+    except PermissionError:
+        return "sin-acceso"
+    except FileNotFoundError:
+        return "sin-carpeta" if not p.parent.exists() else "sin-archivo"
+    except OSError:
+        return "sin-leer"
 
 def fecha_valida(f):
     try:
@@ -194,7 +207,8 @@ def parse_decisiones(texto):
             elif actual and s:
                 campos[actual] += "\n" + s
         d_ = {"fecha": fecha, "titulo": titulo, **campos}
-        if re.search(r"pendientes? de confirma(r|ción)", (titulo + " " + " ".join(campos.values())).lower()):
+        # solo el marcador del contrato: «Decidió: Nombre (pendiente de confirmar)»; mencionarlo en el por qué no cuenta
+        if re.search(r"\(pendiente de confirma(r|ción)\)", campos["decidio"].lower()):
             d_["por_confirmar"] = True
         if campos["cuestiona"] or re.match(r"cuestionamiento\b", titulo, re.I):
             d_["tipo"] = "cuestionamiento"
@@ -204,8 +218,11 @@ def parse_decisiones(texto):
             if not d_[k]: del d_[k]
         out.append(d_)
     # identificador: la fecha y, si ese día hay más de una entrada, -2, -3… contando desde la de más abajo (la más antigua)
+    # una entrada sin fecha válida no tiene identificador: no se puede citar
     cuenta = {}
     for d_ in reversed(out):
+        if not fecha_valida(d_["fecha"]):
+            d_["id"] = ""; continue
         n = cuenta[d_["fecha"]] = cuenta.get(d_["fecha"], 0) + 1
         d_["id"] = d_["fecha"] + ("" if n == 1 else f"-{n}")
     out.sort(key=lambda d: d["fecha"], reverse=True)
@@ -388,6 +405,8 @@ for a in areas_guia:
     }
     if texto is None or (PUBLICO and area_doc["restringido"]):
         area_doc["legible"] = False
+        # por qué no se muestra: declarada restringida, sin acceso, o la carpeta no está en esta computadora
+        area_doc["motivo"] = "declarada" if (PUBLICO and area_doc["restringido"]) else (por_que_no(carpeta / "area.md") or "sin-leer")
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -421,9 +440,10 @@ for a in areas_guia:
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
             "indice_descripcion": ref["descripcion"], "indice_notas": ref["notas"],
-            "legible": tp is not None, "restringido": tp is None and (pc.exists() or declarado),
+            "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
+            pdoc["motivo"] = "declarado" if (PUBLICO and declarado) else (por_que_no(pc / "proyecto.md") or "sin-leer")
             docs["proyectos"][pid] = pdoc
             continue
         fm, cuerpo = frontmatter(tp)
@@ -513,14 +533,19 @@ for pid, pdoc in docs["proyectos"].items():
         if d_.get("responde"):
             q, i = ref_decision(d_["responde"])
             if q: respuestas.add((q, i))
+# una premisa nueva que reemplaza a P<n> responde a los cuestionamientos de P<n> anteriores a ella (contrato, sección 4)
+reemplazos = {p_["reemplaza"]: p_["fecha"] for p_ in premisas if p_["reemplaza"]}
 cuestionamientos = []
 for pid, pdoc in docs["proyectos"].items():
     for d_ in pdoc.get("decisiones") or []:
         if d_.get("tipo") != "cuestionamiento":
             continue
         q, i = ref_decision(d_.get("cuestiona"))
+        abierto = (pid, d_["id"]) not in respuestas
+        if abierto and q == "premisa" and i in reemplazos and (reemplazos[i] or "9999") >= (d_["fecha"] or ""):
+            abierto = False
         c = {"desde": pid, "id": d_["id"], "fecha": d_["fecha"], "titulo": d_["titulo"], "planteo": d_.get("planteo", ""),
-             "porque": d_.get("porque", ""), "a_proyecto": q, "a_id": i, "abierto": (pid, d_["id"]) not in respuestas}
+             "porque": d_.get("porque", ""), "a_proyecto": q, "a_id": i, "abierto": abierto}
         d_["abierto"] = c["abierto"]
         cuestionamientos.append(c)
         if q and q != "premisa" and q in docs["proyectos"]:
@@ -554,7 +579,11 @@ for pid, pdoc in docs["proyectos"].items():
         pts = (3 if s_.get("prioridad_area") else 0) + (2 if s_.get("cliente_o_dinero") else 0) + (2 if s_["desbloquea"] else 0)
         if s_["naturaleza"] in ("rutina", "caducidad"): pts = 0
         s_["puntos"] = pts
-docs["meta"]["enfoque-candidatos"] = {"generado": HOY, "grupos": candidatos[:25]}
+# los candidatos no van a la base (la página no los lee): quedan en salida/meta/enfoque-candidatos.json para «Por dónde empezar»,
+# con una huella de grupos y prioridades para saber si cambió algo desde la última vez sin releer nada
+_prios = {s_: docs["areas"][s_].get("prioridades", []) for s_ in sorted(docs["areas"])}
+_huella_cand = hashlib.sha1(json.dumps([candidatos[:25], _prios], ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candidatos[:25]}
 
 # ---------- carpetas de la raíz que no son de ningún área ----------
 # «Claude outputs» es donde la app de Claude deja lo que produce; cualquier otra carpeta suelta en la
@@ -592,13 +621,21 @@ docs["meta"]["estado"] = {
 }
 
 # ---------- escribir ----------
+# Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
+# suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
+def huella(data):
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella")}
+    return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():
     for did, data in items.items():
+        data["huella"] = huella(data)
         d = OUT / col
         d.mkdir(parents=True, exist_ok=True)
         p = d / f"{did}.json"
         p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-        indice_archivos.append({"coleccion": col, "doc_id": did, "archivo": str(p.relative_to(OUT))})
+        indice_archivos.append({"coleccion": col, "doc_id": did, "archivo": str(p.relative_to(OUT)), "huella": data["huella"], "bytes": p.stat().st_size})
+(OUT / "meta").mkdir(parents=True, exist_ok=True)
+(OUT / "meta" / "enfoque-candidatos.json").write_text(json.dumps(enfoque_candidatos, ensure_ascii=False, indent=1), encoding="utf-8")
 (OUT / "indice.json").write_text(json.dumps(indice_archivos, ensure_ascii=False, indent=1), encoding="utf-8")
 print(f"{len(docs['areas'])} áreas, {len(docs['proyectos'])} proyectos, snapshot {HOY}")

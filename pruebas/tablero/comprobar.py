@@ -49,7 +49,9 @@ ok(paso("Decidir")["naturaleza"] == "decision", "«Decidir…» es decisión")
 ok(paso("Esperar")["naturaleza"] == "espera", "«Esperar…» es espera")
 
 print("Lectura de la carpeta")
-ok(len(com["areas"]) == 3 and "operacion" in com["areas"], "un área cuya descripción dice «Área» no se pierde")
+ok(len(com["areas"]) == 4 and "operacion" in com["areas"], "un área cuya descripción dice «Área» no se pierde")
+ok(com["areas"]["futura"]["legible"] is False and com["areas"]["futura"]["motivo"] == "sin-carpeta", "un área del mapa sin carpeta se marca «sin carpeta», no restringida")
+ok(pub["areas"]["personas"]["motivo"] == "declarada" and com["areas"]["personas"]["legible"], "público: el área restringida se marca «declarada»; completo la lee")
 sop = com["proyectos"]["operacion--soporte"]
 ok(sop["ultima_sesion"] == "2026-08-15", "una entrada «(tarea)» de la bitácora no cuenta como sesión")
 ok(any(s_.get("fecha") == "2026-08-20" for s_ in sop["pasos"]), "un plazo vencido no se esconde porque la tarea movió «actualizado»")
@@ -61,18 +63,21 @@ ok(ents["kit-cuentas"]["descripcion"].startswith("guía para preparar"), "la des
 ok(ents["kit-cuentas"].get("basado_en", [])[:1] == ["ventas/cuentas/entregables/propuesta-base.md"], "basado_en se lee como lista")
 ok(ents["propuesta-base"].get("basado_en") == [], "basado_en vacío en línea («[]»)")
 decs = com["proyectos"]["ventas--cuentas"]["decisiones"]
-ok([d["titulo"] for d in decs if d.get("por_confirmar")] == ["La propuesta de Cliente Uno va en dos fases"], "se marca la decisión pendiente de confirmar, y solo esa")
+ok(sorted(d["titulo"][:20] for d in decs if d.get("por_confirmar")) == ["Decisión recuperada ", "La propuesta de Clie"], "se marca pendiente de confirmar solo con el marcador en «Decidió», no por mencionarlo en el porqué")
+ok(next(d for d in decs if d["titulo"].startswith("Decisión recuperada"))["id"] == "" and all(d["id"] for d in decs if d["fecha"]), "una entrada sin fecha no tiene identificador y no desplaza a las demás")
 ok(com["proyectos"]["operacion--soporte"]["estado_cabecera"] == "borrador", "el estado de proyecto.md llega a la página")
 
 print("Premisas, identificadores y cuestionamientos")
 prem = {x["id"]: x for x in com["meta"]["estado"]["premisas"]}
-ok(set(prem) == {"P1", "P2", "P3"} and not prem["P1"]["vigente"] and prem["P3"]["vigente"] and prem["P3"]["reemplaza"] == "P1", "las premisas se leen y la reemplazada deja de estar vigente")
+ok(set(prem) == {"P1", "P2", "P3", "P4"} and not prem["P1"]["vigente"] and not prem["P2"]["vigente"] and prem["P3"]["vigente"] and prem["P3"]["reemplaza"] == "P1", "las premisas se leen y la reemplazada deja de estar vigente")
 ok(prem["P2"]["confirmo"] == "Ana Prueba" and prem["P2"]["fecha"] == "2026-08-01", "cada premisa trae quién la confirmó y cuándo")
 ok(pub["meta"]["estado"]["premisas"] == com["meta"]["estado"]["premisas"], "público: las premisas se ven, son de toda la organización")
 idde = lambda t: next(d["id"] for d in decs if d["titulo"].startswith(t))
 ok(idde("La propuesta de Cliente Uno") == "2026-09-21" and idde("El anexo de Cliente Uno") == "2026-09-21-2", "dos decisiones el mismo día: la más antigua sin sufijo y la siguiente con -2")
 cq = {(c["a_proyecto"], c["a_id"]): c for c in com["meta"]["estado"]["cuestionamientos"]}
-ok(cq[("ventas--cuentas", "2026-09-21")]["abierto"] and cq[("premisa", "P2")]["abierto"], "un cuestionamiento sin respuesta queda abierto, también el de una premisa")
+ok(cq[("ventas--cuentas", "2026-09-21")]["abierto"] and cq[("premisa", "P3")]["abierto"], "un cuestionamiento sin respuesta queda abierto, también el de una premisa")
+ok(not cq[("premisa", "P2")]["abierto"], "una premisa nueva que reemplaza a la cuestionada cierra su cuestionamiento")
+ok(all("huella" in d for D in (pub, com) for c in ("areas", "proyectos") for d in D[c].values()) and not any(x["doc_id"] == "enfoque-candidatos" for x in json.load(open(os.path.join(sys.argv[2], "indice.json"), encoding="utf-8"))) and com["meta"]["enfoque-candidatos"].get("huella"), "cada documento lleva su huella; los candidatos de enfoque llevan la suya y no van a la base")
 ok(not cq[("ventas--cuentas", "2026-09-20")]["abierto"], "un cuestionamiento con una decisión que lo responde se cierra")
 d0920 = next(d for d in decs if d["id"] == "2026-09-20")
 ok(d0920.get("cuestionado_por") and d0920["cuestionado_por"][0]["desde"] == "operacion--soporte", "la decisión cuestionada sabe quién la cuestionó")

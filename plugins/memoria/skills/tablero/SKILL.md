@@ -7,11 +7,11 @@ description: Monta, actualiza y sincroniza el tablero de una persona sobre la ca
 
 Una página que muestra la carpeta de la organización sin abrirla: qué áreas hay y de quién son, en qué va cada proyecto, qué se decidió, qué entregables hay y qué pasos siguen. Se genera desde los archivos y se pone al día cada vez que su dueño cierra una sesión. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
 
-Cuatro reglas que no cambian:
+Cinco reglas que no cambian:
 
 - **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su puesta al día escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Su dueño puede compartirlo desde el menú del artifact, y esa es la única manera de que otra persona lo vea.
 - **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/`) y nada más. Nunca abre `fuentes/`, `taller/`, `restringido/` ni `base/`, salvo `base/premisas.md`, que es de toda la organización y va arriba de todo; de `fuentes/` y `taller/` solo mira las fechas de los archivos, para avisar del trabajo sin sesión.
-- **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la puesta al día lo mecánico, la siguiente sesión del proyecto lo que pide juicio.
+- **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la puesta al día lo mecánico, la siguiente sesión del proyecto lo que pide juicio. Y la puesta al día escribe solo en las áreas de la cuenta que la lanza: lo que un contribuidor marcó en un proyecto de otra área espera en la cola a que su dueño ponga al día su tablero o cierre una sesión.
 - **Se pone al día al cerrar sesión.** Desde la 1.14, el cierre de cada sesión de su dueño (skill `sesion`, paso 11) rehace el tablero entero y aplica lo mecánico de la cola. No hay tarea diaria por defecto: se crea solo si la piden, por ejemplo en una raíz donde escriben varias personas, porque lo que escriben los demás no llega a un tablero hasta que su dueño cierra una sesión o sincroniza.
 - **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea, si la hay, son de la cuenta de su dueño. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
 
@@ -52,7 +52,7 @@ Si el modo es público y la cuenta de la sesión lee áreas o proyectos restring
 
 ## Montar
 
-**1. Publicar la página.** Se copia `vista.html` de esta skill al scratchpad con el nombre `tablero.html`, se sustituye su primera línea `<title>Tablero</title>` por `<title>Tablero <organización></title>` (y « completo» al final si es ese modo; el nombre de la organización sale del título de `guia.md`), y se publica como artifact nuevo con el icono `dashboard`, y esta declaración de capacidades, idéntica para todos los tableros:
+**1. Publicar la página.** Se copia `vista.html` de esta skill al scratchpad con el nombre `tablero.html`, se sustituye su primera línea `<title>Tablero</title>` por `<title>Tablero <organización></title>` (y « completo» al final si es ese modo; <organización> es el nombre de la organización: lo que va antes del «·» en el título de `guia.md`, `convenciones` sección 1), y se publica como artifact nuevo con el icono `dashboard`, y esta declaración de capacidades, idéntica para todos los tableros:
 
 ```
 db: reglas [{path: "", read: "view", write: "admin"}, {path: "cambios", read: "view", write: "interact"}]
@@ -64,7 +64,7 @@ Con eso el dueño lo ve y lanza la sincronización; si lo comparte, un lector le
 
 **2. Sin tarea diaria.** No se crea ninguna: el tablero se pondrá al día en cada cierre de sesión. Si la persona la pide al montar, se crea como dice «Tarea diaria» abajo y su id se pasa al generador en el paso 3.
 
-**3. Generar y cargar.** Se copian `generar_vista.py` y `aplicar_cambios.py` a `$HOME/tablero/` de la VM de la computadora con `device_bash` y un heredoc con delimitador entre comillas (la computadora no ve el contenedor), y se corre `python3 generar_vista.py "<raíz en $HOME/mnt>" salida --modo <modo> --version <versión del plugin, de plugin.json>`. La salida va a `$HOME/tablero/salida/`, fuera de la raíz. Cada JSON de `salida/areas`, `salida/proyectos` y `salida/meta` se escribe en la base del artifact con `ArtifactData` en lotes de hasta 50: colección y doc_id iguales a carpeta y archivo.
+**3. Generar y cargar.** Se copian `generar_vista.py` y `aplicar_cambios.py` a `$HOME/tablero/` de la VM de la computadora con `device_bash` y un heredoc con delimitador entre comillas (la computadora no ve el contenedor), y se corre `python3 generar_vista.py "<raíz en $HOME/mnt>" salida --modo <modo> --version <versión del plugin, de plugin.json>`. La salida va a `$HOME/tablero/salida/`, fuera de la raíz (o dentro del `scratchFolder` de `get_device_info` si lo hay, que permite traer los archivos con `device_stage_files`). Cada documento de `salida/indice.json` (áreas, proyectos y `meta/estado`; los candidatos de enfoque no se suben) se escribe en la base del artifact con `ArtifactData` en lotes de hasta 50 y de menos de 1 MiB: colección y doc_id iguales a carpeta y archivo, con `file_path` si los archivos se trajeron al contenedor y como `data` si no. En `meta/estado` se añade `pagina_actualizada: {version: <versión del plugin>, fecha: <hoy>}`, que es como la puesta al día sabe qué versión de la página hay publicada sin leerla.
 
 **4. El primer «Por dónde empezar».** Es el paso 6 de `tarea.md` y se hace aquí mismo, porque la página saldría sin esa sección hasta el primer cierre de sesión: se leen los grupos candidatos de `salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe `enfoque/actual`.
 
@@ -86,14 +86,14 @@ Cuando sale una versión nueva del plugin, la página del tablero y el generador
 «Actualiza el tablero», a mano o cuando la tarea lo pide:
 
 1. Se busca el artifact por su nombre con `Artifact` `list`.
-2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con el `<title>` sustituido como en el paso 1 de montar y la misma declaración de capacidades. La base no se toca: la cola, el enfoque y las correcciones sobreviven.
+2. Se vuelve a publicar `vista.html` de esta skill sobre esa URL (`Artifact` con `url`), con el `<title>` sustituido como en el paso 1 de montar y sin pasar `capabilities`, para que conserve las que tiene. La base no se toca, salvo `pagina_actualizada` en `meta/estado`, que pasa a la versión nueva con la fecha de hoy y `desde` con la anterior: la cola, el enfoque y las correcciones sobreviven.
 3. Si hay tarea diaria, se compara su prompt con `tarea.md` sustituido. Si cambió, se pide reescribirlo con `update_trigger`; en una tarea ligada a una computadora eso solo surte efecto cuando la persona lo aprueba en una conversación de la app ligada a esa misma computadora, y hasta entonces no cambia nada: se dice, no se rodea, y nunca se borra la tarea para crear otra, porque se pierde su historial y su computadora.
 4. **Una tarea diaria de antes de la 1.14** se queda donde está, pero se pregunta en una línea si se sigue queriendo, ahora que el tablero se pone al día al cerrar cada sesión. Si no, se desactiva con `update_trigger` (`enabled: false`); nunca se borra, porque se pierde su historial. Si sigue, se recuerda revisar su modelo en sus ajustes.
 5. Se sincroniza una vez (abajo) para que `meta/estado` lleve la versión nueva y la banda de desfase desaparezca.
 
 ## Sincronizar
 
-La puesta al día, en esta sesión, con la raíz conectada: los pasos 1 a 7 de `tarea.md` tal cual, con los scripts copiados a la VM de la computadora como en el paso 3 de montar y el modo del tablero; el id de la tarea diaria, si la hay, se busca con `list_triggers` y se pasa al generador, y si no hay, se omite `--tarea`. Es lo que hace cada cierre de sesión (skill `sesion`, paso 11), y a mano sirve cuando otra persona trabajó en la carpeta o cuando la cola tiene cosas que no esperan a la siguiente sesión. Lo que la tarea deja «pendiente de cerrar en sesión» se cierra con `sesion`, que lee la cola al abrir el proyecto.
+La puesta al día, en esta sesión, con la raíz conectada: los pasos 1 a 7 de `tarea.md` tal cual, con la cuenta de la sesión en `--cuenta`, los scripts de la VM comparados por huella y copiados solo si cambiaron, y el modo del tablero; el id de la tarea diaria, si la hay, se busca con `list_triggers` y se pasa al generador, y si no hay, se omite `--tarea`. Sube a la base solo los documentos cuya huella cambió y no lee la página: lo normal al cerrar una sesión es un proyecto, su área y `meta/estado`. Es lo que hace cada cierre de sesión (skill `sesion`, paso 11), y a mano sirve cuando otra persona trabajó en la carpeta o cuando la cola tiene cosas que no esperan a la siguiente sesión. Lo que la tarea deja «pendiente de cerrar en sesión» se cierra con `sesion`, que lee la cola al abrir el proyecto.
 
 ## Tarea diaria, si la piden
 
@@ -105,7 +105,7 @@ Al terminar se dicen dos cosas. **El modelo de la tarea:** nace con el de la ses
 
 Además de las prohibiciones de `convenciones`:
 
-- Escribir en la raíz cualquier cosa: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración.
+- Escribir en la raíz nada del tablero: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración. En la carpeta solo entra lo mecánico de la cola (fechas y hechos con nota), y solo en las áreas de la cuenta.
 - Montar un tablero completo sin decir que no se comparte, o montar uno público sin avisar de lo restringido no declarado cuando la cuenta lo lee.
 - Montar un segundo tablero igual sin avisar de que ya existe.
 - Cambiar desde aquí el modelo de una tarea, o borrar una tarea para recrearla con otro prompt.

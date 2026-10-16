@@ -15,7 +15,7 @@ Mira un área entera como la miraría quien la dirige: cómo está, qué se movi
 
 **Otras áreas**: «¿qué de otras áreas me afecta?», «revisa lo de otras áreas».
 
-**Panorama**: «actualiza el panorama», y siempre al cerrar una sesión en el área (skill `sesion`, paso 10).
+**Panorama**: al cerrar una sesión en el área (skill `sesion`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
 
 Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, eso es `sesion` o `consulta`, no esta skill.
 
@@ -29,7 +29,7 @@ Por los niveles de la sección 12 de `convenciones`, sin saltarse ninguno:
 4. La búsqueda de líneas `Afecta a:` y `Cuestiona a:` de toda la raíz que nombren un proyecto del área, como al abrir sesión.
 5. Para «otras áreas», de cada una: el bloque `Proyectos` de su `area.md` y, de lo que toque a esta área, sus decisiones y el cuerpo de sus entregables `vigentes`. Nada más: `sesiones.md`, `taller/`, `fuentes/` y lo restringido de otra área no se leen, igual que para cualquier persona de fuera.
 
-Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice `sesion` en «Sin carpeta: solo lectura», y el Panorama no se escribe: se guarda como nota en la cola del tablero para la siguiente sesión con la carpeta.
+Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice `sesion` en «Sin carpeta: solo lectura», y el Panorama no se escribe: se guarda como nota del área en la cola del tablero, con la forma que dice `sesion` ahí (`area` en lugar de `proyecto`), y la siguiente sesión del dueño en cualquier proyecto del área lo enseña al abrir.
 
 Si quien pregunta es dueño del área, de sus propios proyectos se puede leer también `sesiones.md`. Lo restringido se trata como dice la sección 1 de `convenciones`: si no se puede leer, se dice qué es y de quién, y ahí se para.
 
@@ -62,11 +62,11 @@ Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la 
 
 ## Escribir el Panorama
 
-Al cerrar una sesión en el área, o cuando el dueño lo pide, se reescribe la sección `## Panorama` de `<area>/area.md`, entre `## Proyectos` y `## Quién participa`:
+Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<area>/area.md`, entre `## Proyectos` y `## Quién participa`:
 
 ```markdown
 ## Panorama
-2026-10-15 · Comercial cerró la propuesta de Smile Pill y abrió dos leads por canal. Lo que preocupa: el pipeline no tiene fecha de seguimiento en tres de cinco oportunidades, y la tesis de posicionamiento lleva seis semanas en borrador.
+2026-10-15 · Comercial cerró la propuesta de Lumbre y abrió dos leads por canal. Lo que preocupa: el pipeline no tiene fecha de seguimiento en tres de cinco oportunidades, y la tesis de posicionamiento lleva seis semanas en borrador.
 ```
 
 Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
@@ -88,7 +88,7 @@ Además de las prohibiciones de `convenciones`:
 
 **Respuesta:**
 
-> Comercial va hacia vender el método a organizaciones de 10 a 50 personas en México. En las últimas dos semanas cerró la propuesta de Smile Pill (decisión del 2026-10-02) y abrió dos leads por canal; lo que preocupa es que la tesis de posicionamiento lleva seis semanas en borrador y de ella dependen las propuestas.
+> Comercial va hacia vender el servicio a organizaciones de 10 a 50 personas. En las últimas dos semanas cerró la propuesta de Lumbre (decisión del 2026-10-02) y abrió dos leads por canal; lo que preocupa es que la tesis de posicionamiento lleva seis semanas en borrador y de ella dependen las propuestas.
 >
 > - Prospección: en curso; tres de cinco oportunidades sin fecha de seguimiento.
 > - Posicionamiento: parado desde el 2026-09-03; espera tu revisión de la tesis.
@@ -96,5 +96,5 @@ Además de las prohibiciones de `convenciones`:
 > Un cuestionamiento abierto: Tecnología cuestionó el 2026-10-12 la decisión `comercial/posicionamiento#2026-09-03` porque el precio no cubre el costo de la infraestructura de la fase 2. Espera tu respuesta.
 >
 > Dos hallazgos:
-> 1. La propuesta de Madema reescribe un caso de negocio que ya existe vigente en `clientes/smile-pill/entregables/business-case.md`. «abre sesión en clientes/madema y reutiliza el caso de negocio de Smile Pill».
+> 1. La propuesta de Arcadia reescribe un caso de negocio que ya existe vigente en `clientes/lumbre/entregables/caso-de-negocio.md`. «abre sesión en clientes/arcadia y reutiliza el caso de negocio de Lumbre».
 > 2. La decisión `comercial/prospeccion#2026-10-12` sobre comisiones no dice qué se descartó. «abre sesión en comercial/prospeccion y completa lo descartado en una decisión nueva».

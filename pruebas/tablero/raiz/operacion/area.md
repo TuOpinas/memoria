@@ -11,3 +11,6 @@ actualizado: 2026-10-01
 ## Proyectos
 
 - `soporte/` — el soporte a clientes
+
+## Quién participa
+Dueño: Ana Prueba

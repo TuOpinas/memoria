@@ -85,23 +85,20 @@ fijar. No pueden contradecir `metodo.md`; si alguna lo hace, manda `metodo.md`.]
 
 ## Cómo conectarte
 
-Una vez, cada quien, tres minutos.
+Una vez, cada quien, cinco minutos.
 
 **1. Crea tu proyecto** en Claude con el nombre de tu área: "[Organización] · [tu área]".
 Uno por persona, no uno para todos.
 
-**2. Instala el plugin.** Escríbele estas dos líneas, una y luego la otra:
-
-    /plugin marketplace add TuOpinas/memoria
-    /plugin install memoria@memoria-marketplace
-
-Después, en `/plugin`, pestaña Marketplaces, elige `memoria-marketplace` y activa la
-actualización automática: así cada versión nueva del método te llega sola al abrir sesión.
-Si la organización ya lo distribuye a todos, te saltas este paso.
+**2. Instala el plugin.** En la app de Claude, abre Customize → Plugins → Add marketplace,
+escribe `TuOpinas/memoria` e instala `memoria`. Es público: no hace falta pedir acceso.
+Cuando salga una versión nueva, el botón Update del marketplace la trae; si la
+organización ya lo distribuye a todos, te saltas este paso. (En Claude Code, en la
+terminal: `/plugin marketplace add TuOpinas/memoria` y `/plugin install memoria@memoria-marketplace`.)
 
 **3. Conecta esta carpeta completa**, la que tiene dentro `guia.md` y `metodo.md`. No la
 de tu área: la IA necesita poder mirar en cualquiera para decirte qué se sabe ya y qué
-decisión de otra te afecta. Se elige al crear el proyecto y no se puede cambiar después.
+decisión de otra te afecta. Se añade al proyecto o a la conversación con «+».
 
 **4. Compruébalo.** Escribe «abre sesión en [un proyecto de tu área]». Tiene que ponerte
 al día y proponerte en qué trabajar. No hay nada que pegar en las instrucciones del
@@ -201,6 +198,8 @@ actualizado: 2026-09-01
 ## Quién participa
 Dueño: Marta Ruiz
 ```
+
+Sin `## Panorama`: esa sección la crea la skill `director` al cerrar la primera sesión en el área, entre `Proyectos` y `Quién participa`.
 
 **3. La fila del área en la tabla de `guia.md`**, con su dueño, su cuenta y quién la lee. La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
 

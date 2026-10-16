@@ -32,7 +32,7 @@ def rel(p):
 
 def cabecera(path):
     try:
-        txt = open(path, encoding="utf-8", errors="replace").read()
+        txt = open(path, encoding="utf-8-sig", errors="replace").read()
     except OSError:
         return None, ""
     if not txt.startswith("---\n"):

@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.0 · huella 9fbca12 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.0 · huella 9294290 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -54,7 +54,9 @@ La cuenta de cada dueño queda escrita junto a su nombre en `guia.md`. Eso es lo
 
 Se trabaja en una raíz a la vez: con más de una conectada, antes de leer o escribir se pregunta en cuál, cada escritura dice en qué raíz se hace y cambiar de raíz se anuncia. Nada que se escriba en una raíz usa hechos de otra, ni del repo del plugin, salvo por un traspaso que la persona pide y confirma pieza a pieza; y el repo del plugin no guarda hechos de ninguna organización. Cómo es un traspaso y dónde vive el registro de una migración lo dice `raices.md`, junto a este archivo, que se lee con más de una raíz conectada, cuando se pide un traspaso y al migrar.
 
-### Permisos en Drive
+### Permisos en la carpeta compartida
+
+Valen para cualquier sistema de carpetas (Drive, OneDrive, iCloud…); el ejemplo de siempre es Drive, donde el acceso limitado se pone desde la web.
 
 - Lectura de toda la raíz para todo el equipo, salvo lo restringido.
 - Escritura en la carpeta de un área solo para su dueño y las personas que él designe.
@@ -122,7 +124,7 @@ RAIZ/
 
 Tres niveles: área, proyecto, carpeta del proyecto. Un cuarto nivel significa que ahí había dos proyectos, con una excepción: dentro de `entregables/`, `taller/` y `fuentes/` se permite **un** nivel de agrupación cuando hay material suficiente para que la lista deje de leerse; el nombre de la subcarpeta sigue la convención de nombres y no lleva número de fase. Antes de crearla vale la pena probar con el asunto por delante del nombre del archivo, que agrupa igual en el listado y no añade nivel. `restringido/` no admite ninguno: es plano.
 
-`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su dueño y su cuenta, quién responde por el contexto, quién administra la carpeta compartida, las reglas propias de la casa y la receta para conectarse. Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
+`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su dueño y su cuenta, quién responde por el contexto, quién administra la carpeta compartida, las reglas propias de la casa y la receta para conectarse. Su título es «<Organización> · esta carpeta», y **el nombre de la organización**, el que usan el aviso de arranque y el tablero, es lo que va antes del «·». Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
 
 ### Los archivos de `base/`
 
@@ -137,7 +139,7 @@ Los tres primeros se leen a demanda, no al abrir sesión: `glosario.md` cuando a
 
 ### Las premisas
 
-Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Las decide quien dirige la organización, las escribe el responsable de contexto en su sesión, y viven en `base/premisas.md`, que es un registro: se añaden líneas y las que hay no se editan.
+Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Las decide quien dirige la organización, las escribe el responsable de contexto en su sesión («registra como premisa que…», skill `sesion`), y viven en `base/premisas.md`, que es un registro: se añaden líneas y las que hay no se editan.
 
 ```markdown
 ## Premisas
@@ -178,7 +180,7 @@ Dueño: [nombre y apellido]
 [Otras personas y su papel]
 ```
 
-`Panorama` es el resumen ejecutivo del área, con la fecha en que se escribió. Lo escribe la skill `director` al cerrar una sesión en esa área, se reescribe entero cada vez y no lleva historia: lo que pasó está en los registros de los proyectos. Si no existe, el área todavía no tiene resumen; no se escribe a mano.
+`Panorama` es el resumen ejecutivo del área, con la fecha en que se escribió. Lo escribe la skill `director` al cerrar una sesión en esa área, o cuando su dueño pide «actualiza el panorama»; se reescribe entero cada vez y no lleva historia: lo que pasó está en los registros de los proyectos. Si no existe, el área todavía no tiene resumen; no se escribe a mano.
 
 El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. Un proyecto cerrado ocupa solo su línea, sin desglose. Lo escriben el cierre de sesión y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de esas líneas son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
 
@@ -291,7 +293,7 @@ Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media líne
 
 Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`, y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
 
-**Identificador de una decisión.** Cada entrada se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
+**Identificador de una entrada.** Cada entrada de `decisiones.md`, decisión o cuestionamiento, se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua; los cuestionamientos cuentan en la misma serie. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Una entrada sin fecha válida en el encabezado no tiene identificador y no se puede citar. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
 
 **Cuestionamientos.** Cualquiera puede cuestionar una decisión de otro proyecto o una premisa. El cuestionamiento se escribe en el `decisiones.md` de un proyecto propio, desde una sesión de quien cuestiona, porque nadie escribe en el área de otro:
 
@@ -302,7 +304,7 @@ Por qué: … (qué no cuadra, con su dato o su fuente)
 Cuestiona a: compras/automatizacion-ordenes#2026-08-29
 ```
 
-`Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el dueño de lo cuestionado registra en su proyecto una decisión con `Responde a: <proyecto de quien cuestionó>#<fecha del cuestionamiento>`, que confirma lo decidido o lo reemplaza. Una premisa la responde el responsable de contexto, con una premisa nueva o con una entrada en el `decisiones.md` que él elija. Un cuestionamiento no es una decisión, aunque viva en el mismo registro: no se cuenta como tal ni se cita como tal.
+`Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el dueño de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza a P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
 
 Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su dueño con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
@@ -374,7 +376,7 @@ Las claves van sin acentos ni eñes.
 
 Minúsculas, guiones en vez de espacios, sin acentos ni eñes, sin fechas ni números de versión, sin números de fase ni de etapa. `flujo-aprobacion.md`, no `Flujo de Aprobación v2 FINAL.md` ni `fase1-flujo-aprobacion.md`.
 
-El nombre de un archivo es estable durante toda su vida. La versión la lleva Drive, el estado lo lleva la cabecera y el orden de las fases lo cuenta `proyecto.md`.
+El nombre de un archivo es estable durante toda su vida. El historial de versiones lo lleva la carpeta compartida (Drive, OneDrive…), el estado lo lleva la cabecera y el orden de las fases lo cuenta `proyecto.md`.
 
 ### El nombre de una carpeta compartida
 
@@ -434,7 +436,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
 4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones son de la sesión del responsable de contexto, que escribe `guia.md` y `base/` y pone al día `metodo.md` (sección 11).
-5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión (skill `director`), y `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión.
+5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos de las áreas de la cuenta: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en las áreas de otra cuenta.
 6. No leer `sesiones.md`, `taller/`, `fuentes/` ni lo restringido de otra área. Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
@@ -520,7 +522,7 @@ Anexo del contrato (`convenciones`, secciones 11 y 13). Lo leen `nuevo` al monta
 
 El método se actualiza publicando una versión nueva del plugin. La primera línea legible de `metodo.md` lleva la versión y una huella de su contenido, que escribe `build-metodo.sh`: cualquier cambio de texto la cambia aunque el número no cambie. Al abrir sesión se compara esa línea en la raíz con la del `metodo.md` del plugin. Si la raíz está atrasada y quien abre es su responsable de contexto, la sesión copia el `metodo.md` del plugin sobre el de la raíz sin preguntar, sin tocar nada más, y lo dice en una línea; para los demás no pasa nada y se pondrá al día en la próxima sesión del responsable. Si el atrasado es el plugin de quien abre, se le dice que lo actualice. Nadie tiene que acordarse de copiarlo. Nadie edita `metodo.md` dentro de la carpeta de una organización.
 
-Dos scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que el contrato declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
+Tres scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que el contrato declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
 
 ### Montaje en Claude
 

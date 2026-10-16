@@ -40,6 +40,10 @@ const path = require('path');
       await p.screenshot({ path: path.join(out, `${etiqueta}-${nombre}.png`) });
       await p.keyboard.press('Escape');
     }
+    await p.goto(url + '#entregables'); await p.waitForTimeout(400);
+    await p.click('[data-ent-open]'); await p.waitForTimeout(250);
+    await p.click('.modal-f [data-go-proj]'); await p.waitForTimeout(300);
+    if(!(await p.evaluate(() => location.hash.startsWith('#p-') && !document.querySelector('.modal')))) errores.push(`${etiqueta}: un enlace dentro de una ventana no navega`);
     await p.goto(url + '#ayuda'); await p.waitForTimeout(300);
     await p.evaluate(() => { const d = document.getElementById('hc-det'); if(d) d.open = true; });
     await p.fill('#hc-q', 'restringido'); await p.waitForTimeout(150);

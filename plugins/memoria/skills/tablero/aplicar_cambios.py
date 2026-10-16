@@ -11,10 +11,15 @@ La cola ("cambios" en la base de la página) trae cinco tipos:
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
 
-Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> [--dry-run]
+Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> --cuenta <correo> [--dry-run]
+Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo: la puesta
+al día corre con la cuenta de quien la lanza y nadie escribe en el área de otro (contrato, prohibición 4).
+Sin --cuenta no se aplica nada.
 Salida: JSON por stdout con "aplicados" (ids que ya están en la carpeta y se pueden borrar
 de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual), "errores" (no se pudo escribir:
-se quedan en la cola y se reintentan en la próxima corrida) y "para_sesion" (lo que no es una fecha).
+se quedan en la cola y se reintentan en la próxima corrida), "para_sesion" (lo que no es una fecha,
+de las áreas de la cuenta) y "para_su_dueno" (todo lo de áreas de otra cuenta: se queda en la cola
+hasta que su dueño ponga al día su tablero o cierre una sesión; no se toca).
 Una fecha aplicada no toca la fecha «actualizado» de la cabecera: es un cambio mecánico, no trabajo
 sobre el proyecto, y moverla escondería en el tablero los plazos vencidos de los demás pasos.
 """
@@ -23,6 +28,29 @@ import sys, re, json, pathlib
 RAIZ = pathlib.Path(sys.argv[1])
 ENTRADA = pathlib.Path(sys.argv[2])
 DRY = "--dry-run" in sys.argv
+CUENTA = (sys.argv[sys.argv.index("--cuenta") + 1] if "--cuenta" in sys.argv and len(sys.argv) > sys.argv.index("--cuenta") + 1 else "").strip().lower()
+
+def mis_areas():
+    """Slugs de las áreas de guia.md cuya columna Cuenta lleva el correo de --cuenta."""
+    try:
+        guia = (RAIZ / "guia.md").read_text(encoding="utf-8-sig")
+    except OSError:
+        return set()
+    m = re.search(r"^## Áreas\s*\n(.*?)(?=^## |\Z)", guia, re.S | re.M)
+    if not m or not CUENTA:
+        return set()
+    out, primera = set(), True
+    for l in m.group(1).split("\n"):
+        if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
+            continue
+        if primera:
+            primera = False; continue
+        celdas = [c.strip() for c in l.strip().strip("|").split("|")]
+        if len(celdas) >= 4 and CUENTA in celdas[3].lower():
+            out.add(celdas[0].strip("`").rstrip("/"))
+    return out
+
+MIAS = mis_areas()
 
 def cargar():
     docs = []
@@ -91,9 +119,15 @@ def aplicar_fecha(c):
             fh.write(texto_nuevo)
     return "aplicados", f"{linea.strip()}  →  {nueva.strip()}"
 
-rep = {"aplicados": [], "sin_match": [], "errores": [], "para_sesion": [], "dry_run": DRY}
+rep = {"aplicados": [], "sin_match": [], "errores": [], "para_sesion": [], "para_su_dueno": [],
+       "cuenta": CUENTA, "mis_areas": sorted(MIAS), "dry_run": DRY}
 for c in cargar():
     t = c.get("tipo")
+    area = (c.get("proyecto") or "").partition("--")[0] or c.get("area") or ""
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and (not CUENTA or (area and area not in MIAS)):
+        rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
+                                     "detalle": "falta --cuenta" if not CUENTA else f"el área {area or '?'} no es de {CUENTA}"})
+        continue
     if t == "fecha":
         try:
             estado, detalle = aplicar_fecha(c)

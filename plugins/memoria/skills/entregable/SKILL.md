@@ -35,7 +35,7 @@ Tres comprobaciones, resueltas con el usuario en dos o tres líneas, no con un i
 
 **¿Quién lo va a leer?** Un documento para el equipo del proyecto y uno para el comité de dirección no se escriben igual. Si es para fuera del proyecto, el estilo se aplica con más rigor y se asume que el lector no conoce el contexto.
 
-**¿De dónde sale cada cosa?** Toda afirmación no obvia tiene que poder rastrearse a un archivo de `basado_en`. Si algo importante viene solo de la conversación de hoy, se guarda primero en `fuentes/` como nota y luego se cita. Lo que solo existe en el chat se pierde. Toda cifra lleva fecha o fuente en el mismo párrafo.
+**¿De dónde sale cada cosa?** Toda afirmación no obvia tiene que poder rastrearse a un archivo de `basado_en`. Si algo importante viene solo de la conversación de hoy, se guarda primero en `taller/` como nota (es trabajo del proyecto, no material de fuera) y luego se cita. Lo que solo existe en el chat se pierde. Toda cifra lleva fecha o fuente en el mismo párrafo.
 
 **¿Hay algo que no todos deban ver?** Si el material que voy a usar trae indicios de información confidencial (la lista está en `convenciones`, sección 1, «Material sensible»), lo digo y propongo dos cosas: llevar ese material a `restringido/` del proyecto con su fila en el `enlaces.md` público, y dejar en el entregable solo lo agregado o anonimizado que sí puede leer todo el equipo. El usuario decide si es confidencial. Un entregable es superficie pública: lo que entra en él lo lee toda la organización.
 
@@ -51,7 +51,7 @@ El `taller/` del propio proyecto sí se cita en `basado_en`: es de donde sale el
 
 Un entregable restringido puede citar en `basado_en` lo que quiera de lo que sí lee todo el equipo. Uno que lee todo el equipo no cita nada restringido, ni por su ruta ni contando lo que dice: la cita va en una sola dirección. Lo aprendido en una carpeta restringida sale reescrito, como entregable propio de un proyecto que lee todo el equipo y sin los datos ni los nombres de donde salió.
 
-La lista vacía `[]` solo se admite para material adoptado, que ya existía antes de entrar en la estructura y del que no hay forma de saber de dónde salió. Un entregable escrito aquí siempre tiene fuentes, aunque sea una sola nota en `fuentes/`. Un `[]` lo detiene `revisar` antes de publicar.
+La lista vacía `[]` solo se admite para material adoptado, que ya existía antes de entrar en la estructura y del que no hay forma de saber de dónde salió. Un entregable escrito aquí siempre tiene fuentes, aunque sea una sola nota en `taller/`. Un `[]` lo detiene `revisar` antes de publicar.
 
 Un entregable a medias vive en `entregables/` con `estado: borrador`, no en otra carpeta. El estado es lo que avisa a los demás de que todavía no se puede consumir.
 

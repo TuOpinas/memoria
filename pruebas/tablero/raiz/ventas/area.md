@@ -22,3 +22,6 @@ Clientes, propuestas y precios.
 
 ## Panorama
 2026-10-03 · Ventas tiene una sola cuenta grande abierta, Cliente Uno, con la propuesta enviada en dos fases y una respuesta que no llega. Lo que preocupa: el plazo de la llamada venció y Soporte cuestionó que la fase 2 quede sin precio.
+
+## Quién participa
+Dueño: Ana Prueba

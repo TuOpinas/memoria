@@ -11,3 +11,6 @@ actualizado: 2026-10-01
 ## Proyectos
 
 - `nomina/` — la nómina del equipo
+
+## Quién participa
+Dueño: Beto Prueba
