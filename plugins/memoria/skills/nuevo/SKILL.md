@@ -109,7 +109,7 @@ proyecto: el plugin aplica el método solo en cuanto ve esta carpeta, y sabe cu�
 área por tu cuenta en la tabla de arriba.
 
 **5. Si quieres ver la carpeta entera sin abrirla**, escribe «monta el tablero»: una página
-tuya que se pone al día cada mañana. Es tuyo; si lo compartes, hazlo desde su menú.
+tuya que se pone al día cada vez que cierras una sesión, con la ayuda dentro. Es tuyo; si lo compartes, hazlo desde su menú.
 
 ## Versión del método
 La primera línea de `metodo.md` dice cuál corre esta carpeta. Se pone al día sola la

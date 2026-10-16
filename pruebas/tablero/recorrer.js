@@ -13,6 +13,7 @@ const path = require('path');
     ['proyecto', '#p-ventas--cuentas-t-estado'], ['acciones', '#p-ventas--cuentas-t-pasos'],
     ['proy-entregables', '#p-ventas--cuentas-t-entregables'], ['proy-decisiones', '#p-ventas--cuentas-t-decisiones'], ['bitacora', '#p-ventas--cuentas-t-bitacora'],
     ['proy-restringido', '#p-ventas--precios'],
+    ['ayuda', '#ayuda'], ['ayuda-pasar-al-dia', '#ayuda-ponerse-al-dia'], ['ayuda-frases', '#ayuda-frases'], ['ayuda-carpeta', '#ayuda-ordenada'],
   ];
   // ventanas y controles: se abren desde la vista indicada
   const acciones = [
@@ -20,6 +21,7 @@ const path = require('path');
     ['entregable', '#entregables', '[data-ent-open]'], ['estado', '#p-ventas--cuentas-t-estado', '.est-btn'],
     ['corregir-paso', '#p-ventas--cuentas-t-pasos', '.step-x'], ['fecha', '#p-ventas--cuentas-t-pasos', '[data-edit-due]'],
     ['decision', '#decisiones', '[data-dec-open]'],
+    ['ayuda-desde-estado', '#p-ventas--cuentas-t-estado', '.hq'],
   ];
   async function pasada(pagina, etiqueta, opciones){
     const ctx = await b.newContext(opciones);
@@ -38,6 +40,13 @@ const path = require('path');
       await p.screenshot({ path: path.join(out, `${etiqueta}-${nombre}.png`) });
       await p.keyboard.press('Escape');
     }
+    await p.goto(url + '#ayuda'); await p.waitForTimeout(300);
+    await p.evaluate(() => { const d = document.getElementById('hc-det'); if(d) d.open = true; });
+    await p.fill('#hc-q', 'restringido'); await p.waitForTimeout(150);
+    const n = await p.$$eval('#hc-list .hc-i', els => els.length);
+    if(!(n > 0 && n < 18)) errores.push(`${etiqueta}: la búsqueda de la ayuda no filtra (${n} artículos)`);
+    await p.click('#hc-list .hc-i'); await p.waitForTimeout(200);
+    if(!(await p.evaluate(() => location.hash.startsWith('#ayuda-')))) errores.push(`${etiqueta}: un artículo de la ayuda no abre`);
     await ctx.close();
   }
   await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });

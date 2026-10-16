@@ -128,9 +128,11 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 
 **9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o cambia el año, se renombra con el año (`sesiones-2026.md`, o `sesiones-2026-2.md` si ya hay uno de ese año) y se abre uno nuevo con su cabecera. Sin preguntar.
 
+**10. El tablero, al día.** Si la cuenta tiene tablero (el que se buscó al abrir), se pone al día después de escribir todo lo anterior, para que muestre lo que esta sesión dejó en la carpeta: es «Sincronizar» de la skill `tablero`, con el tablero entero y no solo este proyecto. Se hace aunque la sesión no haya tocado la cola, y con cada tablero de la cuenta si tiene los dos modos. Si la computadora o la herramienta de artifacts no responden, se dice en una línea y la sesión queda cerrada igual: el tablero se pondrá al día en el próximo cierre o con «sincroniza el tablero».
+
 ## Qué respondo al terminar
 
-Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Nada más. El resumen largo ya está en los archivos.
+Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Si el tablero se puso al día, media línea; si no se pudo, por qué. Nada más. El resumen largo ya está en los archivos.
 
 ---
 

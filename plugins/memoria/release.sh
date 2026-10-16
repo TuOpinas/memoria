@@ -81,7 +81,7 @@ echo "Publicada la versión $VERSION en el repo. Lo que no hace este script:"
 echo "  1. Commitear y pushear. El push lo hace una persona desde su máquina."
 echo "  2. Copiar metodo.md a cada raíz: se copia sola la próxima vez que su responsable de contexto abra sesión."
 echo "     Compruébalo con:  head -1 plugins/memoria/metodo.md <raiz>/metodo.md"
-[ -n "$TABLERO_CAMBIO" ] && echo "  2b. El tablero cambió: la tarea diaria de cada tablero republica la página sola; si no, «actualiza el tablero»."
+[ -n "$TABLERO_CAMBIO" ] && echo "  2b. El tablero cambió: cada tablero republica su página en la siguiente puesta al día (al cerrar sesión o al sincronizar); si no, «actualiza el tablero»."
 [ -n "$CONTRATO_CAMBIO" ] && echo "  3. El contrato cambió: pasa verificar.sh por cada raíz antes de darla por al día."
 [ -n "$BLOQUE_CAMBIO" ] && echo "  4. El bloque de instrucciones cambió. El hook de arranque lo inyecta solo al actualizar el plugin."
 exit 0
