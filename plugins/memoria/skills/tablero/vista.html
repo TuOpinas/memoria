@@ -509,6 +509,24 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
   .hc-flujo-g .carpeta{order:0}.hc-flujo-g .ida{order:1}.hc-flujo-g .tablero{order:2}.hc-flujo-g .vuelta{order:3}
   .hc-flecha{transform:rotate(90deg);width:28px}
 }
+/* diagrama de las piezas: carpeta, computadora, Claude con el plugin y tablero, en fila; se apila cuando el artículo es estrecho */
+.hc-piezas{margin:4px 0;display:grid;gap:10px}
+.hc-piezas-g{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:stretch}
+.hc-pieza{background:var(--surface);border:1.5px solid var(--ink);border-radius:10px;padding:12px;display:grid;align-content:start;gap:4px}
+.hc-pieza b{font:700 16px/1.15 var(--f-display);color:var(--ink)}
+.hc-pieza small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.hc-pieza.compu{border-color:var(--warn-fill)}
+.hc-pieza.claude{border-color:var(--signal);background:var(--signal-dim)}
+.hc-pieza.tablero{border-style:dashed}
+.hc-piezas-g .hc-flecha{align-self:center;width:28px}
+.hc-piezas-v{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13.5px;line-height:1.4}
+.hc-piezas-v span{color:var(--muted);font-size:12.5px}
+.hc-piezas-v .hc-flecha{transform:rotate(90deg);width:28px}
+.hc-piezas figcaption{font-size:13px;color:var(--muted)}
+@container (max-width:620px){
+  .hc-piezas-g{grid-template-columns:1fr}
+  .hc-piezas-g .hc-flecha{transform:rotate(90deg);justify-self:center}
+}
 .hc-sig{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;border-top:1px solid var(--rule-soft);padding-top:12px}
 @media (max-width:760px){
   .hc{grid-template-columns:1fr;gap:16px}
@@ -1567,6 +1585,22 @@ function ayudaArts(){
       <dt>Lo de otras áreas</dt><dd>${F("¿qué de otras áreas me afecta?")} reúne lo que otras áreas decidieron o publicaron que te toca, y te ayuda a cuestionarlo si hace falta.</dd>
     </dl>
     <p class="hc-nota">El director solo escribe el panorama. Decisiones, pasos y estados siguen siendo cosa de la sesión de cada proyecto.</p>`},
+  {g:"Cómo funciona", id:"piezas", t:"Las piezas y cómo se conectan", h:`
+    <p>Son cuatro piezas, y solo la primera es la memoria. Las demás la leen, la escriben o la enseñan.</p>
+    <figure class="hc-piezas" aria-label="Las piezas de la memoria: la carpeta, tu computadora, Claude con el plugin y el tablero">
+      <div class="hc-piezas-g">
+        <div class="hc-pieza"><b>La carpeta</b><small>En Drive o en otra nube de la organización. Archivos de texto que se abren sin Claude. Lo que está escrito aquí es lo que vale.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza compu"><b>Tu computadora</b><small>Tiene la carpeta sincronizada y la app de Claude abierta. Por ella Claude lee y escribe.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza claude"><b>Claude, con el plugin</b><small>Lee por niveles y escribe en tus áreas con las reglas del método. El plugin se actualiza solo con cada versión.</small></div>
+        <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h36M32 2l7 5-7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="hc-pieza tablero"><b>El tablero</b><small>Una página de tu cuenta. Se pone al día al cerrar cada sesión o con su botón.</small></div>
+      </div>
+      <div class="hc-piezas-v"><svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M42 7H6M12 2L5 7l7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Y de vuelta</b><br><span>Lo que marcas en el tablero espera en su cola; la siguiente puesta al día o la siguiente sesión del proyecto lo escribe en la carpeta.</span></div></div>
+      <figcaption>Sin la computadora, desde el teléfono o la web, Claude puede leer la carpeta en Drive, pero no escribe nada en ella.</figcaption>
+    </figure>
+    <p>Si una pieza falla, las demás siguen: con la computadora apagada la carpeta sigue intacta y el tablero enseña lo último que tenía; sin el tablero, la memoria funciona igual. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día el tablero ›</button></p>`},
   {g:"Cómo funciona", id:"ordenada", t:"Cómo está ordenada la carpeta", h:`
     <p>Un área por cada parte de la organización, con un dueño con nombre y apellido. Dentro de cada área, un proyecto por cada trabajo. Todos los proyectos tienen las mismas piezas, así que quien sabe moverse en uno sabe moverse en todos.</p>
     <div class="hc-arbol"><ul>
