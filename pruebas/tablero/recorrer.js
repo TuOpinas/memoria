@@ -43,6 +43,8 @@ const path = require('path');
     await p.goto(url + '#'); await p.waitForTimeout(400);
     const voz = await p.evaluate(() => ({ brief: !!document.querySelector('.brief p'), lineas: document.querySelectorAll('.ar-ln').length, barras: document.querySelectorAll('.ar .spark').length }));
     if(!(voz.brief && voz.lineas >= 2 && voz.barras >= 1)) errores.push(`${etiqueta}: Inicio no lleva el párrafo de la organización, las líneas de estado o las barras de actividad (${JSON.stringify(voz)})`);
+    const atraso = await p.evaluate(() => [...document.querySelectorAll('.stale')].some(x => /La carpeta usa todavía la versión 1\.11\.0/.test(x.textContent)));
+    if(!atraso) errores.push(`${etiqueta}: Inicio no avisa de que la carpeta usa una versión anterior del método`);
     await p.goto(url + '#p-ventas--cuentas-t-resumen'); await p.waitForTimeout(400);
     const donde = await p.evaluate(() => [...document.querySelectorAll('.brief p')].map(x=>x.textContent).join(' | '));
     if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);

@@ -562,7 +562,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.4"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.5"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1222,7 +1222,7 @@ function renderRoot(){
   const org = META ? META.organizacion : "";
   const modo = META && META.modo==="completo" ? `<span class="pill draft" ${tip("Tablero completo: incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».")}>Completo · no compartir</span>` : "";
   head.innerHTML = `<h1>${esc(org||"Tablero")}</h1>
-    <div class="meta">${modo}${META?`<span ${tip("La versión del método que usa esta carpeta.")}>Versión <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
+    <div class="meta">${modo}${META?`<span ${tip("La versión del método: la de esta página y la de las reglas escritas en la carpeta.")}>Versión <b>${esc(VERSION_TABLERO)}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero solo funciona dentro de Claude. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
   visita();
   const all = pendientes(), t = today(), nLate = all.filter(i=>i.f && i.f<t).length, nSoon = all.filter(i=>i.f && i.f>=t && i.f<=addDays(7)).length;
@@ -1361,11 +1361,14 @@ function syncBtn(){
   const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"") + (!SYNC_STATE && reciente?" ok":"");
   return `<button type="button" class="sync-ico${cls}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora${pend?": hace falta":""}" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
 }
+const verMenor = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
   if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale" style="background:var(--signal-dim);color:var(--signal);border-color:var(--signal)"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.</span></div>`;
   if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>Hay instrucciones nuevas para la tarea que pone el tablero al día y cambiarlas pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero».</span></div>`;
+  // La carpeta puede ir detrás de la página: su metodo.md solo lo escribe quien lleva el contexto común, al abrir sesión o al sincronizar.
+  if(view.lvl === "root" && META.version_metodo && verMenor(META.version_metodo, VERSION_TABLERO)) out += `<div class="stale" style="background:var(--surface);color:var(--ink-soft);border-color:var(--rule)"><span>La carpeta usa todavía la versión <b>${esc(META.version_metodo)}</b> del método. Se pone al día sola cuando ${META.contexto_comun?`<b>${esc(META.contexto_comun)}</b>, que lleva el contexto común,`:"quien lleva el contexto común"} abra sesión o sincronice su tablero. Mientras tanto todo funciona igual.</span></div>`;
   if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale"><span>Esta página es la versión <b>${esc(VERSION_TABLERO)}</b> del tablero y el método instalado es la <b>${esc(META.version_tablero)}</b>. Para ponerlas a la par, dile a Claude con la carpeta conectada: «actualiza el tablero».</span></div>`;
   // Desde la 1.14 el tablero se pone al día al cerrar cada sesión de su dueño; la tarea diaria es opcional.
   // Sin tarea, pasar días sin ponerse al día es normal si nadie trabajó: se avisa con más margen y se dice cómo traer lo de otros.
