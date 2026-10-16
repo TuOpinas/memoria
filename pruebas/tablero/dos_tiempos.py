@@ -8,7 +8,7 @@ documentos que generar sobre la raíz; que la copia en público no trae nada res
 o con archivos de más se rechaza; que un inventario de otro modo se rechaza; y que el plan de subida solo
 propone lo que cambió.
 """
-import json, os, shutil, subprocess, sys, pathlib
+import json, os, re, shutil, subprocess, sys, pathlib
 
 GEN, PLAN, RAIZ, TRAB = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3]), pathlib.Path(sys.argv[4])
 fallos = 0
@@ -32,7 +32,7 @@ def docs(carpeta):
         if p.name == "indice.json":
             continue
         d = json.loads(p.read_text(encoding="utf-8"))
-        d.pop("sincronizado", None); d.pop("generado", None); d.pop("huella_raiz", None)
+        d.pop("sincronizado", None); d.pop("generado", None); d.pop("huella_raiz", None); d.pop("huellas", None)
         out[p.relative_to(carpeta).as_posix()] = d
     return out
 
@@ -113,16 +113,76 @@ ok(_est.get("huella_raiz") == json.loads((TRAB / "inv-completo.json").read_text(
 # la huella guardada vale solo si la versión del plugin, la tarea y «sin horario» siguen igual
 _g = TRAB / "guardada"; (_g / "meta").mkdir(parents=True, exist_ok=True)
 (_g / "meta" / "estado.json").write_text(json.dumps({"huella_raiz": "h1", "version_tablero": "9.9.9", "tarea": "trig_x", "tarea_manual": True}), encoding="utf-8")
-def _guard(*a): return subprocess.run([sys.executable, PLAN, "--guardada", _g, *a], capture_output=True, text=True).stdout.strip()
+def _guard(*a): return subprocess.run([sys.executable, PLAN, "--guardada", _g, *a], capture_output=True, text=True).stdout.split("\n")[0].strip()
 ok(_guard("--version", "9.9.9", "--tarea", "trig_x", "--manual") == "h1", "huella guardada: misma versión y misma tarea, vale")
 ok(_guard("--version", "9.9.10", "--tarea", "trig_x", "--manual") == "-", "huella guardada: con otra versión del plugin hay que regenerar")
 ok(_guard("--version", "9.9.9", "--tarea", "trig_x") == "-", "huella guardada: si la tarea pasó a tener horario, hay que regenerar")
 ok(_guard("--version", "9.9.9") == "-", "huella guardada: sin tarea, hay que regenerar")
-ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.strip() == "-", "huella guardada: con la base vacía (al montar), hay que regenerar")
+ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.split() == ["-", "-"], "huella guardada: con la base vacía (al montar), hay que regenerar")
 # la cola retenida llega a meta/estado
 (TRAB / "ret.json").write_text('["c9", "c3"]', encoding="utf-8")
 correr(TRAB / "copia-completo", TRAB / "dos-ret", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo", "--version", "prueba", "--cola-retenida", TRAB / "ret.json")
 ok(json.loads((TRAB / "dos-ret" / "meta" / "estado.json").read_text(encoding="utf-8")).get("cola_retenida") == ["c3", "c9"], "lo que la sincronización deja en la cola a propósito llega a meta/estado")
+
+# huella por proyecto: lo que no cambió no se trae y su documento sale de la base; el resultado es el mismo que rehacerlo todo
+for modo in ("completo", "publico"):
+    R3 = TRAB / f"raiz-inc-{modo}"; shutil.rmtree(R3, ignore_errors=True); shutil.copytree(RAIZ, R3)
+    def _inv(*extra):
+        r_ = subprocess.run([sys.executable, GEN, R3, "--inventario", "--modo", modo, *extra], capture_output=True, text=True)
+        return json.loads(r_.stdout)
+    def _gen(sal, s_, previos=None):
+        inv_p = TRAB / f"inv-inc-{modo}.json"; inv_p.write_text(json.dumps(s_["inventario"], ensure_ascii=False), encoding="utf-8")
+        cop = TRAB / f"copia-inc-{modo}"; shutil.rmtree(cop, ignore_errors=True)
+        for r_ in s_["leer"]:
+            (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(R3 / r_, cop / r_)
+        cop.mkdir(parents=True, exist_ok=True)
+        extra = ["--previos", previos] if previos else []
+        return subprocess.run([sys.executable, GEN, cop, sal, "--desde-inventario", inv_p, "--modo", modo, "--version", "prueba", *extra], capture_output=True, text=True)
+    def _volcar(sal, dest, envolver=False):
+        shutil.rmtree(dest, ignore_errors=True)
+        shutil.copytree(sal, dest, ignore=shutil.ignore_patterns("indice.json", "enfoque-candidatos.json"))
+        if envolver:   # ArtifactData a veces deja cada documento envuelto en «data»
+            for p_ in dest.rglob("*.json"):
+                p_.write_text(json.dumps({"data": json.loads(p_.read_text(encoding="utf-8")), "version": 3}), encoding="utf-8")
+    s0 = _inv(); _gen(TRAB / f"inc0-{modo}", s0)
+    _volcar(TRAB / f"inc0-{modo}", TRAB / f"base-inc-{modo}", envolver=(modo == "publico"))
+    hs = json.loads((TRAB / f"inc0-{modo}" / "meta" / "estado.json").read_text(encoding="utf-8")).get("huellas") or []
+    ok(len(hs) >= 2, f"{modo}: la generación guarda en meta/estado una huella por proyecto ({len(hs)})")
+    s1 = _inv("--sin-cambios", ",".join(hs))
+    ok(not any(r_.count("/") >= 2 for r_ in s1["leer"]), f"{modo}: sin cambios, el inventario solo pide guia.md, premisas y los area.md ({len(s1['leer'])} de {len(s0['leer'])})")
+    ok(s1["inventario"].get("fuera_reusar") is True and "fuera" not in s1["inventario"], f"{modo}: sin cambios, lo de fuera de la memoria también se reutiliza")
+    ok(len(json.dumps(s1["inventario"])) < len(json.dumps(s0["inventario"])), f"{modo}: el inventario reutilizando es más pequeño ({len(json.dumps(s1['inventario']))} frente a {len(json.dumps(s0['inventario']))} bytes)")
+    r1 = _gen(TRAB / f"inc1-{modo}", s1, TRAB / f"base-inc-{modo}")
+    a, b = docs(TRAB / f"inc0-{modo}"), docs(TRAB / f"inc1-{modo}")
+    dif = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+    ok(r1.returncode == 0 and not dif, f"{modo}: reutilizando la base sale lo mismo que rehaciéndolo todo" + (f" (difieren: {', '.join(dif[:4])}{r1.stderr[-200:]})" if dif or r1.returncode else ""))
+    # reescribir el Panorama de un área no obliga a rehacer sus proyectos; tocar la bitácora de uno, solo ese
+    am = next(R3.glob("*/area.md")); t_ = am.read_text(encoding="utf-8")
+    am.write_text(t_.replace("## Proyectos", "## Panorama\n2026-10-16 · Otro panorama de prueba.\n\n## Proyectos", 1) if "## Panorama" not in t_ else re.sub(r"(## Panorama\n)(.*?)(\n## )", r"\1 2026-10-16 · Otro panorama.\3", t_, count=1, flags=re.S), encoding="utf-8")
+    ses_ = sorted(p_ for p_ in R3.glob("*/*/sesiones.md") if p_.relative_to(R3).as_posix() in s0["leer"])[0]
+    ses_.write_text(ses_.read_text(encoding="utf-8") + "\n## 2026-08-02 · Una sesión más\nTrabajamos en: prueba.\n", encoding="utf-8")
+    s2 = _inv("--sin-cambios", ",".join(hs))
+    tocado_ = ses_.parent.relative_to(R3).as_posix()
+    pide = {r_.rsplit("/", 1)[0] for r_ in s2["leer"] if r_.count("/") >= 2}
+    pide = {"/".join(x.split("/")[:2]) for x in pide}
+    ok(pide == {tocado_}, f"{modo}: con un proyecto tocado y el Panorama reescrito, solo se traen los archivos de ese proyecto" + ("" if pide == {tocado_} else f" (pide {sorted(pide)})"))
+    r2 = _gen(TRAB / f"inc2-{modo}", s2, TRAB / f"base-inc-{modo}")
+    subprocess.run([sys.executable, GEN, R3, TRAB / f"inc2-directo-{modo}", "--modo", modo, "--version", "prueba"], capture_output=True, text=True)
+    a, b = docs(TRAB / f"inc2-directo-{modo}"), docs(TRAB / f"inc2-{modo}")
+    dif = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+    ok(r2.returncode == 0 and not dif, f"{modo}: con un proyecto tocado, el resultado es el mismo que generar en la computadora" + (f" (difieren: {', '.join(dif[:4])}{r2.stderr[-200:]})" if dif or r2.returncode else ""))
+    # si la base no tiene lo que se pide reutilizar, la generación lo dice y pide el inventario entero
+    falta_ = TRAB / f"base-inc-{modo}" / "proyectos" / f"{s2['inventario']['reusar'][0]}.json"; falta_.unlink()
+    r3 = _gen(TRAB / f"inc3-{modo}", s2, TRAB / f"base-inc-{modo}")
+    ok(r3.returncode == 5 and "sin --sin-cambios" in r3.stderr, f"{modo}: si a la base le falta un proyecto que se reutiliza, se para con código 5 y dice qué hacer")
+    r4 = _gen(TRAB / f"inc4-{modo}", s2)
+    ok(r4.returncode == 5, f"{modo}: sin --previos, un inventario que reutiliza se rechaza")
+_g2 = TRAB / "guardada2"; (_g2 / "meta").mkdir(parents=True, exist_ok=True)
+(_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "huellas": ["aa", "bb"]}}), encoding="utf-8")
+_o = lambda *a: subprocess.run([sys.executable, PLAN, "--guardada", _g2, *a], capture_output=True, text=True).stdout.split("\n")
+ok(_o("--version", "9.9.9")[:2] == ["h1", "aa,bb"], "huellas guardadas: con la misma versión salen la huella de la raíz y las de cada proyecto")
+ok(_o("--version", "9.9.9", "--tarea", "trig_y")[:2] == ["-", "aa,bb"], "huellas guardadas: si cambió la tarea hay que regenerar, pero los proyectos se reutilizan")
+ok(_o("--version", "9.9.10")[:2] == ["-", "-"], "huellas guardadas: con otra versión del plugin no se reutiliza nada")
 
 # plan de subida: con la base igual a la salida, solo meta/estado; con un proyecto cambiado, ese y meta; lo que sobra se borra
 salida = TRAB / "dos-completo"

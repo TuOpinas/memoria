@@ -51,8 +51,14 @@ TAREA_MANUAL = bool(TAREA) and "--manual" in sys.argv
 VERSION_PLUGIN = _arg("--version")
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
+# --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
+# cuya huella está en la lista no ha cambiado: el inventario no pide sus archivos y lo marca en «reusar», y la generación
+# toma su documento de la base (--previos) en lugar de rehacerlo. Lo mismo con las carpetas fuera de la memoria.
 LINEAS = "--lineas" in sys.argv
 SI_CAMBIA = _arg("--si-cambia")
+SIN_CAMBIOS = {h for h in (_arg("--sin-cambios") or "").split(",") if h and h != "-"}
+# --previos <volcado de la base>: de donde la generación toma los documentos que el inventario marca en «reusar»
+PREVIOS = pathlib.Path(_arg("--previos")) if _arg("--previos") else None
 # --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al dueño de otra área,
 # a una sesión, o no encontraron su paso); el botón no los cuenta como «hace falta sincronizar».
 _ret = _arg("--cola-retenida")
@@ -570,10 +576,14 @@ if INVENTARIO:
     leer_ = []
     inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
-    def _si_legible(p):
+    _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
+    huellas, reusar, por_proyecto = [], [], {}   # por_proyecto: {pid: (sus archivos, sus entregables, su trabajo sin sesión)}
+    def _si_legible(p, lista=None):
         if leer(p) is not None:
-            leer_.append(rel(p)); return True
+            (leer_ if lista is None else lista).append(rel(p)); return True
         return False
+    def _huella_proyecto(*partes):
+        return hashlib.sha1(json.dumps(partes, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:12]
     _si_legible(RAIZ / "guia.md")
     _si_legible(RAIZ / "base" / "premisas.md")
     for a in areas_guia:
@@ -587,6 +597,7 @@ if INVENTARIO:
             continue
         leer_.append(rel(carpeta / "area.md"))
         indice = parse_indice_proyectos(frontmatter(texto)[1])
+        prioridades_ = bullets(seccion(frontmatter(texto)[1], "Prioridades ahora"))
         slugs = proyectos_de(carpeta, indice)
         inv["proyectos"][rel(carpeta)] = slugs
         for slug in slugs:
@@ -598,34 +609,67 @@ if INVENTARIO:
             if tp is None:
                 inv["motivos"][rel(pc / "proyecto.md")] = por_que_no(pc / "proyecto.md") or "sin-leer"
                 continue
-            leer_.append(rel(pc / "proyecto.md"))
-            ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md") else []
-            _si_legible(pc / "decisiones.md")
-            cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(frontmatter(tp)[1], "Estado actual")))
+            suyos = [rel(pc / "proyecto.md")]
+            ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md", suyos) else []
+            _si_legible(pc / "decisiones.md", suyos)
+            fm_p, cuerpo_p = frontmatter(tp)
+            cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cuerpo_p, "Estado actual")))
             ss_ = sin_sesion_de(pc, ses, cerrado)
-            if ss_:
-                inv["sin_sesion"][rel(pc)] = ss_
             d = pc / "entregables"
             try:
                 for n in sorted(os.listdir(d)) if d.exists() else []:
                     if n.endswith(".md") and not n.startswith(".") and (d / n).is_file():
-                        _si_legible(d / n)
+                        _si_legible(d / n, suyos)
             except OSError:
                 pass
             fe = fechas_de_entregables(pc)
+            # La huella del proyecto: todo lo que entra en su documento antes de cruzarlo con los demás. Sus archivos (tamaño y
+            # fecha), lo que el área dice de él (su fila de guia.md, su línea del índice, las prioridades), sus fechas de entregables,
+            # su trabajo sin sesión, el modo y este script. Del día solo cuenta lo que lo usa: qué sesiones caen en los últimos
+            # 90 días y, si no tiene sesiones ni «actualizado», la fecha de hoy. Así un proyecto que no se tocó no se vuelve a traer
+            # aunque cambie el día.
+            reales_ = [s_["fecha"] for s_ in ses if not es_sesion_de_tarea(s_["titulo"]) and fecha_valida(s_["fecha"])]
+            _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
+            sin_ref = not reales_ and not fecha_valida(fm_p.get("actualizado"))
+            h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
+                                 [(r_, os.path.getsize(RAIZ / r_), int(os.path.getmtime(RAIZ / r_))) for r_ in suyos],
+                                 sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_)
+            pid = f"{a['slug']}--{slug}"
+            huellas.append(h)
+            por_proyecto[rel(pc)] = (suyos, fe, ss_)
+            if h in SIN_CAMBIOS:
+                reusar.append(pid)
+                continue
+            leer_.extend(suyos)
+            if ss_:
+                inv["sin_sesion"][rel(pc)] = ss_
             if fe:
                 inv["entregables"][rel(pc)] = fe
-    inv["fuera"] = fuera_de_la_memoria()
-    leer_ = list(dict.fromkeys(leer_))       # un área repetida en guia.md no trae dos veces lo mismo
-    inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
-    inv["archivos_leer"] = len(leer_)
+    fuera_ = fuera_de_la_memoria()
+    h_fuera = "f" + _huella_proyecto(_script, MODO, fuera_)[1:]
+    huellas.append(h_fuera)
+    if h_fuera in SIN_CAMBIOS:
+        inv["fuera_reusar"] = True
+    else:
+        inv["fuera"] = fuera_
     # Huella de la raíz entera tal como la ve el tablero: cada archivo que lee con su tamaño y su fecha de modificación,
     # más lo que el inventario sabe de lo demás (fechas de entregables, trabajo sin sesión, «Claude outputs»), el día y este mismo script.
     # Si coincide con la que guardó la última sincronización, el tablero ya está al día y la puesta al día no tiene que regenerarlo.
-    _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{int(os.path.getmtime(RAIZ / r))}" for r in leer_)
-    _resto = {k: inv[k] for k in ("modo", "version_metodo", "motivos", "proyectos", "entregables", "sin_sesion", "fuera")}
-    inv["huella_raiz"] = hashlib.sha1(json.dumps([HOY, hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest(), _mt, _resto],
+    # Se calcula sobre la raíz entera, también con los proyectos que se reutilizan.
+    todos = list(dict.fromkeys(leer_ + [r_ for suyos, _, _ in por_proyecto.values() for r_ in suyos]))
+    _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{int(os.path.getmtime(RAIZ / r))}" for r in todos)
+    _resto = {k: inv[k] for k in ("modo", "version_metodo", "motivos", "proyectos")}
+    _resto["entregables"] = {p_: fe for p_, (_, fe, _) in por_proyecto.items() if fe}
+    _resto["sin_sesion"] = {p_: ss for p_, (_, _, ss) in por_proyecto.items() if ss}
+    _resto["fuera"] = fuera_
+    inv["huella_raiz"] = hashlib.sha1(json.dumps([HOY, _script, _mt, _resto],
                                                  ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    leer_ = list(dict.fromkeys(leer_))       # un área repetida en guia.md no trae dos veces lo mismo
+    inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
+    inv["archivos_leer"] = len(leer_)
+    inv["huellas"] = sorted(set(huellas))
+    if reusar:
+        inv["reusar"] = reusar
     inv["sello"] = sello(inv)
     if SI_CAMBIA and SI_CAMBIA == inv["huella_raiz"]:
         print("AL DIA")
@@ -653,6 +697,40 @@ if INV is not None:
         sys.stderr.write(f"La copia no coincide con el inventario: trae {len(_copiados)} archivos y el inventario pide {INV.get('archivos_leer')}, "
                          "o alguno llegó con otro tamaño. Espera unos segundos y repite; si sigue, vacía la carpeta de la copia y vuelve a traer los archivos.\n")
         sys.exit(3)
+
+# ---------- lo que se reutiliza de la base: proyectos y carpetas sueltas que no cambiaron desde la última puesta al día ----------
+def _de_la_base(col, doc):
+    """El documento tal como lo dejó ArtifactData con out_dir (a veces envuelto en «data»), o None."""
+    try:
+        d = json.loads((PREVIOS / col / f"{doc}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    return d.get("data", d) if isinstance(d, dict) else None
+
+REUSAR = set(INV.get("reusar", [])) if INV is not None else set()
+previos = {}
+if REUSAR or (INV is not None and INV.get("fuera_reusar")):
+    faltan = []
+    for pid in sorted(REUSAR):
+        d_ = _de_la_base("proyectos", pid) if PREVIOS else None
+        if not isinstance(d_, dict) or d_.get("id") != pid:
+            faltan.append(pid); continue
+        # fuera lo que sale de cruzarlo con los demás proyectos, que se vuelve a calcular abajo
+        for k in ("huella", "cuestionamientos_abiertos"):
+            d_.pop(k, None)
+        for dec_ in d_.get("decisiones") or []:
+            dec_.pop("cuestionado_por", None); dec_.pop("abierto", None)
+        for s_ in d_.get("pasos") or []:
+            s_.pop("desbloquea", None); s_.pop("puntos", None)
+        previos[pid] = d_
+    est_ = _de_la_base("meta", "estado") if PREVIOS else None
+    if INV.get("fuera_reusar") and not (isinstance(est_, dict) and isinstance(est_.get("fuera"), list)):
+        faltan.append("meta/estado (fuera)")
+    if faltan:
+        sys.stderr.write("La base no tiene lo que el inventario pide reutilizar (" + ", ".join(faltan[:5]) + "): "
+                         "vuelve a sacar el inventario sin --sin-cambios y trae todo lo que pida.\n")
+        sys.exit(5)
+    FUERA_PREVIO = est_.get("fuera") if INV.get("fuera_reusar") else None
 
 docs = {"meta": {}, "areas": {}, "proyectos": {}}
 orden_area = 0
@@ -689,6 +767,12 @@ for a in areas_guia:
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
         declarado = es_declarado(ref, slug, indice)
+        if pid in previos:
+            # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy
+            pdoc = previos[pid]
+            pdoc["orden"] = orden_p
+            docs["proyectos"][pid] = pdoc
+            continue
         tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
@@ -820,7 +904,7 @@ _prios = {s_: docs["areas"][s_].get("prioridades", []) for s_ in sorted(docs["ar
 _huella_cand = hashlib.sha1(json.dumps([candidatos[:25], _prios], ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candidatos[:25]}
 
-fuera = fuera_de_la_memoria()
+fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
@@ -831,6 +915,9 @@ docs["meta"]["estado"] = {
 }
 if INV is not None and INV.get("huella_raiz"):
     docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]
+if INV is not None and INV.get("huellas"):
+    # las huellas de cada proyecto y de lo que queda fuera: la próxima puesta al día las pasa con --sin-cambios
+    docs["meta"]["estado"]["huellas"] = INV["huellas"]
 if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 
@@ -838,7 +925,7 @@ if COLA_RETENIDA is not None:
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
 # suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
 def huella(data):
-    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "cola_retenida")}
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "huellas", "cola_retenida")}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():

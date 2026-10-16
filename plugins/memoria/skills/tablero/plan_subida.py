@@ -4,8 +4,10 @@
 Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000]
      plan_subida.py --guardada <volcado-de-la-base> --version <versión del plugin> [--tarea <id>] [--manual]
 
-Con --guardada no planea nada: imprime la huella de la raíz que guardó la última puesta al día si el tablero
-sigue valiendo tal cual (misma versión del plugin, misma tarea, mismo «sin horario»), o «-» si hay que regenerar.
+Con --guardada no planea nada: imprime dos líneas. La primera, la huella de la raíz que guardó la última puesta al día
+si el tablero sigue valiendo tal cual (misma versión del plugin, misma tarea, mismo «sin horario»), o «-» si hay que
+regenerar. La segunda, las huellas de cada proyecto que guardó (separadas por comas, para --sin-cambios del inventario)
+si los documentos de la base son de esta misma versión del plugin, o «-» si no hay ninguna que valga.
 
 <volcado-de-la-base> es la carpeta donde ArtifactData dejó, con out_dir, lo que hay hoy en la base
 (<volcado>/areas/*.json, <volcado>/proyectos/*.json, <volcado>/meta/estado.json).
@@ -34,6 +36,9 @@ if "--guardada" in sys.argv:
     vale = (bool(d.get("huella_raiz")) and d.get("version_tablero") == _a("--version")
             and (d.get("tarea") or None) == tarea and bool(d.get("tarea_manual")) == (bool(tarea) and "--manual" in sys.argv))
     print(d["huella_raiz"] if vale else "-")
+    # los documentos de la base se pueden reutilizar si los hizo esta misma versión; la tarea no entra en un proyecto
+    hs = d.get("huellas") if d.get("version_tablero") == _a("--version") else None
+    print(",".join(hs) if isinstance(hs, list) and hs else "-")
     sys.exit(0)
 
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
