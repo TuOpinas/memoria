@@ -31,6 +31,8 @@ ok = m.get("tarea") == "trig_prueba" and m.get("tarea_manual") is True
 print(("  bien  " if ok else "  FALLA ") + "una tarea sin horario (--manual) queda marcada como tal")
 sys.exit(0 if ok else 1)
 PY
+# en dos tiempos (inventario en la computadora, generación sobre la copia) sale exactamente lo mismo
+python3 "$AQUI/dos_tiempos.py" "$TABLERO/generar_vista.py" "$TABLERO/plan_subida.py" "$OUT/raiz" "$OUT/dos-tiempos"
 rm -rf "$OUT/raiz-cola"; cp -R "$OUT/raiz" "$OUT/raiz-cola"
 python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 for m in publico completo; do python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/$m" "$OUT/$m.html"; done

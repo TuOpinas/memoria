@@ -25,7 +25,7 @@ Cinco reglas que no cambian:
 
 Una persona puede tener los dos sobre la misma raíz. Antes de montar uno, la skill mira si ya existe un tablero con ese nombre y ese modo en la cuenta (`Artifact` con `list`) o una tarea con ese nombre (`list_triggers`); si existe, lo dice y propone actualizarlo o sincronizarlo en vez de montar otro. Un duplicado no rompe nada, pero son dos tareas y dos colas para lo mismo.
 
-Lo que trae esta skill, en su carpeta: `vista.html` (la página), `generar_vista.py` (lee la raíz y produce los documentos de la base), `aplicar_cambios.py` (escribe en la carpeta lo mecánico de la cola) y `tarea.md` (los pasos de la puesta al día, que siguen al pie de la letra la sincronización, el cierre de sesión y la tarea diaria cuando la hay; con cuatro huecos). Nada de esto se copia a la raíz.
+Lo que trae esta skill, en su carpeta: `vista.html` (la página), `generar_vista.py` (lee la raíz y produce los documentos de la base, en dos tiempos: un inventario corto en la computadora y la generación en Claude sobre una copia de lo que lee), `plan_subida.py` (dice qué documentos cambiaron y los reparte en lotes), `aplicar_cambios.py` (escribe en la carpeta lo mecánico de la cola) y `tarea.md` (los pasos de la puesta al día, que siguen al pie de la letra la sincronización, el cierre de sesión y la tarea diaria cuando la hay; con cuatro huecos). Nada de esto se copia a la raíz.
 
 ## Cuándo
 
@@ -45,7 +45,7 @@ Cuatro comprobaciones, y en la primera que falle se dice qué falta y se para:
 
 1. **La raíz conectada es completa**: tiene `guia.md` y `metodo.md` en su primer nivel. Si solo está conectada la carpeta de un área, el tablero no se puede montar.
 2. **No hay ya uno igual** en esta cuenta: mismo nombre («Tablero <organización>» o «Tablero <organización> completo»). Si lo hay, se ofrece actualizar o sincronizar.
-3. **La cuenta tiene lo que hace falta**: la herramienta `Artifact` con las capacidades de base de datos, usuario y conector; `ArtifactData`; y el shell de la computadora (`device_bash`), porque el generador corre contra la carpeta sincronizada en ella. Se comprueba con `ToolSearch`; lo que no esté se nombra.
+3. **La cuenta tiene lo que hace falta**: la herramienta `Artifact` con las capacidades de base de datos, usuario y conector; `ArtifactData`; el shell de la computadora (`device_bash`), porque el inventario y la cola corren contra la carpeta sincronizada en ella; y `device_stage_files`, que trae a Claude la copia de lo que el tablero lee. Se comprueba con `ToolSearch`; lo que no esté se nombra.
 4. **La computadora está disponible** y la raíz se ve en `$HOME/mnt/` del shell. Si no, se pide con `device_request_folder_access` por su ruta.
 
 Si el modo es público y la cuenta de la sesión lee áreas o proyectos restringidos, se avisa de una cosa antes de seguir: lo restringido queda fuera solo si está declarado (la columna «Quién la lee» en `guia.md`, la palabra «restringido» al inicio de la línea del proyecto en `area.md`); un proyecto restringido en Drive que nadie declaró entraría en el tablero público. Si hay duda, se monta el completo y no se comparte.
@@ -64,7 +64,7 @@ Con eso el dueño lo ve y lanza la sincronización; si lo comparte, un lector le
 
 **2. Sin tarea programada.** No se crea ninguna: el tablero se pondrá al día en cada cierre de sesión. Si la persona pide el botón o la tarea diaria al montar, se crea como dice «Botón o tarea diaria» abajo y su id se pasa al generador en el paso 3.
 
-**3. Generar y cargar.** Se llevan `generar_vista.py` y `aplicar_cambios.py` a `$HOME/tablero/` de la VM de la computadora como dice «Los archivos del plugin en la computadora», abajo, y se corre `python3 generar_vista.py "<raíz en $HOME/mnt>" salida --modo <modo> --version <versión del plugin, de plugin.json>`. La salida va a `$HOME/tablero/salida/`, fuera de la raíz (o dentro del `scratchFolder` de `get_device_info` si lo hay, que permite traer los archivos con `device_stage_files`). Cada documento de `salida/indice.json` (áreas, proyectos y `meta/estado`; los candidatos de enfoque no se suben) se escribe en la base del artifact con `ArtifactData` en lotes de hasta 50 y de menos de 1 MiB: colección y doc_id iguales a carpeta y archivo, con `file_path` si los archivos se trajeron al contenedor y como `data` si no. En `meta/estado` se añade `pagina_actualizada: {version: <versión del plugin>, fecha: <hoy>}`, que es como la puesta al día sabe qué versión de la página hay publicada sin leerla.
+**3. Generar y cargar.** Es el paso 5 de `tarea.md` tal cual, con la base todavía vacía: inventario en la computadora, copia de los archivos con `device_stage_files`, generación en Claude, `plan_subida.py` (con la base vacía lo propone todo) y lotes de `ArtifactData` con `file_path`. Ningún documento pasa por la conversación. En `meta/estado` se añade `pagina_actualizada: {version: <versión del plugin>, fecha: <hoy>}`, que es como la puesta al día sabe qué versión de la página hay publicada sin leerla.
 
 **4. El primer «Por dónde empezar».** Es el paso 6 de `tarea.md` y se hace aquí mismo, porque la página saldría sin esa sección hasta el primer cierre de sesión: se leen los grupos candidatos de `salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe `enfoque/actual`.
 
@@ -93,7 +93,7 @@ Cuando sale una versión nueva del plugin, la página del tablero y el generador
 
 ## Sincronizar
 
-La puesta al día, en esta sesión, con la raíz conectada: los pasos 1 a 7 de `tarea.md` tal cual, con la cuenta de la sesión en `--cuenta`, los scripts de la VM comparados por huella y copiados solo si cambiaron, y el modo del tablero; el id de la tarea, si la hay, se busca con `list_triggers` (la activa, por su nombre) y se pasa al generador con `--tarea`, más `--manual` si no tiene horario; si no hay, se omite `--tarea`. Sube a la base solo los documentos cuya huella cambió y no lee la página: lo normal al cerrar una sesión es un proyecto, su área y `meta/estado`. Es lo que hace cada cierre de sesión (skill `sesion`, paso 11), y a mano sirve cuando otra persona trabajó en la carpeta o cuando la cola tiene cosas que no esperan a la siguiente sesión. Lo que la tarea deja «pendiente de cerrar en sesión» se cierra con `sesion`, que lee la cola al abrir el proyecto.
+La puesta al día, en esta sesión, con la raíz conectada: los pasos 1 a 7 de `tarea.md` tal cual, también su «SIN PEDIR NADA A NADIE», con la cuenta de la sesión en `--cuenta`, los scripts de la VM comparados por huella y traídos solo si cambiaron, y el modo del tablero; el id de la tarea, si la hay, se busca con `list_triggers` (la activa, por su nombre) y se pasa al generador con `--tarea`, más `--manual` si no tiene horario; si no hay, se omite `--tarea`. Sube a la base solo los documentos cuya huella cambió y no lee la página: lo normal al cerrar una sesión es un proyecto, su área y `meta/estado`. Es lo que hace cada cierre de sesión (skill `sesion`, paso 11), y a mano sirve cuando otra persona trabajó en la carpeta o cuando la cola tiene cosas que no esperan a la siguiente sesión. Lo que la tarea deja «pendiente de cerrar en sesión» se cierra con `sesion`, que lee la cola al abrir el proyecto.
 
 ## Botón o tarea diaria, si los piden
 
@@ -108,17 +108,25 @@ Al terminar se dicen dos cosas. **El modelo de la tarea:** nace con el de la ses
 
 ## Los archivos del plugin en la computadora
 
-La computadora no ve el plugin, y cada sesión empieza con el `$HOME` de su VM vacío. Para llevar allí un archivo del plugin (los dos scripts del tablero, o `metodo.md` al poner al día una raíz, skill `sesion`) no se pega su contenido en un comando: cuesta decenas de miles de tokens en cada cierre y el control de permisos puede frenarlo como código nuevo. Se descarga del repositorio público del plugin, en la versión instalada, y se comprueba que es idéntico:
+La computadora no ve el plugin, y cada sesión empieza con el `$HOME` de su VM vacío. Hay dos casos:
+
+- **`metodo.md`, al poner al día una raíz** (skill `sesion`): va directo, sin descargar nada. Se copia el del plugin a `/mnt/user-data/outputs/metodo.md` del contenedor y se escribe sobre el de la raíz con `device_commit_files` (`devicePath`: la ruta de la raíz en la computadora, la de `get_device_info`, más `/metodo.md`). Si esa herramienta no está, se usa la descarga de abajo.
+- **Los dos scripts que corren en la computadora** (`generar_vista.py`, para el inventario, y `aplicar_cambios.py`): `device_commit_files` solo escribe dentro de carpetas conectadas y los scripts no pueden ir a la raíz, así que se descargan.
+
+Para descargar no se pega el contenido en un comando: cuesta decenas de miles de tokens y el control de permisos puede frenarlo como código nuevo. Se descarga del repositorio público del plugin, en la versión instalada, y se comprueba que es idéntico:
 
 1. Con `device_bash`: `mkdir -p $HOME/tablero && curl -sfL -o <destino> https://raw.githubusercontent.com/TuOpinas/memoria/v<versión>/plugins/memoria/<ruta dentro del plugin>` y `sha256sum <destino>`. La versión es la de `plugin.json`; la ruta, por ejemplo, `skills/tablero/generar_vista.py` o `metodo.md`.
 2. Con Bash, `sha256sum` del mismo archivo en el plugin. Si coinciden, se usa.
 3. Si no coinciden o la descarga falla, se prueba una vez con `main` en lugar de `v<versión>`. Si tampoco, se copia con un heredoc con delimitador entre comillas simples (`cat > <destino> <<'EOF' … EOF`).
 
-Un archivo descargado que no coincide no se usa nunca. El destino es siempre `$HOME/tablero/` de la VM, fuera de la raíz; `metodo.md` se copia a la raíz desde ahí, ya comprobado. Los scripts que ya estén en `$HOME/tablero/` con la huella del plugin no se vuelven a traer.
+Un archivo descargado que no coincide no se usa nunca. El destino es siempre `$HOME/tablero/` de la VM, fuera de la raíz; `metodo.md`, cuando va por aquí, se copia a la raíz desde ahí, ya comprobado. Los scripts que ya estén en `$HOME/tablero/` con la huella del plugin no se vuelven a traer. Cada versión queda etiquetada en el repositorio sola, al llegar a `main` (una acción de GitHub la crea), así que la descarga por `v<versión>` funciona desde el primer día.
 
 ## Lo que nunca hago
 
 Además de las prohibiciones de `convenciones`:
+
+- Pedir, para poner al día un tablero, acceso a otra carpeta que no sea la raíz, o pedirle a la persona que haga algo (añadir una carpeta, conectar, aprobar, pulsar). La puesta al día es invisible para quien la tiene; si algo falla, se dice en una línea y la siguiente lo reintenta.
+- Pasar por la conversación el contenido de los documentos del tablero (con `cat`, pegado o como `data`): se generan en Claude y se suben con `file_path`.
 
 - Escribir en la raíz nada del tablero: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración. En la carpeta solo entra lo mecánico de la cola (fechas y hechos con nota), y solo en las áreas de la cuenta.
 - Montar un tablero completo sin decir que no se comparte, o montar uno público sin avisar de lo restringido no declarado cuando la cuenta lo lee.

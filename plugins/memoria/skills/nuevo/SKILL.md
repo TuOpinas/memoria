@@ -113,7 +113,7 @@ La primera línea de `metodo.md` dice cuál corre esta carpeta. Se pone al día 
 primera vez que [responsable de contexto] abre sesión con una versión nueva del plugin.
 ```
 
-**2. `metodo.md`.** Copia exacta del `metodo.md` del plugin, que está en la raíz de la carpeta del plugin, dos niveles por encima de esta skill. No se edita ni una línea: su primera línea lleva la versión y es lo que `sesion` compara al abrir.
+**2. `metodo.md`.** Copia exacta del `metodo.md` del plugin, que está en la raíz de la carpeta del plugin, dos niveles por encima de esta skill, escrita en la raíz como dice «Los archivos del plugin en la computadora» en la skill `tablero` (directo desde el plugin con `device_commit_files`, nunca pegada). No se edita ni una línea: su primera línea lleva la versión y es lo que `sesion` compara al abrir.
 
 **3. `base/contexto.md`.** Esqueleto con las secciones y cada una con su hueco marcado, para que el responsable de contexto las rellene en su primera sesión:
 

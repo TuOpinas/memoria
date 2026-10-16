@@ -78,8 +78,9 @@ trap - ERR
 
 echo
 echo "Publicada la versión $VERSION en el repo. Lo que no hace este script:"
-echo "  1. Commitear, pushear y etiquetar la versión: git tag v$VERSION && git push origin v$VERSION."
-echo "     La etiqueta es de donde las sesiones descargan los scripts del tablero y metodo.md (skill tablero)."
+echo "  1. Commitear y llevar a main (pull request). La etiqueta v$VERSION la crea sola la acción de GitHub"
+echo "     .github/workflows/etiquetar.yml al llegar a main; es de donde las sesiones descargan los scripts del tablero."
+echo "     Compruébala después con:  git ls-remote --tags origin v$VERSION"
 echo "  2. Copiar metodo.md a cada raíz: se copia sola la próxima vez que su responsable de contexto abra sesión."
 echo "     Compruébalo con:  head -1 plugins/memoria/metodo.md <raiz>/metodo.md"
 [ -n "$TABLERO_CAMBIO" ] && echo "  2b. El tablero cambió: cada tablero republica su página en la siguiente puesta al día (al cerrar sesión o al sincronizar); si no, «actualiza el tablero»."

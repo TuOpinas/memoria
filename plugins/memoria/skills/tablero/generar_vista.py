@@ -454,7 +454,7 @@ def plazos_en(texto):
             out.append(f); previa = True
     return out
 
-def senales(paso_texto, area_doc, pdoc, todos):
+def senales(paso_texto, area_doc, pdoc):
     """Señales objetivas de importancia. Vencido no cuenta, por decisión del 2026-10-08."""
     sig = PALABRAS_SIG(paso_texto)
     prio = None
@@ -693,7 +693,7 @@ for a in areas_guia:
             if not cab:
                 p_["naturaleza"] = naturaleza(texto)
                 p_["temas"] = sorted(tokens_tema(texto))
-                p_.update(senales(texto, area_doc, pdoc, None))
+                p_.update(senales(texto, area_doc, pdoc))
                 if p_["naturaleza"] in ("rutina", "caducidad") and p_["fecha"]:
                     # una revisión periódica o una caducidad no vence: se revisa; el tablero la muestra aparte
                     p_["revisar"] = p_["fecha"]; p_["fecha"] = None
