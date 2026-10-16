@@ -1805,7 +1805,7 @@ const panTxt = a => a.panorama && a.panorama.texto ? `${a.panorama.fecha?`<time>
 let VER_ARCH = false; try{ VER_ARCH = localStorage.getItem("ver-archivadas")==="1"; }catch(e){}
 function archivada(a){ if(!a || a.legible===false) return false; const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean); return ps.length>0 && ps.every(p=>p.cerrado && !p.restringido); }
 const areasVis = () => VER_ARCH ? AREAS : AREAS.filter(a=>!archivada(a));
-const archBtn = n => `<button type="button" class="lnk" data-arch>${VER_ARCH ? `Ocultar ${n===1?"el área archivada":`las ${n} áreas archivadas`}` : `Mostrar ${n===1?"el área archivada":`las ${n} áreas archivadas`}`}</button>`;
+const archBtn = n => `<button type="button" class="lnk" data-arch>${VER_ARCH ? "Ocultar áreas archivadas" : `Mostrar áreas archivadas (${n})`}</button>`;
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-arch]"); if(!b) return; VER_ARCH = !VER_ARCH; try{ localStorage.setItem("ver-archivadas", VER_ARCH?"1":"0"); }catch(err){} render(); });
 // ---- lateral ----
 let SIDE_OPEN = false;
