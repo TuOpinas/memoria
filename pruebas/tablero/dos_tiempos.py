@@ -32,7 +32,7 @@ def docs(carpeta):
         if p.name == "indice.json":
             continue
         d = json.loads(p.read_text(encoding="utf-8"))
-        d.pop("sincronizado", None); d.pop("generado", None)
+        d.pop("sincronizado", None); d.pop("generado", None); d.pop("huella_raiz", None)
         out[p.relative_to(carpeta).as_posix()] = d
     return out
 
@@ -91,6 +91,19 @@ ok(r.returncode == 3, "una copia a la que le falta un archivo se rechaza")
 falta.write_bytes(guardado)
 r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "publico")
 ok(r.returncode != 0 and "modo" in (r.stderr + r.stdout), "un inventario sacado en otro modo se rechaza")
+
+# huella de la raíz: la misma raíz da la misma huella; tocar un archivo que el tablero lee la cambia; llega a meta/estado
+r_a = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
+r_b = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
+ok(bool(r_a.get("huella_raiz")) and r_a["huella_raiz"] == r_b["huella_raiz"], "huella de la raíz: dos inventarios seguidos dan la misma")
+tocado = RAIZ / json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["leer"][1]
+_st = tocado.stat()
+os.utime(tocado, (_st.st_atime, _st.st_mtime + 120))
+r_c = json.loads(correr(RAIZ, "--inventario", "--modo", "completo").stdout)["inventario"]
+os.utime(tocado, (_st.st_atime, _st.st_mtime))
+ok(r_c["huella_raiz"] != r_a["huella_raiz"], "huella de la raíz: cambiar la fecha de un archivo que el tablero lee la cambia")
+_est = json.loads((TRAB / "dos-completo" / "meta" / "estado.json").read_text(encoding="utf-8"))
+ok(_est.get("huella_raiz") == json.loads((TRAB / "inv-completo.json").read_text(encoding="utf-8"))["huella_raiz"], "huella de la raíz: la generación la deja en meta/estado")
 
 # plan de subida: con la base igual a la salida, solo meta/estado; con un proyecto cambiado, ese y meta; lo que sobra se borra
 salida = TRAB / "dos-completo"

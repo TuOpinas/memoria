@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.2 · huella c567a77 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.3 · huella af2217d · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -642,6 +642,7 @@ La fecha basta cuando el dato es de la propia organización y está en una fuent
 - **Entregables y cualquier texto que salga del proyecto:** los siete patrones y las ocho reglas de lectura rápida, sin excepción.
 - **Registros** (`sesiones.md`, `decisiones.md`): pueden ser más extensos, porque su función es dejar constancia del razonamiento. El metadiscurso y los rodeos sobran igual, y una cifra en `Por qué` también lleva su fecha o su fuente.
 - **Respuestas de la IA en el chat:** la respuesta primero y el detalle después, sin recapitular lo que el usuario acaba de decir y sin narrar lo que se va a hacer. El único límite es no perder información que el usuario necesita para decidir: entre una respuesta corta y una completa gana la completa, pero sin relleno.
+- **Archivos citados en el chat:** cada archivo de la carpeta que se nombra en una respuesta va enlazado para abrirlo con un clic, y el enlace va en el nombre, no en una línea aparte: `[plan-implementacion.md](computer:///Users/ana/Memoria/Acme/ventas/cuentas/entregables/plan-implementacion.md)`. La ruta es la de la raíz en la computadora (la que da `get_device_info`) más la ruta dentro de la raíz, con los espacios escritos `%20`. Sin la carpeta conectada, en solo lectura por Drive, el enlace es el `viewUrl` de Drive del archivo. Sin ninguno de los dos, la ruta en código, como hasta ahora.
 
 ## Al revisar un texto existente
 

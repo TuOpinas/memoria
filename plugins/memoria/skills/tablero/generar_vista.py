@@ -611,6 +611,13 @@ if INVENTARIO:
     leer_ = list(dict.fromkeys(leer_))       # un área repetida en guia.md no trae dos veces lo mismo
     inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
     inv["archivos_leer"] = len(leer_)
+    # Huella de la raíz entera tal como la ve el tablero: cada archivo que lee con su tamaño y su fecha de modificación,
+    # más lo que el inventario sabe de lo demás (fechas de entregables, trabajo sin sesión, «Claude outputs»), el día y este mismo script.
+    # Si coincide con la que guardó la última sincronización, el tablero ya está al día y la puesta al día no tiene que regenerarlo.
+    _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{int(os.path.getmtime(RAIZ / r))}" for r in leer_)
+    _resto = {k: inv[k] for k in ("modo", "version_metodo", "motivos", "proyectos", "entregables", "sin_sesion", "fuera")}
+    inv["huella_raiz"] = hashlib.sha1(json.dumps([HOY, hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest(), _mt, _resto],
+                                                 ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
     inv["sello"] = sello(inv)
     print(json.dumps({"leer": leer_, "inventario": inv}, ensure_ascii=False, separators=(",", ":")))
     sys.exit(0)
@@ -805,12 +812,14 @@ docs["meta"]["estado"] = {
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
     "fuera": fuera, "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
+if INV is not None and INV.get("huella_raiz"):
+    docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]
 
 # ---------- escribir ----------
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
 # suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
 def huella(data):
-    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella")}
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz")}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():

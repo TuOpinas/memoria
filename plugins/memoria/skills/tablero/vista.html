@@ -221,6 +221,9 @@ body{padding-inline:0;padding-block:0}
 .sync-ico:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .sync-ico.done{color:var(--signal)}
 .sync-ico.off{opacity:.45}
+.sync-ico{position:relative}
+.sync-ico.pend::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn-fill)}
+.sync-ico.ok{color:var(--signal)}
 .sync-ico.busy{color:var(--muted);cursor:progress}
 .sync-ico.busy svg{animation:gira 1s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
@@ -538,7 +541,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.2"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.3"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1198,7 +1201,7 @@ function renderRoot(){
   const org = META ? META.organizacion : "";
   const modo = META && META.modo==="completo" ? `<span class="pill draft" ${tip("Tablero completo: incluye la bitácora y lo restringido que tu cuenta lee en la carpeta. Es para ti: no lo compartas. Para uno que se pueda compartir, pide «monta el tablero público».")}>Completo · no compartir</span>` : "";
   head.innerHTML = `<h1>${esc(org||"Tablero")}</h1>
-    <div class="meta">${modo}${META?`<span>Método <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
+    <div class="meta">${modo}${META?`<span ${tip("La versión del método que usa esta carpeta.")}>Versión <b>${esc(META.version_metodo||"—")}</b></span><span>Mantiene el contexto: <b>${esc(META.contexto_comun||"—")}</b></span><span>Administra la carpeta: <b>${esc(META.administra||"—")}</b></span>`:""}</div>`;
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">${DB===false?"Este tablero solo funciona dentro de Claude. Ábrelo en claude.ai.":"Cargando la raíz…"}</p>`; return; }
   visita();
   const all = pendientes(), t = today(), nLate = all.filter(i=>i.f && i.f<t).length, nSoon = all.filter(i=>i.f && i.f>=t && i.f<=addDays(7)).length;
@@ -1316,11 +1319,26 @@ async function sincronizar(){
 document.addEventListener("click", e => { if(e.target.closest && e.target.closest("[data-sync]")) sincronizar(); });
 function syncBtn(){
   // Desde la 1.14.3 el botón está siempre para el dueño; sin tarea o sin conector sale apagado y dice qué falta.
+  // Su estado sale de lo que la página sabe sin preguntar a nadie: la cola, la versión de la página y la hora de la última sincronización.
+  // Lo escrito en la carpeta después de esa hora no lo puede ver; si no cambió nada, la tarea lo comprueba al empezar y termina enseguida.
   if(!OWNER || !META) return "";
   const listo = !!(MCP && META.tarea);
-  const tipTxt = !META.tarea ? "Sincronizar ahora: este tablero todavía no tiene su tarea. Dile a Claude «actualiza el tablero»." : !MCP ? "Sincronizar ahora: falta el conector de tareas programadas en tu cuenta de Claude." : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…" : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar." : "Sincronizar ahora: pone el tablero al día con la carpeta y pasa a la carpeta lo que marcaste aquí. Es lo mismo que ocurre al cerrar una sesión; tarda unos minutos.";
+  const mec = CAMBIOS.filter(c => c.tipo==="fecha" || (c.tipo==="hecho" && c.nota)).length;
+  const pagVieja = !!(META.version_tablero && META.version_tablero !== VERSION_TABLERO);
+  const pend = listo && (mec > 0 || pagVieja);
+  const min = META.sincronizado ? Math.max(0, Math.round((Date.now() - new Date(META.sincronizado).getTime())/60000)) : null;
+  const cuando = min===null ? "" : min < 2 ? "hace un momento" : min < 60 ? `hace ${min} min` : min < 60*24 ? `hace ${Math.round(min/60)} h` : `hace ${Math.round(min/1440)} días`;
+  const reciente = listo && !pend && min !== null && min < 12*60;
+  const tipTxt = !META.tarea ? "Sincronizar ahora: este tablero todavía no tiene su tarea. Dile a Claude «actualiza el tablero»."
+    : !MCP ? "Sincronizar ahora: falta el conector de tareas programadas en tu cuenta de Claude."
+    : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
+    : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar. Si nada cambió en la carpeta, termina enseguida."
+    : pend ? (mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: esta página es de una versión anterior y la sincronización la pone al día.") + (cuando ? ` Última vez ${cuando}.` : "")
+    : reciente ? `Al día con la carpeta ${cuando}. Si alguien escribió en ella después, sincronizar lo trae; si no cambió nada, termina enseguida.`
+    : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
   const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
-  return `<button type="button" class="sync-ico${listo?"":" off"}${SYNC_STATE==="corriendo"?" busy":""}${SYNC_STATE==="lanzada"?" done":""}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
+  const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"") + (!SYNC_STATE && reciente?" ok":"");
+  return `<button type="button" class="sync-ico${cls}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora${pend?": hace falta":""}" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>`;
 }
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
@@ -1463,7 +1481,7 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Al cerrar una sesión</dt><dd>Cada vez que cierras una sesión, en cualquier proyecto, Claude rehace tu tablero completo con lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Es lo normal: no tienes que hacer nada.</dd>
       <dt>Lo que escriben otros</dt><dd>Se rehace el tablero de quien cierra, no el de los demás. Si otras personas trabajaron en la carpeta, dile a Claude ${F("sincroniza el tablero")} y lo verás ahora.</dd>
-      <dt>Con el botón, cuando quieras</dt><dd>Junto al nombre, arriba a la izquierda, está «Sincronizar ahora»: lo ve solo quien montó el tablero. Sirve para traer lo que escribieron otras personas sin esperar a tu siguiente cierre de sesión. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si sale apagado, al pasar por encima dice qué le falta.</dd>
+      <dt>Con el botón, cuando quieras</dt><dd>Junto al nombre, arriba a la izquierda, está «Sincronizar ahora»: lo ve solo quien montó el tablero. Sirve para traer lo que escribieron otras personas sin esperar a tu siguiente cierre de sesión. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hay cosas marcadas aquí por pasar a la carpeta o la página es de una versión anterior. Sin punto, al pasar por encima dice cuándo se sincronizó por última vez; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Inicio lo avisa una semana.</dd>
     </dl>`},
