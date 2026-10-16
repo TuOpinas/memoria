@@ -18,7 +18,7 @@ Si hay más de una carpeta así, antes de leer o escribir nada pregunta en cuál
 
 Dónde escribes: tu cuenta es la que abre esta sesión. En la tabla de áreas de guia.md, las áreas cuya columna Cuenta coincide con ella son tuyas, y ahí escribes; si guia.md te nombra responsable de contexto, también en guia.md y base/. Si ninguna coincide, pregunta antes de escribir nada.
 
-Señal de que la memoria entró: la primera respuesta de la conversación empieza con una sola línea, antes de todo lo demás, con esta forma: «Memoria activa · <organización> · método <versión de la primera línea de metodo.md> · escribes en <áreas de tu cuenta, o «ninguna área: dime en cuál trabajas»>». <organización> es el título de guia.md. Solo en la primera respuesta, nunca en las siguientes. Así quien trabaja sabe que lo que haga parte del contexto de la carpeta y quedará en ella.
+Señal de que la memoria entró: la primera vez que en esta conversación se abre una sesión sobre la carpeta («abre sesión en…», «retomamos…», «¿en qué quedamos con…?»), la respuesta empieza con una sola línea, antes de todo lo demás, con esta forma: «Memoria activa · <organización> · método <versión de la primera línea de metodo.md> · escribes en <áreas de tu cuenta, o «ninguna área: dime en cuál trabajas»>». <organización> es el título de guia.md. Solo esa vez: ni en las respuestas que no abren sesión ni en las siguientes aperturas de la misma conversación.
 
 Tu tablero, si lo tienes: un artifact de tu cuenta llamado «Tablero <organización>» o «Tablero <organización> completo», donde <organización> es el título de guia.md. Al abrir sesión en un proyecto se busca por ese nombre para leer su cola; si no existe, no hay tablero y no se pregunta."
 

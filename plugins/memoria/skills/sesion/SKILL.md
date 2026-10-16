@@ -51,7 +51,7 @@ No leo `fuentes/`, ni `base/contexto.md`, ni `base/glosario.md`, ni `base/sistem
 
 ## Qué respondo
 
-Tres bloques, en este orden y sin encabezados largos.
+Si es la primera sesión que se abre en esta conversación, la respuesta empieza con la línea «Memoria activa · <organización> · método <versión> · escribes en <áreas de la cuenta>», como pide el aviso de arranque. Después, tres bloques, en este orden y sin encabezados largos.
 
 **Dónde quedó todo.** Cuatro o cinco líneas: objetivo del proyecto en una frase, qué se hizo en la última sesión, qué quedó pendiente. Nada de recapitular el proyecto entero.
 

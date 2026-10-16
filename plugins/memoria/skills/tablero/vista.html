@@ -1288,7 +1288,7 @@ function ayudaArts(){
 /plugin install memoria@memoria-marketplace</pre>
         <span>Después escribe <code>/plugin</code>, ve a la pestaña Marketplaces, elige <code>memoria-marketplace</code> y activa la actualización automática. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
       <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta.</span></li>
-      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La primera respuesta empieza con una línea que dice que la memoria está activa: la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
+      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con una línea, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
     </ol>
     <p class="hc-nota">No hay nada que pegar en las instrucciones del proyecto: el plugin aplica el método en cuanto ve la carpeta.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
@@ -1334,7 +1334,7 @@ function ayudaArts(){
   {g:"Cada día", id:"si-algo-falla", t:"Si algo falla", h:`
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
-      <dt>La primera respuesta no dice que la memoria está activa.</dt><dd>Claude no encontró la carpeta o el plugin no está instalado. Revisa los pasos de <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
+      <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está instalado. Revisa los pasos de <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
       <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en la tabla de áreas de <code>guia.md</code>. Dile en qué área trabajas para seguir hoy, y pide a ${ADM} que añada tu cuenta.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. Actualízalo desde los ajustes de plugins de Claude y activa la actualización automática.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
