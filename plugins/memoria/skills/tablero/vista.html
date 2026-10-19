@@ -566,7 +566,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.9"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.10"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1418,6 +1418,28 @@ function ayudaArts(){
       <li><b>La historia no se borra.</b> Las decisiones y la bitácora de cada proyecto solo crecen: nadie edita lo que ya está registrado.</li>
       <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día solo cuando lo abres después de cerrar una sesión, y te dice por dónde empezar.</li>
     </ul>`},
+  {g:"Para empezar", id:"para-que", t:"Para qué sirve la memoria", h:`
+    <p>Cada conversación con Claude empieza de cero: lo que se le explicó ayer, en otra conversación o en la de un compañero, no lo sabe. La memoria hace que la siguiente conversación, la tuya o la de cualquiera de ${ORG}, empiece sabiendo lo que pasó. Cuesta dos frases por sesión, abrir y cerrar, y confirmar las decisiones al cerrar; a cambio, nadie vuelve a explicarle el contexto a nadie.</p>
+    <dl class="hc-def">
+      <dt>Claude es muchos agentes</dt><dd>En cada conversación Claude hace de un especialista distinto, según lo que le pidas: el abogado que revisa un contrato, el comercial que prepara una propuesta, el desarrollador que programa un cambio, el analista que compara opciones. Sin memoria, son desconocidos entre sí. Con ella, todos leen la misma carpeta: el contrato que revisó uno es el que cita el otro en la propuesta, y la decisión de producto de la semana pasada es la que el desarrollador respeta hoy. Trabajan como empleados de ${ORG} que comparten el mismo archivo.</dd>
+      <dt>Personas y agentes, coordinados</dt><dd>Cada persona trabaja con su propio Claude, en su área. Lo que una decide queda escrito donde la siguiente lo lee: al abrir sesión, Claude avisa de las decisiones de otras áreas que afectan al proyecto, y lo que no cuadra se cuestiona por escrito. Nadie escribe en el área de otro y ninguna decisión se registra sin que una persona la confirme. El punto de encuentro es la carpeta, no el chat: lo que no está escrito en ella no existe para la siguiente conversación.</dd>
+    </dl>
+    <p>Con la memoria al día, estas peticiones salen en una conversación nueva, sin explicar nada antes:</p>
+    <div class="hc-tbl"><table>
+      <thead><tr><th>Le dices</th><th>Lo que Claude ya sabe</th></tr></thead>
+      <tbody>
+        <tr><td>${F("contesta el correo de Juan con las actualizaciones que pide al contrato")}</td><td>Quién es Juan, en qué proyecto está el contrato, qué cambios se acordaron en la última sesión y cuáles se descartaron.</td></tr>
+        <tr><td>${F("actualiza la presentación a Empresa X con las ideas que revisamos ayer sobre la nueva versión del producto")}</td><td>La bitácora de ayer en el proyecto de producto y la presentación en los entregables del proyecto de Empresa X, aunque sean de dos áreas distintas.</td></tr>
+        <tr><td>${F("prepara la propuesta para Acme con los precios que decidimos la semana pasada")}</td><td>La decisión de precios con su porqué, y los criterios con los que ${ORG} escribe sus propuestas.</td></tr>
+        <tr><td>${F("antes de programar el cambio, ¿choca con alguna decisión de producto?")}</td><td>Las decisiones vigentes del área de producto y a quién avisar si choca.</td></tr>
+        <tr><td>${F("¿qué le prometimos a Empresa X y qué falta por entregar?")}</td><td>El alcance acordado, los entregables publicados y los pasos abiertos, con quién y para cuándo.</td></tr>
+        <tr><td>${F("ponme al día de lo que pasó en ventas esta semana")}</td><td>Las sesiones y las decisiones de la semana en esa área, aunque las hayan cerrado otras personas.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="hc-nota">Funciona en la medida en que todos la usan: una sesión que no se cierra, o un acuerdo que se quedó en un chat, es un hueco que la siguiente conversación no puede llenar.</p>
+    <dl class="hc-def">
+      <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. Al cerrar cada sesión, Claude escribe con la voz del director del área cómo va el proyecto (lo que se completó y lo que sigue) y el panorama del área (qué se movió y qué preocupa), y el tablero los pone arriba, junto con «Por dónde empezar»: los grupos de pasos que avanzan varias cosas a la vez. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
+    </dl>`},
   {g:"Para empezar", id:"necesitas", t:"Lo que necesitas", h:`
     <dl class="hc-def">
       <dt>Tu cuenta en el mapa</dt><dd>El correo con el que entras a Claude tiene que estar en la tabla de áreas de <code>guia.md</code>, en la columna Cuenta de tu área. Así sabe Claude dónde escribes sin que se lo digas. Si no estás, pídeselo a ${CTX}, que es quien escribe <code>guia.md</code>.</dd>
