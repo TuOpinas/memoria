@@ -22,7 +22,7 @@ ok("SECRETO-NOMINA" not in texto(pub), "público: nada del área marcada «Restr
 ok("SECRETO-PRECIOS" in texto(com) and "SECRETO-NOMINA" in texto(com), "completo: sí sale lo que la cuenta lee")
 ok("SECRETO-RESTRINGIDO" not in texto(pub) + texto(com), "ningún modo lee las carpetas restringido/")
 ok(pub["proyectos"]["ventas--cuentas"]["legible"], "público: un proyecto que solo menciona algo restringido sale entero")
-ok(all(set(s) <= {"fecha", "titulo"} for p in pub["proyectos"].values() for s in p.get("sesiones", [])), "público: de las sesiones, solo fecha y título")
+ok(all(set(s) <= {"fecha", "titulo", "trabajamos"} for p in pub["proyectos"].values() for s in p.get("sesiones", [])) and any(s.get("trabajamos") for p in pub["proyectos"].values() for s in p.get("sesiones", [])), "público: de las sesiones, solo su cabecera (fecha, título y «Trabajamos en»), nunca «Avances» ni «Pendiente»")
 ok("AVANCE-CUENTAS" in texto(com) and "AVANCE-CUENTAS" not in texto(pub), "completo trae la bitácora entera; público no")
 ok(pub["meta"]["estado"]["modo"] == "publico" and com["meta"]["estado"]["modo"] == "completo", "cada salida dice su modo")
 ok("SECRETO-MARGENES" not in texto(pub), "público: un proyecto restringido escrito con guion medio en el índice no se publica")
@@ -57,6 +57,7 @@ ok(pub["areas"]["personas"]["motivo"] == "declarada" and com["areas"]["personas"
 sop = com["proyectos"]["operacion--soporte"]
 ok(sop["ultima_sesion"] == "2026-08-15", "una entrada «(tarea)» de la bitácora no cuenta como sesión")
 ok(any(s_.get("fecha") == "2026-08-20" for s_ in sop["pasos"]), "un plazo vencido no se esconde porque la tarea movió «actualizado»")
+ok(any(s_.get("fecha") == "2026-06-30" for s_ in sop["pasos"]), "un plazo más de 30 días anterior a la última sesión sigue siendo plazo: está vencido, no es contexto")
 
 print("Entregables y decisiones")
 ents = {e["nombre"]: e for e in com["proyectos"]["ventas--cuentas"]["entregables"]}

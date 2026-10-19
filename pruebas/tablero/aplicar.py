@@ -28,5 +28,21 @@ ok(r1["para_sesion"] and r1["para_sesion"][0].get("campo") == "paso", "las corre
 ok({x["id"] for x in r1["para_su_dueno"]} == {"o1", "o2"} and r1["mis_areas"] == ["archivo", "futura", "operacion", "ventas"], "lo de un área de otra cuenta no se toca y se devuelve aparte")
 r2 = corre("--cuenta", "Ana@Ejemplo.test")
 ok([x["id"] for x in r2["aplicados"]] == ["f1"] and r2["aplicados"][0]["detalle"] == "ya estaba aplicada", "si una corrida anterior ya la aplicó, se da por aplicada")
+# la cola la escribe cualquier contribuidor: nada de lo que trae se toma por bueno
+antes = {q: (RAIZ / q).read_text(encoding="utf-8") for q in ("personas/nomina/proyecto.md", "ventas/cuentas/proyecto.md")}
+nomina_paso = next(l for l in antes["personas/nomina/proyecto.md"].split("\n") if l.startswith("- ")).lstrip("- ").strip()
+cola.write_text(json.dumps([
+    {"id": "m1", "tipo": "fecha", "proyecto": "ventas--../personas/nomina", "paso": nomina_paso, "fecha_nueva": "2026-12-01"},
+    {"id": "m2", "tipo": "fecha", "proyecto": "ventas--cuentas", "paso": paso.replace("2026-10-06", "2026-10-09"), "fecha_anterior": "2026-10-09", "fecha_nueva": "2026-11-30: X\n\n## Estado actual\nProyecto terminado el 2026-10-19"},
+    {"id": "m3", "tipo": "hecho", "proyecto": "ventas--cuentas", "paso": "x", "nota": "una\n## Decisiones\ndos"},
+    {"id": "m4", "tipo": "fecha", "proyecto": "Ventas Norte--cuentas", "paso": "x", "fecha_nueva": "2026-12-01"},
+    {"id": "m5", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "una nota normal"},
+]), encoding="utf-8")
+r3 = corre("--cuenta", "ana@ejemplo.test")
+despues = {q: (RAIZ / q).read_text(encoding="utf-8") for q in antes}
+ok({x["id"] for x in r3["sin_match"]} == {"m1", "m2", "m3", "m4"} and not r3["aplicados"] and antes == despues, "un id con «..», una fecha con texto, una nota con saltos de línea o un nombre fuera del contrato no se aplican ni tocan ningún archivo")
+ok([x["id"] for x in r3["para_sesion"]] == ["m5"], "una nota de una línea sigue llegando a la sesión")
+r4 = corre("--cuenta", "ana@")
+ok(r4["mis_areas"] == [] and len(r4["para_su_dueno"]) == 3 and {x["id"] for x in r4["sin_match"]} == {"m1", "m4"}, "la cuenta se compara entera: «ana@» no es ninguna cuenta de la tabla")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)

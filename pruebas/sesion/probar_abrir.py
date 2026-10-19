@@ -82,6 +82,23 @@ pm = (R / "base/premisas.md").read_text(encoding="utf-8")
 (R / "base/premisas.md").write_text(pm + "\n- P5 · Desde 2026-01-01 se vende también a cuentas pequeñas · Confirmó: Ana Prueba · 2026-10-10 · Reemplaza a P3\n", encoding="utf-8")
 c, o = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
 ok("premisa P3" not in o.split("=== AVISOS")[1], "una premisa que reemplaza a la cuestionada después del cuestionamiento lo responde, aunque su texto lleve otra fecha")
+# lo que encontró la revisión de calidad de la 1.14.10, sobre la misma copia
+d = (R / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8")
+(R / "ventas/cuentas/decisiones.md").write_text(d.replace("# Decisiones\n", "# Decisiones\n\n## 2026-13-45 · Fecha inválida\nDecidió: Ana Prueba\nPor qué: prueba.\nAfecta a: operacion/soporte\n", 1), encoding="utf-8")
+c, o = abrir("ventas/cuentas")
+dec = o.split("=== DECISIONES")[1].split("=== SESIONES")[0]
+ok("2026-13-45" not in dec.split("## ")[1], "una entrada con fecha inválida no se ordena como la más reciente")
+c, o = abrir("operacion/soporte")
+av = o.split("=== AVISOS")[1]
+ok("#2026-13-45" not in av and "Una entrada sin fecha válida de ventas/cuentas" in av, "una entrada sin fecha válida no tiene identificador: se avisa como tal, no se cita ni se da por vista")
+for pl, esperado in (("1.14.10 · huella f8f19e3", "RAIZ ATRASADA"), ("1.11.0 · huella", "RAIZ ATRASADA"), ("1.10.9 · huella abc", "PLUGIN ATRASADO")):
+    c, o = abrir("--plugin", f"# Método de trabajo · versión {pl}")
+    ok(f"Veredicto: {esperado}" in o, f"veredicto de versión en numérico: plugin {pl.split(' ')[0]} frente a raíz 1.11.0 sin huella → {esperado}")
+(R / "metodo.md").write_text("# Método de trabajo · versión 1.14.9 · huella f8f19e3 · x\n", encoding="utf-8")
+c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella f8f19e3")
+ok("Veredicto: AL DIA" in o, "misma versión y misma huella: AL DIA")
+c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella 000000")
+ok("Veredicto: MISMA VERSION, HUELLA DISTINTA" in o, "misma versión con otra huella: no se toca")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

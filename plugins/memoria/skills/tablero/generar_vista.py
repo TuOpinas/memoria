@@ -21,7 +21,7 @@ En dos tiempos, cuando la raíz está en otra computadora y el resultado tiene q
 
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
 «Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md empieza por «restringido» o que no está en ese índice,
-solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo fecha y título.
+solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo su cabecera: fecha, título y «Trabajamos en».
 «completo»: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras. Un tablero completo no se comparte.
 En los dos modos, lo que la cuenta no puede leer sale como restringido.
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
@@ -38,6 +38,29 @@ except Exception:
 RAIZ = pathlib.Path(sys.argv[1])
 def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
+# --veredicto-metodo "<primera línea del metodo.md del plugin>": compara versión y huella con el metodo.md de la raíz,
+# en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 0 de tarea.md: la
+# comparación la hace el script, no quien lo lee. Mismo criterio que abrir.py de la skill sesion.
+_plugin_linea = _arg("--veredicto-metodo")
+if _plugin_linea is not None:
+    def _vh(linea):
+        m = re.search(r"versi[oó]n\s+(\d+(?:\.\d+)*)", linea or "", re.I)
+        h = re.search(r"huella\s+([0-9a-f]+)", linea or "", re.I)
+        return (tuple(int(x) for x in m.group(1).split(".")) if m else None), (h.group(1) if h else None)
+    try:
+        with open(RAIZ / "metodo.md", encoding="utf-8-sig", errors="replace") as _f:
+            _raiz_linea = _f.readline().strip()
+    except OSError:
+        _raiz_linea = ""
+    vr, hr = _vh(_raiz_linea); vp, hp = _vh(_plugin_linea)
+    _t = lambda v: ".".join(map(str, v)) if v else "sin versión"
+    if not vp: ver = "SIN VEREDICTO: la línea del plugin no trae versión"
+    elif not vr or vp > vr or (vp == vr and not hr): ver = "RAIZ ATRASADA: se copia el metodo.md del plugin"
+    elif vp < vr: ver = "PLUGIN ATRASADO: no se copia nada"
+    elif hr == hp: ver = "AL DIA"
+    else: ver = "MISMA VERSION, HUELLA DISTINTA: no se toca"
+    print(f"{ver} (raíz {_t(vr)}, plugin {_t(vp)})")
+    sys.exit(0)
 # primer tiempo: solo inventario, sin carpeta de salida; segundo tiempo: la raíz es una copia y lo demás viene del inventario
 INVENTARIO = "--inventario" in sys.argv
 _inv_ruta = _arg("--desde-inventario")
@@ -175,7 +198,7 @@ else:
 NOMBRE_RAIZ = INV.get("raiz_nombre") if INV is not None else RAIZ.name
 org = titulo_h1(guia).split("·")[0].strip() or NOMBRE_RAIZ
 
-areas_guia = []
+areas_guia, guia_avisos = [], []
 tabla = seccion(guia, "Áreas")
 primera = True
 for l in tabla.split("\n"):
@@ -185,9 +208,13 @@ for l in tabla.split("\n"):
         primera = False; continue
     celdas = [c.strip() for c in l.strip().strip("|").split("|")]
     if len(celdas) < 5:
+        # una fila con columnas de menos no desaparece en silencio: el tablero lo dice en «La memoria al día»
+        guia_avisos.append(f"la fila «{celdas[0].strip('`')}» de la tabla de áreas tiene {len(celdas)} columnas y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)")
         continue
     slug = celdas[0].strip("`").rstrip("/")
     areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[2], "cuenta": celdas[3], "lectores": celdas[4]})
+if not areas_guia and guia:
+    guia_avisos.append("no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta")
 
 quien = seccion(guia, "Quién responde por qué")
 contexto_comun = ""
@@ -747,7 +774,7 @@ for a in areas_guia:
     carpeta = RAIZ / a["slug"]
     texto = leer(carpeta / "area.md")
     area_doc = {
-        "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"], "cuenta": a["cuenta"],
+        "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
@@ -784,7 +811,6 @@ for a in areas_guia:
         tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
-            "indice_descripcion": ref["descripcion"], "indice_notas": ref["notas"],
             "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
@@ -812,15 +838,12 @@ for a in areas_guia:
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
         ultima_real = reales[0]["fecha"] if reales else None
-        # pasos con fecha. Una fecha más de 30 días anterior a la última sesión (o, sin sesiones, a «actualizado»)
-        # se toma por contexto viejo, no por plazo. No se mide desde «actualizado» cuando hay sesión, porque la
-        # tarea lo mueve al cerrar un paso y escondería los plazos vencidos de los demás.
+        # pasos con fecha. Una fecha es plazo solo si el texto la trata como tal («antes del», «para el», al inicio
+        # de la línea…); las que cuentan algo pasado («enviada el») son contexto y plazos_en ya las deja fuera.
+        # Un plazo viejo no se descarta por viejo: está vencido, y eso es lo que el tablero tiene que enseñar.
         pasos = []
-        base_ref = ultima_real if fecha_valida(ultima_real) else (pdoc.get("actualizado") if fecha_valida(pdoc.get("actualizado")) else HOY)
-        ref_fecha = datetime.date.fromisoformat(base_ref) - datetime.timedelta(days=30)
-        for l in pdoc["siguientes_pasos"]:
-            # una fecha es plazo solo si el texto la trata como tal; las que cuentan algo pasado son contexto
-            fs = [f for f in plazos_en(l) if f >= ref_fecha.isoformat()]
+        for l in pdoc.pop("siguientes_pasos"):
+            fs = plazos_en(l)
             texto = re.sub(r"^-\s*", "", l)
             cab = bool(re.match(r"^[A-Za-zÁÉÍÓÚáéíóúñÑ][^.]{0,30}:$", texto.strip()))
             p_ = {"texto": texto, "fecha": min(fs) if fs else None}
@@ -836,11 +859,12 @@ for a in areas_guia:
         dec = parse_decisiones(leer(pc / "decisiones.md"))
         pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
-        pdoc["sesiones_total"] = len(ses)
+        pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
-        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"]} for s in ses[:5]] if PUBLICO else ses[:5]
+        # en público, de cada sesión solo su cabecera: fecha, título y «Trabajamos en» (contrato, sección 7)
+        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"], "trabajamos": s.get("trabajamos", "")} for s in ses[:5]] if PUBLICO else ses[:5]
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -917,9 +941,10 @@ fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
-    "areas": [a["slug"] for a in areas_guia], "fuente": "Generado desde la raíz con generar_vista.py", "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
+    "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
-    "fuera": fuera, "premisas": premisas, "cuestionamientos": cuestionamientos,
+    "fuera": fuera + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
+    "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
 if INV is not None and INV.get("huella_raiz"):
     docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]

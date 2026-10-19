@@ -106,6 +106,24 @@ const path = require('path');
     if(r2 !== 0) errores.push(`cierres: al volver a abrir, la misma tanda de cierres se lanzó otra vez (${r2})`);
     await ctx.close();
   }
+  // la cola y los cierres los escribe la sesión sin filtrar: en el tablero público, un lector no ve nada de un
+  // proyecto que el tablero no muestra, ni en Pendientes, ni en Inicio, ni en la banda de cierres
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`lector: ${e.message}`));
+    const url = 'file://' + path.resolve(dir, 'publico-lector.html');
+    for(const h of ['#', '#pendientes', '#a-ventas', '#p-ventas--cuentas-t-resumen']){
+      await p.goto(url + h); await p.waitForTimeout(500);
+      const t = await p.evaluate(() => document.body.innerText);
+      if(/SECRETO-COLA|SECRETO-TITULO/.test(t)) errores.push(`lector: en ${h} se ve el texto de la cola o el título de un cierre de un proyecto que el tablero no muestra`);
+    }
+    await p.goto(url + '#'); await p.waitForTimeout(500);
+    const banda = await p.evaluate(() => [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | '));
+    if(!/2 sesiones cerradas.*Cuentas, 1 en proyecto que este tablero no muestra/.test(banda)) errores.push(`lector: la banda de cierres no dice lo justo (${banda.slice(0, 200)})`);
+    await p.screenshot({ path: path.join(out, 'publico-lector.png') });
+    await ctx.close();
+  }
   await b.close();
   console.log(errores.length ? errores.join('\n') : 'La página no dio ningún error.');
   process.exit(errores.length ? 1 : 0);

@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"]
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
 cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
 las cinco decisiones y las tres sesiones más recientes, las cabeceras de entregables/) y los avisos de apertura:
 cuestionamientos abiertos, decisiones de otros proyectos que lo nombran en «Afecta a:», entregables desfasados o en
 borrador viejo, trabajo sin sesión y la fecha de base/contexto.md. Con --cuenta dice qué áreas son de esa cuenta y,
-si es la del responsable de contexto, también los cuestionamientos a premisas.
+si es la del responsable de contexto, también los cuestionamientos a premisas. Con --plugin compara la versión y la
+huella del metodo.md de la raíz con las del plugin, en numérico («1.14.10» es mayor que «1.14.9»), y dice el veredicto:
+RAIZ ATRASADA (se copia el del plugin), AL DIA, PLUGIN ATRASADO (no se copia nada y se avisa) o MISMA VERSION, HUELLA
+DISTINTA (no se toca). La comparación la hace el script, no quien lo lee.
 
 Nunca abre taller/, fuentes/, restringido/ ni base/ (salvo premisas.md y la cabecera de contexto.md; de taller/ y fuentes/
 del proyecto activo solo mira fechas), ni las sesiones de otros proyectos, ni los proyectos que no están en el índice de su
@@ -25,6 +28,9 @@ args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
     i = args.index("--cuenta"); CUENTA = (args[i + 1] if i + 1 < len(args) else "").strip().lower(); del args[i:i + 2]
+PLUGIN = None
+if "--plugin" in args:
+    i = args.index("--plugin"); PLUGIN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args else None
 try:
     from zoneinfo import ZoneInfo
@@ -33,6 +39,13 @@ except Exception:
     TZ = None
 HOY = datetime.datetime.now(TZ).date()
 FECHA = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
+
+
+def fecha_ok(f):
+    try:
+        datetime.date.fromisoformat(f); return True
+    except (TypeError, ValueError):
+        return False
 no_legibles = []
 
 
@@ -84,20 +97,16 @@ def entradas(texto):
             continue
         cab = p.split("\n", 1)[0]
         f = FECHA.search(cab)
-        out.append({"fecha": f.group(1) if f else "", "cab": cab[3:].strip(), "texto": p.rstrip()})
+        fecha = f.group(1) if f and fecha_ok(f.group(1)) else ""   # una fecha inválida (2026-13-45) es como no tenerla
+        out.append({"fecha": fecha, "cab": cab[3:].strip(), "texto": p.rstrip()})
     return out
 
 
 def recientes(texto, n):
     es = entradas(texto)
-    return sorted(es, key=lambda e: e["fecha"], reverse=True)[:n]
+    return sorted(es, key=lambda e: e["fecha"], reverse=True)[:n]   # sin fecha válida, al final
 
 
-def fecha_ok(f):
-    try:
-        datetime.date.fromisoformat(f); return True
-    except (TypeError, ValueError):
-        return False
 
 
 def mtime(p):
@@ -120,6 +129,28 @@ except OSError:
 guia = leer(RAIZ / "guia.md") or ""
 print("=== METODO (primera línea)")
 print(linea_metodo)
+
+def version_huella(linea):
+    """(tupla de la versión, huella) de una primera línea de metodo.md; (None, None) si no la trae."""
+    m = re.search(r"versi[oó]n\s+(\d+(?:\.\d+)*)", linea or "", re.I)
+    h = re.search(r"huella\s+([0-9a-f]+)", linea or "", re.I)
+    return (tuple(int(x) for x in m.group(1).split(".")) if m else None), (h.group(1) if h else None)
+
+if PLUGIN is not None:
+    vr, hr = version_huella(linea_metodo)
+    vp, hp = version_huella(PLUGIN)
+    txt = lambda v: ".".join(map(str, v)) if v else "sin versión"
+    if not vp:
+        ver = "SIN VEREDICTO: la línea del plugin no trae versión"
+    elif not vr or vp > vr or (vp == vr and not hr):
+        ver = "RAIZ ATRASADA: se copia el metodo.md del plugin"
+    elif vp < vr:
+        ver = "PLUGIN ATRASADO: no se copia nada; se avisa de que la carpeta usa una versión más nueva"
+    elif hr == hp:
+        ver = "AL DIA"
+    else:
+        ver = "MISMA VERSION, HUELLA DISTINTA: no se toca"
+    print(f"Veredicto: {ver} (raíz {txt(vr)}, plugin {txt(vp)})")
 titulo("GUIA")
 print(guia.strip())
 
@@ -134,6 +165,10 @@ for l in filas:
     c = [x.strip() for x in l.strip().strip("|").split("|")]
     if len(c) >= 5:
         areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuenta": c[3].lower(), "restringida": "restring" in c[4].lower()})
+    else:
+        print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
+if not areas:
+    print("(aviso: no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta; que el responsable de contexto revise guia.md)")
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
 # «Contexto común (`guia.md` y `base/`): Nombre.»); la cuenta del responsable es la de las áreas de las que es dueño
 resp_contexto = ""
@@ -201,7 +236,14 @@ if "/" not in ACTIVO:
 pc = RAIZ / ACTIVO
 area_txt = leer(RAIZ / area_activa / "area.md")
 titulo(f"AREA {area_activa} · bloque Proyectos")
-print(seccion(cabecera(area_txt)[1], "Proyectos") if area_txt is not None else "(no se pudo leer area.md: restringida o sin descargar)")
+def motivo_area(slug):
+    """El mismo motivo que da el nivel 0: sin carpeta, restringida según guia.md, o no se pudo leer."""
+    if not (RAIZ / slug).exists():
+        return "su carpeta no está en esta computadora"
+    if any(a["slug"] == slug and a["restringida"] for a in areas):
+        return "restringida para esta cuenta"
+    return "no se pudo leer: sin permiso o sin descargar"
+print(seccion(cabecera(area_txt)[1], "Proyectos") if area_txt is not None else f"(no se pudo leer area.md: {motivo_area(area_activa)})")
 tp = leer(pc / "proyecto.md")
 if tp is None:
     titulo("PROYECTO")
@@ -311,6 +353,9 @@ for a_slug, slug, carpeta in proyectos_legibles():
     es = entradas(t)
     cuenta = {}
     for e in reversed(es):
+        if not e["fecha"]:
+            e["id"] = ""                       # sin fecha válida no hay identificador (contrato, sección 4)
+            continue
         n = cuenta[e["fecha"]] = cuenta.get(e["fecha"], 0) + 1
         e["id"] = e["fecha"] + ("" if n == 1 else f"-{n}")
     for e in es:
@@ -341,9 +386,13 @@ for origen, e, c, prem in cuestiona:
     objetivo = f"la premisa {prem[1]}" if prem else c["Cuestiona a"]
     avisos.insert(0, f"Cuestionamiento abierto ({origen}#{e['id']}): «{e['cab']}». Planteó: {c['Planteó'] or c['Decidió'] or 'no consta'}. "
                      f"Cuestiona a: {objetivo}. Por qué: {c['Por qué'][:300]}")
+sin_fecha = [x for x in afecta if not x[1]["fecha"]]
+afecta = [x for x in afecta if x[1]["fecha"]]
 nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]
 for origen, e, c in sorted(nuevos, key=lambda x: x[1]["fecha"], reverse=True):
     avisos.append(f"Le afecta una decisión de {origen} ({origen}#{e['id']}): «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Afecta a: {c['Afecta a'][:300]}")
+for origen, e, c in sin_fecha:
+    avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su dueño la revise.")
 viejos = len(afecta) - len(nuevos)
 
 ctx = leer(RAIZ / "base" / "contexto.md")
