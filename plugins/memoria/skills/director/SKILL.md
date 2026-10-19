@@ -15,7 +15,7 @@ Mira un área entera como la miraría quien la dirige: cómo está, qué se movi
 
 **Otras áreas**: «¿qué de otras áreas me afecta?», «revisa lo de otras áreas».
 
-**Panorama**: al cerrar una sesión en el área (skill `sesion`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
+**Panorama**: al cerrar una sesión en el área (skill `sesion`, anexo `cerrar.md`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
 
 Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, no es esta skill: si es su dueño, se abre sesión (`sesion`); si no, es `consulta`.
 
@@ -29,7 +29,7 @@ Por los niveles de la sección 12 de `convenciones`, sin saltarse ninguno:
 4. La búsqueda de líneas `Afecta a:` y `Cuestiona a:` de toda la raíz que nombren un proyecto del área, como al abrir sesión.
 5. Para «otras áreas», de cada una: el bloque `Proyectos` de su `area.md` y, de lo que toque a esta área, sus decisiones y el cuerpo de sus entregables `vigentes`. Nada más: `sesiones.md`, `taller/`, `fuentes/` y lo restringido de otra área no se leen, igual que para cualquier persona de fuera.
 
-Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice `sesion` en «Sin carpeta: solo lectura», y el Panorama no se escribe: se guarda como nota del área en la cola del tablero, con la forma que dice `sesion` ahí (`area` en lugar de `proyecto`), y la siguiente sesión del dueño en cualquier proyecto del área lo enseña al abrir.
+Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice el anexo `sin-carpeta.md` de la skill `sesion`, y el Panorama no se escribe: se guarda como nota del área en la cola del tablero, con la forma que dice ese anexo (`area` en lugar de `proyecto`), y la siguiente sesión del dueño en cualquier proyecto del área lo enseña al abrir.
 
 Si quien pregunta es dueño del área, de sus propios proyectos se puede leer también `sesiones.md`. Lo restringido se trata como dice la sección 1 de `convenciones`: si no se puede leer, se dice qué es y de quién, y ahí se para.
 
@@ -69,7 +69,7 @@ Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<
 2026-10-15 · Comercial cerró la propuesta de Lumbre y abrió dos leads por canal. Lo que preocupa: el pipeline no tiene fecha de seguimiento en tres de cinco oportunidades, y la tesis de posicionamiento lleva seis semanas en borrador.
 ```
 
-Al cerrar una sesión no se relee el área para escribirlo: basta el Panorama anterior, lo que la sesión ya leyó y escribió y, de los demás proyectos del área, la cabecera y el `En corto` de los que cambiaron después de la fecha del Panorama anterior (`sesion`, paso 10). «Actualiza el panorama» sí lee lo que dice «Qué leo».
+Al cerrar una sesión no se relee el área para escribirlo: basta el Panorama anterior, lo que la sesión ya leyó y escribió y, de los demás proyectos del área, la cabecera y el `En corto` de los que cambiaron después de la fecha del Panorama anterior (`sesion`, `cerrar.md`, paso 10). «Actualiza el panorama» sí lee lo que dice «Qué leo».
 
 Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
 
