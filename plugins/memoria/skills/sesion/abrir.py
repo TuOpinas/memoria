@@ -23,7 +23,7 @@ import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
-    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>]  (la raíz es la carpeta con guia.md y metodo.md)")
+    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"]  (la raíz es la carpeta con guia.md y metodo.md)")
 args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
@@ -379,6 +379,9 @@ for a_slug, slug, carpeta in proyectos_legibles():
 # cuestionada después del cuestionamiento también lo responde
 reemplazo_fecha = {r: (f or "9999") for _, _, r, f in premisas if r}   # sin fecha, como el tablero: la responde
 for origen, e, c, prem in cuestiona:
+    if not e["id"]:
+        avisos.insert(0, f"Un cuestionamiento sin fecha válida en {origen} («{e['cab']}») nombra este proyecto: no tiene identificador y no se puede responder hasta que su dueño lo registre con fecha.")
+        continue
     if (origen, e["id"]) in respuestas:
         continue
     if prem and prem[1] in reemplazo_fecha and reemplazo_fecha[prem[1]] >= e["fecha"]:

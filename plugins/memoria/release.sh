@@ -35,6 +35,12 @@ HOOK_SALIDA="$(CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" bash "$PLUGIN_DIR/hooks/arranque
 if [ -z "$HOOK_SALIDA" ] || ! printf '%s' "$HOOK_SALIDA" | grep -q 'Antes de guardar algo' || ! printf '%s' "$HOOK_SALIDA" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
   echo "El hook de arranque no inyecta el bloque de instrucciones (¿cambió la primera o la última línea del bloque en montaje.md?). Corrígelo antes de publicar." >&2; exit 1
 fi
+# una sola frase para cuándo se pone al día el tablero: si vuelve «al cerrar sesión» a los sitios que la copiaban, se avisa
+FRASE_VIEJA="se pone al día (cada vez que|al) (su dueño )?cierr|puesta al d[ií]a al cerrar cada sesi|se regenera cada vez que esa persona cierra"
+VIEJA="$( { grep -nE "$FRASE_VIEJA" "$PLUGIN_DIR/skills/tablero/SKILL.md" "$PLUGIN_DIR/skills/convenciones/montaje.md" "$PLUGIN_DIR/skills/nuevo/SKILL.md" "$PLUGIN_DIR/skills/tablero/vista.html"; sed -n '1,/^## Versiones/p' "$README" | grep -nE "$FRASE_VIEJA" | sed 's/^/README.md:/'; } 2>/dev/null || true)"
+if [ -n "$VIEJA" ]; then
+  echo "Alguien volvió a escribir que el tablero se pone al día al cerrar sesión; la frase canónica vive en la regla «Se pone al día» de skills/tablero/SKILL.md:" >&2; printf '%s\n' "$VIEJA" >&2; exit 1
+fi
 if ! grep -q "Versión del método: \*\*$CONTRATO_VER\*\*" "$CONTRATO"; then
   echo "El contrato no declara la versión $CONTRATO_VER. Corrígelo antes de publicar." >&2; exit 1
 fi

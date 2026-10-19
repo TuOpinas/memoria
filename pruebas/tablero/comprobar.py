@@ -23,6 +23,7 @@ ok("SECRETO-PRECIOS" in texto(com) and "SECRETO-NOMINA" in texto(com), "completo
 ok("SECRETO-RESTRINGIDO" not in texto(pub) + texto(com), "ningún modo lee las carpetas restringido/")
 ok(pub["proyectos"]["ventas--cuentas"]["legible"], "público: un proyecto que solo menciona algo restringido sale entero")
 ok(all(set(s) <= {"fecha", "titulo", "trabajamos"} for p in pub["proyectos"].values() for s in p.get("sesiones", [])) and any(s.get("trabajamos") for p in pub["proyectos"].values() for s in p.get("sesiones", [])), "público: de las sesiones, solo su cabecera (fecha, título y «Trabajamos en»), nunca «Avances» ni «Pendiente»")
+ok("SECRETO-CUERPO" not in json.dumps(pub, ensure_ascii=False) and "SECRETO-PENDIENTE" not in json.dumps(pub, ensure_ascii=False) and "SECRETO-CUERPO" in json.dumps(com, ensure_ascii=False), "público: una entrada sin «Avances:» no arrastra su cuerpo detrás de «Trabajamos en»")
 ok("AVANCE-CUENTAS" in texto(com) and "AVANCE-CUENTAS" not in texto(pub), "completo trae la bitácora entera; público no")
 ok(pub["meta"]["estado"]["modo"] == "publico" and com["meta"]["estado"]["modo"] == "completo", "cada salida dice su modo")
 ok("SECRETO-MARGENES" not in texto(pub), "público: un proyecto restringido escrito con guion medio en el índice no se publica")

@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.14.10 · huella 73b0b1f · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.14.10 · huella e692d6f · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -395,9 +395,11 @@ La raíz es una carpeta compartida y su nombre se ve en Drive, así que ese sí 
 
 ## 7. Qué es público
 
-La superficie pública de un proyecto son `entregables/` y `decisiones.md`. Es lo único que otra área puede leer para construir encima, y solo si el entregable está `vigente`. `area.md` y `proyecto.md` también se leen desde fuera, porque son el índice que lleva hasta esa superficie.
+La superficie pública de un proyecto son `entregables/` y `decisiones.md`. Es lo que otra área puede leer para construir encima, y solo si el entregable está `vigente`. `area.md` y `proyecto.md` también se leen desde fuera, porque son el índice que lleva hasta esa superficie, y de `sesiones.md`, la cabecera de cada entrada (abajo).
 
-`sesiones.md`, `taller/`, `fuentes/` y todo lo que está restringido son taller privado. Nadie de fuera del área los lee ni los cita en `basado_en`. Un entregable sí cita el taller de su propio proyecto, que es de donde salió.
+**Un proyecto es público** cuando su área no dice «Restringida» en la columna «Quién la lee» de `guia.md`, su línea del bloque `Proyectos` de su `area.md` no empieza por «restringido» y esa línea existe. Es el criterio que usan el tablero público, la marca de cierre y las notas de la cola (skill `sesion`): de un proyecto que no es público, fuera de su área y de los tableros completos no sale más que su nombre y su dueño.
+
+El cuerpo de `sesiones.md`, `taller/`, `fuentes/` y todo lo que está restringido son taller privado. Nadie de fuera del área los lee ni los cita en `basado_en`. Un entregable sí cita el taller de su propio proyecto, que es de donde salió.
 
 De `sesiones.md` hay una parte pública: la cabecera de cada entrada, que es la fecha, el título y la línea «Trabajamos en». Dice qué está moviendo el proyecto sin contar cómo, y es lo que otra área, `consulta`, el director y el tablero público pueden leer de una bitácora ajena. «Avances» y «Pendiente» son el cuerpo y siguen siendo taller privado. Lo que otra área necesita saber de un proyecto está pensado para leerse sin la bitácora: su «En corto», su «Estado actual», sus decisiones y sus entregables vigentes, y el `Panorama` de su área.
 

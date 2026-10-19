@@ -12,5 +12,7 @@ Pendiente: nada.
 
 ## 2026-08-15
 Trabajamos en: arranque.
+SECRETO-CUERPO lo que se habló, en una entrada migrada sin «Avances:».
+**Pendiente:** SECRETO-PENDIENTE.
 Avances: —
 Pendiente: —

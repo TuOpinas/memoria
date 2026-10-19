@@ -81,7 +81,7 @@ Además de las prohibiciones de `convenciones`:
 
 - Escribir en cualquier sitio que no sea el `Panorama` del área. Ni decisiones, ni pasos, ni estados: eso es de la sesión de cada proyecto.
 - Registrar un cuestionamiento sin la confirmación de la persona, o fuera de un proyecto suyo.
-- Leer `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área.
+- Leer el cuerpo de `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área. De la bitácora ajena, solo la cabecera de cada entrada.
 - Dar más de cuatro hallazgos. Si hay más, se dan los cuatro que más desbloquean y se dice cuántos quedaron fuera.
 - Presentar una opinión como hallazgo. Todo hallazgo cita de dónde sale.
 - Dar por resuelto un cuestionamiento que nadie respondió.

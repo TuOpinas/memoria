@@ -860,11 +860,12 @@ for a in areas_guia:
         pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
+        pdoc["sesiones_registro"] = len(ses)    # entradas del registro, con las «(tarea)»: lo que enseña la pestaña Bitácora
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
         # en público, de cada sesión solo su cabecera: fecha, título y «Trabajamos en» (contrato, sección 7)
-        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"], "trabajamos": s.get("trabajamos", "")} for s in ses[:5]] if PUBLICO else ses[:5]
+        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"], "trabajamos": (s.get("trabajamos") or "").split("\n")[0].strip()} for s in ses[:5]] if PUBLICO else ses[:5]
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -943,7 +944,7 @@ docs["meta"]["estado"] = {
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
-    "fuera": fuera + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
+    "fuera": [f for f in (fuera or []) if not f.get("guia")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
 if INV is not None and INV.get("huella_raiz"):

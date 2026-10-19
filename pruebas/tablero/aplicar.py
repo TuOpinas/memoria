@@ -23,7 +23,7 @@ ok(not r0["aplicados"] and len(r0["para_su_dueno"]) == 6 and "actualizado: 2026-
 r1 = corre("--cuenta", "ana@ejemplo.test"); pm = (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
 ok([x["id"] for x in r1["aplicados"]] == ["f1"] and "antes del 2026-10-09" in pm, "una fecha se aplica en la línea de su paso")
 ok("actualizado: 2026-10-01" in pm, "aplicar una fecha no mueve «actualizado»")
-ok({x["id"] for x in r1["sin_match"]} == {"f2", "f3"}, "un cambio sin paso o sin proyecto no rompe nada: queda sin aplicar")
+ok({x["id"] for x in r1["rechazados"]} == {"f2", "f3"} and not r1["sin_match"], "un cambio sin paso o sin proyecto no rompe nada: se rechaza y sale de la cola")
 ok(r1["para_sesion"] and r1["para_sesion"][0].get("campo") == "paso", "las correcciones llegan a la sesión con su campo")
 ok({x["id"] for x in r1["para_su_dueno"]} == {"o1", "o2"} and r1["mis_areas"] == ["archivo", "futura", "operacion", "ventas"], "lo de un área de otra cuenta no se toca y se devuelve aparte")
 r2 = corre("--cuenta", "Ana@Ejemplo.test")
@@ -40,9 +40,25 @@ cola.write_text(json.dumps([
 ]), encoding="utf-8")
 r3 = corre("--cuenta", "ana@ejemplo.test")
 despues = {q: (RAIZ / q).read_text(encoding="utf-8") for q in antes}
-ok({x["id"] for x in r3["sin_match"]} == {"m1", "m2", "m3", "m4"} and not r3["aplicados"] and antes == despues, "un id con «..», una fecha con texto, una nota con saltos de línea o un nombre fuera del contrato no se aplican ni tocan ningún archivo")
+ok({x["id"] for x in r3["rechazados"]} == {"m1", "m2", "m3", "m4"} and not r3["aplicados"] and not r3["sin_match"] and antes == despues, "un id con «..», una fecha con texto, una nota con saltos de línea o un nombre fuera del contrato se rechazan sin tocar ningún archivo")
 ok([x["id"] for x in r3["para_sesion"]] == ["m5"], "una nota de una línea sigue llegando a la sesión")
+# lo que encontró la revisión independiente: un salto de línea final, dígitos de otro alfabeto y fechas que no existen
+cola.write_text(json.dumps([
+    {"id": "n1", "tipo": "fecha", "proyecto": "ventas--cuentas", "paso": paso.replace("2026-10-06", "2026-10-09"), "fecha_anterior": "2026-10-09", "fecha_nueva": "2026-11-30\n"},
+    {"id": "n2", "tipo": "fecha", "proyecto": "ventas--cuentas", "paso": paso.replace("2026-10-06", "2026-10-09"), "fecha_anterior": "2026-10-09", "fecha_nueva": "2026-02-30"},
+    {"id": "n3", "tipo": "fecha", "proyecto": "ventas--cuentas", "paso": paso.replace("2026-10-06", "2026-10-09"), "fecha_anterior": "2026-10-09", "fecha_nueva": "2026-\u0661\u0661-30"},
+    {"id": "n4", "tipo": "nota", "proyecto": "ventas--cuentas\n", "nota": "x"},
+]), encoding="utf-8")
+antes = (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
+r5 = corre("--cuenta", "ana@ejemplo.test")
+ok({x["id"] for x in r5["rechazados"]} == {"n1", "n2", "n3", "n4"} and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "un salto de línea final, una fecha que no existe, dígitos de otro alfabeto o un id con salto de línea se rechazan")
+cola.write_text(json.dumps([
+    {"id": "m1", "tipo": "fecha", "proyecto": "ventas--../personas/nomina", "paso": "x", "fecha_nueva": "2026-12-01"},
+    {"id": "m2", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "a"}, {"id": "m3", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "b"},
+    {"id": "m4", "tipo": "fecha", "proyecto": "Ventas Norte--cuentas", "paso": "x", "fecha_nueva": "2026-12-01"},
+    {"id": "m5", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "c"},
+]), encoding="utf-8")
 r4 = corre("--cuenta", "ana@")
-ok(r4["mis_areas"] == [] and len(r4["para_su_dueno"]) == 3 and {x["id"] for x in r4["sin_match"]} == {"m1", "m4"}, "la cuenta se compara entera: «ana@» no es ninguna cuenta de la tabla")
+ok(r4["mis_areas"] == [] and len(r4["para_su_dueno"]) == 3 and {x["id"] for x in r4["rechazados"]} == {"m1", "m4"}, "la cuenta se compara entera: «ana@» no es ninguna cuenta de la tabla")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)
