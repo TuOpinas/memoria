@@ -566,8 +566,8 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.8"; // la misma que el plugin memoria; la sube release.sh
-let AREAS = [], PROJ = [], META = null, CAMBIOS = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
+const VERSION_TABLERO = "1.14.9"; // la misma que el plugin memoria; la sube release.sh
+let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const today = () => { const n = new Date(); return new Date(n.getTime()-n.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
@@ -1190,7 +1190,7 @@ function renderPendientes(){
     + conPlazo
     + (grupos.length ? `<div class="gh"><h2>Sin fecha, por proyecto</h2><p>${all.filter(i=>!i.f).length} pasos en ${grupos.length} proyectos · primero lo importante</p></div>` + grupos.map(grupo).join("") : "")
     + (!all.length ? `<p class="empty">Nada pendiente.</p>` : "")
-    + (CAN ? `<p class="more">Cambiar la fecha o marcar hecho se guarda aquí y se escribe en la carpeta la próxima vez que el tablero se ponga al día (al cerrar una sesión o al sincronizar); lo que necesita contexto se cierra en la siguiente sesión del proyecto.</p>` : "");
+    + (CAN ? `<p class="more">Cambiar la fecha o marcar hecho se guarda aquí y se escribe en la carpeta la próxima vez que el tablero se ponga al día (al abrirlo después de cerrar una sesión, o al sincronizar); lo que necesita contexto se cierra en la siguiente sesión del proyecto.</p>` : "");
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pend-more]"); if(!b) return; const id = b.dataset.pendMore; PEND_OPEN.has(id) ? PEND_OPEN.delete(id) : PEND_OPEN.add(id); render(); });
 function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.riesgo?" risk":""}" ${tip(e.label+(e.riesgo?" · en riesgo":"")+": "+e.regla+(e.riesgo?"; "+e.riesgoRegla:"")+". "+((EST[e.k]||{}).desc||""))}></i>`; }
@@ -1204,7 +1204,7 @@ function renderResumen(){
     const nLate = ps.reduce((n,p)=>n+stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length, 0);
     const p1 = (a.prioridades||[])[0], p1t = p1 ? p1.split(/(?<=\.)\s/)[0] : "";
     const pan = a.panorama && a.panorama.texto ? `<span class="ar-dir">${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(primeraFrase(a.panorama.texto))}${primeraFrase(a.panorama.texto).length < a.panorama.texto.trim().length ? ` <i>más ›</i>` : ""}</span>` : `<span class="ar-dir"><em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em></span>`;
-    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${archivada(a)?`<span class="pill closed">Archivada</span>`:pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}${spark(ps.flatMap(p=>p.sesiones_fechas||[]), a.nombre)}</span><span class="ar-pan"><span class="ar-ln">${areaLinea(a)}</span>${pan}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
+    return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s">${archivada(a)?`<span class="pill closed">Archivada</span>`:pills||`<span class="pill none">Sin proyectos</span>`}${nLate?`<span class="pill late">${nLate} vencido${nLate===1?"":"s"}</span>`:""}${spark(ps.flatMap(p=>p.sesiones_fechas||[]), a.nombre)}</span><span class="ar-pan">${a.panorama && a.panorama.texto ? pan : `<span class="ar-ln">${areaLinea(a)}</span>`}</span><span class="ar-p">${p1t?`<i>1</i>${inline(p1t)}`:`<em>Sin prioridades escritas</em>`}</span></button>`;
   }).join("");
   return `<section class="due"><div class="top"><h2>Áreas${hq("director","Panorama de cada área")}</h2><span class="c">${AREAS.length - (VER_ARCH ? 0 : nArch)}</span><span class="c" style="margin-left:auto">Cómo está cada una, lo que dice su director y su primera prioridad</span></div><div class="ar">${filas}</div>${nArch?`<p class="more" style="margin:8px 0 0">${archBtn(nArch)}</p>`:""}</section>`;
 }
@@ -1325,9 +1325,22 @@ function renderBuscar(){
     : `<p class="empty">Nada coincide con «${esc(QUERY)}».</p>`;
 }
 // ---- sincronizar ahora ----
-let SYNC_STATE = null, SYNC_DESDE = null;
+let SYNC_STATE = null, SYNC_DESDE = null, SYNC_AUTO = null;
+// Cierres de sesión que el tablero aún no muestra: los deja el cierre (skill sesion, cerrar.md, paso 11) en la colección
+// «cierres» y la sincronización borra los que ya recogió. Cuentan los que son posteriores a la última sincronización.
+const cierresPend = () => !META || !META.sincronizado ? [] : CIERRES.filter(c => c.hora && new Date(c.hora).getTime() > new Date(META.sincronizado).getTime());
+const nombresCierres = l => [...new Set(l.map(c => c.nombre || c.proyecto))].join(", ");
+// Al abrir el tablero con cierres pendientes, el dueño lo pone al día solo, una vez por tanda (la marca es la hora del último cierre).
+function autoSync(){
+  if(!OWNER || !META || SYNC_STATE || syncFalta()) return;
+  const pend = cierresPend(); if(!pend.length) return;
+  const marca = pend.map(c => c.hora).sort().pop();
+  if(autoSync.hecha === marca) return;
+  try{ if(localStorage.getItem("auto-sync") === marca) return; localStorage.setItem("auto-sync", marca); }catch(e){}
+  autoSync.hecha = marca; SYNC_AUTO = pend; sincronizar();
+}
 // Lo que el botón dice cuando no puede sincronizar: primero el conector, porque sin él tampoco se puede crear la tarea.
-const syncFalta = () => !MCP ? "falta el conector de tareas programadas (Claude Code Remote) en tu cuenta de Claude; mientras tanto, el tablero se pone al día al cerrar cada sesión" : !(META && META.tarea) ? "este tablero todavía no tiene la tarea del botón; dile a Claude con la carpeta conectada «actualiza el tablero» y queda creada" : "";
+const syncFalta = () => !MCP ? "falta el conector de tareas programadas (Claude Code Remote) en tu cuenta de Claude; mientras tanto, dile a Claude con la carpeta conectada «sincroniza el tablero»" : !(META && META.tarea) ? "este tablero todavía no tiene la tarea del botón; dile a Claude con la carpeta conectada «actualiza el tablero» y queda creada" : "";
 async function sincronizar(){
   if(!META) return;
   const falta = syncFalta(); if(falta){ flash("Para sincronizar desde aquí " + falta + "."); return; }
@@ -1355,13 +1368,14 @@ function syncBtn(){
   const retenida = new Set(META.cola_retenida || []);
   const mec = CAMBIOS.filter(c => (c.tipo==="fecha" || (c.tipo==="hecho" && c.nota)) && !retenida.has(c.id)).length;
   const desfase = !!(META.version_tablero && META.version_tablero !== VERSION_TABLERO);
-  const pend = listo && (mec > 0 || desfase);
+  const nCierres = cierresPend().length;
+  const pend = listo && (mec > 0 || desfase || nCierres > 0);
   const min = META.sincronizado ? Math.max(0, Math.round((Date.now() - new Date(META.sincronizado).getTime())/60000)) : null;
   const cuando = min===null ? "" : haceMin(min);
   const tipTxt = !listo ? `Sincronizar ahora: ${falta}.`
     : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
     : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar. Si nada cambió en la carpeta, termina enseguida."
-    : pend ? (mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: la página y los datos del tablero son de versiones distintas, y la sincronización los pone a la par.") + (cuando ? ` Última vez ${cuando}.` : "")
+    : pend ? (nCierres && !mec ? `Hace falta sincronizar: ${nCierres} sesi${nCierres===1?"ón cerrada":"ones cerradas"} después de la última vez.` : mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: la página y los datos del tablero son de versiones distintas, y la sincronización los pone a la par.") + (cuando ? ` Última vez ${cuando}.` : "")
     : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
   const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
   const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"");
@@ -1371,6 +1385,10 @@ const verMenor = (a, b) => { const x = String(a).split(".").map(Number), y = Str
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
+  // cierres de sesión que el tablero aún no muestra: al abrirlo, su dueño lo pone al día solo
+  const pc = cierresPend();
+  if(pc.length && SYNC_AUTO && (SYNC_STATE === "corriendo" || SYNC_STATE === "lanzada")) out += `<div class="stale info"><span>Poniéndose al día: hubo <b>${pc.length} sesi${pc.length===1?"ón":"ones"}</b> desde la última sincronización (${esc(nombresCierres(pc))}). Tarda unos minutos; la página se actualiza sola al terminar.</span></div>`;
+  else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando su dueño lo ponga al día."}</span></div>`;
   if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.</span></div>`;
   if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;
   // La carpeta puede ir detrás de la página: su metodo.md lo pone al día la primera cuenta con el plugin nuevo que abre sesión o sincroniza y puede escribir en ella.
@@ -1378,7 +1396,7 @@ function staleBanner(){
   if(view.lvl === "root" && META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale suave"><span>Los datos del tablero son de la versión <b>${esc(META.version_tablero)}</b> y la página es la <b>${esc(VERSION_TABLERO)}</b>. Se ponen a la par en la próxima sincronización${OWNER&&!syncFalta()?", o ya mismo con el botón junto al nombre":""}.</span></div>`;
   // Pasar días sin ponerse al día es normal si nadie trabajó: se avisa con margen y se dice cómo traer lo de otros.
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea && !META.tarea_manual ? 2 : 7;
-  if(dias >= umbral) out += `<div class="stale"><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Se pone al día cuando cierras una sesión; si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
+  if(dias >= umbral) out += `<div class="stale"><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Se pone al día solo al abrirlo si cerraste sesiones desde la última vez; si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
   return out;
 }
 // ---- ayuda: el manual y cómo funciona, como artículos con su índice ----
@@ -1398,7 +1416,7 @@ function ayudaArts(){
       <li><b>Hablas normal.</b> Unas pocas frases activan cada cosa (<button type="button" class="lnk" data-help="frases">Qué decirle a Claude</button>).</li>
       <li><b>Claude escribe solo en tu área</b> y nunca da nada por aprobado. Si algo toca a otra área, te dice a quién avisar.</li>
       <li><b>La historia no se borra.</b> Las decisiones y la bitácora de cada proyecto solo crecen: nadie edita lo que ya está registrado.</li>
-      <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día cuando cierras una sesión y te dice por dónde empezar.</li>
+      <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día solo cuando lo abres después de cerrar una sesión, y te dice por dónde empezar.</li>
     </ul>`},
   {g:"Para empezar", id:"necesitas", t:"Lo que necesitas", h:`
     <dl class="hc-def">
@@ -1508,9 +1526,9 @@ function ayudaArts(){
       <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
     </figure>
     <dl class="hc-def">
-      <dt>Al cerrar una sesión</dt><dd>Cada vez que cierras una sesión, en cualquier proyecto, Claude rehace tu tablero completo con lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Es lo normal: no tienes que hacer nada.</dd>
-      <dt>Lo que escriben otros</dt><dd>Se rehace el tablero de quien cierra, no el de los demás. Si otras personas trabajaron en la carpeta, dile a Claude ${F("sincroniza el tablero")} y lo verás ahora.</dd>
-      <dt>Con el botón, cuando quieras</dt><dd>Junto al nombre, arriba a la izquierda, está «Sincronizar ahora»: lo ve solo quien montó el tablero. Sirve para traer lo que escribieron otras personas sin esperar a tu siguiente cierre de sesión. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
+      <dt>Al abrirlo, después de cerrar una sesión</dt><dd>Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada. La próxima vez que lo abres, el tablero ve que hay sesiones que aún no muestra, avisa arriba de cuántas y de cuáles, y se pone al día solo: trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
+      <dt>Lo que escriben otros</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Si otras personas trabajaron en la carpeta, dile a Claude ${F("sincroniza el tablero")} y lo verás ahora.</dd>
+      <dt>Con el botón, cuando quieras</dt><dd>Junto al nombre, arriba a la izquierda, está «Sincronizar ahora»: lo ve solo quien montó el tablero. Sirve para traer lo que escribieron otras personas sin esperar a tu siguiente cierre de sesión. No corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Inicio lo avisa una semana.</dd>
     </dl>`},
@@ -1605,7 +1623,7 @@ function ayudaArts(){
         <div class="hc-claude-g">
           <div class="hc-pieza"><b>Tus sesiones, con el plugin</b><small>Abres sesión, trabajas y la cierras. El plugin pone las reglas del método; se actualiza con su botón Update, o solo si tienes la actualización automática.</small></div>
           <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h40M8 2L2 7l6 5M36 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="hc-pieza tablero"><b>El tablero</b><small>Se pone al día al cerrar cada sesión o con su botón. Lo que marcas en él vuelve a la carpeta en la siguiente puesta al día o sesión.</small></div>
+          <div class="hc-pieza tablero"><b>El tablero</b><small>Se pone al día al abrirlo después de cerrar sesiones, o con su botón. Lo que marcas en él vuelve a la carpeta en la siguiente puesta al día o sesión.</small></div>
         </div>
       </div>
       <figcaption>Sin la computadora, desde el teléfono o la web, Claude puede leer la carpeta en Drive, pero no escribe nada en ella.</figcaption>
@@ -1877,7 +1895,7 @@ function renderArea(a){
   const recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
   const cuestArea = cuestAbiertos(c => c.a_proyecto && c.a_proyecto!=="premisa" && byId[c.a_proyecto] && byId[c.a_proyecto].area===a.slug);
   main.innerHTML = `
-    <section class="card pan"><h2>Panorama${hq("director","El panorama del área")}</h2><p class="ar-ln">${areaLinea(a)}</p><p>${panTxt(a)}</p>${a.que_largo && a.que_largo.trim()!==(a.que||"").trim()?`<details class="mas"><summary>Qué es el área</summary><div class="md">${md(a.que_largo)}</div></details>`:""}</section>
+    <section class="card pan"><h2>Panorama${hq("director","El panorama del área")}</h2>${a.panorama && a.panorama.texto ? `<p>${panTxt(a)}</p>` : `<p class="ar-ln">${areaLinea(a)}</p><p><em>Sin panorama todavía: lo escribe el director del área al cerrar una sesión en ella.</em></p>`}${a.que_largo && a.que_largo.trim()!==(a.que||"").trim()?`<details class="mas"><summary>Qué es el área</summary><div class="md">${md(a.que_largo)}</div></details>`:""}</section>
     ${cuestArea}
     <section class="prios"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section>
     <section class="area"><div class="area-h" style="cursor:default"><span><h2>Proyectos</h2><span class="d">${(()=>{ const cnt={}; let nR=0; for(const p of ps){ const e=projStatus(p); cnt[e.k]=(cnt[e.k]||0)+1; if(e.riesgo) nR++; } return EST_ORDEN.filter(k=>cnt[k]).map(k=>`${cnt[k]} ${EST[k].label.toLowerCase()}`).concat(nR?[`${nR} en riesgo`]:[]).join(" · "); })()}</span></span></div>
@@ -1998,7 +2016,8 @@ function _render(){
   db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("proyectos").onSnapshot(snap=>{ PROJ = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("cambios").onSnapshot(snap=>{ CAMBIOS = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion + (META.modo==="completo" ? " completo" : ""); render(); }, ()=>{});
+  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); autoSync(); }, ()=>{});
+  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion + (META.modo==="completo" ? " completo" : ""); if(META && SYNC_AUTO && !cierresPend().length) SYNC_AUTO = null; render(); autoSync(); }, ()=>{});
   db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});
 })();
 

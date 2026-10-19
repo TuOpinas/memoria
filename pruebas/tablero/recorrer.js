@@ -41,8 +41,9 @@ const path = require('path');
       await p.keyboard.press('Escape');
     }
     await p.goto(url + '#'); await p.waitForTimeout(400);
-    const voz = await p.evaluate(() => ({ brief: !!document.querySelector('.brief p'), lineas: document.querySelectorAll('.ar-ln').length, barras: document.querySelectorAll('.ar .spark').length }));
-    if(!(voz.brief && voz.lineas >= 2 && voz.barras >= 1)) errores.push(`${etiqueta}: Inicio no lleva el párrafo de la organización, las líneas de estado o las barras de actividad (${JSON.stringify(voz)})`);
+    // cada área dice una sola cosa: el Panorama de su director si lo tiene, y si no, la línea calculada
+    const voz = await p.evaluate(() => { const filas = [...document.querySelectorAll('.ar-i')].filter(x => x.querySelector('.ar-pan')); return { brief: !!document.querySelector('.brief p'), filas: filas.length, una: filas.every(x => (!!x.querySelector('.ar-dir')) !== (!!x.querySelector('.ar-ln'))), conPanorama: filas.some(x => x.querySelector('.ar-dir')), barras: document.querySelectorAll('.ar .spark').length }; });
+    if(!(voz.brief && voz.filas >= 2 && voz.una && voz.barras >= 1)) errores.push(`${etiqueta}: Inicio no lleva el párrafo de la organización, cada área no dice una sola cosa (Panorama o línea de estado) o faltan las barras de actividad (${JSON.stringify(voz)})`);
     const atraso = await p.evaluate(() => [...document.querySelectorAll('.stale')].some(x => /La carpeta usa todavía la versión 1\.11\.0/.test(x.textContent)));
     if(!atraso) errores.push(`${etiqueta}: Inicio no avisa de que la carpeta usa una versión anterior del método`);
     const boton = await p.evaluate(() => { const b = document.querySelector('.sync-ico'); return b ? { pend: b.classList.contains('pend'), off: b.classList.contains('off') } : null; });
@@ -90,6 +91,21 @@ const path = require('path');
   await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
   await pasada('publico.html', 'publico-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  // cierres de sesión después de la última sincronización: al abrirlo, el dueño lo pone al día solo, una vez, y lo dice arriba
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`cierres: ${e.message}`));
+    const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
+    await p.goto(url); await p.waitForTimeout(600);
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
+    if(r.llamadas !== 1 || !/Poniéndose al día: hubo 2 sesiones .*Cuentas, Soporte/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes no se pone al día solo una vez ni lo dice (${JSON.stringify(r).slice(0, 300)})`);
+    await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
+    await p.reload(); await p.waitForTimeout(600);
+    const r2 = await p.evaluate(() => (window.__llamadas || []).length);
+    if(r2 !== 0) errores.push(`cierres: al volver a abrir, la misma tanda de cierres se lanzó otra vez (${r2})`);
+    await ctx.close();
+  }
   await b.close();
   console.log(errores.length ? errores.join('\n') : 'La página no dio ningún error.');
   process.exit(errores.length ? 1 : 0);
