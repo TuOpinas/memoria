@@ -85,28 +85,124 @@ fijar. No pueden contradecir `metodo.md`; si alguna lo hace, manda `metodo.md`.]
 
 ## Cómo conectarte
 
-Una vez, cada quien, cinco minutos.
+Se hace una sola vez y lleva unos 15 minutos. Sigue los pasos en orden y no te saltes
+ninguno.
 
-**1. Crea tu proyecto** en Claude con el nombre de tu área: "[Organización] · [tu área]".
-Uno por persona, no uno para todos.
+**Paso 1. Comprueba que tu computadora sirve**
 
-**2. Instala el plugin.** En la app de Claude, abre Customize → Plugins → Add marketplace,
-escribe `TuOpinas/memoria` e instala `memoria`. Es público: no hace falta pedir acceso.
-Cuando salga una versión nueva, el botón Update del marketplace la trae; si la
-organización ya lo distribuye a todos, te saltas este paso. (En Claude Code, en la
-terminal: `/plugin marketplace add TuOpinas/memoria` y `/plugin install memoria@memoria-marketplace`.)
+Necesitas una Mac con macOS 14 (Sonoma) o más nuevo, o una computadora con Windows 10 o
+Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise).
 
-**3. Conecta esta carpeta completa**, la que tiene dentro `guia.md` y `metodo.md`. No la
-de tu área: la IA necesita poder mirar en cualquiera para decirte qué se sabe ya y qué
-decisión de otra te afecta. Se añade al proyecto o a la conversación con «+».
+1. Descarga el verificador de Claude para tu computadora:
+   - Mac: https://claude.ai/api/desktop/darwin/universal/cowork-readiness-check/latest/redirect
+   - Windows: https://claude.ai/api/desktop/win32/x64/cowork-readiness-check/latest/redirect
+   - Windows con procesador Snapdragon (ARM):
+     https://claude.ai/api/desktop/win32/arm64/cowork-readiness-check/latest/redirect
+2. Abre el archivo que se descargó. No instala nada.
+3. Si dice **This computer is ready for Cowork**, sigue al paso 2.
+4. Si dice otra cosa, haz una captura de pantalla y mándasela a quien administra la
+   carpeta (lo dice «Quién responde por qué», arriba). No sigas hasta resolverlo.
 
-**4. Compruébalo.** Escribe «abre sesión en [un proyecto de tu área]». Tiene que ponerte
-al día y proponerte en qué trabajar. No hay nada que pegar en las instrucciones del
-proyecto: el plugin aplica el método solo en cuanto ve esta carpeta, y sabe cuál es tu
-área por tu cuenta en la tabla de arriba.
+**Paso 2. Instala la app de Claude**
 
-**5. Si quieres ver la carpeta entera sin abrirla**, escribe «monta el tablero»: una página
-tuya que se pone al día sola cuando la abres después de cerrar sesiones, con la ayuda dentro. Es tuyo; si lo compartes, hazlo desde su menú.
+Todo se hace en la app de Claude para computadora, no en el navegador ni en el teléfono.
+
+1. Entra en claude.com/download y descarga la app.
+2. Instálala:
+   - Mac: abre el archivo descargado y arrastra **Claude** a la carpeta **Aplicaciones**.
+   - Windows: abre el archivo descargado y pulsa **Instalar**. Si te pide contraseña de
+     administrador, pídesela a quien se encarga de las computadoras.
+3. Abre Claude e inicia sesión con tu cuenta.
+4. Si arriba ves dos opciones, **Chat** y **Cowork**, elige **Cowork**. Todo lo que sigue
+   se hace ahí.
+
+**Paso 3. Ten la carpeta en tu computadora**
+
+La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet.
+
+1. Si vive en Google Drive, instala **Google Drive para escritorio** (google.com/drive/download)
+   e inicia sesión con tu cuenta.
+2. Busca la carpeta [Organización] en el Finder (Mac) o en el Explorador de archivos (Windows).
+3. Si no la ves, pídele acceso a quien administra la carpeta.
+
+**Paso 4. Crea tu proyecto y conecta la carpeta**
+
+1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo.
+2. Ponle de nombre "[Organización] · [tu área]". Por ejemplo: "[Organización] · comercial". Cada persona
+   crea el suyo.
+3. Conecta la carpeta **[Organización] completa**, la que tiene dentro `guia.md` y `metodo.md`. No
+   elijas la carpeta de tu área: Claude necesita ver todas para decirte qué se sabe ya.
+   Si no te la pide al crear el proyecto, añádela con el botón «+».
+
+**Paso 5. Instala el plugin Memoria**
+
+Si tu organización ya te lo instaló, sáltate este paso.
+
+1. En el menú de la izquierda, pulsa **Customize** y luego **Plugins**.
+2. Pulsa la flechita junto al botón **Add** y elige **Add marketplace** ›
+   **Add from a repository**.
+3. Escribe exactamente: `TuOpinas/memoria`
+4. Deja encendido **Sync automatically** y pulsa **Sync**. Así las versiones nuevas te
+   llegan solas.
+5. Ve a la pestaña **Discover**, busca **Memoria** y pulsa **Add**.
+6. Comprueba que quedó activo, porque en algunas versiones de Claude hace falta: pulsa
+   otra vez la flechita junto a **Add** y elige **Manage marketplaces**. Tiene que
+   aparecer **memoria** con la etiqueta **Synced**. Pulsa **Done**. Si no aparece, repite
+   los pasos 2 a 4.
+
+**Paso 6. Pruébalo**
+
+1. Dentro de tu proyecto, abre una conversación nueva.
+2. Escribe: «abre sesión en» y el nombre de un proyecto de tu área.
+3. Si Claude te pide permiso para usar la carpeta, pulsa **Permitir**.
+4. Claude te dirá en qué va ese proyecto y qué propone hacer. Si lo hace, ya estás
+   conectado. No hay que pegar nada en las instrucciones del proyecto.
+
+**Paso 7. Monta tu tablero**
+
+El tablero es una página con toda la carpeta a la vista: áreas, proyectos, en qué va
+cada uno, qué se decidió y qué sigue.
+
+1. En una conversación de tu proyecto, escribe: «monta el tablero».
+2. Claude te pedirá aprobar una tarea. Apruébala: es la que hace funcionar el botón
+   **Sincronizar ahora**.
+3. Espera unos minutos. Al terminar aparece una tarjeta llamada «Tablero [Organización]». Ábrela.
+4. **Lo primero: abre «Ayuda»** en el índice del tablero. En pocos minutos te explica qué
+   muestra cada parte y qué puedes hacer desde ahí. Cada parte tiene además un «?» con
+   su explicación.
+
+Se pone al día solo cuando lo abres después de cerrar sesiones, siempre que tu
+computadora esté encendida y la app de Claude abierta. Para ver lo que escribieron otras
+personas, pulsa **Sincronizar ahora**, junto al nombre de la organización. El tablero es
+tuyo: si quieres compartirlo, hazlo desde su menú.
+
+**Paso 8. Ten el tablero siempre a mano en Chrome**
+
+1. Abre Chrome y entra en claude.ai con la misma cuenta que usas en la app.
+2. Escribe en la barra de direcciones `claude.ai/artifacts` y abre «Tablero [Organización]».
+   Si no lo ves, pídele a Claude en la app «dame el enlace de mi tablero» y ábrelo.
+3. Guárdalo en tus marcadores: pulsa ⌘ + D en Mac o Ctrl + D en Windows, elige
+   **Barra de marcadores** y pulsa **Listo**.
+4. Para que se abra solo cada vez que abras Chrome:
+   - Pulsa los tres puntos ⋮ arriba a la derecha y entra en **Configuración**.
+   - En el menú de la izquierda, elige **Al iniciar**.
+   - Marca **Abrir una página específica o un conjunto de páginas**.
+   - Pulsa **Añadir una página nueva**, pega la dirección del tablero y pulsa
+     **Añadir**.
+5. Si quieres, fija la pestaña: clic derecho sobre ella › **Fijar**.
+
+Chrome solo muestra el tablero. Para que se ponga al día, la app de Claude tiene que
+estar abierta en tu computadora.
+
+**Para avanzados: instalar el plugin con comandos**
+
+En lugar del paso 5, puedes escribirle a Claude estas dos líneas, una y luego la otra:
+
+    /plugin marketplace add TuOpinas/memoria
+    /plugin install memoria@memoria-marketplace
+
+Después, en `/plugin`, pestaña Marketplaces, elige `memoria-marketplace` y activa la
+actualización automática.
 
 ## Versión del método
 La primera línea de `metodo.md` dice cuál corre esta carpeta. Se pone al día sola la
