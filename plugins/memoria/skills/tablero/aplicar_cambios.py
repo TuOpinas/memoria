@@ -16,14 +16,19 @@ Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md ll
 al día corre con la cuenta de quien la lanza y nadie escribe en el área de otro (contrato, prohibición 4).
 Sin --cuenta no se aplica nada.
 Salida: JSON por stdout con "aplicados" (ids que ya están en la carpeta y se pueden borrar
-de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual), "errores" (no se pudo escribir:
+de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual: se quedan para la sesión), "rechazados" (lo que no
+cumple la forma: se borra de la cola y se dice en el resumen), "errores" (no se pudo escribir:
 se quedan en la cola y se reintentan en la próxima corrida), "para_sesion" (lo que no es una fecha,
 de las áreas de la cuenta) y "para_su_dueno" (todo lo de áreas de otra cuenta: se queda en la cola
 hasta que su dueño ponga al día su tablero o cierre una sesión; no se toca).
 Una fecha aplicada no toca la fecha «actualizado» de la cabecera: es un cambio mecánico, no trabajo
 sobre el proyecto, y moverla escondería en el tablero los plazos vencidos de los demás pasos.
+La cola la escribe cualquier contribuidor del tablero, así que nada de ella se toma por bueno: el id del
+proyecto tiene que ser «area--slug» con los nombres del contrato (minúsculas, dígitos y guiones), la ruta
+resuelta tiene que quedar dentro de esa área, las fechas tienen que ser AAAA-MM-DD, y un paso o una nota
+con saltos de línea no se aplica. Lo que no cumple va a "rechazados" y se borra de la cola.
 """
-import sys, re, json, pathlib
+import sys, re, json, pathlib, datetime
 
 RAIZ = pathlib.Path(sys.argv[1])
 ENTRADA = pathlib.Path(sys.argv[2])
@@ -46,11 +51,35 @@ def mis_areas():
         if primera:
             primera = False; continue
         celdas = [c.strip() for c in l.strip().strip("|").split("|")]
-        if len(celdas) >= 4 and CUENTA in celdas[3].lower():
+        # igualdad, no subcadena: «ana@» no es «diana@»; y cinco columnas, como abrir.py y el generador
+        if len(celdas) >= 5 and celdas[3].strip().lower() == CUENTA:
             out.add(celdas[0].strip("`").rstrip("/"))
     return out
 
 MIAS = mis_areas()
+NOMBRE = re.compile(r"[a-z0-9][a-z0-9-]*", re.ASCII)     # nombres de área y de proyecto, como el contrato (sección 6)
+FECHA = re.compile(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}", re.ASCII)
+
+def nombre_ok(s):
+    return isinstance(s, str) and NOMBRE.fullmatch(s) is not None     # fullmatch: un salto de línea final no pasa
+
+def fecha_ok(s):
+    if not (isinstance(s, str) and FECHA.fullmatch(s)):
+        return False
+    try:
+        datetime.date.fromisoformat(s); return True        # 2026-02-30 no existe
+    except ValueError:
+        return False
+
+def partes(c):
+    """(area, slug) de un id «area--slug» bien formado; (None, None) si no lo es."""
+    area, sep, slug = (c.get("proyecto") or "").partition("--") if isinstance(c.get("proyecto"), str) else ("", "", "")
+    if not sep or not nombre_ok(area) or not nombre_ok(slug):
+        return None, None
+    return area, slug
+
+def texto_de_una_linea(s):
+    return isinstance(s, str) and s.strip() != "" and "\n" not in s and "\r" not in s
 
 def cargar():
     docs = []
@@ -75,12 +104,23 @@ def norm(s):
     return re.sub(r"\s+", " ", re.sub(r"^-\s*", "", s.strip()))
 
 def aplicar_fecha(c):
-    area, _, slug = (c.get("proyecto") or "").partition("--")
+    area, slug = partes(c)
+    if not area:
+        return "rechazados", f"id de proyecto mal formado: {c.get('proyecto')!r}"
     p = RAIZ / area / slug / "proyecto.md"
+    try:
+        dentro = p.resolve().is_relative_to((RAIZ / area).resolve())
+    except (OSError, ValueError):
+        dentro = False
+    if not dentro:
+        return "rechazados", f"la ruta sale del área: {area}/{slug}"
     if not p.exists():
         return "sin_match", f"no existe {area}/{slug}/proyecto.md"
-    if not c.get("paso"):
-        return "sin_match", "el cambio no dice a qué paso se refiere"
+    if not texto_de_una_linea(c.get("paso")):
+        return "rechazados", "el cambio no dice a qué paso se refiere, o el paso trae saltos de línea"
+    for k in ("fecha_anterior", "fecha_nueva"):
+        if c.get(k) not in (None, "") and not fecha_ok(c.get(k)):
+            return "rechazados", f"{k} no es una fecha AAAA-MM-DD que exista: {c.get(k)!r}"
     with open(p, encoding="utf-8", newline="") as fh:   # newline="" conserva los finales de línea del archivo
         texto = fh.read()
     m = re.search(r"(^## Siguientes pasos\s*\n)(.*?)(?=^## |\Z)", texto, re.S | re.M)
@@ -119,11 +159,14 @@ def aplicar_fecha(c):
             fh.write(texto_nuevo)
     return "aplicados", f"{linea.strip()}  →  {nueva.strip()}"
 
-rep = {"aplicados": [], "sin_match": [], "errores": [], "para_sesion": [], "para_su_dueno": [],
+rep = {"aplicados": [], "sin_match": [], "rechazados": [], "errores": [], "para_sesion": [], "para_su_dueno": [],
        "cuenta": CUENTA, "mis_areas": sorted(MIAS), "dry_run": DRY}
 for c in cargar():
     t = c.get("tipo")
-    area = (c.get("proyecto") or "").partition("--")[0] or c.get("area") or ""
+    area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and c.get("proyecto") and not partes(c)[0]:
+        rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
+        continue
     if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and (not CUENTA or (area and area not in MIAS)):
         rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
                                      "detalle": "falta --cuenta" if not CUENTA else f"el área {area or '?'} no es de {CUENTA}"})
@@ -135,6 +178,9 @@ for c in cargar():
             estado, detalle = "errores", f"{type(e).__name__}: {e}"
         rep[estado].append({"id": c["id"], "proyecto": c.get("proyecto"), "detalle": detalle})
     elif t in ("hecho", "nota", "corregir", "prioridad"):
+        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto") if c.get(k) not in (None, "")):
+            rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta o texto con saltos de línea"})
+            continue
         rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")})
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})

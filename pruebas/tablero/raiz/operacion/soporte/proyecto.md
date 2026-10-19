@@ -25,3 +25,4 @@ Arrancado el 2026-08-15.
 - Cuando entre Cliente Uno, abrir su canal de soporte.
 - Escribir la guía de soporte.
 - Entregar el informe de arranque antes del 2026-08-20.
+- Mandar la encuesta de satisfacción antes del 2026-06-30.

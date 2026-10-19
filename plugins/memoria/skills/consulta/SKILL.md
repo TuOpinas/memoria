@@ -21,7 +21,7 @@ Por los niveles de la sección 12 de `convenciones`, parándome en el primero qu
 
 1. `guia.md`: qué áreas hay, quién responde por cada una y las reglas propias de la casa
 2. El bloque `Proyectos` del `area.md` de las áreas pertinentes. Casi siempre esto ya dice si existe algo y dónde
-3. Solo si hace falta, del proyecto que toque: `proyecto.md`, `decisiones.md` completo y las cabeceras de `entregables/`. `taller/`, `fuentes/` y `sesiones.md` no: son taller privado y no se consultan desde fuera de su área
+3. Solo si hace falta, del proyecto que toque: `proyecto.md` (su «En corto» es la respuesta a «cómo va»), `decisiones.md` completo, las cabeceras de `entregables/` y, de `sesiones.md`, solo la cabecera de sus entradas (fecha, título y «Trabajamos en»): dice en qué anda el proyecto. `taller/`, `fuentes/` y el cuerpo de `sesiones.md` no: son taller privado y no se consultan desde fuera de su área. Si la pregunta es sobre un área («¿qué sabemos de ventas?», «¿cómo va comercial?»), la respuesta abre con el `Panorama` de su `area.md`, que es lo que su director dejó escrito para quien pregunta desde fuera
 4. El cuerpo de un entregable `vigente`, solo si la pregunta pide el contenido y no basta con saber que existe
 
 `base/premisas.md` se lee siempre que exista: si una premisa vigente toca la pregunta, la respuesta la nombra primero, porque todo lo demás se apoya en ella. Del resto de `base/` no leo nada por defecto. `glosario.md` entra si la pregunta trae una sigla o un nombre interno que no entiendo; `contexto.md`, si la pregunta es sobre la organización; `sistemas.md`, si es sobre un sistema.

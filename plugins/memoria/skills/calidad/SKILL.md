@@ -56,7 +56,7 @@ En la auditoría de la carpeta, además: lo duplicado (dos proyectos que son el 
 
 **A fondo, con revisores independientes.** Se lanza un revisor por lente con la herramienta de agentes, todos a la vez, cada uno con el objetivo del paso 3, el material, solo su lente y las reglas de lectura del párrafo siguiente. Ninguno ha visto el trabajo mientras se hacía, para que nadie se califique a sí mismo. Si la herramienta de agentes no está, se hace una pasada por lente y se dice que la revisión no fue independiente.
 
-Lo que se lee sigue las reglas de siempre, y cada revisor las recibe con su encargo: de otras áreas, solo su superficie pública; lo restringido sin acceso se nombra y se salta; `sesiones.md`, `taller/` y `fuentes/` no se leen.
+Lo que se lee sigue las reglas de siempre, y cada revisor las recibe con su encargo: de otras áreas, solo su superficie pública; lo restringido sin acceso se nombra y se salta; el cuerpo de `sesiones.md`, `taller/` y `fuentes/` no se leen.
 
 ## Paso 5 · Comprobar cada hallazgo
 
@@ -87,7 +87,7 @@ Además de las prohibiciones de `convenciones`:
 - Dar un hallazgo sin evidencia, o una opinión como si fuera un hallazgo.
 - Empezar sin acordar el alcance, o una revisión a fondo sin haber recomendado el modelo.
 - Medir contra lo que ya existe en lugar de contra el objetivo.
-- Leer `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área.
+- Leer el cuerpo de `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área.
 
 ## Ejemplo
 

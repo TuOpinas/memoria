@@ -30,6 +30,17 @@ mayor() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n
 if ! mayor "$VERSION" "$ACTUAL"; then
   echo "La versión $VERSION no es mayor que la actual, $ACTUAL." >&2; exit 1
 fi
+# el hook tiene que inyectar el bloque entero: si montaje.md perdió la última línea del bloque, el hook calla y nadie lo nota
+HOOK_SALIDA="$(CLAUDE_PLUGIN_ROOT="$PLUGIN_DIR" bash "$PLUGIN_DIR/hooks/arranque.sh" 2>/dev/null || true)"
+if [ -z "$HOOK_SALIDA" ] || ! printf '%s' "$HOOK_SALIDA" | grep -q 'Antes de guardar algo' || ! printf '%s' "$HOOK_SALIDA" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+  echo "El hook de arranque no inyecta el bloque de instrucciones (¿cambió la primera o la última línea del bloque en montaje.md?). Corrígelo antes de publicar." >&2; exit 1
+fi
+# una sola frase para cuándo se pone al día el tablero: si vuelve «al cerrar sesión» a los sitios que la copiaban, se avisa
+FRASE_VIEJA="se pone al día (cada vez que|al) (su dueño )?cierr|puesta al d[ií]a al cerrar cada sesi|se regenera cada vez que esa persona cierra"
+VIEJA="$( { grep -nE "$FRASE_VIEJA" "$PLUGIN_DIR/skills/tablero/SKILL.md" "$PLUGIN_DIR/skills/convenciones/montaje.md" "$PLUGIN_DIR/skills/nuevo/SKILL.md" "$PLUGIN_DIR/skills/tablero/vista.html"; sed -n '1,/^## Versiones/p' "$README" | grep -nE "$FRASE_VIEJA" | sed 's/^/README.md:/'; } 2>/dev/null || true)"
+if [ -n "$VIEJA" ]; then
+  echo "Alguien volvió a escribir que el tablero se pone al día al cerrar sesión; la frase canónica vive en la regla «Se pone al día» de skills/tablero/SKILL.md:" >&2; printf '%s\n' "$VIEJA" >&2; exit 1
+fi
 if ! grep -q "Versión del método: \*\*$CONTRATO_VER\*\*" "$CONTRATO"; then
   echo "El contrato no declara la versión $CONTRATO_VER. Corrígelo antes de publicar." >&2; exit 1
 fi
@@ -83,7 +94,7 @@ echo "     .github/workflows/etiquetar.yml al llegar a main; es de donde las ses
 echo "     Compruébala después con:  git ls-remote --tags origin v$VERSION"
 echo "  2. Copiar metodo.md a cada raíz: se copia sola en la próxima sesión o sincronización de cualquier cuenta con el plugin nuevo."
 echo "     Compruébalo con:  head -1 plugins/memoria/metodo.md <raiz>/metodo.md"
-[ -n "$TABLERO_CAMBIO" ] && echo "  2b. El tablero cambió: cada tablero republica su página en la siguiente puesta al día (al cerrar sesión o al sincronizar); si no, «actualiza el tablero»."
+[ -n "$TABLERO_CAMBIO" ] && echo "  2b. El tablero cambió: cada tablero republica su página en la siguiente puesta al día (al abrirlo tras un cierre, con el botón o al sincronizar); si no, «actualiza el tablero»."
 [ -n "$CONTRATO_CAMBIO" ] && echo "  3. El contrato cambió: pasa verificar.sh por cada raíz antes de darla por al día."
 [ -n "$BLOQUE_CAMBIO" ] && echo "  4. El bloque de instrucciones cambió. El hook de arranque lo inyecta solo al actualizar el plugin."
 exit 0

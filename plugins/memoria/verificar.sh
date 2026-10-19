@@ -84,14 +84,51 @@ for nombre in ls(raiz):
     if not nombre_ok(nombre) or nombre_con_orden_version_o_fecha(nombre):
         h("nombre de carpeta", nombre, *([] if nombre_ok(nombre) else ["con espacios, mayúsculas o acentos, las referencias a sus decisiones («Afecta a», «Cuestiona a», «Responde a») dejan de funcionar"]))
 
+# --- guia.md: el mapa que leen abrir.py y el tablero ---
+# La tabla de áreas es lo que da a cada cuenta su área: una fila con columnas de menos, un encabezado distinto
+# de «## Áreas» o una cuenta sin «@» dejan a alguien sin área sin que nadie lo note.
+guia_areas = {}
+try:
+    guia_txt = open(os.path.join(raiz, "guia.md"), encoding="utf-8-sig", errors="replace").read()
+except OSError:
+    guia_txt = ""
+if guia_txt:
+    if not re.search(r"^## Áreas\s*$", guia_txt, re.M):
+        h("guia.md sin la sección «## Áreas»", "guia.md", "con ese título exacto; es la que leen abrir.py y el tablero")
+    m = re.search(r"^## Áreas\s*\n(.*?)(?=^## |\Z)", guia_txt, re.S | re.M)
+    primera = True
+    for l in (m.group(1) if m else "").split("\n"):
+        if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
+            continue
+        if primera:
+            primera = False; continue
+        celdas = [c.strip() for c in l.strip().strip("|").split("|")]
+        slug = celdas[0].strip("`").rstrip("/")
+        if len(celdas) < 5:
+            h("fila de la tabla de áreas con columnas de menos", "guia.md", "«%s» tiene %d y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)" % (slug, len(celdas))); continue
+        guia_areas[slug] = {"dueno": celdas[2], "cuenta": celdas[3]}
+        if "@" not in celdas[3]:
+            h("área sin cuenta en guia.md", slug, "la columna Cuenta lleva el correo con el que su dueño trabaja con la IA")
+        if not os.path.isdir(os.path.join(raiz, slug)):
+            h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
+    if m and not guia_areas:
+        h("tabla de áreas vacía", "guia.md")
+    if not re.search(r"^Contexto común", guia_txt, re.M):
+        h("guia.md sin «Contexto común»", "guia.md", "la línea que dice quién mantiene guia.md y base/")
+
 # --- áreas y proyectos ---
 for area, aruta in areas:
     amd = os.path.join(aruta, "area.md")
     if not os.path.exists(amd):
         h("área sin area.md", area); continue
     fm, txt = cabecera(amd)
-    if not re.search(r"^Dueñ[oa]: *\S", txt, re.M):
+    if guia_txt and area not in guia_areas:
+        h("carpeta de área que no está en guia.md", area, "sin su fila en la tabla de áreas nadie escribe en ella")
+    md = re.search(r"^Dueñ[oa]: *(.+?)\s*$", txt, re.M)
+    if not md:
         h("área sin dueño", rel(amd))
+    elif area in guia_areas and md.group(1).strip().lower() != guia_areas[area]["dueno"].strip().lower():
+        h("dueño distinto en guia.md y en area.md", area, "guia.md dice «%s» y area.md «%s»" % (guia_areas[area]["dueno"], md.group(1).strip()))
     if "## Proyectos" not in txt:
         h("area.md sin bloque Proyectos", rel(amd))
     bloque = seccion_proyectos(txt)
@@ -179,11 +216,12 @@ for dp, dn, fn in os.walk(raiz):
         if fm is None:
             h("sin cabecera", r); continue
         m = re.search(r"^estado: *(\S+)", fm, re.M)
+        estado = m.group(1).strip("'\"") if m else None   # con o sin comillas, como abrir.py y el tablero
         if not m:
             h("cabecera sin estado", r)
-        elif m.group(1) not in ESTADOS:
+        elif estado not in ESTADOS:
             h("estado que no existe", r, m.group(1))
-        elif m.group(1) == "reemplazado" and "reemplazado_por" not in fm:
+        elif estado == "reemplazado" and "reemplazado_por" not in fm:
             h("reemplazado sin reemplazado_por", r)
         a = re.search(r"^actualizado: *(\S+)", fm, re.M)
         if not a:

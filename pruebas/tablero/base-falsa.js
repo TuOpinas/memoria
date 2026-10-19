@@ -7,7 +7,7 @@ window.__D = __DATA__;
   collection: name => ({ onSnapshot:(cb)=>{ setTimeout(()=>cb(snap(name)),0); return ()=>{}; }, add: async v=>{ const id='n'+Date.now(); (D[name]=D[name]||{})[id]=v; return {id}; } }),
   doc: path => { const [c,id]=path.split('/'); return { onSnapshot:(cb)=>{ setTimeout(()=>{ const v=(D[c]||{})[id]; cb({exists:!!v, data:()=>v}); },0); return ()=>{}; }, delete: async()=>{ delete (D[c]||{})[id]; }, update: async u=>{ Object.assign(D[c][id],u); } }; }
  };
- const user = { me: async()=>({id:'u_1', isOwner:true, canEdit:true}) };
+ const user = { me: async()=>({id:'u_1', __USER__}) };
  const mcp = { callTool: async(...a)=>{ (window.__llamadas = window.__llamadas || []).push(a); return {}; } };
  window.claude = { use: async n => n==='db'?db : n==='user'?user : n==='mcp'?mcp : null };
 })();

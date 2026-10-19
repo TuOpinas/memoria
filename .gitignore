@@ -1,2 +1,4 @@
 .DS_Store
 .fuse_hidden*
+__pycache__/
+.claude/
