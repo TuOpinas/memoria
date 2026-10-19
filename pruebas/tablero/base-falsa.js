@@ -8,6 +8,6 @@ window.__D = __DATA__;
   doc: path => { const [c,id]=path.split('/'); return { onSnapshot:(cb)=>{ setTimeout(()=>{ const v=(D[c]||{})[id]; cb({exists:!!v, data:()=>v}); },0); return ()=>{}; }, delete: async()=>{ delete (D[c]||{})[id]; }, update: async u=>{ Object.assign(D[c][id],u); } }; }
  };
  const user = { me: async()=>({id:'u_1', isOwner:true, canEdit:true}) };
- const mcp = { callTool: async()=>({}) };
+ const mcp = { callTool: async(...a)=>{ (window.__llamadas = window.__llamadas || []).push(a); return {}; } };
  window.claude = { use: async n => n==='db'?db : n==='user'?user : n==='mcp'?mcp : null };
 })();

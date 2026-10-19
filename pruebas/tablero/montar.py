@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Monta una página de prueba: la página del tablero con una base falsa que trae lo generado.
-Uso: montar.py <vista.html> <salida-del-generador> <página.html>"""
+Uso: montar.py <vista.html> <salida-del-generador> <página.html> [--cierres]
+--cierres: con dos cierres de sesión posteriores a la última sincronización, para probar que la página se pone al día sola."""
 import json, glob, os, sys
 vista, salida, pagina = sys.argv[1:4]
 D = {}
@@ -18,5 +19,12 @@ D.setdefault("meta", {}).setdefault("estado", {}).update({"tarea": "trig_prueba"
 D["enfoque"] = {"actual": {"generado": "2026-10-02", "criterios": ["prioridad del área", "cliente o dinero", "desbloquea"], "grupos": [
     {"titulo": "Cerrar Cliente Uno", "razon": "Es la primera prioridad de ventas y toca dinero. La sesión decide.", "sesion": "abre sesión en ventas/cuentas y cierra la propuesta de Cliente Uno",
      "pasos": [{"proyecto": "ventas--cuentas", "paso": "Llamar a Cliente Uno"}, {"proyecto": "operacion--soporte", "paso": "Abrir su canal de soporte"}]}]}}
+if "--cierres" in sys.argv:
+    D["cierres"] = {
+        "ventas--cuentas--209901010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2099-01-01T09:00-06:00", "cuenta": "ana@ejemplo.test"},
+        "operacion--soporte--209901011000": {"proyecto": "operacion--soporte", "nombre": "Soporte", "hora": "2099-01-01T10:00-06:00", "cuenta": "ana@ejemplo.test"},
+        # uno ya recogido por una sincronización anterior: no cuenta
+        "ventas--cuentas--200001010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2000-01-01T09:00-06:00", "cuenta": "ana@ejemplo.test"},
+    }
 pre = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "base-falsa.js"), encoding="utf-8").read().replace("__DATA__", json.dumps(D, ensure_ascii=False))
 open(pagina, "w", encoding="utf-8").write("<script>\n" + pre + "\n</script>\n" + open(vista, encoding="utf-8").read())
