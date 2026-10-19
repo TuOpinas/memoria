@@ -10,8 +10,9 @@ cuestionamientos abiertos, decisiones de otros proyectos que lo nombran en «Afe
 borrador viejo, trabajo sin sesión y la fecha de base/contexto.md. Con --cuenta dice qué áreas son de esa cuenta y,
 si es la del responsable de contexto, también los cuestionamientos a premisas.
 
-Nunca abre taller/, fuentes/ ni restringido/ (de taller/ y fuentes/ del proyecto activo solo mira fechas), ni las
-sesiones de otros proyectos. De las demás decisiones solo mira las líneas «Afecta a:», «Cuestiona a:» y «Responde a:»
+Nunca abre taller/, fuentes/, restringido/ ni base/ (salvo premisas.md y la cabecera de contexto.md; de taller/ y fuentes/
+del proyecto activo solo mira fechas), ni las sesiones de otros proyectos, ni los proyectos que no están en el índice de su
+área (salvo el activo). De las demás decisiones solo mira las líneas «Afecta a:», «Cuestiona a:» y «Responde a:»
 y la cabecera de su entrada. Lo restringido no sale salvo que el proyecto activo esté dentro, y lo que no se deja leer
 se cuenta, sin suponer qué hay.
 """
@@ -133,19 +134,25 @@ for l in filas:
     c = [x.strip() for x in l.strip().strip("|").split("|")]
     if len(c) >= 5:
         areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuenta": c[3].lower(), "restringida": "restring" in c[4].lower()})
-contexto = re.search(r"^Contexto común:\s*(.+)$", seccion(guia, "Quién responde por qué"), re.M | re.I)
-resp_contexto = contexto.group(1).strip().rstrip(".") if contexto else ""
-es_resp = bool(CUENTA) and any(a["cuenta"] == CUENTA and a["dueno"] and a["dueno"] in resp_contexto for a in areas)
+# como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
+# «Contexto común (`guia.md` y `base/`): Nombre.»); la cuenta del responsable es la de las áreas de las que es dueño
+resp_contexto = ""
+for l in seccion(guia, "Quién responde por qué").split("\n"):
+    if l.strip().lower().startswith("contexto común"):
+        resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
+es_resp = bool(CUENTA and resp_contexto) and any(a["cuenta"] == CUENTA and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)
 
 premisas = []
 for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
     m = re.match(r"^\s*-\s*(P\d+)\s*·\s*(.+)$", l)
     if m:
-        r = re.search(r"Reemplaza a\s+(P\d+)", m.group(2), re.I)
-        premisas.append((m.group(1).upper(), l.strip(), r.group(1).upper() if r else None))
-reemplazadas = {r for _, _, r in premisas if r}
+        partes = [x.strip() for x in m.group(2).split("·")]
+        r = next((re.search(r"P\d+", x, re.I).group(0).upper() for x in partes[1:] if x.lower().startswith("reemplaza a") and re.search(r"P\d+", x, re.I)), None)
+        f = next((x for x in partes[1:] if re.fullmatch(r"20\d\d-\d\d-\d\d", x)), "")
+        premisas.append((m.group(1).upper(), l.strip(), r, f))
+reemplazadas = {r for _, _, r, _ in premisas if r}
 titulo("PREMISAS VIGENTES")
-print("\n".join(l for pid, l, _ in premisas if pid not in reemplazadas) or "(no hay base/premisas.md o no tiene premisas)")
+print("\n".join(l for pid, l, _, _ in premisas if pid not in reemplazadas) or "(no hay base/premisas.md o no tiene premisas)")
 
 if CUENTA:
     titulo("CUENTA")
@@ -210,6 +217,10 @@ titulo("SESIONES (las 3 más recientes)")
 ses = recientes(ses_txt, 3)
 print("\n\n".join(e["texto"] for e in ses) or "(ninguna)")
 ultima_ses = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True) if fecha_ok(e["fecha"])), None)
+# para los avisos de otras áreas cuenta la última sesión de trabajo: las entradas «(tarea)» o «(tablero)» no son sesiones
+ultima_real = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True)
+                    if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero)\)", e["cab"], re.I)), None)
+cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cabecera(tp)[1], "Estado actual")))
 
 titulo("ENTREGABLES (cabeceras)")
 avisos = []
@@ -237,7 +248,10 @@ for n in nombres:
     for b in (base if est not in ("reemplazado",) else []):
         b_ = re.sub(r"^\./", "", b.strip("`"))
         for c in (pc / b_, RAIZ / b_):
-            if c.is_file() and "restringido" not in c.parts:
+            partes_c = c.relative_to(RAIZ).parts if RAIZ in c.parents else ()
+            if not b_.endswith(".md") or not partes_c or partes_c[0] == "base" or {"restringido", "fuentes", "taller"} & set(partes_c):
+                break   # no se abre: sin cabecera que comparar, o de donde abrir no lee
+            if c.is_file():
                 tb = leer(c)
                 fb = cabecera(tb)[0].get("actualizado") if tb else None
                 if fecha_ok(fb) and fecha_ok(act) and fb > act:
@@ -245,13 +259,16 @@ for n in nombres:
                 break
     if mas_nuevas:
         avisos.append(f"Puede estar desfasado: entregables/{n} (actualizado {act}) se basa en algo más nuevo: {', '.join(mas_nuevas)}.")
-    if fecha_ok(act) and ultima_ses and act > ultima_ses:
+    if fecha_ok(act) and ultima_ses and act > ultima_ses and not cerrado:
         avisos.append(f"Trabajo sin sesión: entregables/{n} tiene actualizado {act}, posterior a la última sesión ({ultima_ses}).")
 
 # trabajo sin sesión por fechas de archivo (nunca el contenido) en entregables/, taller/ y fuentes/
-if ultima_ses:
+if ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
     donde = {}
+    md = mtime(pc / "decisiones.md")
+    if md and md > lim:
+        donde["decisiones"] = 1
     for sub in ("entregables", "taller", "fuentes"):
         for r_, ds, fs in os.walk(pc / sub):
             ds[:] = [x for x in ds if not x.startswith(".") and x != "restringido"]
@@ -277,15 +294,10 @@ def proyectos_legibles():
         except OSError:
             hijos = []
         for slug in hijos:
-            if f"{a['slug']}/{slug}" != ACTIVO and slug in idx and declarado(idx[slug]["linea"]):
+            # un proyecto sin línea en el índice de su área no se sabe si es restringido: no se mira, como en el tablero
+            if f"{a['slug']}/{slug}" != ACTIVO and (slug not in idx or declarado(idx[slug]["linea"])):
                 continue
             yield a["slug"], slug, carpeta / slug
-        # decisiones dentro de restringido/ solo si el proyecto activo está dentro
-        for r_, ds, fs in os.walk(carpeta):
-            ds[:] = [x for x in ds if not x.startswith(".")]
-            if "restringido" in pathlib.Path(r_).relative_to(carpeta).parts and "decisiones.md" in fs:
-                if (RAIZ / ACTIVO) in pathlib.Path(r_).parents or pathlib.Path(r_) == RAIZ / ACTIVO:
-                    yield a["slug"], rel(r_), pathlib.Path(r_)
 
 
 respuestas, cuestiona, afecta = set(), [], []
@@ -294,7 +306,7 @@ for a_slug, slug, carpeta in proyectos_legibles():
     t = leer(carpeta / "decisiones.md")
     if not t:
         continue
-    origen = f"{a_slug}/{slug}" if "/" not in slug else slug
+    origen = f"{a_slug}/{slug}"
     # identificador de cada entrada: fecha y -2, -3… contando desde la más antigua del mismo día (de abajo arriba)
     es = entradas(t)
     cuenta = {}
@@ -320,11 +332,7 @@ for a_slug, slug, carpeta in proyectos_legibles():
 
 # un cuestionamiento sigue abierto si nadie respondió a su identificador; una premisa nueva que reemplaza a la
 # cuestionada después del cuestionamiento también lo responde
-reemplazo_fecha = {}
-for pid, l, r in premisas:
-    f = FECHA.search(l)
-    if r:
-        reemplazo_fecha[r] = f.group(1) if f else ""
+reemplazo_fecha = {r: (f or "9999") for _, _, r, f in premisas if r}   # sin fecha, como el tablero: la responde
 for origen, e, c, prem in cuestiona:
     if (origen, e["id"]) in respuestas:
         continue
@@ -333,7 +341,7 @@ for origen, e, c, prem in cuestiona:
     objetivo = f"la premisa {prem[1]}" if prem else c["Cuestiona a"]
     avisos.insert(0, f"Cuestionamiento abierto ({origen}#{e['id']}): «{e['cab']}». Planteó: {c['Planteó'] or c['Decidió'] or 'no consta'}. "
                      f"Cuestiona a: {objetivo}. Por qué: {c['Por qué'][:300]}")
-nuevos = [x for x in afecta if not ultima_ses or x[1]["fecha"] > ultima_ses]
+nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]
 for origen, e, c in sorted(nuevos, key=lambda x: x[1]["fecha"], reverse=True):
     avisos.append(f"Le afecta una decisión de {origen} ({origen}#{e['id']}): «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Afecta a: {c['Afecta a'][:300]}")
 viejos = len(afecta) - len(nuevos)

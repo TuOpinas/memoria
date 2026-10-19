@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Hook de arranque del plugin memoria. Inyecta como contexto el bloque de instrucciones
-# del contrato (su anexo montaje.md) más cómo deducir el área y el tablero de quien
-# abre la sesión. El texto del bloque vive en el anexo y aquí solo se lee: una sola fuente.
+# del contrato (su anexo montaje.md), cómo reconocer la carpeta, qué hacer con varias y dónde
+# escribe la cuenta; lo demás lo dicen las skills. El texto del bloque vive en el anexo y aquí
+# solo se lee: una sola fuente.
 set -u
 RAIZ="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CONTRATO="$RAIZ/skills/convenciones/montaje.md"
