@@ -55,7 +55,7 @@ Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre
 Además de las prohibiciones de `convenciones`:
 
 - Escribir o modificar ningún archivo. Consultar es solo lectura
-- Buscar con el conector de Google Drive teniendo la carpeta conectada. Sin ninguna carpeta conectada, se puede leer la raíz en Drive por el conector, en solo lectura, como dice `sesion` en «Sin carpeta: solo lectura»
+- Buscar con el conector de Google Drive teniendo la carpeta conectada. Sin ninguna carpeta conectada, se puede leer la raíz en Drive por el conector, en solo lectura, como dice el anexo `sin-carpeta.md` de la skill `sesion`
 - Contar a alguien lo que leí en una carpeta restringida a la que esa persona no tiene acceso, aunque lo resuma o lo diga con otras palabras
 - Deducir lo que hay en un área restringida por los nombres de sus carpetas, o dar por hecho que no hay nada solo porque no puedo abrirla
 - Leer más de lo que hace falta. Si `guia.md` ya responde, no abro el área; si el bloque `Proyectos` responde, no abro el proyecto

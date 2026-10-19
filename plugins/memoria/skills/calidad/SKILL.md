@@ -69,7 +69,7 @@ Se ordenan por lo que pesan contra el objetivo, no por lente: primero lo que imp
 ```markdown
 ### 1. El cierre de sesión no pone al día el tablero si la cuenta tiene dos
 Lente: errores · Pesa: impide cumplir el objetivo
-Dónde: plugins/memoria/skills/sesion/SKILL.md, paso 11
+Dónde: plugins/memoria/skills/sesion/cerrar.md, paso 11
 Qué pasa: … (con la evidencia)
 Propuesta: … (qué cambiar, sin cambiarlo)
 ```
