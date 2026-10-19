@@ -103,6 +103,22 @@ Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise).
 4. Si dice otra cosa, haz una captura de pantalla y mándasela a quien administra la
    carpeta (lo dice «Quién responde por qué», arriba). No sigas hasta resolverlo.
 
+**Recomendado: un lector de archivos Markdown**
+
+Los documentos de la carpeta son archivos `.md`. Sin un lector se ven como texto lleno de
+símbolos; con uno se ven como un documento normal. No es obligatorio: Claude los lee
+igual. Algunas opciones, solo como sugerencia:
+
+- Mac: **QLMarkdown** (gratis), para verlos con la barra espaciadora desde el Finder, o
+  **Typora** (de pago, con prueba gratis), para abrirlos y leerlos con calma.
+- Windows: **PowerToys** de Microsoft (gratis), que los muestra en el panel de vista
+  previa del Explorador de archivos, o **Typora**.
+- Mac y Windows: **MarkText** (gratis).
+
+Úsalo para leer; los cambios se los pides a Claude. Abre los archivos de uno en uno: no
+abras la carpeta entera como «bóveda» o espacio de trabajo en apps como Obsidian, porque
+crean dentro su propia carpeta de configuración.
+
 **Paso 2. Instala la app de Claude**
 
 Todo se hace en la app de Claude para computadora, no en el navegador ni en el teléfono.
