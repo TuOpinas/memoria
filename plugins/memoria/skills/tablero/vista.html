@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.15.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.15.1"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1322,7 +1322,8 @@ function renderBuscar(){
 let SYNC_STATE = null, SYNC_DESDE = null, SYNC_AUTO = null;
 // Cierres de sesión que el tablero aún no muestra: los deja el cierre (skill sesion, cerrar.md, paso 11) en la colección
 // «cierres» y la sincronización borra los que ya recogió. Cuentan los que son posteriores a la última sincronización.
-const cierresPend = () => !META || !META.sincronizado ? [] : CIERRES.filter(c => c.hora && new Date(c.hora).getTime() > new Date(META.sincronizado).getTime());
+// una marca con la hora adelantada (puesta a mano) no cuenta: no puede ser de un cierre que ya pasó
+const cierresPend = () => !META || !META.sincronizado ? [] : CIERRES.filter(c => { const h = c.hora ? new Date(c.hora).getTime() : NaN; return h > new Date(META.sincronizado).getTime() && h <= Date.now() + 5*60000; });
 // el nombre lo pone el cierre sin filtrar: de un proyecto que este tablero no muestra, solo se dice que lo hay
 const nombresCierres = l => { const n = [...new Set(l.map(c => { const p = byId[c.proyecto]; return p && !p.restringido ? (p.nombre || c.nombre || c.proyecto) : null; }).filter(Boolean))]; const otros = l.filter(c => { const p = byId[c.proyecto]; return !p || p.restringido; }).length; if(otros) n.push(`${otros} en proyecto${otros===1?"":"s"} que este tablero no muestra`); return n.join(", "); };
 // Al abrir el tablero con cierres pendientes, el dueño lo pone al día solo, una vez por tanda (la marca es la hora del último cierre).
