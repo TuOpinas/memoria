@@ -125,6 +125,9 @@ el disco: la primera vez la app descarga más de 1 GB, y con el disco lleno no s
 3. Si dice **This computer is ready for Cowork**, sigue al paso 2.
 4. Si dice otra cosa, haz una captura de pantalla y mándasela a quien administra la
    carpeta (lo dice «Quién responde por qué», arriba). No sigas hasta resolverlo.
+5. Mira cuánto espacio libre te queda: en Windows, en el Explorador de archivos, **Este
+   equipo**; en Mac, menú Apple › **Configuración del Sistema** › **General** ›
+   **Almacenamiento**. Si el disco está casi lleno, libera espacio antes de seguir.
 
 **Recomendado: un lector de archivos Markdown**
 
@@ -158,35 +161,41 @@ Todo se hace en la app de Claude para computadora, no en el navegador ni en el t
 
 **Paso 3. Ten la carpeta en tu computadora**
 
-La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet.
+La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet. Si vive
+en Google Drive:
 
-1. Si vive en Google Drive, instala **Google Drive para escritorio** (google.com/drive/download)
-   e inicia sesión con el correo con el que te compartieron la carpeta.
-2. Si es una unidad compartida, aparece sola en tu computadora, dentro de Google Drive, en
-   **Unidades compartidas**. Si es una carpeta que alguien te compartió y no la ves, entra en
-   drive.google.com, búscala en **Compartido conmigo** y añádela a tu unidad.
-3. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), no en la web.
-   Haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
-   **Make available offline**). Así sus archivos están siempre en tu computadora y
-   Claude puede leerlos.
-4. En Windows, Google Drive puede mostrar sus carpetas en una unidad aparte (por ejemplo,
-   G:) que Claude no consigue conectar. Si te pasa en el paso 4, en las preferencias de
-   Google Drive elige que guarde una copia de tus archivos en la computadora y conecta
-   la carpeta desde esa copia. Eso solo vale para carpetas de tu unidad: una unidad
-   compartida no se copia así. Si te pasa con una unidad compartida, avisa a quien
-   administra la carpeta.
-5. Si no la ves, pídele acceso a quien administra la carpeta.
+1. Instala **Google Drive para escritorio** (google.com/drive/download) e inicia sesión con
+   el correo con el que te compartieron la carpeta.
+2. Si es una **unidad compartida**, aparece sola en tu computadora, dentro de Google Drive, en
+   **Unidades compartidas**. Drive no la copia entera a tu disco, así que búscala en el Finder
+   (Mac) o en el Explorador de archivos (Windows), no en la web, haz clic derecho sobre la
+   carpeta y elige **Disponible sin conexión** (en inglés, **Make available offline**).
+   Espera a que se descarguen sus archivos.
+3. Si es una **carpeta que alguien te compartió**, entra en drive.google.com, búscala en
+   **Compartido conmigo** y añádela a tu unidad. Después:
+   - En Mac, haz clic derecho sobre la carpeta en el Finder y elige **Disponible sin
+     conexión**.
+   - En Windows, en las preferencias de Google Drive elige **Duplicar archivos** (en inglés,
+     **Mirror files**): tu unidad se copia a una carpeta normal dentro de
+     `C:\Users\<tu usuario>`. Conecta la carpeta desde ahí, no desde la unidad aparte que
+     Drive muestra con una letra (por ejemplo, G:), que Claude puede no conseguir conectar.
+4. En Windows, una unidad compartida no se puede duplicar: si en el paso 4 Claude no consigue
+   conectarla, avisa a quien administra la carpeta.
+5. Si no ves la carpeta, pídele acceso a quien administra la carpeta.
 
 **Paso 4. Crea tu proyecto y conecta la carpeta**
 
-1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo.
+1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo. Al crearlo, elige
+   usar una carpeta que ya existe (en la app, **Use an existing folder**).
 2. Ponle de nombre "[Organización] · [tu área]" y déjalo privado. Por ejemplo: "[Organización] · comercial".
    Cada persona crea el suyo.
 3. Conecta la carpeta **[Organización] completa**, la que tiene dentro `guia.md` y `metodo.md`. No
    elijas la carpeta de tu área: Claude necesita ver todas para decirte qué se sabe ya.
    Conéctala en el proyecto, no en una conversación suelta: así la tienen todas las
    conversaciones del proyecto.
-   Si no te la pide al crear el proyecto, añádela con el botón «+».
+   Si no te la pide al crear el proyecto, añádela con el botón «+». Si te equivocas de
+   carpeta, se puede quitar y cambiar después. El proyecto vive en tu computadora: no se
+   comparte con nadie, y cada persona crea el suyo.
 
 4. Si trabajas con código, sus repositorios van en otra carpeta de tu computadora (por
    ejemplo, una carpeta Code con todos los repositorios de la organización dentro), nunca
