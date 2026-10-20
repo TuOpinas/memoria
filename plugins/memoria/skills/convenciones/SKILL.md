@@ -65,7 +65,9 @@ Un área tiene un solo dueño, pero pueden escribir en ella más personas: **qui
 
 Una decisión de quien colabora vale como cualquier otra. Si el dueño no está de acuerdo, la reemplaza con una decisión suya o la cuestiona (sección 4), nunca la edita. En Drive, quien colabora en el área tiene escritura en la carpeta del área; quien colabora en un proyecto, solo en la carpeta de ese proyecto.
 
-**Dos personas en el mismo proyecto no cierran sesión a la vez.** La carpeta no bloquea a nadie: si dos cierres escriben a la vez, el segundo puede pisar al primero. Por eso el cierre compara, antes de escribir, la hora de la última escritura de `proyecto.md`, `decisiones.md` y `sesiones.md` con la que vio al abrir, y si cambió, relee y suma lo suyo a lo que encontró (skill `sesion`, anexo `cerrar.md`).
+**Dos personas en el mismo proyecto no cierran sesión a la vez.** La carpeta no bloquea a nadie: si dos cierres escriben a la vez, el segundo puede pisar al primero. Por eso el cierre compara, antes de escribir, la hora de la última escritura de `proyecto.md`, `decisiones.md` y `sesiones.md` con la que vio al abrir, y si cambió, relee y suma lo suyo a lo que encontró (skill `sesion`, anexo `cerrar.md`). Reduce el riesgo, no lo elimina: lo que otra persona escribió y la carpeta compartida aún no bajó a esta computadora no se ve.
+
+La carpeta tampoco impide que quien colabora edite la línea `Colabora:` de un proyecto, porque escribe en la misma carpeta. Las skills no la tocan desde su sesión; lo que de verdad decide quién escribe son los permisos de la carpeta compartida.
 
 ### Independencia entre raíces
 

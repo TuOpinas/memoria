@@ -8,6 +8,24 @@ El método se actualiza publicando una versión nueva del plugin. La primera lí
 
 Tres scripts acompañan al plugin y nadie tiene que recordar sus pasos. `release.sh` publica una versión: comprueba antes de tocar nada que la versión sea mayor que la actual, que el contrato declare la mayor.menor y que el README tenga su entrada; sube el número donde vive, regenera `metodo.md` y dice qué queda por hacer a mano. Si algo falla a mitad, deja los archivos como estaban. `verificar.sh` se pasa sobre la raíz de una organización: comprueba la estructura, los nombres, las cabeceras, los estados y que el bloque `Proyectos` de cada área liste todo lo que tiene que listar. No escribe nada: de cada `.md` lee la cabecera y busca enlaces wiki y rutas absolutas, no entra en `fuentes/` ni en `restringido/`, y una carpeta que no se deja leer la salta.
 
+## La carpeta en Google Drive
+
+Es trabajo de quien administra la carpeta, una vez por organización, antes de que nadie se conecte. Vale lo mismo para otra nube con unidades de equipo; el ejemplo es Drive.
+
+**Mejor una unidad compartida de la organización.** Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde ni cambia de dueño, y los permisos se dan por miembro. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y entonces la raíz es una carpeta normal en «Mi unidad» de quien administra, compartida con el equipo. En ese caso los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.
+
+**La raíz** es la unidad entera o una carpeta de su primer nivel, con `guia.md` y `metodo.md` dentro, y un nombre que se pueda teclear (contrato, sección 6). Cada organización, una sola.
+
+**Los permisos**, como dice la sección 1 del contrato:
+
+- Todo el equipo, lectura en toda la unidad o la carpeta raíz.
+- Cada dueño de área y quien colabora en ella, edición en la carpeta de esa área; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto.
+- El responsable de contexto, edición en `guia.md` y `base/`.
+- Quien administra, administrador de la unidad, y nadie más.
+- Lo restringido se marca en su carpeta con el acceso limitado de Drive, desde la web. En una unidad compartida lo pone quien la administra; Google lo admite en unidades compartidas desde 2025.
+
+**En la computadora de cada persona**, Drive para escritorio solo transmite las unidades compartidas: no las copia enteras al disco como puede hacer con «Mi unidad». Por eso la carpeta se marca «Disponible sin conexión» en cada computadora, y se comprueba que sus archivos bajaron antes de conectar la carpeta a Claude. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:); si Claude no consigue conectarla en una computadora, se dice en la guía de esa raíz y se decide con quien administra cómo seguir.
+
 ## Montaje en Claude
 
 El uso principal del método es Claude con la raíz conectada y el plugin instalado. El montaje tiene dos reglas.
@@ -26,7 +44,7 @@ Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ni
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
 Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
 Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado; si no la ves, pídeme que la añada. Sin ninguna carpeta conectada (desde el teléfono o la web), la raíz se puede leer por el conector de Drive, sin escribir nada en ella.
-Escribe solo en las áreas que `guia.md` asigna a tu cuenta, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
+Escribe solo donde tu cuenta es dueña o colabora, según `guia.md` y la línea «Colabora:» de cada proyecto, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
 Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
 Lo que hagas para un proyecto, un documento, un PDF o un análisis, guárdalo en su carpeta en cuanto exista, como borrador, y no en «Claude outputs»; cerrar sesión es registrar lo que pasó, no guardar.

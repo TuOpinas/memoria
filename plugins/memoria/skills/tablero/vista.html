@@ -1444,7 +1444,7 @@ function ayudaArts(){
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
     <dl class="hc-def">
-      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en la columna Cuenta de tu área, en <code>guia.md</code>: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX}.</dd>
+      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en el mapa de <code>guia.md</code>, como dueño o como colaborador de tu área, o en el proyecto donde colaboras: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX} o al dueño de tu área.</dd>
     </dl>
     <ol class="hc-pasos">
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
@@ -1468,6 +1468,15 @@ function ayudaArts(){
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
     <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos, y el tablero sale vacío.</p>
     <p class="hc-nota">Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto al mismo tiempo: las dos escrituras pueden pisarse.</p>`},
+  {g:"Para empezar", id:"carpeta-drive", t:"Montar la carpeta en Drive", h:`
+    <p>Lo hace ${ADM}, una vez, antes de que nadie se conecte. El resto del equipo no tiene que hacer nada de esto.</p>
+    <dl class="hc-def">
+      <dt>Mejor una unidad compartida</dt><dd>Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y la carpeta va en «Mi unidad» de quien administra, compartida con el equipo. Entonces los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.</dd>
+      <dt>La raíz</dt><dd>La unidad entera o una carpeta de su primer nivel, con <code>guia.md</code> y <code>metodo.md</code> dentro. Una sola por organización, con un nombre sin signos raros.</dd>
+      <dt>Los permisos</dt><dd>Todo el equipo, lectura en toda la carpeta. Cada dueño de área y quien colabora en ella, edición en la carpeta de su área; quien colabora en un solo proyecto, solo en la de ese proyecto. Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
+      <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:); si en una computadora Claude no consigue conectarla, avisa a ${ADM}.</dd>
+    </dl>
+    <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
     <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Al cerrarla, escribe lo que pasó.</p>
     <figure class="hc-chat">
@@ -1505,6 +1514,8 @@ function ayudaArts(){
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
         <tr><td>${F("revisa X")}<br>${F("¿esto está listo?")}</td><td>Busca lo desfasado o sin fuente y te lo enseña.</td></tr>
         <tr><td>${F("ya lo aprobó…")} y el nombre del dueño</td><td>Lo publica como vigente, si cumple los requisitos.</td></tr>
+        <tr><td>${F("[nombre] con [correo] es el dueño del área [área]")}<br>${F("añade a [nombre] con [correo] como colaborador del área [área]")}</td><td>Solo el responsable del contexto: escribe en el mapa de la carpeta quién lleva cada área y quién colabora en ella. Falta además darles permiso en la carpeta compartida (<button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>).</td></tr>
+        <tr><td>${F("añade a [nombre] con [correo] como colaborador de este proyecto")}</td><td>Solo el dueño del área, en una sesión del proyecto: esa persona escribe en ese proyecto y en ningún otro.</td></tr>
         <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas. Pide antes un dueño con nombre y apellido.</td></tr>
         <tr><td>${F("cierra el proyecto")}</td><td>Comprueba que está terminado y lo deja cerrado. No borra nada.</td></tr>
         <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su panorama, lo que pide atención y lo que no cuadra.</td></tr>
@@ -1528,14 +1539,14 @@ function ayudaArts(){
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
       <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
-      <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en la tabla de áreas de <code>guia.md</code>. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
+      <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en el mapa de <code>guia.md</code>, ni como dueño ni como colaborador, ni en el proyecto donde trabajas. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
       <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando cierras la sesión y vuelves a abrir el tablero, con tu computadora encendida y la app abierta: se pone al día solo y tarda unos minutos. Si lo hizo otra persona, pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
-      <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas de tu cuenta. Si algo le toca a otra, te dice a quién pedírselo.</dd>
+      <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es dueña o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
     </dl>`},
   {g:"El tablero", id:"tablero", t:"Tu tablero", h:`
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
@@ -1721,7 +1732,7 @@ function ayudaArts(){
       <dt>Durante una sesión</dt><dd>Lo que se produce se guarda en su proyecto en cuanto existe, como borrador. Al cerrar, Claude registra qué se hizo, qué se decidió y qué sigue.</dd>
       <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta, como dueña o como colaboradora, y en los proyectos donde colabora. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
       <dt>Dueño y colaboradores</dt><dd>Quien colabora abre y cierra sesión, guarda borradores y registra las decisiones de su propio trabajo con su nombre. Publicar un documento, cambiar las prioridades del área, escribir su panorama y crear o cerrar proyectos es del dueño. Si el dueño no está de acuerdo con una decisión, la reemplaza con una suya o la cuestiona.</dd>
-      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez. Si pasa, Claude se da cuenta al cerrar de que otra persona escribió mientras tanto, relee lo que hay y suma lo suyo encima.</dd>
+      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez. Si pasa, Claude compara al cerrar la hora de cada registro con la que vio al abrir, y si otra persona escribió mientras tanto, relee y suma lo suyo encima. Reduce el riesgo, no lo elimina: si la escritura de la otra persona aún no bajó a tu computadora, no la ve.</dd>
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y pasos hechos con nota.</dd>
     </dl>
     <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>

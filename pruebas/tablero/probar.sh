@@ -37,6 +37,7 @@ rm -rf "$OUT/raiz-cola"; cp -R "$OUT/raiz" "$OUT/raiz-cola"
 python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 # la apertura de sesión en una llamada (skill sesion, abrir.py), contra la misma raíz inventada
 python3 "$AQUI/../sesion/probar_abrir.py"
+python3 "$AQUI/../sesion/probar_cuentas.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"
 for m in publico completo; do python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/$m" "$OUT/$m.html"; done

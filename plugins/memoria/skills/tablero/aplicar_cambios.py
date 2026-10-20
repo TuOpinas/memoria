@@ -21,7 +21,7 @@ Salida: JSON por stdout con "aplicados" (ids que ya están en la carpeta y se pu
 de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual: se quedan para la sesión), "rechazados" (lo que no
 cumple la forma: se borra de la cola y se dice en el resumen), "errores" (no se pudo escribir:
 se quedan en la cola y se reintentan en la próxima corrida), "para_sesion" (lo que no es una fecha,
-de las áreas de la cuenta) y "para_su_dueno" (todo lo de áreas de otra cuenta: se queda en la cola
+de las áreas y proyectos donde la cuenta es dueña o colabora) y "para_su_dueno" (lo demás: se queda en la cola
 hasta que su dueño ponga al día su tablero o cierre una sesión; no se toca).
 Una fecha aplicada no toca la fecha «actualizado» de la cabecera: es un cambio mecánico, no trabajo
 sobre el proyecto, y moverla escondería en el tablero los plazos vencidos de los demás pasos.
@@ -37,11 +37,33 @@ ENTRADA = pathlib.Path(sys.argv[2])
 DRY = "--dry-run" in sys.argv
 CUENTA = (sys.argv[sys.argv.index("--cuenta") + 1] if "--cuenta" in sys.argv and len(sys.argv) > sys.argv.index("--cuenta") + 1 else "").strip().lower()
 
-CORREO = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+# --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
+# La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
+# pruebas/sesion/probar_cuentas.py comprueba que las cuatro copias son idénticas.
+CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
+PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
+LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 def cuentas(celda):
-    """(dueño, colaboran) de una celda Cuenta: «dueno@x · colabora: a@x, b@x», como abrir.py."""
-    partes_ = re.split(r"colabora[n]?\s*:", (celda or "").lower(), maxsplit=1)
-    return set(CORREO.findall(partes_[0])), set(CORREO.findall(partes_[1])) if len(partes_) > 1 else set()
+    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    texto = (celda or "").lower()
+    partes = PALABRA_COLABORA.split(texto, maxsplit=1)
+    antes = set(CORREO.findall(partes[0]))
+    despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
+    aviso = None
+    if len(antes) > 1:
+        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        antes = set()
+    elif not antes:
+        aviso = "sin el correo del dueño"
+    elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
+        aviso = "la palabra para quien colabora va escrita «colabora:»"
+    return antes, despues, aviso
+def colaboran_en(quien):
+    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
+    return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
+# --- fin de quién escribe ---
 
 def mis_areas():
     """(áreas de las que la cuenta es dueña, áreas en las que colabora), según la columna Cuenta de guia.md."""
@@ -61,7 +83,7 @@ def mis_areas():
         celdas = [c.strip() for c in l.strip().strip("|").split("|")]
         # cuentas enteras, no subcadenas: «ana@» no es «diana@»; y cinco columnas, como abrir.py y el generador
         if len(celdas) >= 5:
-            de, cb = cuentas(celdas[3])
+            de, cb, _ = cuentas(celdas[3])
             if CUENTA in de:
                 out.add(celdas[0].strip("`").rstrip("/"))
             elif CUENTA in cb:
@@ -77,8 +99,7 @@ def colabora_en_proyecto(area, slug):
     except OSError:
         return False
     m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", tp, re.S | re.M)
-    linea = next((l for l in (m.group(1).split("\n") if m else []) if re.match(r"^\s*colabora[n]?\s*:", l, re.I)), "")
-    return CUENTA in set(CORREO.findall(linea.lower()))
+    return CUENTA in colaboran_en(m.group(1) if m else "")
 
 def puede(t, c, area):
     """Las prioridades del área son de su dueño; lo demás lo escribe también quien colabora en el área o en el proyecto."""

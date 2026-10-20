@@ -60,7 +60,7 @@ ok("=== CUENTA EN EL PROYECTO\nana@ejemplo.test: dueño del área" in o and "===
 c, oc = abrir("ventas/cuentas", "--cuenta", "carla@ejemplo.test")
 ok("carla@ejemplo.test: escribe en ventas (colabora)" in oc and "carla@ejemplo.test: colabora en el área" in oc and "responsable de contexto" not in oc, "quien colabora en el área escribe en ella, sin ser su dueña ni responder por el contexto")
 c, od = abrir("operacion/soporte", "--cuenta", "dani@ejemplo.test")
-ok("dani@ejemplo.test: escribe en ninguna área" in od and "dani@ejemplo.test: colabora en este proyecto" in od, "quien colabora en un solo proyecto escribe en ese proyecto y en ninguna área")
+ok("dani@ejemplo.test: escribe en operacion/soporte (colabora en el proyecto)" in od and "dani@ejemplo.test: colabora en este proyecto" in od, "quien colabora en un solo proyecto escribe en ese proyecto y en ninguna área")
 c, ob = abrir("ventas/cuentas", "--cuenta", "beto@ejemplo.test")
 ok("beto@ejemplo.test: no escribe aquí" in ob, "una cuenta de otra área no escribe en este proyecto")
 c, oa = abrir("ventas/cuentas", "--cuenta", "carla@")

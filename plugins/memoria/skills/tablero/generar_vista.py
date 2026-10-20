@@ -29,6 +29,34 @@ proyectos/<area>--<slug>.json, cada uno con una huella de su contenido; un indic
 tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta al día para «Por dónde empezar».
 """
 import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
+
+# --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
+# La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
+# pruebas/sesion/probar_cuentas.py comprueba que las cuatro copias son idénticas.
+CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
+PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
+LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
+def cuentas(celda):
+    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    texto = (celda or "").lower()
+    partes = PALABRA_COLABORA.split(texto, maxsplit=1)
+    antes = set(CORREO.findall(partes[0]))
+    despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
+    aviso = None
+    if len(antes) > 1:
+        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        antes = set()
+    elif not antes:
+        aviso = "sin el correo del dueño"
+    elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
+        aviso = "la palabra para quien colabora va escrita «colabora:»"
+    return antes, despues, aviso
+def colaboran_en(quien):
+    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
+    return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
+# --- fin de quién escribe ---
 try:
     from zoneinfo import ZoneInfo
     TZ = ZoneInfo("America/Mexico_City")
@@ -213,6 +241,8 @@ for l in tabla.split("\n"):
         continue
     slug = celdas[0].strip("`").rstrip("/")
     areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[2], "cuenta": celdas[3], "lectores": celdas[4]})
+    if cuentas(celdas[3])[2]:
+        guia_avisos.append(f"la celda Cuenta de «{slug}» en guia.md: {cuentas(celdas[3])[2]}")
 if not areas_guia and guia:
     guia_avisos.append("no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta")
 
@@ -775,8 +805,8 @@ for a in areas_guia:
     texto = leer(carpeta / "area.md")
     area_doc = {
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
-        # quienes colaboran: las cuentas tras «colabora:» en la celda Cuenta de guia.md, que ya lee todo el equipo
-        "colaboran": sorted(set(re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", (re.split(r"colabora[n]?\s*:", a["cuenta"].lower(), maxsplit=1) + [""])[1]))),
+        # quienes colaboran, por su cuenta: solo en el tablero completo; el público no lleva correos de nadie
+        "colaboran": [] if PUBLICO else sorted(cuentas(a["cuenta"])[1]),
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
@@ -835,11 +865,16 @@ for a in areas_guia:
         pdoc["cerrado"] = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", pdoc["estado_actual"]))
         mq = re.search(r"Dueño:\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
-        mco = re.search(r"^\s*Colabora[n]?:\s*(.+)$", pdoc["quien"], re.M | re.I)
-        # los nombres, sin las cuentas entre paréntesis: la cuenta solo sirve para saber quién escribe
-        pdoc["colaboran"] = [x.strip() for x in re.sub(r"\s*\([^)]*@[^)]*\)", "", mco.group(1)).split(",") if x.strip()] if mco else []
+        # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
+        nombres_co = []
+        for l in pdoc["quien"].split("\n"):
+            if LINEA_COLABORA.match(l):
+                resto = CORREO.sub("", re.sub(r"\([^)]*\)", "", LINEA_COLABORA.sub("", l, count=1)))
+                nombres_co += [x.strip(" *-<>") for x in resto.split(",") if x.strip(" *-<>")]
+        pdoc["colaboran"] = nombres_co
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
+        pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
         ultima_real = reales[0]["fecha"] if reales else None
