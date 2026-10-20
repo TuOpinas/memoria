@@ -91,7 +91,10 @@ ninguno.
 **Paso 1. Comprueba que tu computadora sirve**
 
 Necesitas una Mac con macOS 14 (Sonoma) o más nuevo, o una computadora con Windows 10 o
-Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise).
+Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise). En Windows,
+mejor la edición Pro, Enterprise o Education: en Windows Home la función de carpetas
+puede no funcionar, y el verificador de abajo te lo dice. Deja también espacio libre en
+el disco: la primera vez la app descarga más de 1 GB, y con el disco lleno no se instala.
 
 1. Descarga el verificador de Claude para tu computadora:
    - Mac: https://claude.ai/api/desktop/darwin/universal/cowork-readiness-check/latest/redirect
@@ -145,16 +148,27 @@ La carpeta de [Organización] tiene que estar en tu computadora, no solo en inte
    Haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
    **Make available offline**). Así sus archivos están siempre en tu computadora y
    Claude puede leerlos.
-4. Si no la ves, pídele acceso a quien administra la carpeta.
+4. En Windows, Google Drive puede mostrar sus carpetas en una unidad aparte (por ejemplo,
+   G:) que Claude no consigue conectar. Si te pasa en el paso 4, en las preferencias de
+   Google Drive elige que guarde una copia de tus archivos en la computadora y conecta
+   la carpeta desde esa copia.
+5. Si no la ves, pídele acceso a quien administra la carpeta.
 
 **Paso 4. Crea tu proyecto y conecta la carpeta**
 
 1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo.
-2. Ponle de nombre "[Organización] · [tu área]". Por ejemplo: "[Organización] · comercial". Cada persona
-   crea el suyo.
+2. Ponle de nombre "[Organización] · [tu área]" y déjalo privado. Por ejemplo: "[Organización] · comercial".
+   Cada persona crea el suyo.
 3. Conecta la carpeta **[Organización] completa**, la que tiene dentro `guia.md` y `metodo.md`. No
    elijas la carpeta de tu área: Claude necesita ver todas para decirte qué se sabe ya.
+   Conéctala en el proyecto, no en una conversación suelta: así la tienen todas las
+   conversaciones del proyecto.
    Si no te la pide al crear el proyecto, añádela con el botón «+».
+
+4. Si trabajas con código, sus repositorios van en otra carpeta de tu computadora (por
+   ejemplo, una carpeta Code con todos los repositorios de la organización dentro), nunca
+   dentro de la carpeta de la memoria: Drive le añade archivos que confunden a Git.
+   Conéctala también al proyecto.
 
 **Paso 5. Instala el plugin Memoria**
 
@@ -171,14 +185,27 @@ Si tu organización ya te lo instaló, sáltate este paso.
    otra vez la flechita junto a **Add** y elige **Manage marketplaces**. Tiene que
    aparecer **memoria** con la etiqueta **Synced**. Pulsa **Done**. Si no aparece, repite
    los pasos 2 a 4.
+7. Comprueba también que el plugin quedó encendido: en algunas versiones de Claude se
+   instala apagado. Búscalo entre tus plugins y, si está apagado, actívalo.
 
 **Paso 6. Pruébalo**
 
 1. Dentro de tu proyecto, abre una conversación nueva.
 2. Escribe: «abre sesión en» y el nombre de un proyecto de tu área.
-3. Si Claude te pide permiso para usar la carpeta, pulsa **Permitir**.
+3. Si Claude te pide permiso para usar la carpeta, elige que lo permita siempre, para que
+   no te lo vuelva a preguntar.
 4. Claude te dirá en qué va ese proyecto y qué propone hacer. Si lo hace, ya estás
    conectado. No hay que pegar nada en las instrucciones del proyecto.
+5. Si Claude no reconoce la memoria, revisa tres cosas: que la conversación está dentro
+   del proyecto, que es de Cowork (si tu versión separa Chat y Cowork) y que el plugin
+   está encendido.
+
+Para trabajar cada día bastan dos frases: «abre sesión en…» al empezar y «cierra la
+sesión» al terminar. Dos cosas que conviene saber desde el principio:
+
+- Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto
+  al mismo tiempo: las dos escrituras pueden pisarse.
+- En Claude Design la memoria no se activa sola: dile «abre sesión en…» y el proyecto.
 
 **Paso 7. Monta tu tablero**
 

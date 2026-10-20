@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.11"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.12"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1444,15 +1444,19 @@ function ayudaArts(){
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
     <dl class="hc-def">
-      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en la columna Cuenta de tu área, en <code>guia.md</code>: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX}.</dd>
+      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en la columna Cuenta de tu área, en <code>guia.md</code>: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX}.</dd>
     </dl>
     <ol class="hc-pasos">
-      <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área». Uno por persona, no uno para todos.</span></li>
-      <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta.</span></li>
-      <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
+      <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
+      <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta. Conéctala en el proyecto, no en una conversación suelta, y cuando Claude pida permiso para usarla, deja que lo haga siempre.</span></li>
+      <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced, y entre tus plugins Memoria tiene que estar encendido: en algunas versiones se instala apagado. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
       <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con una línea, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
       <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
+    <dl class="hc-def">
+      <dt>El código, aparte</dt><dd>Si trabajas con código, sus repositorios van en otra carpeta de tu computadora, con todos los de la organización dentro, y se conecta también al proyecto. Nunca dentro de la carpeta de la memoria: Drive le añade archivos que confunden a Git.</dd>
+      <dt>En Claude Design</dt><dd>La memoria no se activa sola: dile ${F("abre sesión en…")} y el proyecto.</dd>
+    </dl>
     <p class="hc-nota">No hay nada que pegar en las instrucciones del proyecto: el plugin aplica el método en cuanto ve la carpeta. Para sumar a otra persona: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"sumar", t:"Sumar a un compañero", h:`
     <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
@@ -1462,7 +1466,8 @@ function ayudaArts(){
       <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
     </ol>
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
-    <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos.</p>`},
+    <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos, y el tablero sale vacío.</p>
+    <p class="hc-nota">Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto al mismo tiempo: las dos escrituras pueden pisarse.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
     <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Al cerrarla, escribe lo que pasó.</p>
     <figure class="hc-chat">
@@ -1522,9 +1527,11 @@ function ayudaArts(){
   {g:"Cada día", id:"si-algo-falla", t:"Si algo falla", h:`
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
-      <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está instalado. Revisa los pasos de <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
+      <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
       <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en la tabla de áreas de <code>guia.md</code>. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
-      <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize → Plugins, pulsa Update en el marketplace <code>memoria-marketplace</code>.</dd>
+      <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
+      <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
+      <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando cierras la sesión y vuelves a abrir el tablero, con tu computadora encendida y la app abierta: se pone al día solo y tarda unos minutos. Si lo hizo otra persona, pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
