@@ -37,7 +37,7 @@ Si la conversación no tiene consola en la computadora (solo las herramientas qu
 
 ## Qué respondo
 
-**La primera vez en la conversación** que se abre sesión sobre la carpeta, la respuesta empieza con una sola línea: «Memoria activa · <organización> · método <versión de la primera línea de `metodo.md` de la raíz> · escribes en <áreas de la cuenta, que dice la sección CUENTA de `abrir.py`, o «ninguna área: dime en cuál trabajas»>». Solo esa vez.
+**La primera vez en la conversación** que se abre sesión sobre la carpeta, la respuesta empieza con una sola línea: «Memoria activa · <organización> · método <versión de la primera línea de `metodo.md` de la raíz> · escribes en <áreas de la cuenta con su papel, dueño o colabora, que dice la sección CUENTA de `abrir.py`, o «ninguna área: dime en cuál trabajas»>». Solo esa vez.
 
 Después, cuatro bloques, en este orden y sin encabezados largos, y la puesta al día del método si toca.
 

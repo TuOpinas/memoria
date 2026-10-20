@@ -10,6 +10,33 @@ set -euo pipefail
 RAIZ="${1:?Falta la ruta de la raíz}"
 python3 - "$RAIZ" <<'PY'
 import os, re, sys, unicodedata
+# --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
+# La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
+# pruebas/sesion/probar_cuentas.py comprueba que las cuatro copias son idénticas.
+CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
+PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
+LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
+def cuentas(celda):
+    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    texto = (celda or "").lower()
+    partes = PALABRA_COLABORA.split(texto, maxsplit=1)
+    antes = set(CORREO.findall(partes[0]))
+    despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
+    aviso = None
+    if len(antes) > 1:
+        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        antes = set()
+    elif not antes:
+        aviso = "sin el correo del dueño"
+    elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
+        aviso = "la palabra para quien colabora va escrita «colabora:»"
+    return antes, despues, aviso
+def colaboran_en(quien):
+    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
+    return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
+# --- fin de quién escribe ---
 
 raiz = sys.argv[1]
 ESTADOS = {"borrador", "vigente", "reemplazado"}
@@ -107,8 +134,11 @@ if guia_txt:
         if len(celdas) < 5:
             h("fila de la tabla de áreas con columnas de menos", "guia.md", "«%s» tiene %d y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)" % (slug, len(celdas))); continue
         guia_areas[slug] = {"dueno": celdas[2], "cuenta": celdas[3]}
-        if "@" not in celdas[3]:
-            h("área sin cuenta en guia.md", slug, "la columna Cuenta lleva el correo con el que su dueño trabaja con la IA")
+        _de, _co, _av = cuentas(celdas[3])
+        if _av:
+            h("celda Cuenta mal escrita en guia.md", slug, _av + ": primero el correo del dueño y, si hace falta, «· colabora: correo, correo»")
+        if PALABRA_COLABORA.search(celdas[3]) and not _co:
+            h("«colabora:» sin cuentas en guia.md", slug, "detrás de «colabora:» van los correos de quienes colaboran, separados por comas")
         if not os.path.isdir(os.path.join(raiz, slug)):
             h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
     if m and not guia_areas:
@@ -185,6 +215,10 @@ for area, aruta in areas:
         # salvo en un proyecto cerrado, que ocupa solo su línea
         pfm, ptxt = cabecera(os.path.join(pruta, "proyecto.md"))
         cerrado = "Proyecto terminado el" in ptxt
+        _qp = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", ptxt or "", re.S | re.M)
+        for _l in (_qp.group(1).split("\n") if _qp else []):
+            if LINEA_COLABORA.match(_l) and not re.search(r"\([^)]*@[^)]*\)", _l):
+                h("«Colabora:» sin cuentas en proyecto.md", rel(pruta), "cada persona va como «Nombre Apellido (correo)»: sin la cuenta no se sabe quién escribe")
         ed = os.path.join(pruta, "entregables")
         if os.path.isdir(ed) and not cerrado:
             for f in ls(ed):

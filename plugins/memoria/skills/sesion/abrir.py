@@ -120,6 +120,35 @@ def titulo(n):
     print(f"\n=== {n}")
 
 
+# --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
+# La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
+# pruebas/sesion/probar_cuentas.py comprueba que las cuatro copias son idénticas.
+CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
+PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
+LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
+def cuentas(celda):
+    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    texto = (celda or "").lower()
+    partes = PALABRA_COLABORA.split(texto, maxsplit=1)
+    antes = set(CORREO.findall(partes[0]))
+    despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
+    aviso = None
+    if len(antes) > 1:
+        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        antes = set()
+    elif not antes:
+        aviso = "sin el correo del dueño"
+    elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
+        aviso = "la palabra para quien colabora va escrita «colabora:»"
+    return antes, despues, aviso
+def colaboran_en(quien):
+    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
+    return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
+# --- fin de quién escribe ---
+
+
 # ---------- nivel 0 ----------
 try:
     with open(RAIZ / "metodo.md", encoding="utf-8-sig", errors="replace") as f_:
@@ -164,7 +193,10 @@ for l in filas:
         cab_vista = True; continue
     c = [x.strip() for x in l.strip().strip("|").split("|")]
     if len(c) >= 5:
-        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuenta": c[3].lower(), "restringida": "restring" in c[4].lower()})
+        de, co, av = cuentas(c[3])
+        if av:
+            print(f"(aviso: la celda Cuenta de «{c[0].strip('`')}» en guia.md: {av})")
+        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": "restring" in c[4].lower()})
     else:
         print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
 if not areas:
@@ -175,7 +207,7 @@ resp_contexto = ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
-es_resp = bool(CUENTA and resp_contexto) and any(a["cuenta"] == CUENTA and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)
+es_resp = bool(CUENTA and resp_contexto) and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)
 
 premisas = []
 for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
@@ -191,8 +223,15 @@ print("\n".join(l for pid, l, _, _ in premisas if pid not in reemplazadas) or "(
 
 if CUENTA:
     titulo("CUENTA")
-    mias = [a["slug"] for a in areas if a["cuenta"] == CUENTA]
-    print(f"{CUENTA}: escribe en {', '.join(mias) if mias else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
+    mias = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"]]
+    colab = [a["slug"] for a in areas if CUENTA in a["colaboran"] and CUENTA not in a["cuentas_dueno"]]
+    proy_co = []
+    if ACTIVO and "/" in ACTIVO and ACTIVO.split("/")[0] not in mias + colab:
+        tp_ = leer(RAIZ / ACTIVO / "proyecto.md")
+        if tp_ and CUENTA in colaboran_en(seccion(cabecera(tp_)[1], "Quién participa")):
+            proy_co = [ACTIVO]
+    donde_ = ", ".join([f"{s} (dueño)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
+    print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
 
 
@@ -251,6 +290,27 @@ if tp is None:
     sys.exit(0)
 titulo(f"PROYECTO {ACTIVO}/proyecto.md")
 print(tp.strip())
+if CUENTA:
+    # colaborar en un solo proyecto: una línea «Colabora:» en «Quién participa» con la cuenta entre paréntesis
+    a_act = next((a for a in areas if a["slug"] == area_activa), None)
+    if a_act and CUENTA in a_act["cuentas_dueno"]:
+        rol = "dueño del área"
+    elif a_act and CUENTA in a_act["colaboran"]:
+        rol = "colabora en el área"
+    elif CUENTA in colaboran_en(seccion(cabecera(tp)[1], "Quién participa")):
+        rol = "colabora en este proyecto"
+    else:
+        rol = "no escribe aquí (preguntar antes de escribir)"
+    titulo("CUENTA EN EL PROYECTO")
+    print(f"{CUENTA}: {rol}")
+# para el cierre: cuándo cambió cada registro por última vez; si cambian mientras dura la sesión, otra persona escribió
+titulo("REGISTROS (hora de la última escritura)")
+for n_ in ("proyecto.md", "decisiones.md", "sesiones.md"):
+    try:
+        st_ = datetime.datetime.fromtimestamp(os.stat(pc / n_).st_mtime, TZ)
+        print(f"{n_}: {st_.isoformat(timespec='seconds')} · {os.stat(pc / n_).st_size} bytes" + (f" · hace {int((datetime.datetime.now(TZ) - st_).total_seconds() // 60)} minutos: si no fue esta cuenta, otra persona trabaja ahora en el proyecto" if (datetime.datetime.now(TZ) - st_).total_seconds() < 3600 else ""))
+    except OSError:
+        print(f"{n_}: no se pudo leer")
 dec_txt = leer(pc / "decisiones.md") or ""
 ses_txt = leer(pc / "sesiones.md") or ""
 titulo("DECISIONES (las 5 más recientes)")

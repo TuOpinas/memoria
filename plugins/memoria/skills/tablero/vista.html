@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.12"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.15.0"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1444,7 +1444,7 @@ function ayudaArts(){
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
     <dl class="hc-def">
-      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en la columna Cuenta de tu área, en <code>guia.md</code>: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX}.</dd>
+      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en el mapa de <code>guia.md</code>, como dueño o como colaborador de tu área, o en el proyecto donde colaboras: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX} o al dueño de tu área.</dd>
     </dl>
     <ol class="hc-pasos">
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
@@ -1461,13 +1461,22 @@ function ayudaArts(){
   {g:"Para empezar", id:"sumar", t:"Sumar a un compañero", h:`
     <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
     <ol class="hc-pasos">
-      <li><b>Ponla en el mapa</b><span>Su correo de Claude tiene que estar en la tabla de áreas de <code>guia.md</code>, en el área donde va a escribir. Lo escribe ${CTX}, en su sesión: ${F("añade a [nombre] con [correo] en el área [área] de guia.md")}. Sin eso, Claude le preguntará antes de escribir nada.</span></li>
-      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: clic derecho sobre la carpeta ${ORG} › Compartir, su correo y el permiso de editor si va a escribir. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
+      <li><b>Ponla en el mapa, como dueña o como colaboradora</b><span>Si va a llevar un área, su correo va en la columna Cuenta de esa área: ${F("añade a [nombre] con [correo] como dueño del área [área] en guia.md")}. Si va a trabajar en el área de otra persona, va en la misma celda como colaboradora: ${F("añade a [nombre] con [correo] como colaborador del área [área]")}. Si solo va a trabajar en un proyecto, se declara en ese proyecto: ${F("añade a [nombre] con [correo] como colaborador de este proyecto")}, en una sesión del dueño del área. La tabla de <code>guia.md</code> la escribe ${CTX}. Sin nada de eso, Claude le preguntará antes de escribir.</span></li>
+      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: lectura de toda la carpeta ${ORG}, y permiso de editor en la carpeta del área donde va a escribir, o solo en la del proyecto si colabora en uno. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
       <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
     </ol>
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
     <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos, y el tablero sale vacío.</p>
     <p class="hc-nota">Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto al mismo tiempo: las dos escrituras pueden pisarse.</p>`},
+  {g:"Para empezar", id:"carpeta-drive", t:"Montar la carpeta en Drive", h:`
+    <p>Lo hace ${ADM}, una vez, antes de que nadie se conecte. El resto del equipo no tiene que hacer nada de esto.</p>
+    <dl class="hc-def">
+      <dt>Mejor una unidad compartida</dt><dd>Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y la carpeta va en «Mi unidad» de quien administra, compartida con el equipo. Entonces los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.</dd>
+      <dt>La raíz</dt><dd>La unidad entera o una carpeta de su primer nivel, con <code>guia.md</code> y <code>metodo.md</code> dentro. Una sola por organización, con un nombre sin signos raros.</dd>
+      <dt>Los permisos</dt><dd>Todo el equipo, lectura en toda la carpeta. Cada dueño de área y quien colabora en ella, edición en la carpeta de su área; quien colabora en un solo proyecto, solo en la de ese proyecto. Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
+      <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:); si en una computadora Claude no consigue conectarla, avisa a ${ADM}.</dd>
+    </dl>
+    <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
     <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Al cerrarla, escribe lo que pasó.</p>
     <figure class="hc-chat">
@@ -1505,6 +1514,8 @@ function ayudaArts(){
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
         <tr><td>${F("revisa X")}<br>${F("¿esto está listo?")}</td><td>Busca lo desfasado o sin fuente y te lo enseña.</td></tr>
         <tr><td>${F("ya lo aprobó…")} y el nombre del dueño</td><td>Lo publica como vigente, si cumple los requisitos.</td></tr>
+        <tr><td>${F("[nombre] con [correo] es el dueño del área [área]")}<br>${F("añade a [nombre] con [correo] como colaborador del área [área]")}</td><td>Solo el responsable del contexto: escribe en el mapa de la carpeta quién lleva cada área y quién colabora en ella. Falta además darles permiso en la carpeta compartida (<button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>).</td></tr>
+        <tr><td>${F("añade a [nombre] con [correo] como colaborador de este proyecto")}</td><td>Solo el dueño del área, en una sesión del proyecto: esa persona escribe en ese proyecto y en ningún otro.</td></tr>
         <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas. Pide antes un dueño con nombre y apellido.</td></tr>
         <tr><td>${F("cierra el proyecto")}</td><td>Comprueba que está terminado y lo deja cerrado. No borra nada.</td></tr>
         <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su panorama, lo que pide atención y lo que no cuadra.</td></tr>
@@ -1528,14 +1539,14 @@ function ayudaArts(){
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
       <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
-      <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en la tabla de áreas de <code>guia.md</code>. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
+      <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en el mapa de <code>guia.md</code>, ni como dueño ni como colaborador, ni en el proyecto donde trabajas. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
       <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando cierras la sesión y vuelves a abrir el tablero, con tu computadora encendida y la app abierta: se pone al día solo y tarda unos minutos. Si lo hizo otra persona, pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
-      <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas de tu cuenta. Si algo le toca a otra, te dice a quién pedírselo.</dd>
+      <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es dueña o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
     </dl>`},
   {g:"El tablero", id:"tablero", t:"Tu tablero", h:`
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
@@ -1719,7 +1730,9 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Claude teclea</dt><dd>Las personas deciden qué dice cada archivo y lo piden; Claude es quien lo escribe, siempre con las mismas reglas. Nadie tiene que aprender el formato.</dd>
       <dt>Durante una sesión</dt><dd>Lo que se produce se guarda en su proyecto en cuanto existe, como borrador. Al cerrar, Claude registra qué se hizo, qué se decidió y qué sigue.</dd>
-      <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
+      <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta, como dueña o como colaboradora, y en los proyectos donde colabora. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
+      <dt>Dueño y colaboradores</dt><dd>Quien colabora abre y cierra sesión, guarda borradores y registra las decisiones de su propio trabajo con su nombre. Publicar un documento, cambiar las prioridades del área, escribir su panorama y crear o cerrar proyectos es del dueño. Si el dueño no está de acuerdo con una decisión, la reemplaza con una suya o la cuestiona.</dd>
+      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez. Si pasa, Claude compara al cerrar la hora de cada registro con la que vio al abrir, y si otra persona escribió mientras tanto, relee y suma lo suyo encima. Reduce el riesgo, no lo elimina: si la escritura de la otra persona aún no bajó a tu computadora, no la ve.</dd>
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y pasos hechos con nota.</dd>
     </dl>
     <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>
@@ -1942,7 +1955,7 @@ function renderArea(a){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
   head.innerHTML = `<div class="eyebrow">Área</div><h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
-    <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
+    <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span>${(a.colaboran||[]).length?`<span>Colaboran: <b>${a.colaboran.map(esc).join(", ")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card"><p class="sub">${noLeido(a,true).txt}</p></div>`; return; }
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
   const hace30 = addDays(-30);
@@ -1974,7 +1987,7 @@ function renderProj(p){
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
   head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
-    <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span><span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
+    <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span>${(p.colaboran||[]).length?`<span>Colaboran: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
   const nP = stepsLive(p).length;

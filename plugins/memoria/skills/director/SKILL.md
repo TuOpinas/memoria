@@ -15,7 +15,7 @@ Mira un área entera como la miraría quien la dirige: cómo está, qué se movi
 
 **Otras áreas**: «¿qué de otras áreas me afecta?», «revisa lo de otras áreas».
 
-**Panorama**: al cerrar una sesión en el área (skill `sesion`, anexo `cerrar.md`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
+**Panorama**: al cerrar una sesión en el área (skill `sesion`, anexo `cerrar.md`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores, y los dos piden la cuenta del dueño del área: si cierra quien colabora, el Panorama no se toca.
 
 Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, no es esta skill: si es su dueño, se abre sesión (`sesion`); si no, es `consulta`.
 
@@ -29,9 +29,9 @@ Por los niveles de la sección 12 de `convenciones`, sin saltarse ninguno:
 4. La búsqueda de líneas `Afecta a:` y `Cuestiona a:` de toda la raíz que nombren un proyecto del área, como al abrir sesión.
 5. Para «otras áreas», de cada una: su `Panorama` y el bloque `Proyectos` de su `area.md`, el «En corto» de los proyectos que toquen a esta área, y de esos, sus decisiones, el cuerpo de sus entregables `vigentes` y la cabecera de sus sesiones (fecha, título y «Trabajamos en»). Nada más: el cuerpo de `sesiones.md`, `taller/`, `fuentes/` y lo restringido de otra área no se leen, igual que para cualquier persona de fuera. Lo que se dice de otra área empieza por lo que su director escribió.
 
-Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice el anexo `sin-carpeta.md` de la skill `sesion`, y el Panorama no se escribe: se guarda como nota del área en la cola del tablero, con la forma que dice ese anexo (`area` en lugar de `proyecto`), y la siguiente sesión del dueño en cualquier proyecto del área lo enseña al abrir.
+Sin carpeta conectada (teléfono, web), se lee la raíz en Drive en solo lectura como dice el anexo `sin-carpeta.md` de la skill `sesion`, y el Panorama no se escribe: se guarda como nota del área en la cola del tablero, con la forma que dice ese anexo (`area` en lugar de `proyecto`), y la siguiente sesión del dueño en cualquier proyecto del área lo enseña al abrir. Si quien pregunta solo colabora, el Panorama no se guarda ni como nota: es del dueño.
 
-Si quien pregunta es dueño del área, de sus propios proyectos se puede leer también `sesiones.md`. Lo restringido se trata como dice la sección 1 de `convenciones`: si no se puede leer, se dice qué es y de quién, y ahí se para.
+Si quien pregunta es dueño del área o colabora en ella, de los proyectos del área se puede leer también `sesiones.md`; quien colabora solo en un proyecto, el de ese proyecto. Lo restringido se trata como dice la sección 1 de `convenciones`: si no se puede leer, se dice qué es y de quién, y ahí se para.
 
 ## Qué respondo
 
