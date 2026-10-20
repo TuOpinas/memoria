@@ -205,7 +205,9 @@ sesión» al terminar. Dos cosas que conviene saber desde el principio:
 
 - Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto
   al mismo tiempo: las dos escrituras pueden pisarse.
-- En Claude Design la memoria no se activa sola: dile «abre sesión en…» y el proyecto.
+- Para diseñar, pídeselo a Claude en una conversación normal de tu proyecto: el diseño
+  sale como un artifact y la memoria funciona como en cualquier otra conversación. No uses
+  la interfaz aparte de Claude Design, que se retira en diciembre.
 
 **Paso 7. Monta tu tablero**
 
