@@ -5,7 +5,7 @@ description: Revision de calidad a fondo de algo que se esta construyendo - el c
 
 # Revisión de calidad
 
-Revisar a fondo algo que se está construyendo, midiéndolo contra su objetivo y no contra lo que ya tiene. Encuentra lo que está mal, lo que no cuadra entre sí, lo que sobra y lo que se está dejando pasar. No arregla nada por su cuenta: entrega hallazgos comprobados y ordenados, y la sesión del proyecto decide qué se hace. Antes de nada se cargan `convenciones` y `estilo`: sus prohibiciones aplican a todo lo que sigue.
+Revisar a fondo algo que se está construyendo, midiéndolo contra su objetivo y no contra lo que ya tiene. Encuentra lo que está mal, lo que no cuadra entre sí, lo que sobra y lo que se está dejando pasar. No arregla nada por su cuenta: entrega hallazgos comprobados y ordenados, y la sesión del proyecto decide qué se hace. Antes de nada se cargan `convenciones`, con su anexo `escribir.md`, y `estilo`: sus prohibiciones aplican a todo lo que sigue.
 
 No es `revisar`. `revisar` comprueba que un entregable puede publicarse y lo publica. Esta skill busca problemas y oportunidades en algo más grande, y no publica nada.
 

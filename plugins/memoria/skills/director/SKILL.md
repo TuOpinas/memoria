@@ -5,7 +5,7 @@ description: Actua como director de un area - resume como esta, cuestiona su con
 
 # Director de área
 
-Mira un área entera como la miraría quien la dirige: cómo está, qué se movió, qué falta, qué decidieron otras áreas que le toca, y qué conviene cuestionar. No ejecuta trabajo de los proyectos ni registra decisiones: resume, pregunta y propone. Lo único que escribe es el `Panorama` de su área. Para resumir, cuestionar o mirar otras áreas se cargan antes `convenciones`, cuya sección 12 dice cómo se lee, y `estilo`; para escribir el `Panorama` basta el anexo `escribir.md` de `convenciones`, que trae su forma, su voz y las prohibiciones.
+Mira un área entera como la miraría quien la dirige: cómo está, qué se movió, qué falta, qué decidieron otras áreas que le toca, y qué conviene cuestionar. No ejecuta trabajo de los proyectos ni registra decisiones: resume, pregunta y propone. Lo único que escribe es el `Panorama` de su área. Antes de nada se cargan `convenciones`, cuya sección 12 dice cómo se lee, con su anexo `escribir.md` (formatos y prohibiciones), y `estilo`. La excepción es el `Panorama` al cerrar sesión: ahí basta `escribir.md`, que trae su forma y su voz; «actualiza el panorama» lee el área y carga todo lo anterior.
 
 ## Cuándo
 
@@ -58,7 +58,7 @@ Se dan hasta cuatro, ordenados por lo que desbloquean. Cada uno dice qué se vio
 
 Lo que otras áreas decidieron o publicaron y toca a esta: primero lo que la nombra en `Afecta a:`, después lo que trata del mismo tema según los índices. Cada cosa con su identificador o su ruta, quién la decidió y qué le cambia a esta área.
 
-Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `convenciones` y se enseña. Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
+Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `escribir.md` y se enseña. Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
 
 ## Escribir el Panorama
 

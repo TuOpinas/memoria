@@ -484,7 +484,7 @@ for origen, e, c, prem in cuestiona:
         continue
     abiertos.append((origen, e, c, prem))
 # una línea por cuestionamiento, y el «Por qué» solo de los tres más recientes: con muchos, el aviso no crece sin tope
-abiertos.sort(key=lambda x: (x[1]["fecha"], x[1]["id"]), reverse=True)
+abiertos.sort(key=lambda x: (x[1]["fecha"], int(x[1]["id"].rsplit("-", 1)[1]) if x[1]["id"].count("-") == 3 else 1), reverse=True)
 lineas_cq = []
 for i, (origen, e, c, prem) in enumerate(abiertos):
     objetivo = f"la premisa {prem[1]}" if prem else c["Cuestiona a"]

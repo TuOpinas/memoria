@@ -220,10 +220,10 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
 14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
-15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md`, ni un índice a mano, ni una carpeta de borradores.
+15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md` u otro archivo de instrucciones para la IA, ni un índice a mano, ni una carpeta de borradores, ni escribir rutas absolutas en ningún archivo.
 16. No dejar dentro de la raíz el almacén de datos de una aplicación, ni apuntar una aplicación a que escriba ahí.
 17. No borrar un entregable superado. Pasa a `reemplazado` con `reemplazado_por`, porque alguien puede tenerlo citado.
 18. No llevar a la raíz de una organización ningún hecho que venga de otra raíz, ni siquiera para comparar, salvo por un traspaso que la persona pidió y confirmó pieza a pieza (sección 1, «Independencia entre raíces»).
-19. No guardar estado del método en la memoria del modelo. Si un dato importa, va a un `.md` de la carpeta.
+19. No guardar estado del método en la memoria del modelo ni en la memoria de proyecto de Claude. Si un dato importa, va a un `.md` de la carpeta.
 20. No dejar en `entregables/` lo que no puede salir del proyecto. Si no se lo puedo dar a nadie de fuera, va a `taller/`.
 21. No abrir un `decisiones.md` ni un `sesiones.md` dentro de `taller/`. Los registros del proyecto son los de su raíz.

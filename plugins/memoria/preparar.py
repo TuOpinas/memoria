@@ -9,6 +9,8 @@ corre donde sí está el plugin y imprime cuatro líneas:
   DESCARGA <comando para device_bash: trae cada archivo del repositorio en esa versión y lo comprueba>
   REINTENTO <el mismo comando con main en lugar de v<versión>>
 
+De DESCARGA y REINTENTO se usa lo que va detrás de la etiqueta y su espacio.
+
 Un archivo que ya está en el destino con la huella del plugin no se vuelve a traer. El comando
 termina en `sha256sum -c`, así que detrás se le añade ` && <lo que se corre>` y eso solo corre
 si todos los archivos cuadran.
@@ -43,6 +45,10 @@ def main(argv):
             return 1
         with open(p, "rb") as f:
             huellas.append((os.path.basename(r), r, hashlib.sha256(f.read()).hexdigest()))
+    nombres = [n for n, _, _ in huellas]
+    if len(set(nombres)) != len(nombres):
+        print("Dos rutas con el mismo nombre de archivo se pisarían en el destino", file=sys.stderr)
+        return 1
     # el destino va entre comillas dobles para que $HOME se expanda en la computadora
     if '"' in destino or "`" in destino:
         print("El destino no puede llevar comillas ni acentos graves", file=sys.stderr)

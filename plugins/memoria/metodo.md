@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.16.1 · huella bef9515 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.16.1 · huella bd090d9 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -282,6 +282,9 @@ Lo que ya excluyen las prohibiciones (`escribir.md`, sección 10) y el resto del
 - Un archivo por decisión
 - Enlaces wiki `[[asi]]`, callouts propietarios, archivos `.canvas`
 - Cualquier archivo que el usuario tenga que rellenar a mano
+- `AGENTS.md` ni ningún archivo de instrucciones para la IA dentro de la raíz. Las instrucciones son las skills, el aviso de arranque del plugin y `guia.md`
+- Rutas absolutas dentro de cualquier archivo
+- Estado del método guardado en la memoria del modelo ni en la memoria de proyecto de Claude: es por persona, no se comparte, no se ve y puede contradecir un archivo sin que nadie lo note. Si un dato importa, está en un `.md`
 
 ## 10. Prohibiciones
 
@@ -551,11 +554,11 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
 14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
-15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md`, ni un índice a mano, ni una carpeta de borradores.
+15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md` u otro archivo de instrucciones para la IA, ni un índice a mano, ni una carpeta de borradores, ni escribir rutas absolutas en ningún archivo.
 16. No dejar dentro de la raíz el almacén de datos de una aplicación, ni apuntar una aplicación a que escriba ahí.
 17. No borrar un entregable superado. Pasa a `reemplazado` con `reemplazado_por`, porque alguien puede tenerlo citado.
 18. No llevar a la raíz de una organización ningún hecho que venga de otra raíz, ni siquiera para comparar, salvo por un traspaso que la persona pidió y confirmó pieza a pieza (sección 1, «Independencia entre raíces»).
-19. No guardar estado del método en la memoria del modelo. Si un dato importa, va a un `.md` de la carpeta.
+19. No guardar estado del método en la memoria del modelo ni en la memoria de proyecto de Claude. Si un dato importa, va a un `.md` de la carpeta.
 20. No dejar en `entregables/` lo que no puede salir del proyecto. Si no se lo puedo dar a nadie de fuera, va a `taller/`.
 21. No abrir un `decisiones.md` ni un `sesiones.md` dentro de `taller/`. Los registros del proyecto son los de su raíz.
 
@@ -652,7 +655,7 @@ Este archivo es la fuente canónica del estilo. Si una plantilla del plugin lo c
 
 ## Cuándo se aplica
 
-Sin que nadie la invoque, en todo texto que se va a firmar o compartir: un entregable, un documento, un correo, lo que se escribe en la carpeta para que lo lea otra persona. Para las respuestas del chat bastan las dos preguntas de abajo, que el aviso de arranque ya trae, sin cargar esta skill. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
+Sin que nadie la invoque, en todo texto que se va a firmar o compartir: un entregable, un documento, un correo, lo que se escribe en la carpeta para que lo lea otra persona. «En corto» y el `Panorama` no la cargan: su voz la da `escribir.md`. Para las respuestas del chat bastan las dos preguntas de abajo, que el aviso de arranque ya trae, sin cargar esta skill. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
 
 **No se cambia por iniciativa propia.** Este es el estilo de la casa y se aplica por defecto, aunque el texto parezca pedir otro registro. Solo cambia si quien encarga el texto lo pide de forma expresa, y el cambio vale para ese texto: no se guarda como estándar nuevo ni se arrastra al siguiente entregable.
 
@@ -759,7 +762,7 @@ Cerrar una sesión, registrar una premisa y publicar un documento, tal como los 
 
 ## Cerrar sesión y cerrar el proyecto
 
-Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo de hoy», «terminamos», «cierra el proyecto»), y antes se carga el anexo `escribir.md` de la skill `convenciones`, que hasta aquí no hacía falta: cerrar escribe en la carpeta y sus prohibiciones aplican a todo lo que sigue. Con él basta: ni el contrato entero ni las skills `director` y `estilo` hacen falta para cerrar.
+Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo de hoy», «terminamos», «cierra el proyecto»), y antes se carga el anexo `escribir.md` de la skill `convenciones`, que hasta aquí no hacía falta: cerrar escribe en la carpeta y sus prohibiciones aplican a todo lo que sigue. Con él basta, salvo que el paso 1 o el 7 guarde o mueva un archivo, que pide además `convenciones` entera (nombres, entregable o taller, `fuentes/enlaces.md`, material sensible), o que haya un traspaso (paso 8), que pide `raices.md`. Las skills `director` y `estilo` no hacen falta para cerrar.
 
 ### Cerrar sesión
 

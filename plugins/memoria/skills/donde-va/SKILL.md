@@ -5,7 +5,7 @@ description: Coloca cualquier material que llegue en el sitio correcto de la est
 
 # Dónde va
 
-Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
+Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se cargan `convenciones` y su anexo `escribir.md`: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 

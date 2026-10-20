@@ -1,6 +1,6 @@
 # Cerrar sesión y cerrar el proyecto
 
-Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo de hoy», «terminamos», «cierra el proyecto»), y antes se carga el anexo `escribir.md` de la skill `convenciones`, que hasta aquí no hacía falta: cerrar escribe en la carpeta y sus prohibiciones aplican a todo lo que sigue. Con él basta: ni el contrato entero ni las skills `director` y `estilo` hacen falta para cerrar.
+Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo de hoy», «terminamos», «cierra el proyecto»), y antes se carga el anexo `escribir.md` de la skill `convenciones`, que hasta aquí no hacía falta: cerrar escribe en la carpeta y sus prohibiciones aplican a todo lo que sigue. Con él basta, salvo que el paso 1 o el 7 guarde o mueva un archivo, que pide además `convenciones` entera (nombres, entregable o taller, `fuentes/enlaces.md`, material sensible), o que haya un traspaso (paso 8), que pide `raices.md`. Las skills `director` y `estilo` no hacen falta para cerrar.
 
 ## Cerrar sesión
 

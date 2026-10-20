@@ -5,7 +5,7 @@ description: Revisa un entregable, detecta lo que quedo desfasado y lo publica d
 
 # Revisar
 
-Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar lo que quedó desfasado y publicar. Antes de nada se carga la skill `convenciones`: sus secciones 5 y 7 fijan estados y superficie pública, y sus prohibiciones aplican a todo lo que sigue.
+Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar lo que quedó desfasado y publicar. Antes de nada se cargan la skill `convenciones` y su anexo `escribir.md`: la sección 5 de `escribir.md` fija los estados y la 7 del contrato la superficie pública, y sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 

@@ -281,6 +281,9 @@ Lo que ya excluyen las prohibiciones (`escribir.md`, sección 10) y el resto del
 - Un archivo por decisión
 - Enlaces wiki `[[asi]]`, callouts propietarios, archivos `.canvas`
 - Cualquier archivo que el usuario tenga que rellenar a mano
+- `AGENTS.md` ni ningún archivo de instrucciones para la IA dentro de la raíz. Las instrucciones son las skills, el aviso de arranque del plugin y `guia.md`
+- Rutas absolutas dentro de cualquier archivo
+- Estado del método guardado en la memoria del modelo ni en la memoria de proyecto de Claude: es por persona, no se comparte, no se ve y puede contradecir un archivo sin que nadie lo note. Si un dato importa, está en un `.md`
 
 ## 10. Prohibiciones
 

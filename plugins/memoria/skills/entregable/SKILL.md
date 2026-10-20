@@ -5,7 +5,7 @@ description: Crea o actualiza un entregable de un proyecto. Usala cuando pidan '
 
 # Entregable
 
-Crear o actualizar un entregable. Antes de nada se cargan `convenciones`, cuyas prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
+Crear o actualizar un entregable. Antes de nada se cargan `convenciones` y su anexo `escribir.md`, cuyas prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
 
 ## Cuándo
 
