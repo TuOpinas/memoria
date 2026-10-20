@@ -5,7 +5,7 @@ description: Adopta una carpeta que sigue otra estructura y la trae al metodo si
 
 # Migrar
 
-Traer al método una carpeta que se organizó de otra forma: otro sistema de documentación, una carpeta de proyecto heredada, un repositorio con ADR y logs. La migración crea la estructura nueva al lado, deja los originales intactos y termina con un reporte de qué se trajo, qué se dejó y qué quedó como hueco. Antes de nada se carga `convenciones`, y con ella su anexo `raices.md`, que dice dónde vive el registro de la migración y cómo se trabaja con dos raíces conectadas; las prohibiciones del contrato aplican a todo lo que sigue.
+Traer al método una carpeta que se organizó de otra forma: otro sistema de documentación, una carpeta de proyecto heredada, un repositorio con ADR y logs. La migración crea la estructura nueva al lado, deja los originales intactos y termina con un reporte de qué se trajo, qué se dejó y qué quedó como hueco. Antes de nada se carga `convenciones`, y con ella sus anexos `escribir.md` (formatos de los registros y prohibiciones) y `raices.md`, que dice dónde vive el registro de la migración y cómo se trabaja con dos raíces conectadas; las prohibiciones del contrato aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -27,7 +27,7 @@ Migrar es una tarea larga. Se hace por proyecto, no toda la carpeta de golpe, y 
 
 Los nombres reservados (`proyecto.md`, `decisiones.md`, `sesiones.md`, `area.md`) no sobreviven a una adopción: se renombran a lo que de verdad es cada archivo, como dice `convenciones`, sección 3. Y si lo que se adopta es un proyecto del propio método que se pliega dentro de otro, sus registros se funden con los del que recibe, sin editar ninguna entrada. Un proyecto nuevo se crea con la skill `nuevo`, con su dueño con nombre y apellido, que es bloqueante también aquí. Si el origen mezclaba dos trabajos en una carpeta, salen dos proyectos. Si el origen tenía un cuarto nivel de carpetas, ahí había dos proyectos.
 
-**3. Decisiones.** Cada ADR o archivo de decisión del origen pasa a ser una entrada de `decisiones.md` con el formato del método: fecha, título en una frase, quién decidió, por qué, qué se descartó, a qué afecta. Si el ADR traía análisis (opciones comparadas, tablas, cifras), el análisis no cabe en la entrada: se convierte en un entregable del proyecto, con la plantilla `comparativo.md` si compara opciones, y la entrada lo cita en `Afecta a`. Si el ADR no dice quién decidió, se pregunta; si nadie lo sabe, se escribe "no consta" y queda como hueco en el manifiesto. Toda decisión recuperada entra marcada `Decidió: Nombre Apellido (pendiente de confirmar)` (`convenciones`, sección 4), y la confirma su dueño después con una entrada nueva.
+**3. Decisiones.** Cada ADR o archivo de decisión del origen pasa a ser una entrada de `decisiones.md` con el formato del método (`escribir.md`, sección 4): fecha, título en una frase, quién decidió, por qué, qué se descartó, a qué afecta. Si el ADR traía análisis (opciones comparadas, tablas, cifras), el análisis no cabe en la entrada: se convierte en un entregable del proyecto, con la plantilla `comparativo.md` si compara opciones, y la entrada lo cita en `Afecta a`. Si el ADR no dice quién decidió, se pregunta; si nadie lo sabe, se escribe "no consta" y queda como hueco en el manifiesto. Toda decisión recuperada entra marcada `Decidió: Nombre Apellido (pendiente de confirmar)` (`convenciones`, sección 4), y la confirma su dueño después con una entrada nueva.
 
 **4. Sesiones.** Todos los logs de sesión del origen, estén en un archivo por sesión o en una carpeta, se consolidan en un solo `sesiones.md` del proyecto. Cada log pasa a una entrada con encabezado `## AAAA-MM-DD`, tomada del nombre del archivo o de su contenido, y el cuerpo viejo se conserva debajo tal cual, con sus encabezados bajados a `###` para que no compitan con las fechas. Las entradas van de la más reciente a la más antigua. No se resume ni se reescribe lo que decían: la regla de histórico permite convertir este registro porque nadie lo ha consumido todavía, pero convertir es cambiar el formato, no el contenido.
 
@@ -63,15 +63,12 @@ El manifiesto se guarda como entregable en la raíz de quien migró, en su proye
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Borrar, mover o modificar un archivo del origen. Se copia; el origen queda como estaba hasta que el usuario decida qué hacer con él
 - Migrar sin enseñar antes el inventario y el mapeo
 - Resumir o reescribir el contenido de un log de sesión al consolidarlo. Se cambia el formato, no lo que decía
-- Dejar un entregable migrado en `vigente` sin que el dueño del origen lo haya pedido
-- Traer `AGENTS.md`, índices manuales, prefijos numéricos o cualquier cosa de la lista de lo que no existe en `convenciones`
-- Traer a `entregables/` un documento que produjo alguien ajeno a la organización que migra. Va a `fuentes/`
-- Traer a `entregables/` un documento que no sale del proyecto. Va a `taller/`
+- Traer `AGENTS.md`, índices manuales, prefijos numéricos o cualquier otra cosa que el contrato excluye (`convenciones`, sección 9, y las prohibiciones de `escribir.md`)
 - Sacar de una carpeta restringida un archivo que pertenece dentro de ella, o dejar fuera la ruta de lo que se migró dentro
 - Escribir en el manifiesto de la migración el contenido de lo restringido. Se cuenta cuántos archivos fueron y a qué carpeta, nunca qué decían
 - Dejar en la raíz migrada rastro del sistema de origen: sus rutas, sus nombres de carpeta, su vocabulario o el manifiesto de la migración

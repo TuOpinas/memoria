@@ -473,6 +473,7 @@ for a_slug, slug, carpeta in proyectos_legibles():
 # un cuestionamiento sigue abierto si nadie respondió a su identificador; una premisa nueva que reemplaza a la
 # cuestionada después del cuestionamiento también lo responde
 reemplazo_fecha = {r: (f or "9999") for _, _, r, f in premisas if r}   # sin fecha, como el tablero: la responde
+abiertos = []
 for origen, e, c, prem in cuestiona:
     if not e["id"]:
         avisos.insert(0, f"Un cuestionamiento sin fecha válida en {origen} («{e['cab']}») nombra este proyecto: no tiene identificador y no se puede responder hasta que su dueño lo registre con fecha.")
@@ -481,9 +482,17 @@ for origen, e, c, prem in cuestiona:
         continue
     if prem and prem[1] in reemplazo_fecha and reemplazo_fecha[prem[1]] >= e["fecha"]:
         continue
+    abiertos.append((origen, e, c, prem))
+# una línea por cuestionamiento, y el «Por qué» solo de los tres más recientes: con muchos, el aviso no crece sin tope
+abiertos.sort(key=lambda x: (x[1]["fecha"], int(x[1]["id"].rsplit("-", 1)[1]) if x[1]["id"].count("-") == 3 else 1), reverse=True)
+lineas_cq = []
+for i, (origen, e, c, prem) in enumerate(abiertos):
     objetivo = f"la premisa {prem[1]}" if prem else c["Cuestiona a"]
-    avisos.insert(0, f"Cuestionamiento abierto ({origen}#{e['id']}): «{e['cab']}». Planteó: {c['Planteó'] or c['Decidió'] or 'no consta'}. "
-                     f"Cuestiona a: {objetivo}. Por qué: {c['Por qué'][:300]}")
+    linea = f"Cuestionamiento abierto ({origen}#{e['id']}): «{e['cab']}». Planteó: {c['Planteó'] or c['Decidió'] or 'no consta'}. Cuestiona a: {objetivo}."
+    if i < 3 and c["Por qué"]:
+        linea += f" Por qué: {c['Por qué'][:300]}"
+    lineas_cq.append(linea)
+avisos[0:0] = lineas_cq
 sin_fecha = [x for x in afecta if not x[1]["fecha"]]
 afecta = [x for x in afecta if x[1]["fecha"]]
 nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]

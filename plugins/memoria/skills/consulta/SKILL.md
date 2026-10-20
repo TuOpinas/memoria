@@ -5,7 +5,7 @@ description: Responde preguntas sobre lo que la organizacion ya sabe, leyendo so
 
 # Consulta
 
-Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dónde sale cada cosa. Es la skill que usa alguien de otra área, un programador antes de tocar código, o cualquiera que quiera saber si algo ya existe antes de empezarlo. Antes de nada se carga la skill `convenciones`: su sección 12 fija qué se lee y en qué orden, su sección 7 qué es público, y sus prohibiciones aplican a todo lo que sigue.
+Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dónde sale cada cosa. Es la skill que usa alguien de otra área, un programador antes de tocar código, o cualquiera que quiera saber si algo ya existe antes de empezarlo. Antes de nada se carga la skill `convenciones` con su anexo `escribir.md` (formatos y prohibiciones): su sección 12 fija qué se lee y en qué orden, su sección 7 qué es público, y sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -42,7 +42,7 @@ Respuesta corta y primero la respuesta, no el recorrido. Después, una línea po
 
 Si hay varias fuentes que se contradicen, se dicen las dos con su fecha y no se elige una.
 
-Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, sección 4 de `convenciones`). Si una decisión de la respuesta tiene un cuestionamiento abierto (una línea `Cuestiona a:` que la nombra y ninguna `Responde a:` que la cierre), se dice: quién la cuestionó y por qué, en una línea. Una decisión cuestionada sigue vigente hasta que su dueño responde, pero quien va a construir encima tiene que saberlo.
+Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, `escribir.md`, sección 4). Si una decisión de la respuesta tiene un cuestionamiento abierto (una línea `Cuestiona a:` que la nombra y ninguna `Responde a:` que la cierre), se dice: quién la cuestionó y por qué, en una línea. Una decisión cuestionada sigue vigente hasta que su dueño responde, pero quien va a construir encima tiene que saberlo.
 
 Si no hay nada escrito sobre el tema, se dice en una línea y se propone dónde debería vivir: qué área y, si aplica, si merece un proyecto nuevo con la skill `nuevo` o una entrada en `base/`. No se inventa una respuesta con lo que parece razonable.
 
@@ -52,7 +52,7 @@ Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Escribir o modificar ningún archivo. Consultar es solo lectura
 - Buscar con el conector de Google Drive teniendo la carpeta conectada. Sin ninguna carpeta conectada, se puede leer la raíz en Drive por el conector, en solo lectura, como dice el anexo `sin-carpeta.md` de la skill `sesion`

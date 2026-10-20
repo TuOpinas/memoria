@@ -49,11 +49,12 @@ trap 'rm -f "$CUERPO"' EXIT
     fi
   done
   cuerpo "$SKILLS/convenciones/SKILL.md"
-  # los dos anexos del contrato, que el plugin lee a demanda, van enteros: metodo.md es para quien no tiene el plugin
-  for anexo in raices montaje; do
+  # los anexos del contrato, que el plugin lee a demanda, van enteros: metodo.md es para quien no tiene el plugin
+  for anexo in escribir raices montaje; do
     [ -f "$SKILLS/convenciones/$anexo.md" ] || { echo "Falta el anexo $anexo.md del contrato" >&2; exit 1; }
     echo
-    tr -d '\r' < "$SKILLS/convenciones/$anexo.md" | sed 's/^## /### /; s/^# /## Anexo: /'
+    # cada encabezado baja un nivel y el título pasa a «Anexo:», salvo dentro de un bloque de código, que son ejemplos
+    tr -d '\r' < "$SKILLS/convenciones/$anexo.md" | awk '/^```/{c=!c} !c && /^# /{sub(/^# /, "## Anexo: "); print; next} !c && /^##+ /{sub(/^#/, "##")} {print}' | cat -s
   done
   echo
   echo "---"

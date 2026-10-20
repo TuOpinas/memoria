@@ -5,7 +5,7 @@ description: Coloca cualquier material que llegue en el sitio correcto de la est
 
 # Dónde va
 
-Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se carga `convenciones`: sus prohibiciones aplican a todo lo que sigue.
+Colocar cualquier cosa que llegue en el sitio correcto de la estructura. Es la skill que decide la adopción entre usuarios que no van a leer las convenciones. Antes de nada se cargan `convenciones` y su anexo `escribir.md`: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -82,14 +82,13 @@ Se responde en dos o tres líneas: cuántos archivos fueron a qué proyectos, cu
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Crear una carpeta nueva para acomodar algo que no encaja. Si no encaja, es la pregunta 6
 - Dejar algo en la raíz o en la carpeta de un área
 - Colocar fuera de una carpeta restringida material que pertenece dentro de ella, aunque el usuario tenga acceso
 - Mover archivos de un área que no es la del usuario, o colocar material en un proyecto ajeno sin avisar a su dueño
 - Guardar un documento de terceros en `entregables/` tal cual, sin convertirlo
-- Dejar en `entregables/` algo que no sale del proyecto. Si no se lo puedo dar a nadie de fuera, va a `taller/`
 - Guardar en `fuentes/` algo que escribió una sesión. Eso es taller
 - Dar tres opciones y dejar que el usuario elija. Si dudo, pregunto una cosa y decido
 

@@ -1,6 +1,6 @@
 # Premisas
 
-Anexo de la skill `sesion`. Se lee cuando el responsable de contexto pide registrar, cambiar o retirar una premisa («registra como premisa que…», «la premisa P2 cambia a…», «esa premisa ya no vale»), y antes se carga entera la skill `convenciones`, porque se escribe en `base/`.
+Anexo de la skill `sesion`. Se lee cuando el responsable de contexto pide registrar, cambiar o retirar una premisa («registra como premisa que…», «la premisa P2 cambia a…», «esa premisa ya no vale»), y antes se carga el anexo `escribir.md` de la skill `convenciones`, porque se escribe en `base/`.
 
 Solo en la sesión del responsable de contexto según `guia.md`; a cualquier otra persona se le dice que una premisa la registra él, y se le prepara el texto. Se hace en el momento en que se pide, no al cerrar, porque la dirección la confirma en voz alta y lo que importa es que quede.
 

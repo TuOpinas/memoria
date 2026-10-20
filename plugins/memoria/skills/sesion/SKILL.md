@@ -11,7 +11,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Este archivo es lo que 
 - `premisas.md`: registrar, cambiar o retirar una premisa, en la sesión del responsable de contexto.
 - `sin-carpeta.md`: abrir, consultar o preguntar al director sin ninguna carpeta conectada, leyendo la raíz en Drive.
 
-**Abrir no carga `convenciones`.** Antes de escribir cualquier cosa en la carpeta (cerrar, guardar un documento o un análisis, registrar una premisa o una decisión, mover algo) se carga la skill `convenciones` entera y, si es cerrar o una premisa, su anexo. Sin excepción, aunque sea una línea: sus prohibiciones aplican a toda escritura.
+**Abrir no carga `convenciones`.** Antes de escribir cualquier cosa en la carpeta se carga su anexo `escribir.md`, sin excepción, aunque sea una línea: sus prohibiciones aplican a toda escritura. Para cerrar o registrar una premisa basta con él y el anexo de esta skill (`cerrar.md`, `premisas.md`); para guardar un documento o un análisis, mover algo o crear, se carga además `convenciones` entera.
 
 ## Cuándo
 
@@ -25,13 +25,15 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Este archivo es lo que 
 
 Abrir es solo lectura. No se escribe ningún archivo, salvo poner al día `metodo.md` cuando la raíz está atrasada (abajo).
 
-## Qué leo, en dos o tres llamadas
+## Qué leo, y en cuántas llamadas
 
 Todo lo que dice la sección 12 de `convenciones` para abrir (nivel 0, nivel 1 y el barrido de avisos) lo lee de una vez `abrir.py`, junto a este archivo, en la computadora. No escribe nada, nunca abre `taller/`, `fuentes/` ni `restringido/` (de `taller/` y `fuentes/` del proyecto solo mira fechas), de otros proyectos solo mira las líneas `Afecta a:`, `Cuestiona a:` y `Responde a:`, y lo restringido no sale salvo que el proyecto activo esté dentro.
 
-1. **Con Bash, en el contenedor, una llamada**: el directorio de esta skill (`find /root/.claude/plugins -path '*/.trash' -prune -o -type d -path '*/memoria*/skills/sesion' -print`, y si hay varias copias del plugin, la de versión más alta en su `../../.claude-plugin/plugin.json`), la versión del plugin, el `sha256sum` de `abrir.py` y la primera línea del `metodo.md` del plugin (`../../metodo.md`).
-2. **Con device_bash, en la computadora, una llamada**: `mkdir -p $HOME/memoria && cd $HOME/memoria && curl -sfL -o abrir.py https://raw.githubusercontent.com/TuOpinas/memoria/v<versión>/plugins/memoria/skills/sesion/abrir.py && echo "<huella>  abrir.py" | sha256sum -c && python3 abrir.py "<raíz en $HOME/mnt>" <area>/<proyecto> --cuenta <correo de la cuenta> --plugin "<primera línea del metodo.md del plugin, la de la llamada 1>"`. Sin proyecto todavía, sin `<area>/<proyecto>`: imprime el nivel 0 y la lista de proyectos de cada área, para saber cuál se abre; después se vuelve a correr con el proyecto (el script ya está, basta `cd $HOME/memoria && python3 abrir.py …`). Si `sha256sum -c` falla, se repite una vez con `main` en lugar de `v<versión>`; un script que no pasa la comprobación no se ejecuta nunca, ni se pega su contenido en un comando. Si tras ese reintento no hay un `abrir.py` comprobado (la computadora no llega a GitHub, o ninguna copia cuadra), se abre como sin consola (abajo) y se dice en media línea.
-3. **La cola del tablero**, si la cuenta tiene uno: con `Artifact` (`list`) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo» (la organización es lo que va antes del «·» en el título de `guia.md`); de cada uno, con `ArtifactData` (se carga con `ToolSearch`), un `list` de la colección `cambios` con `query.limit` 1000 (y su `next_cursor` si lo trae), y de ahí se queda lo que tiene `proyecto` igual a `<area>--<proyecto>` y lo que tiene `area` igual al área del proyecto (prioridades marcadas desde el tablero y notas de área que dejó una sesión sin carpeta). Si no hay tablero, no se pregunta; si no se deja leer, se dice en una línea y se sigue.
+Son dos llamadas para la carpeta, una más si todavía no se sabe el proyecto, y, si la cuenta tiene tablero, `Artifact list`, la carga de `ArtifactData` y dos consultas por tablero:
+
+1. **Con Bash, en el contenedor**: el directorio de esta skill (`find /root/.claude/plugins -path '*/.trash' -prune -o -type d -path '*/memoria*/skills/sesion' -print`; si hay varias copias del plugin, la de versión más alta en su `../../.claude-plugin/plugin.json`) y, en la misma llamada, `python3 <ese directorio>/../../preparar.py '$HOME/memoria' skills/sesion/abrir.py`, que imprime la versión del plugin, la primera línea de su `metodo.md` (METODO) y el comando que trae `abrir.py` y lo comprueba (DESCARGA, y REINTENTO con `main`), como dice la skill `tablero` en «Los archivos del plugin en la computadora».
+2. **Con device_bash, en la computadora**: lo que va detrás de «DESCARGA » seguido de ` && python3 abrir.py "<raíz en $HOME/mnt>" <area>/<proyecto> --cuenta <correo de la cuenta> --plugin "<la línea METODO sin «METODO »>"`. Sin proyecto todavía, sin `<area>/<proyecto>`: imprime el nivel 0 y la lista de proyectos de cada área, para saber cuál se abre; después se vuelve a correr con el proyecto (el script ya está, basta `cd $HOME/memoria && python3 abrir.py …`). Si la comprobación falla, se repite una vez con lo que va detrás de «REINTENTO »; un script que no pasa la comprobación no se ejecuta nunca, ni se pega su contenido en un comando. Si tras ese reintento no hay un `abrir.py` comprobado (la computadora no llega a GitHub, o ninguna copia cuadra), se abre como sin consola (abajo) y se dice en media línea.
+3. **La cola del tablero**, si la cuenta tiene uno: con `Artifact` (`list`) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo» (la organización es lo que va antes del «·» en el título de `guia.md`); de cada uno, con `ArtifactData` (se carga con `ToolSearch`), dos `query` de la colección `cambios`: una con `where` `[["proyecto", "eq", "<area>--<proyecto>"]]` y otra con `[["area", "eq", "<area>"]]` (prioridades marcadas desde el tablero y notas de área que dejó una sesión sin carpeta), las dos con `limit` 1000. Si no hay tablero, no se pregunta; si no se deja leer, se dice en una línea y se sigue.
 
 Si la conversación no tiene consola en la computadora (solo las herramientas que traen archivos), o no hay un `abrir.py` comprobado, se carga `convenciones` y se lee por los niveles de su sección 12, y `metodo.md` no se toca: sin el script no hay veredicto de versión, y lo copiará la siguiente sesión que lo tenga. Nada más se lee al abrir: `base/`, `taller/`, `fuentes/` y el resto de `area.md` entran cuando el trabajo los pide, por sus disparadores de esa misma sección.
 
@@ -67,7 +69,7 @@ Si no hay avisos, no se menciona que no los hay.
 ## Lo que nunca hago al abrir
 
 - Escribir algo, salvo poner al día `metodo.md` cuando la raíz está atrasada
-- Escribir nada después de abrir sin haber cargado antes `convenciones`
+- Escribir nada después de abrir sin haber cargado antes el anexo `escribir.md` de `convenciones`
 - Leer más de lo que imprime `abrir.py`, o, sin él, más del nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Deducir lo que hay en una carpeta que no se deja leer: se dice qué es y de quién, y ahí se para

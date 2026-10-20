@@ -5,7 +5,7 @@ description: Crea o actualiza un entregable de un proyecto. Usala cuando pidan '
 
 # Entregable
 
-Crear o actualizar un entregable. Antes de nada se cargan `convenciones`, cuyas prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
+Crear o actualizar un entregable. Antes de nada se cargan `convenciones` y su anexo `escribir.md`, cuyas prohibiciones aplican a todo lo que sigue, y `estilo`, sin excepciones, porque un entregable sale del proyecto.
 
 ## Cuándo
 
@@ -75,12 +75,11 @@ Si al escribirlo aparecieron decisiones que nadie había tomado, se listan al us
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Escribir una afirmación que no sale de una fuente citable
 - Dejar `basado_en` vacía en un entregable que escribí yo
 - Citar en `basado_en` un `sesiones.md`, una fuente o un `taller/` de otra área, o un archivo de `restringido/`
-- Escribir en `entregables/` algo que no sale del proyecto. Eso es `taller/`
 - Construir sobre un entregable que no esté `vigente`, sin avisar de que no lo está
 - Crear un entregable nuevo cuando ya hay uno vigente sobre el mismo tema
 - Meter en un entregable datos que parecen confidenciales sin haberlo dicho antes

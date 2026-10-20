@@ -1,6 +1,6 @@
 ---
 name: estilo
-description: Normas de estilo y de lectura rapida. Aplicala por defecto al redactar o revisar cualquier texto que se vaya a firmar o compartir, y tambien a las respuestas en el chat, sin que la invoquen; y de forma explicita cuando pidan 'que suene menos a IA', 'mas ejecutivo', 'mas al grano', 'mas compacto', 'que se lea rapido' o 'revisa el estilo'.
+description: Normas de estilo y de lectura rapida. Aplicala por defecto al redactar o revisar un texto que se vaya a firmar o compartir (un entregable, un documento, un correo), sin que la invoquen; y de forma explicita cuando pidan 'que suene menos a IA', 'mas ejecutivo', 'mas al grano', 'mas compacto', 'que se lea rapido' o 'revisa el estilo'.
 ---
 
 # Estilo
@@ -15,7 +15,7 @@ Este archivo es la fuente canónica del estilo. Si una plantilla del plugin lo c
 
 ## Cuándo se aplica
 
-Siempre, sin que nadie la invoque, en cualquier redacción o revisión. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
+Sin que nadie la invoque, en todo texto que se va a firmar o compartir: un entregable, un documento, un correo, lo que se escribe en la carpeta para que lo lea otra persona. «En corto» y el `Panorama` no la cargan: su voz la da `escribir.md`. Para las respuestas del chat bastan las dos preguntas de abajo, que el aviso de arranque ya trae, sin cargar esta skill. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
 
 **No se cambia por iniciativa propia.** Este es el estilo de la casa y se aplica por defecto, aunque el texto parezca pedir otro registro. Solo cambia si quien encarga el texto lo pide de forma expresa, y el cambio vale para ese texto: no se guarda como estándar nuevo ni se arrastra al siguiente entregable.
 

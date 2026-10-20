@@ -5,7 +5,7 @@ description: Actua como director de un area - resume como esta, cuestiona su con
 
 # Director de área
 
-Mira un área entera como la miraría quien la dirige: cómo está, qué se movió, qué falta, qué decidieron otras áreas que le toca, y qué conviene cuestionar. No ejecuta trabajo de los proyectos ni registra decisiones: resume, pregunta y propone. Lo único que escribe es el `Panorama` de su área. Antes de nada se cargan `convenciones` y `estilo`: sus prohibiciones aplican a todo lo que sigue.
+Mira un área entera como la miraría quien la dirige: cómo está, qué se movió, qué falta, qué decidieron otras áreas que le toca, y qué conviene cuestionar. No ejecuta trabajo de los proyectos ni registra decisiones: resume, pregunta y propone. Lo único que escribe es el `Panorama` de su área. Antes de nada se cargan `convenciones`, cuya sección 12 dice cómo se lee, con su anexo `escribir.md` (formatos y prohibiciones), y `estilo`. La excepción es el `Panorama` al cerrar sesión: ahí basta `escribir.md`, que trae su forma y su voz; «actualiza el panorama» lee el área y carga todo lo anterior.
 
 ## Cuándo
 
@@ -58,30 +58,22 @@ Se dan hasta cuatro, ordenados por lo que desbloquean. Cada uno dice qué se vio
 
 Lo que otras áreas decidieron o publicaron y toca a esta: primero lo que la nombra en `Afecta a:`, después lo que trata del mismo tema según los índices. Cada cosa con su identificador o su ruta, quién la decidió y qué le cambia a esta área.
 
-Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `convenciones` y se enseña. Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
+Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `escribir.md` y se enseña. Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
 
 ## Escribir el Panorama
 
-Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<area>/area.md`, entre `## Proyectos` y `## Quién participa`:
-
-```markdown
-## Panorama
-2026-10-15 · Comercial cerró la propuesta de Lumbre y abrió dos leads por canal. Lo que preocupa: el pipeline no tiene fecha de seguimiento en tres de cinco oportunidades, y la tesis de posicionamiento lleva seis semanas en borrador.
-```
+Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<area>/area.md` con la forma y la voz de `escribir.md` (sección 2, «Estructura de `area.md`»): se reescribe entera, no se acumula, y no lleva nada de `restringido/`, de un proyecto restringido solo su nombre, ni ningún dato personal, aunque la sesión los haya leído. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe.
 
 Al cerrar una sesión no se relee el área para escribirlo: basta el Panorama anterior, lo que la sesión ya leyó y escribió y, de los demás proyectos del área, la cabecera y el `En corto` de los que cambiaron después de la fecha del Panorama anterior (`sesion`, `cerrar.md`, paso 10). «Actualiza el panorama» sí lee lo que dice «Qué leo».
 
-Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Lo lee todo el equipo: nada de `restringido/`, de un proyecto restringido solo su nombre, y ningún dato personal, aunque la sesión los haya leído. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
-
-Con la misma voz escribe el cierre de sesión el `En corto` de cada proyecto (`convenciones`, sección 3): lo de un proyecto, para quien no va a abrir nada más. Al resumir el área, la línea de cada proyecto sale de su `En corto` cuando lo tiene.
+Con la misma voz escribe el cierre de sesión el `En corto` de cada proyecto (`escribir.md`, sección 3): lo de un proyecto, para quien no va a abrir nada más. Al resumir el área, la línea de cada proyecto sale de su `En corto` cuando lo tiene.
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Escribir en cualquier sitio que no sea el `Panorama` del área. Ni decisiones, ni pasos, ni estados: eso es de la sesión de cada proyecto.
 - Registrar un cuestionamiento sin la confirmación de la persona, o fuera de un proyecto suyo.
-- Leer el cuerpo de `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área. De la bitácora ajena, solo la cabecera de cada entrada.
 - Dar más de cuatro hallazgos. Si hay más, se dan los cuatro que más desbloquean y se dice cuántos quedaron fuera.
 - Presentar una opinión como hallazgo. Todo hallazgo cita de dónde sale.
 - Dar por resuelto un cuestionamiento que nadie respondió.

@@ -5,7 +5,7 @@ description: Da de alta lo que falte en la memoria de la organizacion: monta la 
 
 # Nuevo
 
-Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones`, y al montar una raíz también su anexo `montaje.md`, que dice cómo se conecta cada persona: sus prohibiciones aplican a todo lo que sigue.
+Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, el área, el proyecto. La skill detecta en qué nivel está la carpeta conectada y empieza por ahí. Antes de nada se carga `convenciones` con su anexo `escribir.md`, y al montar una raíz también su anexo `montaje.md`, que dice cómo se conecta cada persona: sus prohibiciones aplican a todo lo que sigue.
 
 ## Cuándo
 
@@ -363,7 +363,7 @@ Antes de crearla se dice en una línea: un área es una capa de propiedad nueva,
 
 **1. La carpeta**, con nombre en minúsculas y guiones, en la raíz. Sin número delante.
 
-**2. `area.md`**, con la estructura fija de `convenciones`, sección 2:
+**2. `area.md`**, con la estructura fija de `escribir.md`, sección 2:
 
 ```markdown
 ---
@@ -420,7 +420,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 **1. La carpeta**, con nombre en minúsculas y guiones, sin número de fase ni de etapa, dentro del área del dueño. Si el proyecto entero no lo puede leer todo el equipo y su área sí, se dice que hay que limitar el acceso a esta carpeta y quién tiene que hacerlo, y su línea en el bloque `Proyectos` del área empieza por «restringido». Si solo una parte no lo puede leer, el proyecto se crea normal y esa parte va a `restringido/`.
 
-**2. `proyecto.md`**, con la estructura fija de `convenciones`, sección 3. Se rellena con las respuestas: `Quién participa` lleva al dueño, `En corto` lleva la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; `Estado actual` queda como "arrancando" y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
+**2. `proyecto.md`**, con la estructura fija de `escribir.md`, sección 3. Se rellena con las respuestas: `Quién participa` lleva al dueño, `En corto` lleva la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; `Estado actual` queda como "arrancando" y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
 
 **3. `decisiones.md`**, con cabecera y solo el título. Vacío de entradas: las que haya se registran al cerrar la primera sesión.
 
@@ -448,7 +448,7 @@ El nombre de la carpeta creada y el primer siguiente paso. Dos líneas.
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Crear un área sin decir antes que es una decisión organizativa
 - Montar la raíz encima de una carpeta con documentos sin avisar de que después toca `migrar`
