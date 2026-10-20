@@ -13,7 +13,7 @@ const path = require('path');
     ['proyecto', '#p-ventas--cuentas-t-estado'], ['acciones', '#p-ventas--cuentas-t-pasos'],
     ['proy-entregables', '#p-ventas--cuentas-t-entregables'], ['proy-decisiones', '#p-ventas--cuentas-t-decisiones'], ['bitacora', '#p-ventas--cuentas-t-bitacora'],
     ['proy-restringido', '#p-ventas--precios'],
-    ['resumen', '#p-ventas--cuentas-t-resumen'], ['ayuda-cuestionar', '#ayuda-cuestionar'], ['ayuda', '#ayuda'], ['ayuda-pasar-al-dia', '#ayuda-ponerse-al-dia'], ['ayuda-frases', '#ayuda-frases'], ['ayuda-carpeta', '#ayuda-ordenada'], ['ayuda-piezas', '#ayuda-piezas'],
+    ['resumen', '#p-ventas--cuentas-t-resumen'], ['ayuda-cuestionar', '#ayuda-cuestionar'], ['ayuda', '#ayuda'], ['ayuda-pasar-al-dia', '#ayuda-ponerse-al-dia'], ['ayuda-frases', '#ayuda-frases'], ['ayuda-carpeta', '#ayuda-ordenada'], ['ayuda-piezas', '#ayuda-piezas'], ['ayuda-sumar', '#ayuda-sumar'], ['ayuda-pasos', '#ayuda-pasos'],
   ];
   // ventanas y controles: se abren desde la vista indicada
   const acciones = [

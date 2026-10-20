@@ -434,7 +434,8 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hc-i:hover{background:var(--rule-soft);color:var(--ink)}
 .hc-i[aria-current="page"]{background:var(--signal-dim);color:var(--signal);font-weight:500}
 .hc-i:focus-visible{outline:2px solid var(--signal);outline-offset:1px}
-.hc-art{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px 22px;display:grid;gap:14px;min-width:0;max-width:70ch}
+.hc-art{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px 22px;display:grid;gap:14px;align-content:start;min-width:0;max-width:70ch}
+.hc-h{font-size:16px;font-weight:600;color:var(--ink);margin:10px 0 -6px}
 .hc-art p,.hc-art li,.hc-art dd{color:var(--ink-soft);font-size:15px;line-height:1.6}
 .hc-art b{color:var(--ink);font-weight:600}
 .hc-l{margin:0;padding-left:20px;display:grid;gap:8px}
@@ -552,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.10"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.14.11"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1401,11 +1402,17 @@ function ayudaArts(){
   const ADM = esc(META && META.administra || "quien administra la carpeta");
   const CTX = esc(META && META.contexto_comun || "quien mantiene el contexto común");
   const F = t => `<span class="hc-fr">${t}</span>`;
+  const ORG_TXT = META && META.organizacion || "la organización";
+  const MSG_SUMAR = `Te di acceso a la memoria de ${ORG_TXT}. Para conectarte se hace una sola vez y lleva unos 15 minutos:
+1. Instala Google Drive para escritorio (google.com/drive/download) e inicia sesión con el correo con el que te compartí la carpeta.
+2. Si la carpeta ${ORG_TXT} no aparece en tu computadora, entra en drive.google.com, búscala en «Compartido conmigo» y añádela a tu unidad.
+3. En tu computadora, en el Finder (Mac) o en el Explorador de archivos (Windows), no en la web, haz clic derecho sobre la carpeta ${ORG_TXT} y elige «Disponible sin conexión» («Make available offline» en inglés), para que sus archivos estén siempre descargados.
+4. Abre guia.md, dentro de esa carpeta, y sigue la sección «Cómo conectarte» paso a paso.`;
   return [
   {g:"Para empezar", id:"empezar", t:"Qué es la memoria", h:`
     <p>La memoria de ${ORG} es una carpeta compartida, ordenada por áreas y, dentro de cada área, por proyectos. Claude la lee antes de ayudarte y escribe en ella lo que importa mientras trabajas.</p>
     <ul class="hc-l">
-      <li><b>Te conectas una vez</b>, en cinco minutos: tu proyecto en Claude, el plugin <code>memoria</code> y la carpeta.</li>
+      <li><b>Te conectas una vez</b>, en unos quince minutos: la app de escritorio, tu proyecto en Claude, la carpeta y el plugin <code>memoria</code> (<button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>).</li>
       <li><b>Trabajas por sesiones.</b> Empiezas con ${F("abre sesión en…")} y terminas con ${F("cierra la sesión")}. Claude te pone al día al abrir y deja escrito lo que pasó al cerrar.</li>
       <li><b>Hablas normal.</b> Unas pocas frases activan cada cosa (<button type="button" class="lnk" data-help="frases">Qué decirle a Claude</button>).</li>
       <li><b>Claude escribe solo en tu área</b> y nunca da nada por aprobado. Si algo toca a otra área, te dice a quién avisar.</li>
@@ -1434,21 +1441,28 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. Al cerrar cada sesión, Claude escribe con la voz del director del área cómo va el proyecto (lo que se completó y lo que sigue) y el panorama del área (qué se movió y qué preocupa), y el tablero los pone arriba, junto con «Por dónde empezar»: los grupos de pasos que avanzan varias cosas a la vez. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
     </dl>`},
-  {g:"Para empezar", id:"necesitas", t:"Lo que necesitas", h:`
-    <dl class="hc-def">
-      <dt>Tu cuenta en el mapa</dt><dd>El correo con el que entras a Claude tiene que estar en la tabla de áreas de <code>guia.md</code>, en la columna Cuenta de tu área. Así sabe Claude dónde escribes sin que se lo digas. Si no estás, pídeselo a ${CTX}, que es quien escribe <code>guia.md</code>.</dd>
-      <dt>La carpeta en tu computadora</dt><dd>La carpeta compartida de ${ORG}, sincronizada en tu computadora, con acceso a todo lo que te toca leer. Claude trabaja sobre esa copia, nunca por el conector de Google Drive.</dd>
-      <dt>La app de Claude</dt><dd>La de escritorio, en esa misma computadora. Es la que deja conectar la carpeta a un proyecto.</dd>
-    </dl>
-    <p class="hc-nota"><b>Lo que va a pasar:</b> Claude lee la carpeta antes de ayudarte, escribe lo que importa en ella y no en su memoria personal, y solo escribe en las áreas de tu cuenta. Lo de otras áreas lo puede leer, para decirte qué se sabe ya y qué decisión te afecta.</p>`},
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
+    <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
+    <dl class="hc-def">
+      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en la columna Cuenta de tu área, en <code>guia.md</code>: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX}.</dd>
+    </dl>
     <ol class="hc-pasos">
-      <li><b>Crea tu proyecto en Claude</b><span>Con el nombre de tu área: «${ORG} · tu área». Uno por persona, no uno para todos.</span></li>
-      <li><b>Instala el plugin</b><span>En la app de Claude: Customize → Plugins → Add marketplace, escribe <code>TuOpinas/memoria</code> e instala <code>memoria</code>. Es público: no hace falta pedir acceso. Cuando salga una versión nueva, el botón Update del marketplace la trae. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
+      <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área». Uno por persona, no uno para todos.</span></li>
       <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta.</span></li>
+      <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
       <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con una línea, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
+      <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
-    <p class="hc-nota">No hay nada que pegar en las instrucciones del proyecto: el plugin aplica el método en cuanto ve la carpeta.</p>`},
+    <p class="hc-nota">No hay nada que pegar en las instrucciones del proyecto: el plugin aplica el método en cuanto ve la carpeta. Para sumar a otra persona: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
+  {g:"Para empezar", id:"sumar", t:"Sumar a un compañero", h:`
+    <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
+    <ol class="hc-pasos">
+      <li><b>Ponla en el mapa</b><span>Su correo de Claude tiene que estar en la tabla de áreas de <code>guia.md</code>, en el área donde va a escribir. Lo escribe ${CTX}, en su sesión: ${F("añade a [nombre] con [correo] en el área [área] de guia.md")}. Sin eso, Claude le preguntará antes de escribir nada.</span></li>
+      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: clic derecho sobre la carpeta ${ORG} › Compartir, su correo y el permiso de editor si va a escribir. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
+      <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
+    </ol>
+    <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
+    <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
     <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Al cerrarla, escribe lo que pasó.</p>
     <figure class="hc-chat">
@@ -1561,7 +1575,12 @@ function ayudaArts(){
       </tbody>
     </table></div>
     <p class="hc-nota">La puesta al día ocurre cuando abres el tablero después de cerrar sesiones, con el botón «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
-  {g:"El tablero", id:"estado-proyecto", t:"El estado de cada proyecto", h:`
+  {g:"El tablero", id:"estado-proyecto", t:"Cómo lee cada proyecto", h:`
+    <p>De cada proyecto, el tablero enseña tres cosas: cómo va, en qué estado está y qué pasos tiene. Solo la primera la escribe una persona con Claude; las otras dos las calcula el tablero con lo que hay escrito.</p>
+    <h3 class="hc-h">Cómo va</h3>
+    <p>Arriba del Resumen de cada proyecto está «Cómo va», el reporte del director: lo que se completó y lo que sigue, y debajo lo terminado con su fecha, los siguientes pasos con quién y cuándo, lo que falta decidir y lo que preocupa. Si solo vas a leer una cosa, es esta.</p>
+    <p>Lo escribe Claude al cerrar cada sesión del proyecto, con la voz del director del área, y lo guarda con su fecha en la sección «En corto» de su <code>proyecto.md</code>; el tablero solo lo muestra. Si la ficha cambió después, la tarjeta avisa de que puede no estar al día. El estado completo está en «En detalle». Un proyecto que aún no cerró una sesión con esta versión enseña en su lugar «Dónde está».</p>
+    <h3 class="hc-h">El estado</h3>
     <p>Sale de lo que dice su ficha y de cuándo fue su última sesión. Si no te parece bien, tócalo para corregirlo: queda pendiente para la siguiente sesión.</p>
     <dl class="hc-def">
       <dt>En curso</dt><dd>Tiene una sesión en los últimos 30 días y nada lo bloquea.</dd>
@@ -1570,18 +1589,26 @@ function ayudaArts(){
       <dt>Sin iniciar</dt><dd>Su estado empieza por «Arrancando», o solo tiene la sesión de arranque (las entradas «(tarea)» no cuentan) y ningún documento.</dd>
       <dt>Cerrado</dt><dd>Su estado dice «Proyecto terminado». Queda como registro.</dd>
       <dt>En riesgo</dt><dd>Se suma a cualquier estado: dos o más pasos vencidos, o una espera a alguien de fuera ya vencida.</dd>
-    </dl>`},
-  {g:"El tablero", id:"en-corto", t:"Cómo va cada proyecto", h:`
-    <p>Arriba del Resumen de cada proyecto está «Cómo va», el reporte del director: lo que se completó y lo que sigue, y debajo lo terminado con su fecha, los siguientes pasos con quién y cuándo, lo que falta decidir y lo que preocupa. Es lo que hay que leer si solo vas a leer una cosa.</p>
-    <p>Lo escribe Claude al cerrar cada sesión del proyecto, con la voz del director del área, y lo guarda con su fecha en la sección «En corto» de su <code>proyecto.md</code>: el tablero solo lo muestra. Si la ficha del proyecto cambió después, la tarjeta lo avisa, porque puede no estar al día; debajo sigue la línea que calcula el tablero (última sesión, lo último decidido, lo que espera). El estado completo, para quien trabaja en el proyecto, está en «En detalle». Un proyecto que aún no cerró una sesión con esta versión todavía no lo tiene, y el tablero enseña en su lugar «Dónde está».</p>`},
-  {g:"El tablero", id:"pasos", t:"Cómo lee los pasos", h:`
-    <p>El tablero mira cómo empieza cada paso para saber qué es: una rutina («mantener…», «cada semana…»), algo que depende de que pase otra cosa («cuando…», «tras…»), una decisión («decidir…», «definir…») o una espera a alguien de fuera.</p>
-    <p>Una rutina con fecha no vence: se revisa. Si lee mal un paso, corrígelo con el botón ⋯ de su fila; queda pendiente para la siguiente sesión.</p>`},
-  {g:"El tablero", id:"por-donde-empezar", t:"Por dónde empezar", h:`
-    <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de pasos de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite.</p>
-    <p>Elige con tres criterios: que esté entre las prioridades del área, que toque a un cliente, una firma o dinero, y que desbloquee otros proyectos. Que un paso esté vencido no lo hace más importante.</p>
-    <p>Cada grupo trae una frase para pegarle a Claude. Es una sugerencia: la sesión decide.</p>`},
-  {g:"El tablero", id:"memoria-al-dia", t:"La memoria al día", h:`
+    </dl>
+    <h3 class="hc-h">Los pasos</h3>
+    <p>El tablero mira cómo empieza cada paso para saber qué es, y lo trata distinto según el caso:</p>
+    <div class="hc-tbl"><table>
+      <thead><tr><th>Si empieza por</th><th>Es</th><th>Cómo lo trata</th></tr></thead>
+      <tbody>
+        <tr><td>«mantener…», «cada semana…»</td><td>Una rutina</td><td>Con fecha no vence: se revisa.</td></tr>
+        <tr><td>«se revisa en…», «vence en…»</td><td>Una caducidad</td><td>Se revisa cuando llega su fecha.</td></tr>
+        <tr><td>«esperar…», «cuando Ana conteste…»</td><td>Una espera a alguien de fuera</td><td>Si vence, el proyecto pasa a «En riesgo».</td></tr>
+        <tr><td>«cuando…», «tras…», «una vez que…»</td><td>Algo que depende de otra cosa</td><td>Espera a que pase lo anterior.</td></tr>
+        <tr><td>«decidir…», «definir…», «aprobar…»</td><td>Una decisión</td><td>Marcarlo hecho lo resuelve una sesión, no la puesta al día.</td></tr>
+        <tr><td>Cualquier otra cosa</td><td>Una acción</td><td>Es lo que se agenda y lo que vence.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Si lee mal un paso, corrígelo con el botón ⋯ de su fila: queda pendiente para la siguiente sesión.</p>`},
+  {g:"El tablero", id:"por-donde-empezar", t:"Lo que te propone Inicio", h:`
+    <p>Inicio te dice qué hacer, de dos maneras: por dónde empezar y qué arreglar para que la memoria siga sirviendo. Junto a cada cosa hay una frase para copiar y pegarle a Claude.</p>
+    <h3 class="hc-h">Por dónde empezar</h3>
+    <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de pasos de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige con tres criterios: que esté entre las prioridades del área, que toque a un cliente, una firma o dinero, y que desbloquee otros proyectos. Que un paso esté vencido no lo hace más importante. Es una sugerencia: la sesión decide.</p>
+    <h3 class="hc-h">La memoria al día</h3>
     <p>La lista de lo que la memoria tiene flojo, cada cosa con la frase para arreglarla en una sesión. Cuenta como flojo:</p>
     <ul class="hc-l">
       <li>Archivos que cambiaron después de la última sesión registrada: hubo trabajo que nadie cerró.</li>
@@ -1601,15 +1628,16 @@ function ayudaArts(){
       <dt>Restringido</dt><dd>Lo que está declarado así en el mapa de la carpeta o en la ficha de su área, aunque tu cuenta pueda leerlo, y lo que la cuenta que genera el tablero no puede leer. Si lo necesitas, pide acceso a quien administra la carpeta. Si en vez de «Restringido» ves «Sin carpeta» o «Sin leer», la carpeta no estaba en la computadora al generar el tablero: no es un permiso.</dd>
       <dt>Al compartirlo</dt><dd>Quien lo recibe como lector, solo mira. Quien lo recibe como contribuidor puede además fechar, marcar, anotar y corregir, siempre como pendiente.</dd>
     </dl>`},
-  {g:"Anclar y cuestionar", id:"premisas", t:"Las premisas", h:`
+  {g:"Anclar y cuestionar", id:"premisas", t:"Premisas y cuestionamientos", h:`
+    <h3 class="hc-h">Las premisas</h3>
     <p>Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Van arriba de todo en Inicio, y Claude las tiene presentes en cada sesión.</p>
     <dl class="hc-def">
       <dt>Dónde viven</dt><dd>En <code>base/premisas.md</code>, una por línea: su identificador (P1, P2…), qué dice, quién la confirmó y cuándo.</dd>
       <dt>Quién las escribe</dt><dd>El responsable del contexto, en su sesión, cuando la dirección confirma una. Dile ${F("registra como premisa que…")}.</dd>
       <dt>Cuando cambian</dt><dd>No se corrigen: ${F("la premisa P1 cambia a…")} añade otra que dice «Reemplaza a P1», y la anterior queda como historia.</dd>
-      <dt>Si no estás de acuerdo</dt><dd>Se cuestiona como cualquier decisión (<button type="button" class="lnk" data-help="cuestionar">Cuestionar algo</button>).</dd>
-    </dl>`},
-  {g:"Anclar y cuestionar", id:"cuestionar", t:"Cuestionar algo", h:`
+      <dt>Si no estás de acuerdo</dt><dd>Se cuestiona como cualquier decisión: lo explica la parte de abajo.</dd>
+    </dl>
+    <h3 class="hc-h">Cuestionar algo</h3>
     <p>Cualquiera puede cuestionar una decisión de otro proyecto o una premisa. No es una queja: es dejar escrito qué no cuadra, con su dato, para que quien decidió lo confirme o lo cambie.</p>
     <ol class="hc-pasos">
       <li><b>Lo planteas en una sesión tuya</b><span>Abre sesión en un proyecto de tu área y dile ${F("quiero cuestionar la decisión de … porque …")}. Claude lo redacta y te lo enseña; con tu sí, queda escrito en el registro de decisiones de tu proyecto. Nadie escribe en el área de otro.</span></li>
@@ -1636,7 +1664,7 @@ function ayudaArts(){
       <div class="hc-claude">
         <span class="hc-claude-t">Dentro de Claude, en tu cuenta</span>
         <div class="hc-claude-g">
-          <div class="hc-pieza"><b>Tus sesiones, con el plugin</b><small>Abres sesión, trabajas y la cierras. El plugin pone las reglas del método; se actualiza con su botón Update, o solo si tienes la actualización automática.</small></div>
+          <div class="hc-pieza"><b>Tus sesiones, con el plugin</b><small>Abres sesión, trabajas y la cierras. El plugin pone las reglas del método y se actualiza solo con Sync automatically.</small></div>
           <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h40M8 2L2 7l6 5M36 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div class="hc-pieza tablero"><b>El tablero</b><small>Se pone al día al abrirlo después de cerrar sesiones, o con su botón. Lo que marcas en él vuelve a la carpeta en la siguiente puesta al día o sesión.</small></div>
         </div>
@@ -1679,15 +1707,16 @@ function ayudaArts(){
         <tr><td>La ficha del área y el mapa</td><td>Se reescriben: la del área en una sesión de su dueño; el mapa y la base, en una del responsable del contexto.</td></tr>
       </tbody>
     </table></div>`},
-  {g:"Cómo funciona", id:"quien-escribe", t:"Quién escribe", h:`
+  {g:"Cómo funciona", id:"quien-escribe", t:"Quién escribe y cómo lee Claude", h:`
+    <h3 class="hc-h">Quién escribe</h3>
     <dl class="hc-def">
       <dt>Claude teclea</dt><dd>Las personas deciden qué dice cada archivo y lo piden; Claude es quien lo escribe, siempre con las mismas reglas. Nadie tiene que aprender el formato.</dd>
       <dt>Durante una sesión</dt><dd>Lo que se produce se guarda en su proyecto en cuanto existe, como borrador. Al cerrar, Claude registra qué se hizo, qué se decidió y qué sigue.</dd>
       <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y pasos hechos con nota.</dd>
     </dl>
-    <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>`},
-  {g:"Cómo funciona", id:"como-lee", t:"Cómo la lee la IA", h:`
+    <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>
+    <h3 class="hc-h">Cómo lee Claude la carpeta</h3>
     <p>Claude nunca lee la carpeta entera. Lee por niveles y se para en el primero que responde a lo que se le pide.</p>
     <dl class="hc-def">
       <dt>Al empezar, siempre</dt><dd>El mapa de la carpeta, la lista de proyectos del área en la que se va a trabajar y las premisas vigentes, si las hay. Cabe en una pantalla.</dd>
@@ -1705,7 +1734,10 @@ function ayudaToc(arts, cur){
   const grupos = [...new Set(vis.map(a=>a.g))];
   return grupos.map(g => `<div class="hc-g"><span class="eyebrow">${esc(g)}</span>${vis.filter(a=>a.g===g).map(a=>`<button type="button" class="hc-i" data-help="${a.id}"${a.id===cur?' aria-current="page"':""}>${esc(a.t)}</button>`).join("")}</div>`).join("");
 }
+// artículos fundidos en 1.14.11: sus enlaces viejos siguen llevando a donde está ahora su texto
+const AYUDA_ALIAS = {necesitas:"conectarte", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
 function renderAyuda(id){
+  id = AYUDA_ALIAS[id] || id;
   const head = document.getElementById("head"), main = document.getElementById("main");
   const arts = ayudaArts(), a = arts.find(x=>x.id===id) || arts[0], i = arts.indexOf(a), sig = arts[i+1];
   head.innerHTML = `<div class="eyebrow">Ayuda · ${esc(a.g)}</div><h1>${esc(a.t)}</h1>`;
