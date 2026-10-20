@@ -138,9 +138,14 @@ Todo se hace en la app de Claude para computadora, no en el navegador ni en el t
 La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet.
 
 1. Si vive en Google Drive, instala **Google Drive para escritorio** (google.com/drive/download)
-   e inicia sesión con tu cuenta.
-2. Busca la carpeta [Organización] en el Finder (Mac) o en el Explorador de archivos (Windows).
-3. Si no la ves, pídele acceso a quien administra la carpeta.
+   e inicia sesión con el correo con el que te compartieron la carpeta.
+2. Si te la compartieron, entra en drive.google.com › **Compartido conmigo**, haz clic
+   derecho sobre la carpeta [Organización] y elige **Organizar › Añadir acceso directo ›
+   Mi unidad**. Así aparece en tu computadora.
+3. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), haz clic derecho
+   sobre ella y elige **Disponible sin conexión** (en Windows está dentro de **Acceso sin
+   conexión**). Así sus archivos están siempre en tu computadora y Claude puede leerlos.
+4. Si no la ves, pídele acceso a quien administra la carpeta.
 
 **Paso 4. Crea tu proyecto y conecta la carpeta**
 
@@ -192,6 +197,9 @@ Se pone al día solo cuando lo abres después de cerrar sesiones, siempre que tu
 computadora esté encendida y la app de Claude abierta. Para ver lo que escribieron otras
 personas, pulsa **Sincronizar ahora**, junto al nombre de la organización. El tablero es
 tuyo: si quieres compartirlo, hazlo desde su menú.
+
+Para sumar a un compañero, abre en el tablero **Ayuda › Sumar a un compañero**: dice qué
+hacer de tu lado y trae el mensaje con las instrucciones, listo para copiar.
 
 **Paso 8. Ten el tablero siempre a mano en Chrome**
 
