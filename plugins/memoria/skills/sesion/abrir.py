@@ -32,11 +32,21 @@ PLUGIN = None
 if "--plugin" in args:
     i = args.index("--plugin"); PLUGIN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args else None
-try:
-    from zoneinfo import ZoneInfo
-    TZ = ZoneInfo("America/Mexico_City")
-except Exception:
-    TZ = None
+def zona_horaria(raiz, defecto="America/Mexico_City"):
+    """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md, si la hay; si no, Ciudad de México."""
+    try:
+        m = re.search(r"^\s*Zona horaria:\s*([A-Za-z_]+(?:/[A-Za-z_+-]+){1,2})", (raiz / "guia.md").read_text(encoding="utf-8-sig"), re.M)
+    except OSError:
+        m = None
+    try:
+        from zoneinfo import ZoneInfo
+        try:
+            return ZoneInfo(m.group(1)) if m else ZoneInfo(defecto)
+        except Exception:
+            return ZoneInfo(defecto)
+    except Exception:
+        return None
+TZ = zona_horaria(pathlib.Path(sys.argv[1]))
 HOY = datetime.datetime.now(TZ).date()
 FECHA = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
 
@@ -207,7 +217,11 @@ resp_contexto = ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
-es_resp = bool(CUENTA and resp_contexto) and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)
+# la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
+# como antes, es la de las áreas de las que esa persona es dueña
+cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
+resp_contexto = re.sub(r"\s*\([^)]*\)", "", resp_contexto).strip()
+es_resp = bool(CUENTA) and (CUENTA in cuenta_resp or (bool(resp_contexto) and not cuenta_resp and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)))
 
 premisas = []
 for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
@@ -403,7 +417,10 @@ def proyectos_legibles():
 
 
 respuestas, cuestiona, afecta = set(), [], []
+mis_cuestionamientos, me_responden = {}, []
 patron_proy = re.compile(r"(?<![\w/-])" + re.escape(ACTIVO) + r"(?![\w-])")
+# un área entera como destino: «operacion/» o «operacion/ (el área entera)», nunca «operacion/soporte»
+patron_area = re.compile(r"(?<![\w/-])" + re.escape(area_activa) + r"/(?![\w-])")
 for a_slug, slug, carpeta in proyectos_legibles():
     t = leer(carpeta / "decisiones.md")
     if not t:
@@ -426,13 +443,19 @@ for a_slug, slug, carpeta in proyectos_legibles():
             for m in re.finditer(r"premisa\s+(P\d+)", campos["Responde a"], re.I):
                 respuestas.add(("premisa", m.group(1).upper()))
         if origen == ACTIVO:
+            if campos["Cuestiona a"] and e["id"]:
+                mis_cuestionamientos[e["id"]] = e["cab"]
             continue
+        if campos["Responde a"]:
+            for m in re.finditer(r"([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", campos["Responde a"]):
+                if m.group(1) == ACTIVO:
+                    me_responden.append((origen, e, campos, m.group(2)))
         if campos["Cuestiona a"]:
             m = re.search(r"([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#", campos["Cuestiona a"])
             mp = re.search(r"premisa\s+(P\d+)", campos["Cuestiona a"], re.I)
             if (m and m.group(1) == ACTIVO) or (mp and es_resp):
                 cuestiona.append((origen, e, campos, ("premisa", mp.group(1).upper()) if mp and not m else None))
-        if campos["Afecta a"] and patron_proy.search(campos["Afecta a"]):
+        if campos["Afecta a"] and (patron_proy.search(campos["Afecta a"]) or patron_area.search(campos["Afecta a"])):
             afecta.append((origen, e, campos))
 
 # un cuestionamiento sigue abierto si nadie respondió a su identificador; una premisa nueva que reemplaza a la
@@ -454,6 +477,11 @@ afecta = [x for x in afecta if x[1]["fecha"]]
 nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]
 for origen, e, c in sorted(nuevos, key=lambda x: x[1]["fecha"], reverse=True):
     avisos.append(f"Le afecta una decisión de {origen} ({origen}#{e['id']}): «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Afecta a: {c['Afecta a'][:300]}")
+# a quien cuestionó: la respuesta del dueño, si llegó después de su última sesión
+for origen, e, c, cid in me_responden:
+    if e["fecha"] and (not ultima_real or e["fecha"] >= ultima_real):
+        sobre = mis_cuestionamientos.get(cid, "")
+        avisos.insert(0, f"Respondieron tu cuestionamiento {ACTIVO}#{cid}" + (f" («{sobre}»)" if sobre else "") + f": {origen}#{e['id']}, «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Por qué: {c['Por qué'][:300]}")
 for origen, e, c in sin_fecha:
     avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su dueño la revise.")
 viejos = len(afecta) - len(nuevos)

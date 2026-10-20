@@ -12,5 +12,8 @@ actualizado: 2026-10-01
 
 - `nomina/` — la nómina del equipo
 
+## Panorama
+2026-10-03 · SECRETO-PANORAMA el área de personas revisa la nómina.
+
 ## Quién participa
 Dueño: Beto Prueba

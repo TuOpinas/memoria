@@ -71,7 +71,7 @@ Con los dos disparadores de arriba, se reescribe la sección `## Panorama` de `<
 
 Al cerrar una sesión no se relee el área para escribirlo: basta el Panorama anterior, lo que la sesión ya leyó y escribió y, de los demás proyectos del área, la cabecera y el `En corto` de los que cambiaron después de la fecha del Panorama anterior (`sesion`, `cerrar.md`, paso 10). «Actualiza el panorama» sí lee lo que dice «Qué leo».
 
-Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
+Una línea con la fecha de hoy y de tres a cinco frases: cómo está, qué se movió, qué preocupa. Sin listas, sin rutas, sin repetir el índice de proyectos. Lo lee todo el equipo: nada de `restringido/`, de un proyecto restringido solo su nombre, y ningún dato personal, aunque la sesión los haya leído. Se reescribe entera; no se acumula. Solo la escribe una sesión de una cuenta que es dueña del área según `guia.md`; si no lo es, se dice y no se escribe. Si la sección no existe, se crea en ese sitio.
 
 Con la misma voz escribe el cierre de sesión el `En corto` de cada proyecto (`convenciones`, sección 3): lo de un proyecto, para quien no va a abrir nada más. Al resumir el área, la línea de cada proyecto sale de su `En corto` cuando lo tiene.
 

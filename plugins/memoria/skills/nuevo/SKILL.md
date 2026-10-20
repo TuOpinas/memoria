@@ -89,9 +89,10 @@ las prioridades y el panorama del área son de su dueño.
 
 ## Quién responde por qué
 
-Contexto común (`guia.md` y `base/`): [nombre y apellido].
+Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
 Cada área, su dueño de la tabla de arriba.
+Zona horaria: [la de la organización, por ejemplo America/Mexico_City]
 
 ## Reglas propias de la casa
 
@@ -107,7 +108,10 @@ ninguno.
 **Paso 1. Comprueba que tu computadora sirve**
 
 Necesitas una Mac con macOS 14 (Sonoma) o más nuevo, o una computadora con Windows 10 o
-Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise). En Windows,
+Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise). La computadora
+tiene que poder conectarse a GitHub (github.com y raw.githubusercontent.com): Claude descarga
+de ahí sus herramientas en cada sesión. Si tu organización filtra internet, pide que los
+dejen pasar. En Windows,
 mejor la edición Pro, Enterprise o Education: en Windows Home la función de carpetas
 puede no funcionar, y el verificador de abajo te lo dice. Deja también espacio libre en
 el disco: la primera vez la app descarga más de 1 GB, y con el disco lleno no se instala.

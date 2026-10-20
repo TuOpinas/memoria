@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.15.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.16.0"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -879,6 +879,12 @@ function regNecesita(p){
   const pl = (k,n) => `${n} ${(PL[k]||[k,k])[n===1?0:1]}`;
   return {total: live.length, raros: raros.map(k=>pl(k,by[k])), nRaros: raros.reduce((n,k)=>n+by[k],0)};
 }
+// lo que alguien marcó aquí en un proyecto cuya área no es de quien montó el tablero: su puesta al día no lo escribe,
+// y el dueño no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
+function ajenaAviso(p){
+  const aj = new Set((META && META.cola_ajena) || []), n = CAMBIOS.filter(c => c.proyecto === p.id && aj.has(c.id)).length;
+  return n ? `<p class="hint">${n===1?"Hay 1 cosa marcada":`Hay ${n} cosas marcadas`} aquí que no se escriben solas: este proyecto es de ${esc(p.dueno||"otra persona")}, y su puesta al día no lee este tablero. Díselo, o pídele que lo marque en el suyo.</p>` : "";
+}
 function regularizar(p){
   const r = regNecesita(p); if(!r) return "";
   const frase = sesionFrase(p);
@@ -964,7 +970,9 @@ function desfase(p, e, idx){
 }
 const tagDe = p => p.area+"/"+p.slug;
 function afectan(p){
-  const re = new RegExp("(^|[\\s(·`/.])"+tagDe(p).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?![\\w-])");
+  const esc_ = s => s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  // el proyecto, o su área entera («operacion/» o «operacion/ (el área entera)»), como abrir.py
+  const re = new RegExp("(^|[\\s(·`/.])("+esc_(tagDe(p))+"(?![\\w-])|"+esc_(p.area+"/")+"(?![\\w-]))");
   const out = [];
   for(const q of PROJ){ if(q.id===p.id || q.restringido) continue; for(const d of (q.decisiones||[])) if(re.test(d.afecta||"")) out.push({q, d, nueva: !p.ultima_sesion || (d.fecha||"") >= p.ultima_sesion}); }
   return out.sort((a,b)=>(b.d.fecha||"").localeCompare(a.d.fecha||""));
@@ -1445,7 +1453,7 @@ function ayudaArts(){
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
     <dl class="hc-def">
-      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en el mapa de <code>guia.md</code>, como dueño o como colaborador de tu área, o en el proyecto donde colaboras: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX} o al dueño de tu área.</dd>
+      <dt>Lo que necesitas</dt><dd>Una Mac con macOS 14 o más nuevo, o una computadora con Windows 10 o 11, mejor en edición Pro, Enterprise o Education (en Home la función de carpetas puede no funcionar), y espacio libre en el disco: la primera vez la app descarga más de 1 GB. Una cuenta de Claude de pago, y que la computadora pueda conectarse a GitHub (github.com y raw.githubusercontent.com), de donde Claude descarga sus herramientas en cada sesión. La app de Claude de escritorio, trabajando en Cowork si tu versión separa Chat y Cowork. La carpeta de ${ORG} sincronizada en tu computadora, con sus archivos siempre descargados. Y tu correo en el mapa de <code>guia.md</code>, como dueño o como colaborador de tu área, o en el proyecto donde colaboras: así sabe Claude dónde escribes; si no estás, pídeselo a ${CTX} o al dueño de tu área.</dd>
     </dl>
     <ol class="hc-pasos">
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
@@ -1543,6 +1551,7 @@ function ayudaArts(){
       <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en el mapa de <code>guia.md</code>, ni como dueño ni como colaborador, ni en el proyecto donde trabajas. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
       <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
+      <dt>Cambié de computadora y el botón «Sincronizar ahora» no hace nada.</dt><dd>El botón está ligado a la computadora donde montaste el tablero. En la nueva, con la carpeta conectada, dile a Claude ${F("cambié de computadora: pon al día la tarea del tablero")} y aprueba el cambio que te pide la app.</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando cierras la sesión y vuelves a abrir el tablero, con tu computadora encendida y la app abierta: se pone al día solo y tarda unos minutos. Si lo hizo otra persona, pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}.</dd>
@@ -1661,7 +1670,7 @@ function ayudaArts(){
     <ol class="hc-pasos">
       <li><b>Lo planteas en una sesión tuya</b><span>Abre sesión en un proyecto de tu área y dile ${F("quiero cuestionar la decisión de … porque …")}. Claude lo redacta y te lo enseña; con tu sí, queda escrito en el registro de decisiones de tu proyecto. Nadie escribe en el área de otro.</span></li>
       <li><b>Le llega a quien decidió</b><span>La próxima vez que el dueño abra sesión en su proyecto, Claude se lo enseña primero. Aquí sale en «Cuestionamientos abiertos», en Inicio y en el área.</span></li>
-      <li><b>Lo responde con una decisión</b><span>El dueño, en una sesión de ese proyecto, dice ${F("lo mantengo, porque…")} o ${F("lo cambio: …")}. Al cerrar queda como una decisión que dice a qué cuestionamiento responde, también cuando solo lo mantiene. Con eso se cierra. Una premisa la responde el responsable del contexto: con una premisa nueva que la reemplaza, o manteniéndola.</span></li>
+      <li><b>Lo responde con una decisión</b><span>El dueño, en una sesión de ese proyecto, dice ${F("lo mantengo, porque…")} o ${F("lo cambio: …")}. Al cerrar queda como una decisión que dice a qué cuestionamiento responde, también cuando solo lo mantiene. Con eso se cierra, y a quien lo planteó se lo enseña Claude la próxima vez que abra sesión en su proyecto. Una premisa la responde el responsable del contexto: con una premisa nueva que la reemplaza, o manteniéndola.</span></li>
     </ol>
     <p class="hc-nota">Una decisión cuestionada sigue valiendo hasta que su dueño responde, pero quien vaya a construir encima lo ve.</p>`},
   {g:"Anclar y cuestionar", id:"director", t:"El director de cada área", h:`
@@ -2034,7 +2043,7 @@ function renderProj(p){
     const pasos = (p.pasos||[]);
     body = `${CAN||notas.length ? `<div class="card"><h3>Para la próxima sesión</h3>${notas.length?`<div class="due-list">${notas.map(c=>`<div class="due-item static"><span class="pill">nota</span><span class="t">${esc(c.nota)}</span><span class="w">${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${esc(c.id)}">Quitar</button>`:""}</span></div>`).join("")}</div>`:""}
       ${CAN?`<form class="anotar" data-proj="${esc(p.id)}"><label class="sr" for="anotar-txt">Anotar</label><input id="anotar-txt" class="search" type="text" maxlength="400" placeholder="Anotar algo que pasó, para registrarlo en la siguiente sesión"><button type="submit" class="btn">Anotar</button></form>`:""}</div>`:""}
-      <div class="card"><h3>Siguientes pasos${hq("pasos","Cómo lee los pasos")}</h3>${regularizar(p)}<div class="steps">${pasos.length ? pasos.map(s => isHeader(s) ? `<div class="step h">${esc(s.texto.replace(/:$/,""))}</div>` : stepRow(p, s, false)).join("") : `<p class="empty">Sin siguientes pasos.</p>`}</div>${CAN?`<p class="more">Cambiar la fecha o marcar hecho se guarda aquí y se escribe en la carpeta la próxima vez que el tablero se ponga al día. Pasos nuevos o cambios de texto, en sesión.</p>`:""}</div>`;
+      <div class="card"><h3>Siguientes pasos${hq("pasos","Cómo lee los pasos")}</h3>${ajenaAviso(p)}${regularizar(p)}<div class="steps">${pasos.length ? pasos.map(s => isHeader(s) ? `<div class="step h">${esc(s.texto.replace(/:$/,""))}</div>` : stepRow(p, s, false)).join("") : `<p class="empty">Sin siguientes pasos.</p>`}</div>${CAN?`<p class="more">Cambiar la fecha o marcar hecho se guarda aquí y se escribe en la carpeta la próxima vez que el tablero se ponga al día. Pasos nuevos o cambios de texto, en sesión.</p>`:""}</div>`;
   } else if(tab==="decisiones"){
     body = `<div class="card">${(p.decisiones||[]).length ? decList(p.decisiones.map(d=>({d,p})), false, 0) + (nD>p.decisiones.length?`<p class="more">Se muestran las ${p.decisiones.length} más recientes de ${nD}. El registro completo está en <code>decisiones.md</code>.</p>`:"") : `<p class="empty">Sin decisiones registradas.</p>`}</div>`;
   } else if(tab==="entregables"){

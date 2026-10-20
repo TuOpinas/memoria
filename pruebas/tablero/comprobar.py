@@ -22,6 +22,7 @@ ok("SECRETO-NOMINA" not in texto(pub), "público: nada del área marcada «Restr
 ok("SECRETO-PRECIOS" in texto(com) and "SECRETO-NOMINA" in texto(com), "completo: sí sale lo que la cuenta lee")
 ok("SECRETO-RESTRINGIDO" not in texto(pub) + texto(com), "ningún modo lee las carpetas restringido/")
 ok("@ejemplo.test" not in texto(pub), "público: ningún correo, ni de dueños ni de quien colabora")
+ok("SECRETO-PANORAMA" not in texto(pub) and "SECRETO-PANORAMA" in texto(com), "el Panorama de un área restringida no sale en el público")
 ok(com["areas"]["ventas"].get("colaboran") == ["carla@ejemplo.test"] and pub["areas"]["ventas"].get("colaboran") == [], "quien colabora en un área: su cuenta en el completo, nada en el público")
 ok(pub["proyectos"]["operacion--soporte"].get("colaboran") == ["Dani Prueba"] and "dani@" not in texto(com) and "quien" not in pub["proyectos"]["operacion--soporte"], "quien colabora en un proyecto: su nombre, sin su cuenta, y sin la sección en bruto")
 ok(pub["proyectos"]["ventas--cuentas"]["legible"], "público: un proyecto que solo menciona algo restringido sale entero")
