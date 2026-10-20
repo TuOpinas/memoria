@@ -161,40 +161,34 @@ Todo se hace en la app de Claude para computadora, no en el navegador ni en el t
 
 **Paso 3. Ten la carpeta en tu computadora**
 
-La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet. Si vive
-en Google Drive:
+La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet. Lo normal
+es que sea una unidad compartida de Google Drive:
 
 1. Instala **Google Drive para escritorio** (google.com/drive/download) e inicia sesión con
-   el correo con el que te compartieron la carpeta.
-2. Si es una **unidad compartida**, aparece sola en tu computadora, dentro de Google Drive, en
-   **Unidades compartidas**. Drive no la copia entera a tu disco, así que búscala en el Finder
-   (Mac) o en el Explorador de archivos (Windows), no en la web, haz clic derecho sobre la
-   carpeta y elige **Disponible sin conexión** (en inglés, **Make available offline**).
-   Espera a que se descarguen sus archivos.
-3. Si es una **carpeta que alguien te compartió**, entra en drive.google.com, búscala en
-   **Compartido conmigo** y añádela a tu unidad. Después:
-   - En Mac, haz clic derecho sobre la carpeta en el Finder y elige **Disponible sin
-     conexión**.
-   - En Windows, en las preferencias de Google Drive elige **Duplicar archivos** (en inglés,
-     **Mirror files**): tu unidad se copia a una carpeta normal dentro de
-     `C:\Users\<tu usuario>`. Conecta la carpeta desde ahí, no desde la unidad aparte que
-     Drive muestra con una letra (por ejemplo, G:), que Claude puede no conseguir conectar.
-4. En Windows, una unidad compartida no se puede duplicar: si en el paso 4 Claude no consigue
-   conectarla, avisa a quien administra la carpeta.
-5. Si no ves la carpeta, pídele acceso a quien administra la carpeta.
+   el correo con el que te dieron acceso.
+2. La unidad aparece sola en tu computadora, dentro de Google Drive, en **Unidades
+   compartidas**. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), no en
+   la web, haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
+   **Make available offline**). Espera a que se descarguen sus archivos.
+3. En Windows, Google Drive la muestra en una unidad aparte, con una letra (por ejemplo,
+   G:). Si en el paso 4 Claude no consigue conectarla, avisa a quien administra la carpeta.
+4. Si no la ves, pídele acceso a quien administra la carpeta.
+
+Si en tu organización no es una unidad compartida sino una carpeta que alguien te compartió,
+entra en drive.google.com, búscala en **Compartido conmigo**, añádela a tu unidad y márcala
+igual **Disponible sin conexión**.
 
 **Paso 4. Crea tu proyecto y conecta la carpeta**
 
-1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo. Al crearlo, elige
-   usar una carpeta que ya existe (en la app, **Use an existing folder**).
+1. En el menú de la izquierda, entra en **Projects** y crea uno nuevo.
 2. Ponle de nombre "[Organización] · [tu área]" y déjalo privado. Por ejemplo: "[Organización] · comercial".
    Cada persona crea el suyo.
 3. Conecta la carpeta **[Organización] completa**, la que tiene dentro `guia.md` y `metodo.md`. No
    elijas la carpeta de tu área: Claude necesita ver todas para decirte qué se sabe ya.
    Conéctala en el proyecto, no en una conversación suelta: así la tienen todas las
    conversaciones del proyecto.
-   Si no te la pide al crear el proyecto, añádela con el botón «+». Si te equivocas de
-   carpeta, se puede quitar y cambiar después. El proyecto vive en tu computadora: no se
+   Según tu versión de Claude, se la asocias al crearlo o después, desde el proyecto. Si te
+   equivocas de carpeta, se puede quitar y cambiar. El proyecto vive en tu computadora: no se
    comparte con nadie, y cada persona crea el suyo.
 
 4. Si trabajas con código, sus repositorios van en otra carpeta de tu computadora (por
