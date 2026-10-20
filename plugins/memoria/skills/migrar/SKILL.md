@@ -63,15 +63,12 @@ El manifiesto se guarda como entregable en la raíz de quien migró, en su proye
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Borrar, mover o modificar un archivo del origen. Se copia; el origen queda como estaba hasta que el usuario decida qué hacer con él
 - Migrar sin enseñar antes el inventario y el mapeo
 - Resumir o reescribir el contenido de un log de sesión al consolidarlo. Se cambia el formato, no lo que decía
-- Dejar un entregable migrado en `vigente` sin que el dueño del origen lo haya pedido
-- Traer `AGENTS.md`, índices manuales, prefijos numéricos o cualquier cosa de la lista de lo que no existe en `convenciones`
-- Traer a `entregables/` un documento que produjo alguien ajeno a la organización que migra. Va a `fuentes/`
-- Traer a `entregables/` un documento que no sale del proyecto. Va a `taller/`
+- Traer `AGENTS.md`, índices manuales, prefijos numéricos o cualquier otra cosa que el contrato excluye (`convenciones`, sección 9, y las prohibiciones de `escribir.md`)
 - Sacar de una carpeta restringida un archivo que pertenece dentro de ella, o dejar fuera la ruta de lo que se migró dentro
 - Escribir en el manifiesto de la migración el contenido de lo restringido. Se cuenta cuántos archivos fueron y a qué carpeta, nunca qué decían
 - Dejar en la raíz migrada rastro del sistema de origen: sus rutas, sus nombres de carpeta, su vocabulario o el manifiesto de la migración

@@ -80,14 +80,13 @@ Propuesta: … (qué cambiar, sin cambiarlo)
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Arreglar lo que encuentro. Se propone; lo cambia la sesión del proyecto.
 - Registrar decisiones. Si un hallazgo pide decidir, se dice y la sesión lo registra con la confirmación de su dueño.
 - Dar un hallazgo sin evidencia, o una opinión como si fuera un hallazgo.
 - Empezar sin acordar el alcance, o una revisión a fondo sin haber recomendado el modelo.
 - Medir contra lo que ya existe en lugar de contra el objetivo.
-- Leer el cuerpo de `sesiones.md`, `taller/`, `fuentes/` o lo restringido de otra área.
 
 ## Ejemplo
 

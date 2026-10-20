@@ -52,7 +52,7 @@ Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Escribir o modificar ningún archivo. Consultar es solo lectura
 - Buscar con el conector de Google Drive teniendo la carpeta conectada. Sin ninguna carpeta conectada, se puede leer la raíz en Drive por el conector, en solo lectura, como dice el anexo `sin-carpeta.md` de la skill `sesion`

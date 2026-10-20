@@ -116,7 +116,7 @@ Se avisa de quién consume este entregable, según el campo `Consumen esto` de `
 
 ## Lo que nunca hago
 
-Además de las prohibiciones de `convenciones`:
+Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Publicar sin comprobar que quien lo pide es el dueño del proyecto
 - Publicar con `basado_en` vacía sin que el dueño acepte el hueco y quede escrito

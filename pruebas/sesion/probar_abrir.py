@@ -127,6 +127,14 @@ g.write_text(g.read_text(encoding="utf-8").replace("Zona horaria: Asia/Tokyo", "
 c, oz_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
 ok(c == 0 and "(aviso: la zona horaria «Europe/Madridd» de guia.md no es una zona válida" in oz_, "una zona mal escrita, aun con viñeta, negrita y comillas, se avisa y se usa la de siempre")
 ok("es la del responsable de contexto" not in on_, "con cuenta en «Contexto común», ya no basta ser dueño de un área con el mismo nombre")
+# con muchos cuestionamientos abiertos, una línea cada uno y el «Por qué» solo de los tres más recientes
+d = R / "operacion/soporte/decisiones.md"
+extra = "".join(f"## 2026-10-{10+i:02d} · Cuestionamiento: prueba de tope {i}\nPlanteó: Bea Prueba\nPor qué: motivo-{i}.\nCuestiona a: ventas/cuentas#2026-09-21\n\n" for i in range(5))
+d.write_text(d.read_text(encoding="utf-8").replace("# Decisiones\n\n", "# Decisiones\n\n" + extra, 1), encoding="utf-8")
+c, ot_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+av_ = ot_.split("=== AVISOS")[1]
+cq_ = [l for l in av_.split("\n") if l.lstrip("- ").startswith("Cuestionamiento abierto")]
+ok(c == 0 and len(cq_) == 6 and sum("Por qué:" in l for l in cq_) == 3 and "motivo-4" in cq_[0] and "motivo-2" in av_ and "motivo-1." not in av_, "con seis cuestionamientos abiertos, seis líneas y el «Por qué» solo de los tres más recientes")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
