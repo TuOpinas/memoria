@@ -139,9 +139,8 @@ La carpeta de [Organización] tiene que estar en tu computadora, no solo en inte
 
 1. Si vive en Google Drive, instala **Google Drive para escritorio** (google.com/drive/download)
    e inicia sesión con el correo con el que te compartieron la carpeta.
-2. Si te la compartieron, entra en drive.google.com › **Compartido conmigo**, haz clic
-   derecho sobre la carpeta [Organización] y elige **Organizar › Añadir acceso directo ›
-   Mi unidad**. Así aparece en tu computadora.
+2. Si te la compartieron y no la ves en tu computadora, entra en drive.google.com, búscala
+   en **Compartido conmigo** y añádela a tu unidad. Así aparece en tu computadora.
 3. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), no en la web.
    Haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
    **Make available offline**). Así sus archivos están siempre en tu computadora y
