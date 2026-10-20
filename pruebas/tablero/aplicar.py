@@ -60,5 +60,16 @@ cola.write_text(json.dumps([
 ]), encoding="utf-8")
 r4 = corre("--cuenta", "ana@")
 ok(r4["mis_areas"] == [] and len(r4["para_su_dueno"]) == 3 and {x["id"] for x in r4["rechazados"]} == {"m1", "m4"}, "la cuenta se compara entera: «ana@» no es ninguna cuenta de la tabla")
+# quien colabora: escribe lo mecánico en el área o en el proyecto donde colabora; las prioridades del área, no
+cola.write_text(json.dumps([
+    {"id": "c1", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "de quien colabora"},
+    {"id": "c2", "tipo": "prioridad", "area": "ventas", "indice": 0, "texto": "x"},
+    {"id": "c3", "tipo": "nota", "proyecto": "operacion--soporte", "nota": "de otra área"},
+    {"id": "c4", "tipo": "nota", "proyecto": "operacion--soporte", "nota": "del proyecto donde colabora"},
+]), encoding="utf-8")
+r6 = corre("--cuenta", "carla@ejemplo.test")
+ok([x["id"] for x in r6["para_sesion"]] == ["c1"] and {x["id"] for x in r6["para_su_dueno"]} == {"c2", "c3", "c4"} and r6["colabora"] == ["ventas"] and r6["mis_areas"] == [], "quien colabora en un área escribe en ella, pero sus prioridades se quedan para el dueño")
+r7 = corre("--cuenta", "dani@ejemplo.test")
+ok({x["id"] for x in r7["para_sesion"]} == {"c3", "c4"} and {x["id"] for x in r7["para_su_dueno"]} == {"c1", "c2"}, "quien colabora en un solo proyecto escribe solo en ese proyecto")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)

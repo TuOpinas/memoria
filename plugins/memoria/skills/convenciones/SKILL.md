@@ -7,7 +7,7 @@ description: Contrato base del metodo de trabajo: estructura de carpetas, cabece
 
 Contrato base del método. El resto de skills del plugin lo cargan antes de escribir nada. Si una skill contradice algo de aquí, manda este documento. Dos anexos, junto a este archivo, se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración) y `montaje.md` (montaje, publicación, bloque de instrucciones, programadores).
 
-Versión del método: **1.14**
+Versión del método: **1.15**
 
 ## 1. Las tres capas de propiedad
 
@@ -49,6 +49,24 @@ La raíz es la carpeta que contiene `guia.md`, `metodo.md` y `base/`. Ninguna in
 
 La cuenta de cada dueño queda escrita junto a su nombre en `guia.md`. Eso es lo que permite comprobar, y no solo suponer, que quien pide publicar es el dueño del proyecto. Si la identidad de la cuenta no está disponible, por ejemplo con otro modelo leyendo `metodo.md`, se pregunta el nombre y se anota de quién viene la petición.
 
+### Quién colabora
+
+Un área tiene un solo dueño, pero pueden escribir en ella más personas: **quienes colaboran**. Se declaran en la misma celda Cuenta de la tabla de áreas de `guia.md`, después de la cuenta del dueño: `dueno@ejemplo.com · colabora: ana@ejemplo.com, luis@ejemplo.com`. Las cuentas se comparan enteras. Quien colabora en un solo proyecto, y no en toda el área, se declara en `Quién participa` de ese `proyecto.md`, con una línea `Colabora: Nombre Apellido (correo), Nombre Apellido (correo)`; la cuenta entre paréntesis es lo que permite comprobar quién escribe. La celda de `guia.md` la escribe el responsable de contexto; la línea del proyecto, la sesión del dueño del área.
+
+| Puede | El dueño | Quien colabora |
+|---|---|---|
+| Abrir y cerrar sesión en los proyectos donde colabora, y escribir su bitácora | sí | sí |
+| Guardar borradores en `entregables/`, `taller/` y `fuentes/` | sí | sí |
+| Registrar las decisiones de su propio trabajo, con su nombre en `Decidió` | sí | sí |
+| Poner al día `En corto`, `Estado actual` y `Siguientes pasos` al cerrar | sí | sí |
+| Publicar un entregable como `vigente` | sí | no |
+| Cambiar `Prioridades ahora` o escribir el `Panorama` del área | sí | no |
+| Crear o cerrar un proyecto, o declarar quién colabora en él | sí | no |
+
+Una decisión de quien colabora vale como cualquier otra. Si el dueño no está de acuerdo, la reemplaza con una decisión suya o la cuestiona (sección 4), nunca la edita. En Drive, quien colabora en el área tiene escritura en la carpeta del área; quien colabora en un proyecto, solo en la carpeta de ese proyecto.
+
+**Dos personas en el mismo proyecto no cierran sesión a la vez.** La carpeta no bloquea a nadie: si dos cierres escriben a la vez, el segundo puede pisar al primero. Por eso el cierre compara, antes de escribir, la hora de la última escritura de `proyecto.md`, `decisiones.md` y `sesiones.md` con la que vio al abrir, y si cambió, relee y suma lo suyo a lo que encontró (skill `sesion`, anexo `cerrar.md`).
+
 ### Independencia entre raíces
 
 Se trabaja en una raíz a la vez: con más de una conectada, antes de leer o escribir se pregunta en cuál, cada escritura dice en qué raíz se hace y cambiar de raíz se anuncia. Nada que se escriba en una raíz usa hechos de otra, ni del repo del plugin, salvo por un traspaso que la persona pide y confirma pieza a pieza; y el repo del plugin no guarda hechos de ninguna organización. Cómo es un traspaso y dónde vive el registro de una migración lo dice `raices.md`, junto a este archivo, que se lee con más de una raíz conectada, cuando se pide un traspaso y al migrar.
@@ -58,7 +76,7 @@ Se trabaja en una raíz a la vez: con más de una conectada, antes de leer o esc
 Valen para cualquier sistema de carpetas (Drive, OneDrive, iCloud…); el ejemplo de siempre es Drive, donde el acceso limitado se pone desde la web.
 
 - Lectura de toda la raíz para todo el equipo, salvo lo restringido.
-- Escritura en la carpeta de un área solo para su dueño y las personas que él designe.
+- Escritura en la carpeta de un área solo para su dueño y quienes colaboran en ella, y en la de un proyecto, además, para quienes colaboran en ese proyecto (sección 1, «Quién colabora»).
 - Escritura en `guia.md` y en `base/` solo para el responsable de contexto. La IA escribe los dos, y solo puede hacerlo en la sesión de esa persona; desde la sesión de otra área prepara el texto y se lo pasa.
 - Administrar la carpeta compartida es del dueño de la organización, o de una persona de su total confianza, y de nadie más. Quien administra puede quitar cualquier restricción, así que todo lo que sigue se apoya en esa lista.
 
@@ -241,6 +259,7 @@ No: [lo que queda fuera]
 
 ## Quién participa
 Dueño: [nombre] ([área])
+Colabora: [nombre (correo)], solo si alguien colabora en este proyecto sin colaborar en el área
 Consumen esto: [áreas o personas]
 
 ## Estado actual
@@ -254,7 +273,7 @@ Consumen esto: [áreas o personas]
 
 `En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe, como el `Panorama` del área, y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, también en el tablero que se comparte: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` sigue siendo válido: lo escribe su siguiente cierre.
 
-`Dueño`, en `Quién participa`, es el dueño de todo el proyecto: sus entregables, sus decisiones, quién pide publicar. Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
+`Dueño`, en `Quién participa`, es el dueño de todo el proyecto: responde por sus entregables y sus decisiones, y es quien pide publicar. Quien colabora registra las decisiones de su propio trabajo, y el dueño puede reemplazarlas (sección 1, «Quién colabora»). Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
 ### Un proyecto cerrado
 
@@ -449,8 +468,8 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el dueño del proyecto; y `migrar`, con lo que su dueño en el origen pide publicar al migrar. `area.md` y los registros nacen `vigente` (sección 5).
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
-4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de otra área. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
-5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos de las áreas de la cuenta: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en las áreas de otra cuenta.
+4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de un área de la que la cuenta no es dueña ni colabora. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
+5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos donde la cuenta es dueña o colabora: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en los de otra cuenta. `Panorama` y `Prioridades ahora` son solo del dueño del área.
 6. No leer `taller/`, `fuentes/`, lo restringido de otra área, ni el cuerpo de su `sesiones.md`: de la bitácora ajena solo la fecha, el título y «Trabajamos en» de cada entrada (sección 7). Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
@@ -508,4 +527,4 @@ Si el camino lleva a una carpeta restringida sin acceso, la lectura falla. Eso n
 
 ## 13. Montaje
 
-Se conecta la raíz completa, nunca la carpeta de un área: `guia.md`, `metodo.md` y `base/` viven en la raíz y la lectura cruza áreas. Cada persona trabaja desde su cuenta, y dónde escribe sale de su fila en `guia.md`. El plugin trae un aviso de arranque que inyecta las instrucciones en cada sesión, así que nadie pega nada en el proyecto de Claude. El tablero es opcional y personal (skill `tablero`). El montaje en detalle, el bloque de instrucciones para quien use otro modelo sin el plugin y lo que vale para programadores están en `montaje.md`, junto a este archivo.
+Se conecta la raíz completa, nunca la carpeta de un área: `guia.md`, `metodo.md` y `base/` viven en la raíz y la lectura cruza áreas. Cada persona trabaja desde su cuenta, y dónde escribe sale de su fila en `guia.md`, como dueño o como colaborador, y de la línea `Colabora:` de los proyectos. El plugin trae un aviso de arranque que inyecta las instrucciones en cada sesión, así que nadie pega nada en el proyecto de Claude. El tablero es opcional y personal (skill `tablero`). El montaje en detalle, el bloque de instrucciones para quien use otro modelo sin el plugin y lo que vale para programadores están en `montaje.md`, junto a este archivo.

@@ -1,6 +1,6 @@
 ---
 name: nuevo
-description: Da de alta lo que falte en la memoria de la organizacion: monta la raiz si la carpeta no tiene guia.md, crea el area si no existe y crea el paquete completo de un proyecto. Usala cuando digan 'nuevo proyecto', 'arranca un proyecto para...', 'necesito documentar esto como proyecto', 'nueva area', 'crea el area de...', 'monta la carpeta de...', 'nueva organizacion', 'arranca el metodo para este cliente', o cuando se trabaje en algo que todavia no tiene carpeta.
+description: Da de alta lo que falte en la memoria de la organizacion: monta la raiz si la carpeta no tiene guia.md, crea el area si no existe y crea el paquete completo de un proyecto. Usala cuando digan 'nuevo proyecto', 'arranca un proyecto para...', 'necesito documentar esto como proyecto', 'nueva area', 'crea el area de...', 'monta la carpeta de...', 'nueva organizacion', 'arranca el metodo para este cliente', o cuando se trabaje en algo que todavia no tiene carpeta, y para sumar a alguien: 'añade a X como colaborador del area...' o 'de este proyecto'.
 ---
 
 # Nuevo
@@ -9,7 +9,7 @@ Dar de alta lo que falte, de fuera hacia dentro: la raíz de la organización, e
 
 ## Cuándo
 
-"Nuevo proyecto", "arranca un proyecto para X", "necesito documentar esto como proyecto", "nueva área", "crea el área de operaciones", "monta la carpeta de Acme", "nueva organización", "arranca el método para este cliente", o cuando alguien empieza a trabajar en algo que todavía no tiene carpeta.
+"Nuevo proyecto", "arranca un proyecto para X", "necesito documentar esto como proyecto", "nueva área", "crea el área de operaciones", "monta la carpeta de Acme", "nueva organización", "arranca el método para este cliente", o cuando alguien empieza a trabajar en algo que todavía no tiene carpeta. También para sumar a alguien: «añade a Tania como colaboradora del área de tecnología», «añade a Luis como colaborador de este proyecto» (abajo, «Sumar a quien colabora»).
 
 También cuando una conversación de trabajo lleva veinte minutos sobre algo que no existe en ninguna carpeta. En ese caso se propone crear el proyecto, no se crea sin avisar.
 
@@ -33,6 +33,15 @@ Si el proyecto se parece a uno existente, se dice antes de crear nada. Dos proye
 Si la identidad de la cuenta no está disponible, se pregunta el nombre y apellido y se espera: un área o un proyecto sin dueño no se crea.
 
 Las demás preguntas de cada nivel se hacen juntas, en una sola tanda, en lenguaje llano. Nadie tiene que saber qué es un alcance ni un entregable para responderlas. Si el usuario responde a medias, se crea igual con lo que haya y lo que falta queda marcado como hueco.
+
+## Sumar a quien colabora
+
+Quien escribe en un área o en un proyecto sin ser su dueño (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe.
+
+- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del dueño: `dueno@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
+- **En un solo proyecto**: se añade en `Quién participa` de su `proyecto.md` la línea `Colabora: Nombre Apellido (correo)`, o la persona al final de la que ya hay. Solo lo escribe la sesión del dueño del área.
+
+En los dos casos se recuerda en una línea el permiso que falta en la carpeta compartida (editor en la carpeta del área, o solo en la del proyecto), que pone quien administra la carpeta, y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
 ---
 
@@ -69,7 +78,10 @@ con Claude. Aquí solo está lo nuestro.
 | `nordia/` | … | Nombre Apellido | correo@… | Restringida |
 
 La cuenta es con la que esa persona trabaja con la IA. Es lo que permite comprobar
-que quien pide publicar algo es su dueño.
+que quien pide publicar algo es su dueño. Quien escribe en un área sin ser su dueño va en
+la misma celda, después de la cuenta del dueño: `dueno@… · colabora: ana@…, luis@…`.
+Quien colabora abre y cierra sesión y registra las decisiones de su trabajo; publicar,
+las prioridades y el panorama del área son de su dueño.
 
 ## Quién responde por qué
 

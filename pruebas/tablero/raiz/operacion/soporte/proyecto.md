@@ -17,6 +17,7 @@ Atender a los clientes después de la firma.
 
 ## Quién participa
 Dueño: Ana Prueba
+Colabora: Dani Prueba (dani@ejemplo.test)
 
 ## Estado actual
 Arrancado el 2026-08-15.

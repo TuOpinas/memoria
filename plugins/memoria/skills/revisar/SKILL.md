@@ -95,7 +95,7 @@ Pasar de `borrador` a `vigente`. Es el único momento en que un documento se vue
 1. La revisión se pasó y no quedan hallazgos bloqueantes
 2. No hay huecos abiertos, o el dueño del proyecto los acepta de forma explícita y quedan escritos en el documento
 3. `basado_en` no está vacía. Si el documento es material adoptado y no hay forma de reconstruir sus fuentes, el dueño del proyecto acepta el hueco de forma explícita y queda escrito en el documento, en una línea bajo el título: de quién venía el material, con qué fecha y por qué no hay trazabilidad. Esa línea no nombra rutas ni carpetas del sistema del que se migró
-4. **Lo pide el dueño del proyecto, y se comprueba.** El dueño es quien figura en `Quién participa` de `proyecto.md`, y su cuenta está junto a su nombre en `guia.md`. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
+4. **Lo pide el dueño del proyecto, y se comprueba.** El dueño es quien figura en `Quién participa` de `proyecto.md`, y su cuenta está junto a su nombre en `guia.md`, la primera de la celda Cuenta, antes de «colabora:». Quien colabora en el área o en el proyecto no publica: su cuenta no cuenta como la del dueño. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
 
 Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 

@@ -15,7 +15,7 @@ Mira un área entera como la miraría quien la dirige: cómo está, qué se movi
 
 **Otras áreas**: «¿qué de otras áreas me afecta?», «revisa lo de otras áreas».
 
-**Panorama**: al cerrar una sesión en el área (skill `sesion`, anexo `cerrar.md`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores.
+**Panorama**: al cerrar una sesión en el área (skill `sesion`, anexo `cerrar.md`, paso 10), o cuando su dueño dice «actualiza el panorama». Son los dos únicos disparadores, y los dos piden la cuenta del dueño del área: si cierra quien colabora, el Panorama no se toca.
 
 Si no queda claro qué área, se pregunta. Si la persona pregunta por un solo proyecto, no es esta skill: si es su dueño, se abre sesión (`sesion`); si no, es `consulta`.
 

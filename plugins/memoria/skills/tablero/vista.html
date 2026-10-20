@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.14.12"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.15.0"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1461,8 +1461,8 @@ function ayudaArts(){
   {g:"Para empezar", id:"sumar", t:"Sumar a un compañero", h:`
     <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
     <ol class="hc-pasos">
-      <li><b>Ponla en el mapa</b><span>Su correo de Claude tiene que estar en la tabla de áreas de <code>guia.md</code>, en el área donde va a escribir. Lo escribe ${CTX}, en su sesión: ${F("añade a [nombre] con [correo] en el área [área] de guia.md")}. Sin eso, Claude le preguntará antes de escribir nada.</span></li>
-      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: clic derecho sobre la carpeta ${ORG} › Compartir, su correo y el permiso de editor si va a escribir. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
+      <li><b>Ponla en el mapa, como dueña o como colaboradora</b><span>Si va a llevar un área, su correo va en la columna Cuenta de esa área: ${F("añade a [nombre] con [correo] como dueño del área [área] en guia.md")}. Si va a trabajar en el área de otra persona, va en la misma celda como colaboradora: ${F("añade a [nombre] con [correo] como colaborador del área [área]")}. Si solo va a trabajar en un proyecto, se declara en ese proyecto: ${F("añade a [nombre] con [correo] como colaborador de este proyecto")}, en una sesión del dueño del área. La tabla de <code>guia.md</code> la escribe ${CTX}. Sin nada de eso, Claude le preguntará antes de escribir.</span></li>
+      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: lectura de toda la carpeta ${ORG}, y permiso de editor en la carpeta del área donde va a escribir, o solo en la del proyecto si colabora en uno. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
       <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
     </ol>
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
@@ -1719,7 +1719,9 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Claude teclea</dt><dd>Las personas deciden qué dice cada archivo y lo piden; Claude es quien lo escribe, siempre con las mismas reglas. Nadie tiene que aprender el formato.</dd>
       <dt>Durante una sesión</dt><dd>Lo que se produce se guarda en su proyecto en cuanto existe, como borrador. Al cerrar, Claude registra qué se hizo, qué se decidió y qué sigue.</dd>
-      <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
+      <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta, como dueña o como colaboradora, y en los proyectos donde colabora. Si algo es de otra área, Claude lo dice para que se lo pidas a su dueño.</dd>
+      <dt>Dueño y colaboradores</dt><dd>Quien colabora abre y cierra sesión, guarda borradores y registra las decisiones de su propio trabajo con su nombre. Publicar un documento, cambiar las prioridades del área, escribir su panorama y crear o cerrar proyectos es del dueño. Si el dueño no está de acuerdo con una decisión, la reemplaza con una suya o la cuestiona.</dd>
+      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez. Si pasa, Claude se da cuenta al cerrar de que otra persona escribió mientras tanto, relee lo que hay y suma lo suyo encima.</dd>
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y pasos hechos con nota.</dd>
     </dl>
     <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>
@@ -1942,7 +1944,7 @@ function renderArea(a){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
   head.innerHTML = `<div class="eyebrow">Área</div><h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
-    <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span><span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
+    <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span>${(a.colaboran||[]).length?`<span>Colaboran: <b>${a.colaboran.map(esc).join(", ")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card"><p class="sub">${noLeido(a,true).txt}</p></div>`; return; }
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
   const hace30 = addDays(-30);
@@ -1974,7 +1976,7 @@ function renderProj(p){
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo, su alcance o «terminado significa» siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
   head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
-    <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span><span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
+    <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Dueño: <b>${esc(p.dueno)}</b></span>${(p.colaboran||[]).length?`<span>Colaboran: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
   const nP = stepsLive(p).length;

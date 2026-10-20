@@ -12,8 +12,10 @@ La cola ("cambios" en la base de la página) trae cinco tipos:
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
 
 Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> --cuenta <correo> [--dry-run]
-Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo: la puesta
-al día corre con la cuenta de quien la lanza y nadie escribe en el área de otro (contrato, prohibición 4).
+Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo, como dueño o tras
+«colabora:», y los proyectos cuya línea «Colabora:» de «Quién participa» lo lleva: la puesta al día corre con la
+cuenta de quien la lanza y nadie escribe en el área de otro (contrato, prohibición 4). Las prioridades del área
+son solo de su dueño: las que marca quien colabora se quedan para él.
 Sin --cuenta no se aplica nada.
 Salida: JSON por stdout con "aplicados" (ids que ya están en la carpeta y se pueden borrar
 de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual: se quedan para la sesión), "rechazados" (lo que no
@@ -35,28 +37,61 @@ ENTRADA = pathlib.Path(sys.argv[2])
 DRY = "--dry-run" in sys.argv
 CUENTA = (sys.argv[sys.argv.index("--cuenta") + 1] if "--cuenta" in sys.argv and len(sys.argv) > sys.argv.index("--cuenta") + 1 else "").strip().lower()
 
+CORREO = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+def cuentas(celda):
+    """(dueño, colaboran) de una celda Cuenta: «dueno@x · colabora: a@x, b@x», como abrir.py."""
+    partes_ = re.split(r"colabora[n]?\s*:", (celda or "").lower(), maxsplit=1)
+    return set(CORREO.findall(partes_[0])), set(CORREO.findall(partes_[1])) if len(partes_) > 1 else set()
+
 def mis_areas():
-    """Slugs de las áreas de guia.md cuya columna Cuenta lleva el correo de --cuenta."""
+    """(áreas de las que la cuenta es dueña, áreas en las que colabora), según la columna Cuenta de guia.md."""
     try:
         guia = (RAIZ / "guia.md").read_text(encoding="utf-8-sig")
     except OSError:
-        return set()
+        return set(), set()
     m = re.search(r"^## Áreas\s*\n(.*?)(?=^## |\Z)", guia, re.S | re.M)
     if not m or not CUENTA:
-        return set()
-    out, primera = set(), True
+        return set(), set()
+    out, co, primera = set(), set(), True
     for l in m.group(1).split("\n"):
         if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
             continue
         if primera:
             primera = False; continue
         celdas = [c.strip() for c in l.strip().strip("|").split("|")]
-        # igualdad, no subcadena: «ana@» no es «diana@»; y cinco columnas, como abrir.py y el generador
-        if len(celdas) >= 5 and celdas[3].strip().lower() == CUENTA:
-            out.add(celdas[0].strip("`").rstrip("/"))
-    return out
+        # cuentas enteras, no subcadenas: «ana@» no es «diana@»; y cinco columnas, como abrir.py y el generador
+        if len(celdas) >= 5:
+            de, cb = cuentas(celdas[3])
+            if CUENTA in de:
+                out.add(celdas[0].strip("`").rstrip("/"))
+            elif CUENTA in cb:
+                co.add(celdas[0].strip("`").rstrip("/"))
+    return out, co
 
-MIAS = mis_areas()
+MIAS, COLABORA = mis_areas()
+
+def colabora_en_proyecto(area, slug):
+    """La cuenta figura en la línea «Colabora:» de «Quién participa» de ese proyecto."""
+    try:
+        tp = (RAIZ / area / slug / "proyecto.md").read_text(encoding="utf-8-sig")
+    except OSError:
+        return False
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", tp, re.S | re.M)
+    linea = next((l for l in (m.group(1).split("\n") if m else []) if re.match(r"^\s*colabora[n]?\s*:", l, re.I)), "")
+    return CUENTA in set(CORREO.findall(linea.lower()))
+
+def puede(t, c, area):
+    """Las prioridades del área son de su dueño; lo demás lo escribe también quien colabora en el área o en el proyecto."""
+    if not CUENTA or not area:
+        return bool(CUENTA)
+    if area in MIAS:
+        return True
+    if t == "prioridad":
+        return False
+    if area in COLABORA:
+        return True
+    a_, s_ = partes(c)
+    return bool(a_) and colabora_en_proyecto(a_, s_)
 NOMBRE = re.compile(r"[a-z0-9][a-z0-9-]*", re.ASCII)     # nombres de área y de proyecto, como el contrato (sección 6)
 FECHA = re.compile(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}", re.ASCII)
 
@@ -160,16 +195,16 @@ def aplicar_fecha(c):
     return "aplicados", f"{linea.strip()}  →  {nueva.strip()}"
 
 rep = {"aplicados": [], "sin_match": [], "rechazados": [], "errores": [], "para_sesion": [], "para_su_dueno": [],
-       "cuenta": CUENTA, "mis_areas": sorted(MIAS), "dry_run": DRY}
+       "cuenta": CUENTA, "mis_areas": sorted(MIAS), "colabora": sorted(COLABORA), "dry_run": DRY}
 for c in cargar():
     t = c.get("tipo")
     area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
     if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and c.get("proyecto") and not partes(c)[0]:
         rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
         continue
-    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and (not CUENTA or (area and area not in MIAS)):
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and not puede(t, c, area):
         rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
-                                     "detalle": "falta --cuenta" if not CUENTA else f"el área {area or '?'} no es de {CUENTA}"})
+                                     "detalle": "falta --cuenta" if not CUENTA else (f"las prioridades de {area} son de su dueño" if t == "prioridad" and area in COLABORA else f"el área {area or '?'} no es de {CUENTA}")})
         continue
     if t == "fecha":
         try:

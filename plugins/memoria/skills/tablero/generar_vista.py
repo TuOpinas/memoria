@@ -775,6 +775,8 @@ for a in areas_guia:
     texto = leer(carpeta / "area.md")
     area_doc = {
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
+        # quienes colaboran: las cuentas tras «colabora:» en la celda Cuenta de guia.md, que ya lee todo el equipo
+        "colaboran": sorted(set(re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", (re.split(r"colabora[n]?\s*:", a["cuenta"].lower(), maxsplit=1) + [""])[1]))),
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
@@ -833,6 +835,9 @@ for a in areas_guia:
         pdoc["cerrado"] = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", pdoc["estado_actual"]))
         mq = re.search(r"Dueño:\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
+        mco = re.search(r"^\s*Colabora[n]?:\s*(.+)$", pdoc["quien"], re.M | re.I)
+        # los nombres, sin las cuentas entre paréntesis: la cuenta solo sirve para saber quién escribe
+        pdoc["colaboran"] = [x.strip() for x in re.sub(r"\s*\([^)]*@[^)]*\)", "", mco.group(1)).split(",") if x.strip()] if mco else []
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
         ses = parse_sesiones(leer(pc / "sesiones.md"))

@@ -107,8 +107,12 @@ if guia_txt:
         if len(celdas) < 5:
             h("fila de la tabla de áreas con columnas de menos", "guia.md", "«%s» tiene %d y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)" % (slug, len(celdas))); continue
         guia_areas[slug] = {"dueno": celdas[2], "cuenta": celdas[3]}
-        if "@" not in celdas[3]:
-            h("área sin cuenta en guia.md", slug, "la columna Cuenta lleva el correo con el que su dueño trabaja con la IA")
+        _partes = re.split(r"colabora[n]?\s*:", celdas[3].lower(), maxsplit=1)
+        _correo = r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+        if not re.search(_correo, _partes[0]):
+            h("área sin cuenta en guia.md", slug, "la columna Cuenta lleva primero el correo con el que su dueño trabaja con la IA, y después, tras «colabora:», los de quienes colaboran")
+        if len(_partes) > 1 and not re.search(_correo, _partes[1]):
+            h("«colabora:» sin cuentas en guia.md", slug, "detrás de «colabora:» van los correos de quienes colaboran, separados por comas")
         if not os.path.isdir(os.path.join(raiz, slug)):
             h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
     if m and not guia_areas:
