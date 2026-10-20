@@ -346,6 +346,8 @@ Nada más. No se crea carpeta de plantillas, ni archivo de reglas propias en `ba
 
 Tres o cuatro líneas: qué se creó, quién responde por qué, y los siguientes pasos. Permisos en Drive (lectura de la raíz para todo el equipo, escritura en `guia.md` y `base/` para el responsable de contexto, escritura en cada área para su dueño, y administrar la carpeta solo quien se nombró), y rellenar `contexto.md` en una primera sesión con el responsable. Si había documentos de otra estructura, se recuerda que el siguiente paso es `migrar`.
 
+El tablero se sugiere para la segunda sesión, no para esta: sobre una carpeta recién montada dice poco. Cuando ya haya un área con un proyecto y una sesión cerrada, «monta el tablero» enseña algo.
+
 Si quien monta la raíz mantiene el método para otros, se recuerda además abrir en su propia raíz un proyecto con el nombre de esta organización: ahí va el registro de la relación, qué se entregó, cuándo y con qué versión, y si hubo migración, su reporte. Del contenido del trabajo de la organización no entra nada.
 
 ---
