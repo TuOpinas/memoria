@@ -121,8 +121,11 @@ ok(_guard("--version", "9.9.9") == "-", "huella guardada: sin tarea, hay que reg
 ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.split() == ["-", "-"], "huella guardada: con la base vacía (al montar), hay que regenerar")
 # la cola retenida llega a meta/estado
 (TRAB / "ret.json").write_text('["c9", "c3"]', encoding="utf-8")
-correr(TRAB / "copia-completo", TRAB / "dos-ret", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo", "--version", "prueba", "--cola-retenida", TRAB / "ret.json")
-ok(json.loads((TRAB / "dos-ret" / "meta" / "estado.json").read_text(encoding="utf-8")).get("cola_retenida") == ["c3", "c9"], "lo que la sincronización deja en la cola a propósito llega a meta/estado")
+(TRAB / "aj.json").write_text('["c9"]', encoding="utf-8")
+correr(TRAB / "copia-completo", TRAB / "dos-ret", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo", "--version", "prueba", "--cola-retenida", TRAB / "ret.json", "--cola-ajena", TRAB / "aj.json")
+_est = json.loads((TRAB / "dos-ret" / "meta" / "estado.json").read_text(encoding="utf-8"))
+ok(_est.get("cola_retenida") == ["c3", "c9"], "lo que la sincronización deja en la cola a propósito llega a meta/estado")
+ok(_est.get("cola_ajena") == ["c9"], "lo que es de un área de otra cuenta llega aparte, para que la página diga a quién pasárselo")
 
 # huella por proyecto: lo que no cambió no se trae y su documento sale de la base; el resultado es el mismo que rehacerlo todo
 for modo in ("completo", "publico"):

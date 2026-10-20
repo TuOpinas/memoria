@@ -30,5 +30,7 @@ ok(cuentas("ana@")[0] == set(), "una cuenta incompleta no es la de nadie")
 ok(cuentas("o'brien@x.com")[0] == {"o'brien@x.com"} and cuentas("ana@empresa")[0] == {"ana@empresa"}, "correos con apóstrofo y dominios sin punto")
 q = "Dueño: Ana\nColabora: Dani (dani@x.com)\n- **Colabora:** Eva (eva@x.com)\nColabora : Fer (fer@x.com)\nConsumen esto: Luis (luis@x.com)"
 ok(colaboran_en(q) == {"dani@x.com", "eva@x.com", "fer@x.com"}, "todas las líneas «Colabora:», con viñeta, negrita o espacio; «Consumen esto» no da permiso")
+met = (PL / "metodo.md").read_text(encoding="utf-8")
+ok(not re.search(r"^#{3,} 20\d\d-", met, re.M), "metodo.md: los ejemplos de registro conservan su «## AAAA-MM-DD» dentro de los bloques de código")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

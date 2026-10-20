@@ -1,6 +1,6 @@
 ---
 name: tablero
-description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia sola cuando su dueno la abre despues de cerrar sesiones. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar' o pregunten por que el tablero no muestra algo.
+description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia sola cuando su dueno la abre despues de cerrar sesiones. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
 ---
 
 # Tablero
@@ -90,6 +90,8 @@ Cuando sale una versión nueva del plugin, la página del tablero y el generador
 3. Si el tablero no tiene tarea, se crea la del botón como en el paso 2 de montar. Si la tiene (cada mañana o solo el botón), se compara su prompt con `tarea-prompt.md` sustituido. Si cambió (una tarea que todavía lleve `tarea.md` entero como prompt, siempre), se pide reescribirlo con `update_trigger`, y desde entonces las versiones nuevas llegan sin volver a pedirlo; en una tarea ligada a una computadora eso solo surte efecto cuando la persona lo aprueba en una conversación de la app ligada a esa misma computadora, y hasta entonces no cambia nada: se dice, no se rodea, y nunca se borra la tarea para crear otra, porque se pierde su historial y su computadora.
 4. **Una tarea con horario** se queda donde está, pero se pregunta en una línea qué se quiere ahora que el tablero se pone al día solo cuando su dueño lo abre después de cerrar sesiones: que siga cada mañana o que quede solo el botón. Si es solo el botón, se desactiva con `update_trigger` (`enabled: false`), nunca se borra porque se pierde su historial, y se crea una sin horario como dice «La tarea del botón y la diaria». Si sigue, se recuerda revisar su modelo en sus ajustes.
 5. Se sincroniza una vez (abajo) para que `meta/estado` lleve la versión nueva y la banda de desfase desaparezca.
+
+**Cambié de computadora.** La tarea del botón está ligada a la computadora donde se creó y a la ruta de la raíz en ella; con otra, cada pulsación falla aunque la nueva esté encendida. Desde una conversación de la app en la computadora nueva, con la raíz conectada: se busca la tarea por su nombre (`list_triggers`), se cambia con `update_trigger` su ruta (`{{RUTA_RAIZ}}` del prompt y `folders`) y se aprueba en la app, que la liga a esta computadora. Nunca se borra para crear otra, porque se pierde su historial. Después se sincroniza una vez para comprobarlo.
 
 ## Sincronizar
 

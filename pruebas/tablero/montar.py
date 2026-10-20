@@ -4,7 +4,11 @@ Uso: montar.py <vista.html> <salida-del-generador> <página.html> [--cierres] [-
 --cierres: con dos cierres de sesión posteriores a la última sincronización, para probar que la página se pone al día sola.
 --lector: quien abre la página es un lector (ni dueño ni editor), y la cola y los cierres traen cosas de proyectos que
 el tablero no muestra (restringidos o fuera del índice), escritas por una sesión sin filtrar: nada de eso debe verse."""
-import json, glob, os, sys
+import json, glob, os, sys, datetime
+# cierres posteriores a la sincronización pero no en el futuro: la página no cuenta una marca con la hora adelantada
+_ahora = datetime.datetime.now(datetime.timezone.utc)
+H1 = (_ahora + datetime.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%MZ")
+H2 = (_ahora + datetime.timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%MZ")
 vista, salida, pagina = sys.argv[1:4]
 D = {}
 for f in glob.glob(os.path.join(salida, "*", "*.json")):
@@ -28,13 +32,13 @@ if "--lector" in sys.argv:
         "r3": {"tipo": "nota", "area": "personas", "nota": "SECRETO-COLA panorama de personas", "creado": "2026-10-02T13:20:00-06:00"},
     })
     D["cierres"] = {
-        "personas--nomina--209901010900": {"proyecto": "personas--nomina", "nombre": "SECRETO-TITULO Nómina", "hora": "2099-01-01T09:00-06:00", "cuenta": "beto@ejemplo.test"},
-        "ventas--cuentas--209901011000": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2099-01-01T10:00-06:00", "cuenta": "ana@ejemplo.test"},
+        "personas--nomina--209901010900": {"proyecto": "personas--nomina", "nombre": "SECRETO-TITULO Nómina", "hora": H1, "cuenta": "beto@ejemplo.test"},
+        "ventas--cuentas--209901011000": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": H2, "cuenta": "ana@ejemplo.test"},
     }
 if "--cierres" in sys.argv:
     D["cierres"] = {
-        "ventas--cuentas--209901010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2099-01-01T09:00-06:00", "cuenta": "ana@ejemplo.test"},
-        "operacion--soporte--209901011000": {"proyecto": "operacion--soporte", "nombre": "Soporte", "hora": "2099-01-01T10:00-06:00", "cuenta": "ana@ejemplo.test"},
+        "ventas--cuentas--209901010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": H1, "cuenta": "ana@ejemplo.test"},
+        "operacion--soporte--209901011000": {"proyecto": "operacion--soporte", "nombre": "Soporte", "hora": H2, "cuenta": "ana@ejemplo.test"},
         # uno ya recogido por una sincronización anterior: no cuenta
         "ventas--cuentas--200001010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2000-01-01T09:00-06:00", "cuenta": "ana@ejemplo.test"},
     }

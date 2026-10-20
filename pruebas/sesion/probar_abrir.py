@@ -5,7 +5,7 @@ Uso: python3 pruebas/sesion/probar_abrir.py
 Copia la raíz a una carpeta temporal con fechas de archivo fijas (todo del 2026-08-01 salvo un entregable tocado hoy),
 como probar.sh del tablero, y comprueba lo que sale y, sobre todo, lo que no debe salir.
 """
-import os, pathlib, shutil, subprocess, sys, tempfile, time
+import os, pathlib, re, shutil, subprocess, sys, tempfile, time
 
 AQUI = pathlib.Path(__file__).resolve().parent
 ABRIR = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "abrir.py"
@@ -108,6 +108,25 @@ c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella f8f1
 ok("Veredicto: AL DIA" in o, "misma versión y misma huella: AL DIA")
 c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella 000000")
 ok("Veredicto: MISMA VERSION, HUELLA DISTINTA" in o, "misma versión con otra huella: no se toca")
+print("Avisos entre áreas, respuestas y responsable de contexto (1.16)")
+c, os_ = abrir("operacion/soporte", "--cuenta", "ana@ejemplo.test")
+ok("Respondieron tu cuestionamiento operacion/soporte#2026-09-25" in os_.split("=== AVISOS")[1], "a quien cuestionó le llega la respuesta del dueño")
+dec = R / "ventas/cuentas/decisiones.md"
+t_ = dec.read_text(encoding="utf-8"); i_ = t_.index("\n## ") + 1
+dec.write_text(t_[:i_] + "## 2026-10-12 · Todo soporte recibe copia de las propuestas\nDecidió: Ana Prueba\nPor qué: prueba.\nAfecta a: operacion/ (el área entera)\n\n## 2026-10-11 · Otra que no es para soporte\nDecidió: Ana Prueba\nPor qué: prueba.\nAfecta a: operacionx/ · operacion/soportex\n\n" + t_[i_:], encoding="utf-8")
+c, oa_ = abrir("operacion/soporte", "--cuenta", "ana@ejemplo.test")
+av_ = oa_.split("=== AVISOS")[1]
+ok("ventas/cuentas#2026-10-12" in av_ and "ventas/cuentas#2026-10-11" not in av_, "una decisión que apunta al área entera avisa en sus proyectos; un nombre parecido, no")
+g = R / "guia.md"
+g.write_text(re.sub(r"^Contexto común.*$", "Contexto común (`guia.md` y `base/`): Carla Prueba (carla@ejemplo.test).\nZona horaria: Asia/Tokyo", g.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+c, or_ = abrir("ventas/cuentas", "--cuenta", "carla@ejemplo.test")
+ok(c == 0 and "es la del responsable de contexto" in or_, "el responsable de contexto con su cuenta en «Contexto común» se reconoce aunque no sea dueño de ningún área")
+c, on_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok("zona horaria" not in on_.split("=== GUIA")[0] + on_.split("=== PREMISAS")[0].split("=== GUIA")[-1].split("\n")[0], "una zona válida no avisa")
+g.write_text(g.read_text(encoding="utf-8").replace("Zona horaria: Asia/Tokyo", "- **Zona horaria:** `Europe/Madridd`"), encoding="utf-8")
+c, oz_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and "(aviso: la zona horaria «Europe/Madridd» de guia.md no es una zona válida" in oz_, "una zona mal escrita, aun con viñeta, negrita y comillas, se avisa y se usa la de siempre")
+ok("es la del responsable de contexto" not in on_, "con cuenta en «Contexto común», ya no basta ser dueño de un área con el mismo nombre")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

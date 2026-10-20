@@ -145,6 +145,15 @@ if guia_txt:
         h("tabla de áreas vacía", "guia.md")
     if not re.search(r"^Contexto común", guia_txt, re.M):
         h("guia.md sin «Contexto común»", "guia.md", "la línea que dice quién mantiene guia.md y base/")
+    _z = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", guia_txt, re.M | re.I)
+    if _z:
+        try:
+            from zoneinfo import ZoneInfo
+            ZoneInfo(_z.group(1))
+        except ImportError:
+            pass
+        except Exception:
+            h("zona horaria no válida en guia.md", "guia.md", "«%s»: tiene que ser una zona como America/Mexico_City o Europe/Madrid" % _z.group(1))
 
 # --- áreas y proyectos ---
 for area, aruta in areas:

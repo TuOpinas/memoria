@@ -32,11 +32,29 @@ PLUGIN = None
 if "--plugin" in args:
     i = args.index("--plugin"); PLUGIN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args else None
-try:
-    from zoneinfo import ZoneInfo
-    TZ = ZoneInfo("America/Mexico_City")
-except Exception:
-    TZ = None
+ZONA_AVISO = None
+def zona_horaria(raiz, defecto="America/Mexico_City"):
+    """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas
+    invertidas, y UTC o Etc/GMT+5), si la hay; si no, Ciudad de México. Una zona que no vale se avisa en ZONA_AVISO."""
+    global ZONA_AVISO
+    try:
+        m = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", (raiz / "guia.md").read_text(encoding="utf-8-sig"), re.M | re.I)
+    except OSError:
+        m = None
+    try:
+        from zoneinfo import ZoneInfo
+    except Exception:
+        return None
+    if m and not m.group(1).startswith("["):
+        try:
+            return ZoneInfo(m.group(1))
+        except Exception:
+            ZONA_AVISO = f"la zona horaria «{m.group(1)}» de guia.md no es una zona válida (por ejemplo America/Mexico_City o Europe/Madrid); se usa {defecto}"
+    try:
+        return ZoneInfo(defecto)
+    except Exception:
+        return None
+TZ = zona_horaria(pathlib.Path(sys.argv[1]))
 HOY = datetime.datetime.now(TZ).date()
 FECHA = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
 
@@ -111,7 +129,7 @@ def recientes(texto, n):
 
 def mtime(p):
     try:
-        return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date()   # el día en Ciudad de México, como el tablero
+        return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date()   # el día en la zona de la organización, como el tablero
     except OSError:
         return None
 
@@ -199,15 +217,22 @@ for l in filas:
         areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": "restring" in c[4].lower()})
     else:
         print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
+if ZONA_AVISO:
+    print(f"(aviso: {ZONA_AVISO})")
 if not areas:
     print("(aviso: no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta; que el responsable de contexto revise guia.md)")
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
-# «Contexto común (`guia.md` y `base/`): Nombre.»); la cuenta del responsable es la de las áreas de las que es dueño
+# «Contexto común (`guia.md` y `base/`): Nombre (correo).»); sin correo, la cuenta del responsable es la de las áreas
+# de las que es dueño
 resp_contexto = ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
-es_resp = bool(CUENTA and resp_contexto) and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)
+# la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
+# como antes, es la de las áreas de las que esa persona es dueña
+cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
+resp_contexto = re.sub(r"\s*\([^)]*\)", "", resp_contexto).strip()
+es_resp = bool(CUENTA) and (CUENTA in cuenta_resp or (bool(resp_contexto) and not cuenta_resp and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)))
 
 premisas = []
 for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
@@ -403,7 +428,10 @@ def proyectos_legibles():
 
 
 respuestas, cuestiona, afecta = set(), [], []
+mis_cuestionamientos, me_responden = {}, []
 patron_proy = re.compile(r"(?<![\w/-])" + re.escape(ACTIVO) + r"(?![\w-])")
+# un área entera como destino: «operacion/» o «operacion/ (el área entera)», nunca «operacion/soporte»
+patron_area = re.compile(r"(?<![\w/-])" + re.escape(area_activa) + r"/(?![\w-])")
 for a_slug, slug, carpeta in proyectos_legibles():
     t = leer(carpeta / "decisiones.md")
     if not t:
@@ -426,13 +454,20 @@ for a_slug, slug, carpeta in proyectos_legibles():
             for m in re.finditer(r"premisa\s+(P\d+)", campos["Responde a"], re.I):
                 respuestas.add(("premisa", m.group(1).upper()))
         if origen == ACTIVO:
+            if campos["Cuestiona a"] and e["id"]:
+                mp_ = re.search(r"premisa\s+(P\d+)", campos["Cuestiona a"], re.I)
+                mis_cuestionamientos[e["id"]] = (e["cab"], e["fecha"], mp_.group(1).upper() if mp_ else None)
             continue
+        if campos["Responde a"]:
+            for m in re.finditer(r"([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", campos["Responde a"]):
+                if m.group(1) == ACTIVO:
+                    me_responden.append((origen, e, campos, m.group(2)))
         if campos["Cuestiona a"]:
             m = re.search(r"([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#", campos["Cuestiona a"])
             mp = re.search(r"premisa\s+(P\d+)", campos["Cuestiona a"], re.I)
             if (m and m.group(1) == ACTIVO) or (mp and es_resp):
                 cuestiona.append((origen, e, campos, ("premisa", mp.group(1).upper()) if mp and not m else None))
-        if campos["Afecta a"] and patron_proy.search(campos["Afecta a"]):
+        if campos["Afecta a"] and (patron_proy.search(campos["Afecta a"]) or patron_area.search(campos["Afecta a"])):
             afecta.append((origen, e, campos))
 
 # un cuestionamiento sigue abierto si nadie respondió a su identificador; una premisa nueva que reemplaza a la
@@ -454,6 +489,19 @@ afecta = [x for x in afecta if x[1]["fecha"]]
 nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]
 for origen, e, c in sorted(nuevos, key=lambda x: x[1]["fecha"], reverse=True):
     avisos.append(f"Le afecta una decisión de {origen} ({origen}#{e['id']}): «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Afecta a: {c['Afecta a'][:300]}")
+# a quien cuestionó: la respuesta del dueño, si llegó después de su última sesión
+for origen, e, c, cid in me_responden:
+    if cid not in mis_cuestionamientos:
+        continue   # «Responde a» apunta a una entrada de este proyecto que no es un cuestionamiento
+    if not e["fecha"]:
+        avisos.append(f"Una entrada sin fecha válida de {origen} responde a tu cuestionamiento {ACTIVO}#{cid} («{e['cab']}»): conviene que su dueño la registre con fecha.")
+    elif not ultima_real or e["fecha"] >= ultima_real:
+        avisos.insert(0, f"Respondieron tu cuestionamiento {ACTIVO}#{cid} («{mis_cuestionamientos[cid][0]}»): {origen}#{e['id']}, «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Por qué: {c['Por qué'][:300]}")
+# una premisa cuestionada desde aquí y reemplazada después por otra: también es una respuesta
+for cid, (cab_, fecha_, prem_) in mis_cuestionamientos.items():
+    if prem_ and prem_ in reemplazo_fecha and reemplazo_fecha[prem_] != "9999" and reemplazo_fecha[prem_] >= fecha_ and (not ultima_real or reemplazo_fecha[prem_] >= ultima_real):
+        nueva = next((l for pid, l, r, f in premisas if r == prem_), "")
+        avisos.insert(0, f"Respondieron tu cuestionamiento {ACTIVO}#{cid} («{cab_}»): la premisa {prem_} se reemplazó el {reemplazo_fecha[prem_]}: {nueva}")
 for origen, e, c in sin_fecha:
     avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su dueño la revise.")
 viejos = len(afecta) - len(nuevos)

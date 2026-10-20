@@ -60,7 +60,7 @@ Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está 
 3. ¿Qué sistemas usáis a diario? Nombre y para qué, aunque sea una lista rápida
 4. ¿Hay ya una primera área con la que empezar, y de quién es?
 
-Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el dueño de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción.
+Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el dueño de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
 
 ## Qué escribo y dónde
 
@@ -89,9 +89,10 @@ las prioridades y el panorama del área son de su dueño.
 
 ## Quién responde por qué
 
-Contexto común (`guia.md` y `base/`): [nombre y apellido].
+Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
 Cada área, su dueño de la tabla de arriba.
+Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 
 ## Reglas propias de la casa
 
@@ -107,7 +108,10 @@ ninguno.
 **Paso 1. Comprueba que tu computadora sirve**
 
 Necesitas una Mac con macOS 14 (Sonoma) o más nuevo, o una computadora con Windows 10 o
-Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise). En Windows,
+Windows 11, y una cuenta de Claude de pago (Pro, Max, Team o Enterprise). La computadora
+tiene que poder conectarse a GitHub (github.com y raw.githubusercontent.com): Claude descarga
+de ahí sus herramientas en cada sesión. Si tu organización filtra internet, pide que los
+dejen pasar. En Windows,
 mejor la edición Pro, Enterprise o Education: en Windows Home la función de carpetas
 puede no funcionar, y el verificador de abajo te lo dice. Deja también espacio libre en
 el disco: la primera vez la app descarga más de 1 GB, y con el disco lleno no se instala.
@@ -121,6 +125,9 @@ el disco: la primera vez la app descarga más de 1 GB, y con el disco lleno no s
 3. Si dice **This computer is ready for Cowork**, sigue al paso 2.
 4. Si dice otra cosa, haz una captura de pantalla y mándasela a quien administra la
    carpeta (lo dice «Quién responde por qué», arriba). No sigas hasta resolverlo.
+5. Mira cuánto espacio libre te queda: en Windows, en el Explorador de archivos, **Este
+   equipo**; en Mac, menú Apple › **Configuración del Sistema** › **General** ›
+   **Almacenamiento**. Si el disco está casi lleno, libera espacio antes de seguir.
 
 **Recomendado: un lector de archivos Markdown**
 
@@ -154,24 +161,22 @@ Todo se hace en la app de Claude para computadora, no en el navegador ni en el t
 
 **Paso 3. Ten la carpeta en tu computadora**
 
-La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet.
+La carpeta de [Organización] tiene que estar en tu computadora, no solo en internet. Lo normal
+es que sea una unidad compartida de Google Drive:
 
-1. Si vive en Google Drive, instala **Google Drive para escritorio** (google.com/drive/download)
-   e inicia sesión con el correo con el que te compartieron la carpeta.
-2. Si es una unidad compartida, aparece sola en tu computadora, dentro de Google Drive, en
-   **Unidades compartidas**. Si es una carpeta que alguien te compartió y no la ves, entra en
-   drive.google.com, búscala en **Compartido conmigo** y añádela a tu unidad.
-3. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), no en la web.
-   Haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
-   **Make available offline**). Así sus archivos están siempre en tu computadora y
-   Claude puede leerlos.
-4. En Windows, Google Drive puede mostrar sus carpetas en una unidad aparte (por ejemplo,
-   G:) que Claude no consigue conectar. Si te pasa en el paso 4, en las preferencias de
-   Google Drive elige que guarde una copia de tus archivos en la computadora y conecta
-   la carpeta desde esa copia. Eso solo vale para carpetas de tu unidad: una unidad
-   compartida no se copia así. Si te pasa con una unidad compartida, avisa a quien
-   administra la carpeta.
-5. Si no la ves, pídele acceso a quien administra la carpeta.
+1. Instala **Google Drive para escritorio** (google.com/drive/download) e inicia sesión con
+   el correo con el que te dieron acceso.
+2. La unidad aparece sola en tu computadora, dentro de Google Drive, en **Unidades
+   compartidas**. Búscala en el Finder (Mac) o en el Explorador de archivos (Windows), no en
+   la web, haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
+   **Make available offline**). Espera a que se descarguen sus archivos.
+3. En Windows, Google Drive la muestra en una unidad aparte, con una letra (por ejemplo,
+   G:). Si en el paso 4 Claude no consigue conectarla, avisa a quien administra la carpeta.
+4. Si no la ves, pídele acceso a quien administra la carpeta.
+
+Si en tu organización no es una unidad compartida sino una carpeta que alguien te compartió,
+entra en drive.google.com, búscala en **Compartido conmigo**, añádela a tu unidad y márcala
+igual **Disponible sin conexión**.
 
 **Paso 4. Crea tu proyecto y conecta la carpeta**
 
@@ -182,7 +187,9 @@ La carpeta de [Organización] tiene que estar en tu computadora, no solo en inte
    elijas la carpeta de tu área: Claude necesita ver todas para decirte qué se sabe ya.
    Conéctala en el proyecto, no en una conversación suelta: así la tienen todas las
    conversaciones del proyecto.
-   Si no te la pide al crear el proyecto, añádela con el botón «+».
+   Según tu versión de Claude, se la asocias al crearlo o después, desde el proyecto. Si te
+   equivocas de carpeta, se puede quitar y cambiar. El proyecto vive en tu computadora: no se
+   comparte con nadie, y cada persona crea el suyo.
 
 4. Si trabajas con código, sus repositorios van en otra carpeta de tu computadora (por
    ejemplo, una carpeta Code con todos los repositorios de la organización dentro), nunca
@@ -333,6 +340,8 @@ Nada más. No se crea carpeta de plantillas, ni archivo de reglas propias en `ba
 
 Tres o cuatro líneas: qué se creó, quién responde por qué, y los siguientes pasos. Permisos en Drive (lectura de la raíz para todo el equipo, escritura en `guia.md` y `base/` para el responsable de contexto, escritura en cada área para su dueño, y administrar la carpeta solo quien se nombró), y rellenar `contexto.md` en una primera sesión con el responsable. Si había documentos de otra estructura, se recuerda que el siguiente paso es `migrar`.
 
+El tablero se sugiere para la segunda sesión, no para esta: sobre una carpeta recién montada dice poco. Cuando ya haya un área con un proyecto y una sesión cerrada, «monta el tablero» enseña algo.
+
 Si quien monta la raíz mantiene el método para otros, se recuerda además abrir en su propia raíz un proyecto con el nombre de esta organización: ahí va el registro de la relación, qué se entregó, cuándo y con qué versión, y si hubo migración, su reporte. Del contenido del trabajo de la organización no entra nada.
 
 ---
@@ -422,6 +431,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 Trabajamos en: arranque del proyecto.
 Avances: encuadre definido con Ana Pérez.
 Pendiente: reunir los exports del ERP.
+Sesión de: Ana Pérez · plugin 1.16.0
 ```
 
 **5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías.
