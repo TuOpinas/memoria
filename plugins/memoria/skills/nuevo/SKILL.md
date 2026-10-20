@@ -60,7 +60,7 @@ Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está 
 3. ¿Qué sistemas usáis a diario? Nombre y para qué, aunque sea una lista rápida
 4. ¿Hay ya una primera área con la que empezar, y de quién es?
 
-Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el dueño de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción.
+Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el dueño de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
 
 ## Qué escribo y dónde
 
@@ -92,7 +92,7 @@ las prioridades y el panorama del área son de su dueño.
 Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
 Cada área, su dueño de la tabla de arriba.
-Zona horaria: [la de la organización, por ejemplo America/Mexico_City]
+Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 
 ## Reglas propias de la casa
 
@@ -437,6 +437,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 Trabajamos en: arranque del proyecto.
 Avances: encuadre definido con Ana Pérez.
 Pendiente: reunir los exports del ERP.
+Sesión de: Ana Pérez · plugin 1.16.0
 ```
 
 **5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías.

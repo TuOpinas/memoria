@@ -883,7 +883,7 @@ function regNecesita(p){
 // y el dueño no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
 function ajenaAviso(p){
   const aj = new Set((META && META.cola_ajena) || []), n = CAMBIOS.filter(c => c.proyecto === p.id && aj.has(c.id)).length;
-  return n ? `<p class="hint">${n===1?"Hay 1 cosa marcada":`Hay ${n} cosas marcadas`} aquí que no se escriben solas: este proyecto es de ${esc(p.dueno||"otra persona")}, y su puesta al día no lee este tablero. Díselo, o pídele que lo marque en el suyo.</p>` : "";
+  return n ? `<p class="hint">${n===1?"Hay 1 cosa marcada":`Hay ${n} cosas marcadas`} aquí que no se escriben solas: el área de este proyecto es de ${esc(((AREAS||[]).find(a=>a.slug===p.area)||{}).dueno||p.dueno||"otra persona")}, y su puesta al día no lee este tablero. Díselo, o pídele que lo marque en el suyo.</p>` : "";
 }
 function regularizar(p){
   const r = regNecesita(p); if(!r) return "";
@@ -972,7 +972,7 @@ const tagDe = p => p.area+"/"+p.slug;
 function afectan(p){
   const esc_ = s => s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   // el proyecto, o su área entera («operacion/» o «operacion/ (el área entera)»), como abrir.py
-  const re = new RegExp("(^|[\\s(·`/.])("+esc_(tagDe(p))+"(?![\\w-])|"+esc_(p.area+"/")+"(?![\\w-]))");
+  const re = new RegExp("(?<![\\w/-])("+esc_(tagDe(p))+"(?![\\w-])|"+esc_(p.area+"/")+"(?![\\w-]))");
   const out = [];
   for(const q of PROJ){ if(q.id===p.id || q.restringido) continue; for(const d of (q.decisiones||[])) if(re.test(d.afecta||"")) out.push({q, d, nueva: !p.ultima_sesion || (d.fecha||"") >= p.ultima_sesion}); }
   return out.sort((a,b)=>(b.d.fecha||"").localeCompare(a.d.fecha||""));

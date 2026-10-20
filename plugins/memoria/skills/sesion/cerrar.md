@@ -26,7 +26,7 @@ Pendiente: confirmar con Finanzas el tope de 5.000 MXN.
 Sesión de: Ana Pérez · plugin 1.16.0
 ```
 
-Tres líneas, más la de quién trabajó y con qué versión del plugin (la de `plugin.json`, la misma que la llamada 1 de abrir). Si una sesión no cabe en tres líneas, es que hubo decisiones y esas van a su archivo.
+Tres líneas, más la de quién trabajó y con qué versión del plugin (la de `plugin.json`, la misma que la llamada 1 de abrir; quien trabaja sin el plugin escribe con qué lo hizo, por ejemplo «sin plugin, Gemini»). Si una sesión no cabe en tres líneas, es que hubo decisiones y esas van a su archivo.
 
 **3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas y se pide confirmación explícita. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. Formato:
 

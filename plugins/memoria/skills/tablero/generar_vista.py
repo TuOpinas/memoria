@@ -58,18 +58,26 @@ def colaboran_en(quien):
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
 RAIZ = pathlib.Path(sys.argv[1])
+ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
-    """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md, si la hay; si no, Ciudad de México."""
+    """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas
+    invertidas, y UTC o Etc/GMT+5), si la hay; si no, Ciudad de México. Una zona que no vale se avisa en ZONA_AVISO."""
+    global ZONA_AVISO
     try:
-        m = re.search(r"^\s*Zona horaria:\s*([A-Za-z_]+(?:/[A-Za-z_+-]+){1,2})", (raiz / "guia.md").read_text(encoding="utf-8-sig"), re.M)
+        m = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", (raiz / "guia.md").read_text(encoding="utf-8-sig"), re.M | re.I)
     except OSError:
         m = None
     try:
         from zoneinfo import ZoneInfo
+    except Exception:
+        return None
+    if m and not m.group(1).startswith("["):
         try:
-            return ZoneInfo(m.group(1)) if m else ZoneInfo(defecto)
+            return ZoneInfo(m.group(1))
         except Exception:
-            return ZoneInfo(defecto)
+            ZONA_AVISO = f"la zona horaria «{m.group(1)}» de guia.md no es una zona válida (por ejemplo America/Mexico_City o Europe/Madrid); se usa {defecto}"
+    try:
+        return ZoneInfo(defecto)
     except Exception:
         return None
 TZ = zona_horaria(RAIZ) or datetime.timezone.utc
@@ -255,6 +263,8 @@ for l in tabla.split("\n"):
     areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[2], "cuenta": celdas[3], "lectores": celdas[4]})
     if cuentas(celdas[3])[2]:
         guia_avisos.append(f"la celda Cuenta de «{slug}» en guia.md: {cuentas(celdas[3])[2]}")
+if ZONA_AVISO:
+    guia_avisos.append(ZONA_AVISO)
 if not areas_guia and guia:
     guia_avisos.append("no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta")
 
@@ -267,8 +277,8 @@ for l in quien.split("\n"):
     if l.lower().startswith("administra"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
 # los nombres, sin la cuenta entre paréntesis: el tablero no lleva correos
-contexto_comun = CORREO.sub("", re.sub(r"\s*\([^)]*\)", "", contexto_comun)).strip(" .")
-administra = CORREO.sub("", re.sub(r"\s*\([^)]*\)", "", administra)).strip(" .")
+contexto_comun = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", contexto_comun)).strip(" .")
+administra = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", administra)).strip(" .")
 
 # ---------- premisas: el único archivo de base/ que lee el tablero ----------
 premisas = []
@@ -376,7 +386,7 @@ def parse_sesiones(texto):
             elif low.startswith("pendiente:"):
                 actual = "pendiente"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("sesión de:") or low.startswith("sesion de:"):
-                actual = None; campos["quien"] = s.split(":", 1)[1].strip()   # quién y con qué plugin: cuerpo, no cabecera
+                actual = None   # quién y con qué plugin: cuerpo del área, que la página no usa; no viaja a la base
             elif actual and s:
                 campos[actual] += "\n" + s
         out.append({"fecha": fecha, "titulo": titulo, **campos})
@@ -408,7 +418,7 @@ def parse_indice_proyectos(texto_area):
     return idx
 
 def fecha_de(p):
-    """Fecha de modificación de p (día, hora de Ciudad de México), o None."""
+    """Fecha de modificación de p (día, en la zona de la organización), o None."""
     try:
         return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date().isoformat()
     except OSError:
@@ -509,7 +519,7 @@ def naturaleza(texto):
 RUIDO = set("claude cowork memoria pro google workspace mac ahora después".split())
 # un dueño solo es ruido si lleva la mitad de las áreas o más: entonces sale en casi todos los pasos y no distingue
 _duenos = [a["dueno"] for a in areas_guia]
-RUIDO |= {w.lower() for w in re.findall(r"[\wáéíóúñ]+", org + " " + " ".join(d for d in set(_duenos) if _duenos.count(d) * 2 >= len(_duenos))) if len(w) > 2}
+RUIDO |= {w.lower() for w in re.findall(r"[\wáéíóúñ]+", org + " " + " ".join(d for d in set(_duenos) if len(_duenos) > 1 and _duenos.count(d) * 2 > len(_duenos))) if len(w) > 2}
 def tokens_tema(texto):
     """Tokens que sirven para agrupar pasos de proyectos distintos: entregables citados, nombres propios, herramientas y roles."""
     toks = set()
@@ -526,8 +536,9 @@ def tokens_tema(texto):
     for rol in ("abogado", "contador", "notario", "banco"):
         if re.search(r"\b" + rol + r"\b", sin_cod.lower()): toks.add(rol)
     for tool in ("posthog", "linkedin", "github", "gitlab", "cloudflare", "drive", "odoo", "whatsapp", "gmail", "outlook", "slack", "teams", "jira", "clickup", "figma", "notion", "hubspot", "salesforce", "sap", "shopify", "stripe", "aws"):
-        if tool in sin_cod.lower(): toks.add(tool)
-    return {t for t in toks if t not in RUIDO}
+        if re.search(r"\b" + re.escape(tool) + r"\b", sin_cod.lower()): toks.add(tool)
+    # un token de varias palabras es ruido si lo es alguna de ellas («ana pérez» con «ana» de dueña de casi todo)
+    return {t for t in toks if t not in RUIDO and not (set(t.split()) & RUIDO)}
 
 
 PLAZO_ANTES = r"(antes del|antes de|para el|hasta el|a más tardar el|fecha límite:?|vence el|vencido el|vencida el|el próximo|el lunes|el martes|el miércoles|el jueves|el viernes|el sábado|el domingo|lunes|martes|miércoles|jueves|viernes|esperar (?:al|hasta el)|en la revisión del|revisión (?:trimestral|anual)? ?del|el)\s*"

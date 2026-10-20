@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.16.0 · huella 9ab0e06 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.16.0 · huella 73b46d3 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -340,7 +340,7 @@ Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decid
 
 Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir nada más. El análisis que respalda la decisión (opciones, tablas, cifras) no va en la entrada: va a un entregable del proyecto y la entrada lo cita en `Afecta a` o en `Por qué`.
 
-`Afecta a` lleva rutas relativas al proyecto para lo que está dentro de él, y `area/proyecto` cuando la decisión toca a otro proyecto de la raíz. Cada destino admite detrás un paréntesis corto con la consecuencia concreta; sin él, quien recibe el aviso sabe que algo le toca pero no qué. Los destinos se separan con `·` y la línea no se parte en varias.
+`Afecta a` lleva rutas relativas al proyecto para lo que está dentro de él, y `area/proyecto` cuando la decisión toca a otro proyecto de la raíz, o `area/` cuando toca a un área entera, que avisa en cualquiera de sus proyectos. Cada destino admite detrás un paréntesis corto con la consecuencia concreta; sin él, quien recibe el aviso sabe que algo le toca pero no qué. Los destinos se separan con `·` y la línea no se parte en varias.
 
 ### Formato de `sesiones.md`
 
@@ -362,7 +362,7 @@ Las entradas escritas antes de adoptar este formato se dejan tal cual; el format
 
 ### Aviso entre áreas
 
-La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su dueño.
+La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo o su área entera (`area/`) (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado y avisan a quien lo planteó, en su proyecto, de que le respondieron. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su dueño.
 
 ## 5. Cabecera
 
@@ -722,7 +722,7 @@ Lo que hace cada una, en una línea. Con el plugin instalado se activan solas po
 - **revisar**: Revisa un entregable, detecta lo que quedo desfasado y lo publica de borrador a vigente. Usala con 'revisa X', 'esto esta listo?', 'que esta desactualizado?', 'pasalo a vigente' o 'ya lo aprobo...'.
 - **donde-va**: Coloca cualquier material que llegue en el sitio correcto de la estructura. Usala cuando pregunten 'donde guardo esto?', peguen un documento o un enlace sin decir donde va, aparezca un archivo suelto en la raiz, o digan 'ordena Claude outputs'.
 - **consulta**: Responde preguntas sobre lo que la organizacion ya sabe, leyendo solo la superficie publica de la raiz y sin escribir nada. Usala cuando pregunten 'que sabemos de X?', 'alguien ya trabajo esto?', 'que se decidio sobre...?', 'hay algo hecho sobre...?' o 'quien lleva...?'.
-- **tablero**: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia sola cuando su dueno la abre despues de cerrar sesiones. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar' o pregunten por que el tablero no muestra algo.
+- **tablero**: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia sola cuando su dueno la abre despues de cerrar sesiones. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
 - **migrar**: Adopta una carpeta que sigue otra estructura y la trae al metodo sin borrar los originales. Usala cuando digan 'migra esta carpeta', 'trae esto al metodo', 'adopta lo que hay en...', 'convierte estos documentos a la estructura' o cuando aparezca una carpeta con ADR, logs de sesion o carpetas numeradas.
 - **director**: Actua como director de un area - resume como esta, cuestiona su contenido para encontrar oportunidades, revisa lo que otras areas decidieron o publicaron que le afecta, y escribe el Panorama del area al cerrar sesion. Usala cuando digan 'como va el area X?', 'resumen del area', 'panorama de...', 'cuestiona el area', 'que se nos escapa en...', 'que de otras areas me afecta?', 'revisa lo de otras areas' o 'actualiza el panorama'.
 - **calidad**: Revision de calidad a fondo de algo que se esta construyendo - el contenido de un proyecto, un entregable, un desarrollo o plugin, o la carpeta entera (auditoria) - contra su objetivo, con revisores independientes, para encontrar errores, inconsistencias, riesgos, oportunidades y lo que cuesta de mas (tiempo, llamadas, tokens). Usala cuando digan 'revision de calidad', 'revisa a fondo...', 'audita la carpeta', 'que no cuadra en...', 'revisalo todo contra el objetivo' o cuando toque la revision periodica de un proyecto.
@@ -739,7 +739,7 @@ Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo
 
 ### Cerrar sesión
 
-### Qué escribo y dónde
+#### Qué escribo y dónde
 
 **Las reglas del área, antes que nada.** El bloque `Proyectos` del `area.md` del proyecto (que `abrir.py` imprimió al abrir) y las reglas propias de la casa de `guia.md` pueden pedir algo al cerrar, como poner al día la fila de un pipeline o la ficha de otro proyecto del área. Se cumple en este mismo cierre, como un paso más y dentro de lo que la cuenta puede escribir; si pide escribir en un área de otra cuenta, se prepara el texto y se dice a quién pasárselo.
 
@@ -754,19 +754,19 @@ Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo
 **2. `sesiones.md`.** Entrada nueva arriba del todo, sin tocar las anteriores:
 
 ```markdown
-### 2026-08-29
+## 2026-08-29
 Trabajamos en: rediseño del flujo de aprobación por monto.
 Avances: mapa del proceso actual terminado, en borrador esperando a Ana.
 Pendiente: confirmar con Finanzas el tope de 5.000 MXN.
 Sesión de: Ana Pérez · plugin 1.16.0
 ```
 
-Tres líneas, más la de quién trabajó y con qué versión del plugin (la de `plugin.json`, la misma que la llamada 1 de abrir). Si una sesión no cabe en tres líneas, es que hubo decisiones y esas van a su archivo.
+Tres líneas, más la de quién trabajó y con qué versión del plugin (la de `plugin.json`, la misma que la llamada 1 de abrir; quien trabaja sin el plugin escribe con qué lo hizo, por ejemplo «sin plugin, Gemini»). Si una sesión no cabe en tres líneas, es que hubo decisiones y esas van a su archivo.
 
 **3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas y se pide confirmación explícita. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. Formato:
 
 ```markdown
-### 2026-08-29 · Las órdenes bajo 5.000 MXN no pasan por aprobación
+## 2026-08-29 · Las órdenes bajo 5.000 MXN no pasan por aprobación
 Decidió: Ana Pérez
 Por qué: el 70% del volumen son órdenes pequeñas y consumían el 80% del tiempo de aprobación, según el export de órdenes de 2025.
 Descartamos: tope acumulado mensual por proveedor, porque el ERP no expone el acumulado en tiempo real.
@@ -803,7 +803,7 @@ Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a u
 
 **11. El tablero, avisado.** Si la cuenta tiene tablero (el que se buscó al abrir), se apunta el cierre en su base, sin preguntar ni decir nada: con `ArtifactData` (se carga con `ToolSearch`), un `set` en la colección `cierres` con el documento `<area>--<proyecto>--<AAAAMMDDHHMM>` (nuevo en cada cierre, así que no lleva `if_version`) y los campos `proyecto` (`<area>--<proyecto>`), `nombre` (el título de `proyecto.md`), `hora` (ahora, ISO 8601 con zona, en minutos, tomada del reloj y nunca calculada a mano: con `date -u +%Y-%m-%dT%H:%MZ` en la consola, como `2026-10-19T03:20Z`; una hora adelantada deja el aviso del tablero encendido hasta que llega) y `cuenta`. Uno por cada tablero de la cuenta, con una excepción: la base del tablero público la lee cualquiera con quien se comparta, así que en ese tablero la marca se escribe solo si el proyecto es público (`convenciones`, sección 7: su área no es restringida, y su línea del índice existe y no empieza por «restringido»); si no, solo en el completo, y si la cuenta solo tiene el público, no se escribe y se dice en media línea que el tablero se pone al día con su botón. Al abrir el tablero, su dueño ve arriba que hubo sesiones que aún no muestra, y la página se pone al día sola con la tarea del botón; la sincronización borra las marcas que recoge. No se lanza la tarea desde la conversación, porque la app pide permiso cada vez que una conversación lanza una tarea. Solo si la persona lo pide al cerrar («cierra y pon al día el tablero») se lanza con `fire_trigger`: con `list_triggers` (`enabled: true`, siguiendo `next_cursor`) se busca la tarea llamada «Regenerar tablero <organización>», con « completo» si es ese tablero, y se dispara si su aprobación es automática (`permission_mode` `auto`) y su carpeta (`derived_state.folders`) es la raíz conectada; la app pedirá permiso y la persona lo da. Si el tablero no tiene tarea o la cuenta no tiene el conector de tareas programadas, la página no puede ponerse al día sola: entonces se pone al día aquí mismo, como «Sincronizar» de la skill `tablero`. Si la escritura falla, se dice en media línea y la sesión queda cerrada igual: el tablero se pondrá al día con su botón o con «sincroniza el tablero».
 
-### Qué respondo al terminar
+#### Qué respondo al terminar
 
 Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más. El resumen largo ya está en los archivos.
 
@@ -862,8 +862,20 @@ Solo en la sesión del responsable de contexto según `guia.md`; a cualquier otr
 
 Una premisa es algo que la dirección confirmó y sobre lo que todos construyen; un objetivo de un proyecto o una preferencia de un área no lo es. Ante la duda, se pregunta de quién es la confirmación.
 
-## Publicar un documento: los requisitos
+## Publicar un documento
+### Las cinco comprobaciones
 
+**1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `enlaces.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
+
+**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md`, ni siquiera de hace meses.
+
+**3. Frescura.** Ningún archivo de `basado_en` tiene una fecha `actualizado` posterior a la del entregable. Si la tiene, se dice qué cambió aguas arriba.
+
+**4. Huecos.** Los huecos declarados en el documento siguen abiertos, o ya hay material para cerrarlos.
+
+**5. Estilo.** Los siete patrones de la skill `estilo`. Se cuentan los guiones largos y se comparan con el umbral: más de uno cada 500 palabras es muletilla. Las cifras sin fecha ni fuente se buscan aquí, pero no son estilo: son bloqueantes, porque el contrato las prohíbe.
+
+### Requisitos
 
 1. La revisión se pasó y no quedan hallazgos bloqueantes
 2. No hay huecos abiertos, o el dueño del proyecto los acepta de forma explícita y quedan escritos en el documento
