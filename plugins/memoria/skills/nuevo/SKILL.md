@@ -109,9 +109,10 @@ Los documentos de la carpeta son archivos `.md`. Sin un lector se ven como texto
 símbolos; con uno se ven como un documento normal. No es obligatorio: Claude los lee
 igual. Algunas opciones, solo como sugerencia:
 
-- Mac: **OpenMark**, en la App Store (pago único de 9.99 USD; con la misma compra lo
-  tienes en iPhone y iPad). Pide macOS 26; en una Mac más antigua, **QLMarkdown**
-  (gratis), para verlos con la barra espaciadora desde el Finder.
+- Mac, la más completa: **OpenMark**, en la App Store (pago único de 9.99 USD; con la
+  misma compra lo tienes en iPhone y iPad). Pide macOS 26.
+- Mac, gratis: **QLMarkdown**, para verlos con la barra espaciadora desde el Finder. Es
+  la opción si no quieres gastar o si tu Mac tiene una versión anterior a macOS 26.
 - Windows: **PowerToys** de Microsoft (gratis), que los muestra en el panel de vista
   previa del Explorador de archivos, o **MarkText** (gratis).
 
