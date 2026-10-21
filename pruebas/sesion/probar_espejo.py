@@ -43,9 +43,11 @@ while rondas < 6:
     rondas += 1
     for r in out.split():
         pedidas.append(r)
-        if (R / r).is_file():   # lo que no existe no llega, como con device_stage_files
+        if (R / r).is_file():
             (C / r).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(R / r, C / r)
+        else:   # device_stage_files rechaza la llamada por un archivo que no existe: se apunta y se repite sin él
+            corre(ESPEJO, "falta", C, r)
 ok(out.strip() == "COMPLETA" and rondas == 3, f"tres rondas y COMPLETA (rondas: {rondas})")
 ok(not any(re.search(r"(^|/)(fuentes|taller|restringido)/", r) for r in pedidas), "no pide nada de fuentes/, taller/ ni restringido/")
 ok("ventas/cuentas/decisiones.md" in pedidas and "ventas/area.md" in pedidas, "pide area.md y los registros de los proyectos")
@@ -90,16 +92,24 @@ ok(i3["huella_raiz"] != i2["huella_raiz"] and i3["huellas"].get("ventas--cuentas
 print("Sin consola: el tablero entero sobre la copia")
 # la copia que arma la puesta al día sin consola, desde el listado: los .md fuera de fuentes/, taller/, restringido/ y base/
 # (salvo base/premisas.md) y todo entregables/; con fechas de ahora, como las deja device_stage_files
+(R / ACTIVO / "entregables" / "contrato firmado.pdf").write_bytes(b"%PDF-1.4 prueba")   # un entregable que no es .md
 TC = tmp / "copia-tablero"
+marcas = []
 for d, ds, fs in os.walk(R):
     for f in fs:
         r = (pathlib.Path(d) / f).relative_to(R).as_posix()
         partes = r.split("/")
         if set(partes[:-1]) & {"fuentes", "taller", "restringido"} or (partes[0] == "base" and r != "base/premisas.md"):
             continue
-        if f.endswith(".md") or "entregables" in partes[:-1]:
+        if f.endswith(".md"):
             (TC / r).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(R / r, TC / r)
+        elif "entregables" in partes[:-1]:
+            marcas.append(r)
+(tmp / "marcas.txt").write_text("\n".join(marcas), encoding="utf-8")
+corre(ESPEJO, "marcadores", TC, tmp / "marcas.txt")
+ok(all((TC / r).is_file() and (TC / r).stat().st_size == 0 for r in marcas), f"los entregables que no son .md, como marcadores vacíos ({len(marcas)})")
+ok(len(marcas) == 1, "el PDF de prueba sale como marcador")
 
 
 def docs(carpeta):
@@ -129,24 +139,46 @@ for modo in ("publico", "completo"):
     a_, b_ = docs(tmp / f"out-{modo}"), docs(tmp / f"directo-{modo}")
     ok(a_ == b_ and len(a_) > 3, f"{modo}: sale lo mismo que sobre la raíz ({len(a_)} documentos)")
 
-print("Sin consola: devolver lo que cambió")
+print("Sin consola: devolver solo lo registrado o nuevo, sin pisar")
 corre(ESPEJO, "instantanea", C)
-rc, out, _ = corre(ESPEJO, "devolver", C, "C:\\Users\\Ana\\Drive\\Unidades compartidas\\Raiz", tmp / "salidas")
-ok(rc == 0 and json.loads(out) == [], "sin cambios no devuelve nada")
-(C / ACTIVO / "sesiones.md").write_text((C / ACTIVO / "sesiones.md").read_text(encoding="utf-8") + "\nx\n", encoding="utf-8")
+WIN = "C:\\Users\\Ana\\Drive\\Unidades compartidas\\Raiz"
+dev = lambda *x: json.loads(corre(ESPEJO, "devolver", C, WIN, "--salidas", tmp / "salidas", *x)[1])
+d = dev()
+ok(d["lotes"] == [] and d["retenidos"] == [] and d["sin_registrar"] == [], "sin cambios no devuelve nada")
+S, P, G = f"{ACTIVO}/sesiones.md", f"{ACTIVO}/proyecto.md", "guia.md"
+for r in (S, P, G):
+    corre(ESPEJO, "registrar", C, r, "1790000000123", (C / r).stat().st_size)
+rc, _, err = corre(ESPEJO, "registrar", C, S, "1790000000123", "999999")
+ok(rc == 3, "registrar sale con 3 si el archivo aún no llegó entero")
+corre(ESPEJO, "registrar", C, S, "1790000000123", (C / S).stat().st_size)
+(C / S).write_text((C / S).read_text(encoding="utf-8") + "\nx\n", encoding="utf-8")
+(C / G).write_text("", encoding="utf-8")                                    # vaciado por error
+(C / P).write_text("# corto\n", encoding="utf-8")                          # pierde cabecera y encoge
+(C / ACTIVO / "decisiones.md").write_text("tocado sin registrar\n", encoding="utf-8")
 (C / ACTIVO / "taller").mkdir(parents=True, exist_ok=True)
-(C / ACTIVO / "taller" / "nota.md").write_text("nueva\n", encoding="utf-8")
-rc, out, _ = corre(ESPEJO, "devolver", C, "C:\\Users\\Ana\\Drive\\Unidades compartidas\\Raiz", tmp / "salidas")
-d = json.loads(out) if rc == 0 else []
-rels = sorted(x["rel"] for x in d)
-ok(rels == [f"{ACTIVO}/sesiones.md", f"{ACTIVO}/taller/nota.md"], f"devuelve lo editado y lo nuevo ({rels})")
-ok(all(x["devicePath"].startswith("C:\\Users\\Ana\\Drive\\Unidades compartidas\\Raiz\\ventas\\cuentas\\") for x in d),
-   "la ruta en la computadora con el separador de la raíz (Windows)")
-ok(all(pathlib.Path(x["stagedPath"]).is_file() for x in d) and [x["nuevo"] for x in sorted(d, key=lambda x: x["rel"])] == [False, True],
-   "cada archivo en una carpeta de salidas nueva, y marca cuál es nuevo")
-corre(ESPEJO, "instantanea", C)
-rc, out, _ = corre(ESPEJO, "devolver", C, "/Users/ana/Raiz", tmp / "salidas")
-ok(json.loads(out) == [], "tras la instantánea, nada pendiente")
+(C / ACTIVO / "taller" / "nota.md").write_text("---\nestado: borrador\n---\nnueva\n", encoding="utf-8")
+(C / ACTIVO / "taller" / "otra.md").write_text("sin declarar\n", encoding="utf-8")
+corre(ESPEJO, "nuevo", C, f"{ACTIVO}/taller/nota.md")
+d = dev()
+ent = [x for l in d["lotes"] for x in l]
+rels = sorted(x["rel"] for x in ent)
+ok(rels == [S, f"{ACTIVO}/taller/nota.md"], f"devuelve lo registrado que cambió y lo nuevo declarado ({rels})")
+ok(next(x for x in ent if x["rel"] == S).get("expectedMtimeMs") == 1790000000123 and "expectedMtimeMs" not in next(x for x in ent if x["rel"].endswith("nota.md")),
+   "con la fecha que protege lo que otra persona escribió, salvo en lo nuevo")
+ret = {x["rel"]: x["motivo"] for x in d["retenidos"]}
+ok(set(ret) == {G, P} and "vacío" in ret[G], f"retiene el .md vaciado y el que pierde su cabecera ({ret})")
+ok(f"{ACTIVO}/decisiones.md" in d["sin_registrar"] and f"{ACTIVO}/taller/otra.md" in d["sin_registrar"], "avisa de lo que cambió sin registrar y no lo devuelve")
+ok(all(x["devicePath"].startswith(WIN + "\\ventas\\cuentas\\") for x in ent), "la ruta en la computadora con el separador de la raíz (Windows)")
+ok(all(pathlib.Path(x["stagedPath"]).is_file() for x in ent), "cada archivo en una carpeta de salidas nueva")
+d2 = dev("--forzar", P)
+ok(any(x["rel"] == P for l in d2["lotes"] for x in l), "con --forzar sí devuelve lo retenido")
+corre(ESPEJO, "hecho", C, S, f"{ACTIVO}/taller/nota.md", P)
+d3 = dev()
+ok(not any(x["rel"] in (S, P) for l in d3["lotes"] for x in l), "lo escrito deja de estar registrado: hay que traerlo otra vez antes de volver a escribir")
+corre(ESPEJO, "hecho", C, G)
+ok(not any(pathlib.Path(tmp / "salidas").glob("espejo-*")), "sin nada pendiente, borra sus carpetas de salidas")
+rc, _, _ = corre(ESPEJO, "nuevo", C, "../fuera.md")
+ok(rc != 0, "no admite rutas que salen de la raíz")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallos.")
