@@ -166,7 +166,8 @@ for area, aruta in areas:
     md = re.search(r"^Dueñ[oa]: *(.+?)\s*$", txt, re.M)
     if not md:
         h("área sin dueño", rel(amd))
-    elif area in guia_areas and md.group(1).strip().lower() != guia_areas[area]["dueno"].strip().lower():
+    # la línea puede seguir con una frase («Dueño: Ana Pérez. Consume esta área…»): cuenta el nombre, hasta el primer punto
+    elif area in guia_areas and re.split(r"\.(?:\s|$)", md.group(1).strip())[0].strip().lower() != re.split(r"\.(?:\s|$)", guia_areas[area]["dueno"].strip())[0].strip().lower():
         h("dueño distinto en guia.md y en area.md", area, "guia.md dice «%s» y area.md «%s»" % (guia_areas[area]["dueno"], md.group(1).strip()))
     if "## Proyectos" not in txt:
         h("area.md sin bloque Proyectos", rel(amd))
