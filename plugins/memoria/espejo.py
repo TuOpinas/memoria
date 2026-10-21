@@ -17,7 +17,9 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       COMPLETA. Primera ronda: guia.md, metodo.md, base/premisas.md y base/contexto.md; segunda: el area.md de cada área de la
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
       abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo. Lo que no se trajo se vuelve a
-      pedir, salvo lo apuntado con «falta».
+      pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
+      suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
+      minutos.
 
   espejo.py falta <copia> <ruta>...
       Apunta lo que no existe en la computadora (device_stage_files rechazó la llamada por ese archivo) para no pedirlo más.
@@ -135,19 +137,29 @@ def huella(p):
     return hashlib.sha1(pathlib.Path(p).read_bytes()).hexdigest()
 
 
+FRESCO = 10 * 60   # segundos: lo del proyecto que se abre, traído hace más, se vuelve a traer
+
+
 def rutas(copia, activo):
     copia = pathlib.Path(copia)
     faltan = set(estado(copia)["faltan"])
-    falta = lambda r: not (copia / r).is_file() and r not in faltan
-    ronda = [r for r in ("guia.md", "metodo.md", "base/premisas.md", "base/contexto.md") if falta(r)]
+    # en la misma conversación la copia se reutiliza: solo se pide lo que no está. Lo que dice cómo está el proyecto que se
+    # abre (guia.md, su area.md y sus tres archivos) se vuelve a pedir si se trajo hace más de diez minutos: la fecha de un
+    # archivo de la copia es la de cuándo llegó
+    frescos = {"guia.md"} | ({f"{activo.split('/')[0]}/area.md"} | {f"{activo}/{n}" for n in ("proyecto.md", "decisiones.md", "sesiones.md")} if activo else set())
+    viejo = lambda r: r in frescos and (copia / r).is_file() and time.time() - (copia / r).stat().st_mtime > FRESCO
+    ausente = lambda r: not (copia / r).is_file() and r not in faltan
+    falta = lambda r: (ausente(r) or viejo(r)) and r not in faltan
+    ronda = [r for r in ("guia.md", "metodo.md", "base/premisas.md", "base/contexto.md") if ausente(r)]
     if not ronda:
         guia = leer(copia / "guia.md")
         if guia is None:
             print("Sin guia.md en la copia: no es la raíz, o la cuenta no la lee.", file=sys.stderr)
             return 1
         areas = areas_de(guia)
-        ronda = [f"{a}/area.md" for a in areas if falta(f"{a}/area.md")]
+        ronda = [f"{a}/area.md" for a in areas if ausente(f"{a}/area.md")]
         if not ronda:
+            ronda = sorted(r for r in frescos if viejo(r) and not r.endswith(("proyecto.md", "decisiones.md", "sesiones.md")))
             # sin proyecto, abrir.py solo lee hasta los area.md; con proyecto, de los demás solo lee decisiones.md (el barrido
             # de «Afecta a», «Cuestiona a» y «Responde a»), y del activo sus tres archivos
             if activo:

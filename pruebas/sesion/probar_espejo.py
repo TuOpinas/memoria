@@ -52,6 +52,16 @@ ok(out.strip() == "COMPLETA" and rondas == 3, f"tres rondas y COMPLETA (rondas: 
 ok(not any(re.search(r"(^|/)(fuentes|taller|restringido)/", r) for r in pedidas), "no pide nada de fuentes/, taller/ ni restringido/")
 ok("ventas/cuentas/decisiones.md" in pedidas and "ventas/area.md" in pedidas, "pide area.md y los registros de los proyectos")
 ok(not any(r.startswith("ventas/oculto/") for r in pedidas), "no pide un proyecto que no está en el índice de su área")
+# en la misma conversación: abrir otro proyecto pide solo lo suyo; y lo del proyecto que se abre, si llegó hace rato, otra vez
+_, out2, _ = corre(ESPEJO, "rutas", C, "operacion/soporte")
+ok(sorted(out2.split()) == ["operacion/soporte/proyecto.md", "operacion/soporte/sesiones.md"], f"otro proyecto en la misma conversación pide solo lo suyo ({out2.split()})")
+for r in ("guia.md", "ventas/area.md", "ventas/cuentas/proyecto.md", "ventas/cuentas/decisiones.md", "ventas/cuentas/sesiones.md", "operacion/soporte/decisiones.md"):
+    os.utime(C / r, (time.time() - 3600, time.time() - 3600))
+_, out3, _ = corre(ESPEJO, "rutas", C, ACTIVO)
+ok(sorted(out3.split()) == sorted(["guia.md", "ventas/area.md", "ventas/cuentas/proyecto.md", "ventas/cuentas/decisiones.md", "ventas/cuentas/sesiones.md"]),
+   f"lo del proyecto que se abre, traído hace más de diez minutos, se vuelve a pedir; lo demás no ({out3.split()})")
+for r in out3.split():
+    shutil.copy(R / r, C / r)
 # las cabeceras de entregables del proyecto activo se traen desde su listado
 for f in (R / ACTIVO / "entregables").iterdir():
     (C / ACTIVO / "entregables").mkdir(parents=True, exist_ok=True)
