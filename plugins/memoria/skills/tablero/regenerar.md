@@ -1,6 +1,7 @@
 Regeneración del tablero ({{MODO}}) de {{ORGANIZACION}}: los pasos 5c a 5h y 6 de la puesta al día. Anexo de `tarea.md`, junto a este archivo; se lee solo cuando el paso 5b no dice «AL DIA», y sigue valiendo todo lo que dice `tarea.md` (SIN PEDIR NADA A NADIE, DÓNDE ESTÁ CADA COSA, LÍMITES). Al terminar el paso 6 se vuelve a `tarea.md`, paso 7.
 
 LA COPIA
+Sin consola, «la copia» de estos pasos es la que dice «SIN CONSOLA» en `tarea.md`, no la de abajo.
 - La copia de los archivos de la raíz la deja device_stage_files bajo `/mnt/user-data/uploads/<carpeta>/`, donde <carpeta> es el nombre que la raíz tiene en `$HOME/mnt/`. Esa es «la copia» en lo que sigue; si el primer `stagedPath` que devuelve la herramienta dice otra carpeta, la copia es esa: la parte de `stagedPath` que va antes de la ruta relativa del archivo.
 
 PASOS

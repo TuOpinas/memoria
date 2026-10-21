@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas]
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
 cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
@@ -18,6 +18,11 @@ del proyecto activo solo mira fechas), ni las sesiones de otros proyectos, ni lo
 área (salvo el activo). De las demás decisiones solo mira las líneas «Afecta a:», «Cuestiona a:» y «Responde a:»
 y la cabecera de su entrada. Lo restringido no sale salvo que el proyecto activo esté dentro, y lo que no se deja leer
 se cuenta, sin suponer qué hay.
+
+Con --sin-fechas corre sobre una copia en el contenedor (sesión sin consola: la copia la arma espejo.py y sus fechas de
+archivo son las de la copia, no las de la computadora). No usa ninguna fecha de archivo: no da el aviso de trabajo sin sesión
+por fechas, sino el instante desde el que hay que mirarlo en el listado de la computadora (device_list_dir, mtimeMs), y en
+REGISTROS solo da el tamaño.
 """
 import datetime, os, pathlib, re, sys
 
@@ -31,6 +36,9 @@ if "--cuenta" in args:
 PLUGIN = None
 if "--plugin" in args:
     i = args.index("--plugin"); PLUGIN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
+SIN_FECHAS = "--sin-fechas" in args
+if SIN_FECHAS:
+    args.remove("--sin-fechas")
 ACTIVO = args[0].strip("/") if args else None
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
@@ -128,6 +136,8 @@ def recientes(texto, n):
 
 
 def mtime(p):
+    if SIN_FECHAS:   # en la copia, la fecha de archivo es la de la copia: no dice nada
+        return None
     try:
         return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date()   # el día en la zona de la organización, como el tablero
     except OSError:
@@ -214,7 +224,8 @@ for l in filas:
         de, co, av = cuentas(c[3])
         if av:
             print(f"(aviso: la celda Cuenta de «{c[0].strip('`')}» en guia.md: {av})")
-        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": "restring" in c[4].lower()})
+        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": "restring" in c[4].lower(),
+                      "en_celda": set(CORREO.findall(c[3].lower())), "aviso": av})
     else:
         print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
 if ZONA_AVISO:
@@ -258,6 +269,12 @@ if CUENTA:
     donde_ = ", ".join([f"{s} (dueño)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
+    # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
+    # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
+    for a in areas:
+        if a["aviso"] and CUENTA in a["en_celda"] and CUENTA not in a["cuentas_dueno"] | a["colaboran"]:
+            print(f"(aviso para decirlo: esta cuenta está en la celda Cuenta de «{a['slug']}» en guia.md, pero no cuenta como suya: {a['aviso']}. "
+                  f"Se escribe «correo del dueño · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
 
 
 def indice_proyectos(texto_area):
@@ -331,6 +348,12 @@ if CUENTA:
 # para el cierre: cuándo cambió cada registro por última vez; si cambian mientras dura la sesión, otra persona escribió
 titulo("REGISTROS (hora de la última escritura)")
 for n_ in ("proyecto.md", "decisiones.md", "sesiones.md"):
+    if SIN_FECHAS:
+        try:
+            print(f"{n_}: {os.stat(pc / n_).st_size} bytes (sin consola: la hora es la de la copia; al cerrar se releen siempre)")
+        except OSError:
+            print(f"{n_}: no se pudo leer")
+        continue
     try:
         st_ = datetime.datetime.fromtimestamp(os.stat(pc / n_).st_mtime, TZ)
         print(f"{n_}: {st_.isoformat(timespec='seconds')} · {os.stat(pc / n_).st_size} bytes" + (f" · hace {int((datetime.datetime.now(TZ) - st_).total_seconds() // 60)} minutos: si no fue esta cuenta, otra persona trabaja ahora en el proyecto" if (datetime.datetime.now(TZ) - st_).total_seconds() < 3600 else ""))
@@ -360,7 +383,7 @@ except OSError:
 for n in nombres:
     p = d / n
     if not n.endswith(".md"):
-        print(f"- {n} · sin cabecera (fecha de archivo {mtime(p)})"); continue
+        print(f"- {n} · sin cabecera" + (f" (fecha de archivo {mtime(p)})" if mtime(p) else "")); continue
     t = leer(p)
     if t is None:
         print(f"- {n} · no se pudo leer"); continue
@@ -390,7 +413,14 @@ for n in nombres:
         avisos.append(f"Trabajo sin sesión: entregables/{n} tiene actualizado {act}, posterior a la última sesión ({ultima_ses}).")
 
 # trabajo sin sesión por fechas de archivo (nunca el contenido) en entregables/, taller/ y fuentes/
-if ultima_ses and not cerrado:
+if SIN_FECHAS and ultima_ses and not cerrado:
+    # sin consola las fechas de verdad solo están en el listado de la computadora: se da el instante, en milisegundos como
+    # los da device_list_dir, a partir del cual un archivo cuenta (el día siguiente a la última sesión, en la zona de la organización)
+    _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)
+    avisos.append(f"Trabajo sin sesión: sin consola no se calcula aquí. Con device_list_dir (recursivo) de la carpeta del proyecto, "
+                  f"cuenta los archivos de entregables/, taller/ y fuentes/ (fuera de restringido/), y decisiones.md, con mtimeMs mayor o igual que "
+                  f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
+if not SIN_FECHAS and ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
     donde = {}
     md = mtime(pc / "decisiones.md")

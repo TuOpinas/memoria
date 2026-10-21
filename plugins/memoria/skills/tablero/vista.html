@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.16.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.17.0"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1483,7 +1483,7 @@ function ayudaArts(){
       <dt>Mejor una unidad compartida</dt><dd>Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y la carpeta va en «Mi unidad» de quien administra, compartida con el equipo. Entonces los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.</dd>
       <dt>La raíz</dt><dd>La unidad entera o una carpeta de su primer nivel, con <code>guia.md</code> y <code>metodo.md</code> dentro. Una sola por organización, con un nombre sin signos raros.</dd>
       <dt>Los permisos</dt><dd>Todo el equipo, lectura en toda la carpeta. Cada dueño de área y quien colabora en ella, edición en la carpeta de su área; quien colabora en un solo proyecto, solo en la de ese proyecto. Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
-      <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:); si en una computadora Claude no consigue conectarla, avisa a ${ADM}.</dd>
+      <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual: Claude trabaja con ella algo más lento, y para mover archivos necesita el conector de Google Drive activado en Claude.</dd>
     </dl>
     <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`

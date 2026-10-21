@@ -19,6 +19,10 @@ En dos tiempos, cuando la raíz está en otra computadora y el resultado tiene q
      generar_vista.py <copia> <carpeta-de-salida> --desde-inventario <inventario.json> [--modo …] [--tarea …] [--version …]
      Comprueba que la copia trae exactamente los archivos de «leer» y genera lo mismo que el modo de un tiempo en la computadora.
 
+Sin consola en la computadora (la raíz no se monta en su shell), el inventario corre en el contenedor sobre una copia completa
+de la superficie pública que arma espejo.py, con --sin-fechas: las fechas de archivo de una copia son las de la copia, así que
+no se usan. Las huellas miran el contenido en lugar de la fecha, y no hay aviso de trabajo sin sesión ni fechas de archivo.
+
 Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
 «Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md empieza por «restringido» o que no está en ese índice,
 solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo su cabecera: fecha, título y «Trabajamos en».
@@ -108,6 +112,7 @@ if _plugin_linea is not None:
     sys.exit(0)
 # primer tiempo: solo inventario, sin carpeta de salida; segundo tiempo: la raíz es una copia y lo demás viene del inventario
 INVENTARIO = "--inventario" in sys.argv
+SIN_FECHAS = "--sin-fechas" in sys.argv
 _inv_ruta = _arg("--desde-inventario")
 INV = json.loads(pathlib.Path(_inv_ruta).read_text(encoding="utf-8")) if _inv_ruta else None
 if INV is not None and INV.get("formato") != 1:
@@ -418,11 +423,19 @@ def parse_indice_proyectos(texto_area):
     return idx
 
 def fecha_de(p):
-    """Fecha de modificación de p (día, en la zona de la organización), o None."""
+    """Fecha de modificación de p (día, en la zona de la organización), o None. Sin fechas (una copia), siempre None."""
+    if SIN_FECHAS:
+        return None
     try:
         return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date().isoformat()
     except OSError:
         return None
+
+def marca(p):
+    """Lo que dice si p cambió: su fecha de modificación en la computadora; en una copia (sin fechas), su contenido."""
+    if SIN_FECHAS:
+        return hashlib.sha1(pathlib.Path(p).read_bytes()).hexdigest()[:12]
+    return int(os.path.getmtime(p))
 
 def rel(p):
     return pathlib.Path(p).relative_to(RAIZ).as_posix()
@@ -727,7 +740,7 @@ if INVENTARIO:
             # igual que la generación: la última sesión es la primera de la lista aunque su fecha no sea válida
             sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
             h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
-                                 [(r_, os.path.getsize(RAIZ / r_), int(os.path.getmtime(RAIZ / r_))) for r_ in suyos],
+                                 [(r_, os.path.getsize(RAIZ / r_), marca(RAIZ / r_)) for r_ in suyos],
                                  sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_)
             pid = f"{a['slug']}--{slug}"
             por_proyecto[rel(pc)] = (suyos, fe, ss_)
@@ -754,7 +767,7 @@ if INVENTARIO:
     # Si coincide con la que guardó la última sincronización, el tablero ya está al día y la puesta al día no tiene que regenerarlo.
     # Se calcula sobre la raíz entera, también con los proyectos que se reutilizan.
     todos = list(dict.fromkeys(leer_ + [r_ for suyos, _, _ in por_proyecto.values() for r_ in suyos]))
-    _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{int(os.path.getmtime(RAIZ / r))}" for r in todos)
+    _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{marca(RAIZ / r)}" for r in todos)
     _resto = {k: inv[k] for k in ("modo", "version_metodo", "motivos", "proyectos")}
     _resto["entregables"] = {p_: fe for p_, (_, fe, _) in por_proyecto.items() if fe}
     _resto["sin_sesion"] = {p_: ss for p_, (_, _, ss) in por_proyecto.items() if ss}

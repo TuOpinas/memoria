@@ -24,7 +24,7 @@ Es trabajo de quien administra la carpeta, una vez por organización, antes de q
 - Quien administra, administrador de la unidad, y nadie más.
 - Lo restringido se marca en su carpeta con el acceso limitado de Drive, desde la web. En una unidad compartida lo pone quien la administra; Google lo admite en unidades compartidas desde 2025.
 
-**En la computadora de cada persona**, Drive para escritorio solo transmite las unidades compartidas: no las copia enteras al disco como puede hacer con «Mi unidad». Por eso la carpeta se marca «Disponible sin conexión» en cada computadora, y se comprueba que sus archivos bajaron antes de conectar la carpeta a Claude. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:); si Claude no consigue conectarla en una computadora, se dice en la guía de esa raíz y se decide con quien administra cómo seguir.
+**En la computadora de cada persona**, Drive para escritorio solo transmite las unidades compartidas: no las copia enteras al disco como puede hacer con «Mi unidad». Por eso la carpeta se marca «Disponible sin conexión» en cada computadora, y se comprueba que sus archivos bajaron antes de conectar la carpeta a Claude. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual. La consola de Claude no la monta, así que esas computadoras trabajan sin consola (anexo `sin-consola.md`): todo funciona, algo más lento, y para mover archivos hace falta el conector de Google Drive activado en Claude. Nadie tiene que cambiar nada de Drive.
 
 ## Montaje en Claude
 
@@ -43,7 +43,7 @@ Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ni
 ```
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
 Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
-Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado; si no la ves, pídeme que la añada. Sin ninguna carpeta conectada (desde el teléfono o la web), la raíz se puede leer por el conector de Drive, sin escribir nada en ella.
+Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado, salvo para crear carpetas, mover, renombrar o mandar a la papelera cuando la consola de la computadora no ve la carpeta; si no la ves, pídeme que la añada. Sin ninguna carpeta conectada (desde el teléfono o la web), la raíz se puede leer por el conector de Drive, sin escribir nada en ella.
 Escribe solo donde tu cuenta es dueña o colabora, según `guia.md` y la línea «Colabora:» de cada proyecto, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
 Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
@@ -55,6 +55,6 @@ El bloque es idéntico en cualquier organización: no nombra a ninguna, no lleva
 
 La skill `nuevo` escribe todo esto en `guia.md` como una receta corta: crear el proyecto con el nombre del área, instalar el plugin desde el marketplace, conectar la raíz, comprobar con «abre sesión en...» y, si se quiere, montar el tablero, para que cada persona lo monte sola sin preguntarle a nadie.
 
-**Otros modelos.** Gemini u otro modelo sin plugin leen `metodo.md`. Contiene el contrato con sus tres anexos, el estilo y el índice de skills, así que saben qué reglas seguir aunque no puedan ejecutarlas como skills.
+**Otros modelos.** Gemini u otro modelo sin plugin leen `metodo.md`. Contiene el contrato con sus anexos (menos `sin-consola.md`, que solo sirve con las herramientas del plugin), el estilo y el índice de skills, así que saben qué reglas seguir aunque no puedan ejecutarlas como skills.
 
 **Programadores.** El `CLAUDE.md` de un repositorio enlaza la carpeta del proyecto en la raíz (`area/proyecto`). Las decisiones de código que dependen de un diseño se anclan en `decisiones.md` y en los entregables vigentes de ese proyecto, no en comentarios del código. Para saber qué se decidió antes de escribir código, usan la skill `consulta`.

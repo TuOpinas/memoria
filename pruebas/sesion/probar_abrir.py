@@ -135,6 +135,17 @@ c, ot_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
 av_ = ot_.split("=== AVISOS")[1]
 cq_ = [l for l in av_.split("\n") if l.lstrip("- ").startswith("Cuestionamiento abierto")]
 ok(c == 0 and len(cq_) == 6 and sum("Por qué:" in l for l in cq_) == 3 and "motivo-4" in cq_[0] and "motivo-2" in av_ and "motivo-1." not in av_, "con seis cuestionamientos abiertos, seis líneas y el «Por qué» solo de los tres más recientes")
+print("Dos correos en la celda Cuenta, sin «colabora:» (lo que reportó Escuela Fácil)")
+g_ = (R / "guia.md").read_text(encoding="utf-8")
+fila_ = next(l for l in g_.split("\n") if l.startswith("| `ventas/`"))
+cs_ = fila_.split("|"); cs_[4] = " carla@ejemplo.test, agustin@ejemplo.test "
+(R / "guia.md").write_text(g_.replace(fila_, "|".join(cs_)), encoding="utf-8")
+c, oc_ = abrir("--cuenta", "agustin@ejemplo.test")
+ok(c == 0 and "agustin@ejemplo.test: escribe en ninguna área" in oc_, "falla cerrado: nadie es dueño de un área con dos correos sin «colabora:»")
+ok("está en la celda Cuenta de «ventas»" in oc_ and "colabora: otro@" in oc_, "y lo dice, con cómo se escribe, a la cuenta que está en esa celda")
+c, ob_ = abrir("--cuenta", "nadie@ejemplo.test")
+ok("está en la celda Cuenta" not in ob_, "a una cuenta que no está en la celda no se lo dice")
+(R / "guia.md").write_text(g_, encoding="utf-8")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
