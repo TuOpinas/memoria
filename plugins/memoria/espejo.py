@@ -10,8 +10,8 @@ traer, guarda cómo estaba la copia y prepara lo que hay que devolver.
   espejo.py rutas <copia> [<area>/<proyecto>]
       Qué traer para abrir sesión, por rondas: imprime una ruta por línea (relativa a la raíz) de lo que falta en la copia, o
       COMPLETA. Primera ronda: guia.md, metodo.md y base/premisas.md y base/contexto.md; segunda: el area.md de cada área de
-      la tabla de guia.md; tercera: proyecto.md, decisiones.md y sesiones.md de cada proyecto del índice de su área, y del
-      proyecto activo aunque no esté en el índice. Lo que se pidió y no llegó (no existe, o la cuenta no lo lee) no se vuelve
+      la tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
+      abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo. Lo que se pidió y no llegó (no existe, o la cuenta no lo lee) no se vuelve
       a pedir. Las cabeceras de entregables/ del proyecto activo no salen de aquí: se traen desde su listado.
 
   espejo.py instantanea <copia>
@@ -96,10 +96,11 @@ def rutas(copia, activo):
         areas = areas_de(guia)
         ronda = [f"{a}/area.md" for a in areas if falta(f"{a}/area.md")]
         if not ronda:
-            for a in areas:
-                for p in proyectos_de(leer(copia / a / "area.md")):
-                    ronda += [f"{a}/{p}/{n}" for n in ("proyecto.md", "decisiones.md", "sesiones.md")]
+            # sin proyecto, abrir.py solo lee hasta los area.md; con proyecto, de los demás solo lee decisiones.md (el barrido
+            # de «Afecta a», «Cuestiona a» y «Responde a»), y del activo sus tres archivos
             if activo:
+                for a in areas:
+                    ronda += [f"{a}/{p}/decisiones.md" for p in proyectos_de(leer(copia / a / "area.md"))]
                 ronda += [f"{activo}/{n}" for n in ("proyecto.md", "decisiones.md", "sesiones.md")]
             ronda = [r for r in dict.fromkeys(ronda) if falta(r) and not set(r.split("/")[:-1]) & set(FUERA)]
     if not ronda:
