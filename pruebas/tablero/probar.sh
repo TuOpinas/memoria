@@ -38,6 +38,8 @@ python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 # la apertura de sesión en una llamada (skill sesion, abrir.py), contra la misma raíz inventada
 python3 "$AQUI/../sesion/probar_abrir.py"
 python3 "$AQUI/../sesion/probar_cuentas.py"
+# sin consola en la computadora: la copia de la raíz en el contenedor (espejo.py) y los scripts sin fechas de archivo
+python3 "$AQUI/../sesion/probar_espejo.py"
 python3 "$AQUI/../sesion/probar_preparar.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"

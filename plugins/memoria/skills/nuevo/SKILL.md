@@ -171,7 +171,9 @@ es que sea una unidad compartida de Google Drive:
    la web, haz clic derecho sobre la carpeta y elige **Disponible sin conexión** (en inglés,
    **Make available offline**). Espera a que se descarguen sus archivos.
 3. En Windows, Google Drive la muestra en una unidad aparte, con una letra (por ejemplo,
-   G:). Si en el paso 4 Claude no consigue conectarla, avisa a quien administra la carpeta.
+   G:). Se conecta igual. Claude trabaja con ella algo más lento que en Mac, y para mover
+   archivos necesita el conector de Google Drive: actívalo en Claude, en Customize ›
+   Connectors.
 4. Si no la ves, pídele acceso a quien administra la carpeta.
 
 Si en tu organización no es una unidad compartida sino una carpeta que alguien te compartió,
@@ -434,7 +436,7 @@ Pendiente: reunir los exports del ERP.
 Sesión de: Ana Pérez · plugin 1.16.0
 ```
 
-**5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías.
+**5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías. Sin consola en la computadora se crean con el conector de Google Drive (anexo `sin-consola.md` de `convenciones`); sin el conector, aparecen con su primer archivo.
 
 **6. El material existente** se mueve a `fuentes/` con nombres legibles, si el usuario lo tiene a mano. Si no, queda como siguiente paso. Los enlaces van a `fuentes/enlaces.md`, una fila por enlace; ese archivo solo se crea si hay filas. Antes de guardar cada archivo se mira si trae indicios de información confidencial (la lista está en `convenciones`, sección 1, «Material sensible»); si los trae, se dice y se propone llevarlo a `restringido/` con su fila en el `enlaces.md` público. El usuario decide.
 

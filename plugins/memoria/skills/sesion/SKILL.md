@@ -35,7 +35,13 @@ Son dos llamadas para la carpeta, una más si todavía no se sabe el proyecto, y
 2. **Con device_bash, en la computadora**: lo que va detrás de «DESCARGA » seguido de ` && python3 abrir.py "<raíz en $HOME/mnt>" <area>/<proyecto> --cuenta <correo de la cuenta> --plugin "<la línea METODO sin «METODO »>"`. Sin proyecto todavía, sin `<area>/<proyecto>`: imprime el nivel 0 y la lista de proyectos de cada área, para saber cuál se abre; después se vuelve a correr con el proyecto (el script ya está, basta `cd $HOME/memoria && python3 abrir.py …`). Si la comprobación falla, se repite una vez con lo que va detrás de «REINTENTO »; un script que no pasa la comprobación no se ejecuta nunca, ni se pega su contenido en un comando. Si tras ese reintento no hay un `abrir.py` comprobado (la computadora no llega a GitHub, o ninguna copia cuadra), se abre como sin consola (abajo) y se dice en media línea.
 3. **La cola del tablero**, si la cuenta tiene uno: con `Artifact` (`list`) se buscan los artifacts llamados «Tablero <organización>» y «Tablero <organización> completo» (la organización es lo que va antes del «·» en el título de `guia.md`); de cada uno, con `ArtifactData` (se carga con `ToolSearch`), dos `query` de la colección `cambios`: una con `where` `[["proyecto", "eq", "<area>--<proyecto>"]]` y otra con `[["area", "eq", "<area>"]]` (prioridades marcadas desde el tablero y notas de área que dejó una sesión sin carpeta), las dos con `limit` 1000. Si no hay tablero, no se pregunta; si no se deja leer, se dice en una línea y se sigue.
 
-Si la conversación no tiene consola en la computadora (solo las herramientas que traen archivos), o no hay un `abrir.py` comprobado, se carga `convenciones` y se lee por los niveles de su sección 12, y `metodo.md` no se toca: sin el script no hay veredicto de versión, y lo copiará la siguiente sesión que lo tenga. Nada más se lee al abrir: `base/`, `taller/`, `fuentes/` y el resto de `area.md` entran cuando el trabajo los pide, por sus disparadores de esa misma sección.
+**Sin consola** (la raíz está conectada pero el shell de la computadora no la ve: anexo `sin-consola.md` de `convenciones`, que se lee entonces), `abrir.py` corre en el contenedor sobre una copia, desde el plugin y sin descargar nada:
+
+1. **La copia, por rondas**: con Bash, `python3 <raíz del plugin>/espejo.py rutas "<la copia>" <area>/<proyecto>` (la copia es `/mnt/user-data/uploads/<carpeta>`, y su nombre exacto lo da el primer `stagedPath`; antes de la primera ronda se puede usar el nombre de la raíz en `get_device_info`) y `device_stage_files` con `<ruta de la raíz en la computadora>/<ruta>` de cada línea, hasta 50 por llamada (si rechaza la llamada porque un archivo no existe, se repite sin él); se repite hasta que diga COMPLETA (son tres rondas). Además, `device_list_dir` recursivo de la carpeta del proyecto, y se traen los `.md` de su `entregables/`; los demás archivos de `entregables/` se ven en ese listado, no en lo que imprime el script. Sin proyecto todavía, sin `<area>/<proyecto>` y sin el listado.
+2. **El script**: `python3 <directorio de esta skill>/abrir.py "<la copia>" <area>/<proyecto> --cuenta <correo de la cuenta> --plugin "<la línea METODO>" --sin-fechas`, con METODO, la primera línea del `metodo.md` del plugin. Imprime lo mismo que en la computadora salvo las fechas de archivo: el aviso de trabajo sin sesión trae el instante desde el que se cuentan, y se mira con el listado del paso 1 (`mtimeMs`). `RAIZ ATRASADA` se escribe como siempre, con `device_commit_files`, y se comprueba trayendo otra vez `metodo.md`.
+3. Al terminar, `espejo.py instantanea "<la copia>"`: la copia queda lista para escribir sobre ella.
+
+Si no hay forma de correr `abrir.py` (ni en la computadora ni en el contenedor), se carga `convenciones` y se lee por los niveles de su sección 12, y `metodo.md` no se toca: sin el script no hay veredicto de versión, y lo copiará la siguiente sesión que lo tenga. Nada más se lee al abrir: `base/`, `taller/`, `fuentes/` y el resto de `area.md` entran cuando el trabajo los pide, por sus disparadores de esa misma sección.
 
 ## Qué respondo
 
@@ -73,7 +79,7 @@ Si no hay avisos, no se menciona que no los hay.
 - Leer más de lo que imprime `abrir.py`, o, sin él, más del nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Deducir lo que hay en una carpeta que no se deja leer: se dice qué es y de quién, y ahí se para
-- Usar el conector de Google Drive teniendo la carpeta conectada
+- Usar el conector de Google Drive teniendo la carpeta conectada, salvo para mover, renombrar o mandar a la papelera sin consola (`sin-consola.md`)
 
 ## Ejemplo de apertura
 

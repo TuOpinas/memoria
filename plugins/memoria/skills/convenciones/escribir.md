@@ -1,6 +1,6 @@
 # Escribir en la carpeta
 
-Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Panorama` basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 7, 11, 12) son las del contrato.
+Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Panorama` basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Si la carpeta está conectada pero el shell de la computadora no la ve, se escribe además como dice el anexo `sin-consola.md`, junto a este archivo, y se lee antes de la primera escritura. Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 7, 11, 12) son las del contrato.
 
 ## 2. Estructura de `area.md`
 
@@ -145,7 +145,7 @@ Pendiente: …
 Sesión de: Nombre Apellido · plugin 1.16.0
 ```
 
-La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances» y «Pendiente», y no sale fuera del área. Las entradas anteriores a la 1.16 no la llevan.
+La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances» y «Pendiente», y no sale fuera del área. Las entradas anteriores a la 1.16 no la llevan. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
 Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`: cuenta lo que hizo, pero no es una sesión, y el tablero no la cuenta como tal.
 
