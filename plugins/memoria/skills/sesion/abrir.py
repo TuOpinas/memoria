@@ -411,6 +411,7 @@ tp = leer(pc / "proyecto.md")
 if tp is None:
     titulo("PROYECTO")
     print("(no se pudo leer proyecto.md: el proyecto no existe, es restringido o no está descargado; se dice y se para)")
+    claude_outputs()
     sys.exit(0)
 titulo(f"PROYECTO {ACTIVO}/proyecto.md")
 print(tp.strip())

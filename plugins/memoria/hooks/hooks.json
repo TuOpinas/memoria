@@ -1,5 +1,5 @@
 {
-  "description": "Al arrancar una sesión, el plugin memoria se presenta solo: si hay una carpeta conectada con guia.md y metodo.md, Claude aplica el método sin que nadie pegue instrucciones en el proyecto. Al terminar cada respuesta, si hay carpetas conectadas y la memoria no se abrió, lo pide una vez por conversación. Antes de escribir, no deja guardar nada en «Claude outputs» de la memoria y dice dónde va; después de cada herramienta, si apareció algo ahí, pide moverlo a su proyecto.",
+  "description": "Al arrancar una sesión, el plugin memoria se presenta solo: si hay una carpeta conectada con guia.md y metodo.md, Claude aplica el método sin que nadie pegue instrucciones en el proyecto. Al terminar cada respuesta, si hay carpetas conectadas y la memoria no se abrió, lo pide una vez por conversación. Antes de escribir, no deja guardar nada en «Claude outputs» de la memoria y dice dónde va; después de cada comando, si apareció algo ahí, pide moverlo a su proyecto.",
   "hooks": {
     "SessionStart": [
       {
@@ -37,7 +37,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
