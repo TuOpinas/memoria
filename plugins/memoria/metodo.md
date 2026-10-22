@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.18.0 · huella 3e14ad4 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.18.1 · huella 3e14ad4 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 

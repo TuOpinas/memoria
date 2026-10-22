@@ -840,8 +840,9 @@ for a in areas_guia:
     }
     if texto is None:
         area_doc["legible"] = False
-        # por qué no se muestra: sin acceso, o la carpeta no está en esta computadora
-        area_doc["motivo"] = motivo_de(carpeta / "area.md")
+        # por qué no se muestra. Lo que declara guia.md manda sobre lo que se ve en el disco: Drive no baja a la
+        # computadora las carpetas que la cuenta no puede abrir, y un área restringida parecería «sin carpeta»
+        area_doc["motivo"] = "restringido" if area_doc["restringido"] else motivo_de(carpeta / "area.md")
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -873,7 +874,14 @@ for a in areas_guia:
             "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
-            pdoc["motivo"] = motivo_de(pc / "proyecto.md")
+            # su línea del índice del área es pública: se muestra sin la palabra «restringido», y si la lleva, o el área
+            # está restringida, el motivo es ese aunque la carpeta no esté en la computadora (lo mismo que con un área)
+            linea = ref.get("descripcion", "")
+            declarado = bool(re.match(r"^restringid[oa]\b", linea, re.I)) or area_doc["restringido"]
+            linea = re.sub(r"^restringid[oa]\b\s*[:—–-]?\s*", "", linea, flags=re.I).strip()
+            if linea:
+                pdoc["descripcion"] = linea
+            pdoc["motivo"] = "restringido" if declarado else motivo_de(pc / "proyecto.md")
             docs["proyectos"][pid] = pdoc
             continue
         fm, cuerpo = frontmatter(tp)

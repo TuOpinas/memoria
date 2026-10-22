@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.18.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.18.1"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -771,14 +771,19 @@ projStatus = _memo1("estado", projStatus);
 afectan = _memo1("afectan", afectan);
 mtDatos = _memo1("mt", mtDatos);
 entIdx = _memo1("ents", entIdx);
-// por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14); sin motivo, se supone restringido
+// por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14; «restringido» cuando la carpeta
+// lo declara, 1.18.1); sin motivo, se supone restringido. Del dueño, solo el nombre: la celda de guia.md puede llevar notas
+const soloNombre = d => (d||"").replace(/\s*\([^)]*\)/g,"").trim();
 function noLeido(x, fem){
-  const m = x.motivo || "sin-acceso", quien = esc(x.dueno || (fem ? "su dueña" : "su dueño"));
-  const r = fem ? "Restringida" : "Restringido", lo = fem ? "ella" : "él", ella = fem ? "la" : "lo";
-  if(m==="sin-carpeta") return {pill:"Sin carpeta", txt:`Está en el mapa de la carpeta, pero su carpeta no existe en la computadora donde se generó el tablero: todavía no se creó, o no está sincronizada ahí. Responde ${quien}.`};
+  const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
+  const r = fem ? "Restringida" : "Restringido", ella = fem ? "la" : "lo";
+  const lectores = esc((x.lectores||"").replace(/^\s*restringid[oa]\b\s*[:—–-]?\s*/i, "").trim());
+  const pedir = `Si necesitas acceso, pídeselo a ${quien}.`;
+  if(m==="restringido") return {pill:r, txt:`${r}${/^restringid/i.test(x.lectores||"") && lectores ? ` a ${lectores}` : ""}. ${pedir}`};
+  if(m==="sin-carpeta") return {pill:"No disponible", txt:`No está en la computadora que generó el tablero: tu cuenta no tiene acceso o aún no se sincronizó. ${pedir}`};
   if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer. Responde ${quien}.`};
   if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día. Responde ${quien}.`};
-  return {pill:r, txt:`${r}. Existe y responde por ${lo} ${quien}; la cuenta que genera este tablero no tiene acceso. Para pedirlo, habla con quien administra la carpeta.`};
+  return {pill:r, txt:`${r}. ${pedir}`};
 }
 function projStatus(p){
   if(p.restringido) return {k:"sininiciar", ...EST.sininiciar, label:"Restringido", regla:"No se lee", riesgo:false};
@@ -1112,7 +1117,7 @@ function projTags(p){
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function projRow(p){
-  if(p.restringido){ const nl = noLeido(p,false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${nl.pill==="Restringido"?"Existe y tiene dueño; su contenido no se muestra aquí.":nl.txt}</span></span></div>`; }
+  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion)+" · ":""}${nl.txt}</span></span></div>`; }
   if(p.cerrado) return `<div class="prow closed" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span></span><span class="s"><span class="st">${inline(p.estado_resumen)}</span></span></div>`;
   const live = stepsLive(p), t = today(), lim = addDays(7);
   const fs = live.map(s=>effDate(p,s));
@@ -1200,7 +1205,7 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 function renderResumen(){
   const tday = today(), nArch = AREAS.filter(archivada).length;
   const filas = areasVis().map(a => {
-    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span><span class="ar-p">Responde ${esc(a.dueno||"su dueño")}</span></button>`;
+    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span><span class="ar-p">Responde ${esc(soloNombre(a.dueno)||"su dueño")}</span></button>`;
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido && !p.cerrado);
     const cnt = {}; let nR = 0; for(const p of ps){ const e = projStatus(p); cnt[e.k] = (cnt[e.k]||0)+1; if(e.riesgo) nR++; }
     const pills = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`<span class="pill ${EST[k].pill}">${cnt[k]} ${EST[k].label.toLowerCase()}</span>`).join("") + (nR?`<span class="pill late">${nR} en riesgo</span>`:"");
@@ -1999,7 +2004,7 @@ function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
   if(p.restringido){
-    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1><p class="sub">${noLeido({...p, dueno: (a.dueno||"su dueño")+", que responde por el área"}, false).txt}</p>`;
+    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}<p class="sub">${noLeido({...p, dueno: a.dueno, lectores: a.restringido ? a.lectores : ""}, false).txt}</p>`;
     main.innerHTML = ""; return;
   }
   const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;
