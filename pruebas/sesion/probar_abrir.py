@@ -56,6 +56,8 @@ ok("=== PROYECTO " not in o and "=== AVISOS" not in o, "con un proyecto pasado, 
 c, o = abrir("--minima", "--cuenta", "beto@ejemplo.test")
 ok("`personas/nomina/`" in o and "`personas/sueldos/`" in o, "de un área restringida de la cuenta, sus proyectos")
 ok("legal/ · es de esta cuenta, pero su carpeta aún no se creó" in o, "un área restringida de la cuenta sin carpeta: no le dice restringida a su dueño")
+ok("=== CLAUDE OUTPUTS\n(no se muestra a esta cuenta" in o and "propuesta-NOMBRE-SUELTO.pdf" not in o,
+   "a una cuenta que no es la del responsable de contexto no le lista «Claude outputs»")
 c, o = abrir("--minima", "--cuenta", "eva@ejemplo.test")
 ok("legal/ · es de esta cuenta, pero su carpeta aún no se creó" in o, "tampoco a quien colabora en ella")
 c, o = abrir("legal/contratos", "--cuenta", "beto@ejemplo.test")
