@@ -833,7 +833,7 @@ for a in areas_guia:
     texto = leer(carpeta / "area.md")
     area_doc = {
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
-        # quienes colaboran, por su cuenta: solo en el tablero completo; el público no lleva correos de nadie
+        # quienes colaboran, por su cuenta: el tablero es de su dueño y no se comparte
         "colaboran": sorted(cuentas(a["cuenta"])[1]),
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],

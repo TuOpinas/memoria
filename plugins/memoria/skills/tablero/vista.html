@@ -775,7 +775,6 @@ entIdx = _memo1("ents", entIdx);
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(x.dueno || (fem ? "su dueña" : "su dueño"));
   const r = fem ? "Restringida" : "Restringido", lo = fem ? "ella" : "él", ella = fem ? "la" : "lo";
-  if(m==="declarada"||m==="declarado") return {pill:r, txt:`${r}. Existe y responde por ${lo} ${quien}; está declarad${fem?"a":"o"} así en la carpeta y su contenido no se muestra en este tablero.`};
   if(m==="sin-carpeta") return {pill:"Sin carpeta", txt:`Está en el mapa de la carpeta, pero su carpeta no existe en la computadora donde se generó el tablero: todavía no se creó, o no está sincronizada ahí. Responde ${quien}.`};
   if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer. Responde ${quien}.`};
   if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día. Responde ${quien}.`};
@@ -905,7 +904,9 @@ function huellas(){
 }
 function visita(){
   if(NOV !== null || !META || !(ready.a && ready.p)) return;
-  const k = "tablero-visto:" + (META.organizacion||"") + ":" + (META.modo||"");
+  // la clave lleva «completo», que es lo que decía el modo antes de la 1.18; uno que era público trae lo suyo la primera vez
+  const k = "tablero-visto:" + (META.organizacion||"") + ":completo";
+  try{ const v = "tablero-visto:" + (META.organizacion||"") + ":publico"; if(!localStorage.getItem(k) && localStorage.getItem(v)) localStorage.setItem(k, localStorage.getItem(v)); }catch(e){}
   let st = null;
   try{ st = JSON.parse(localStorage.getItem(k) || "null"); }catch(e){ NOV = false; return; }
   const ahora = {sinc: META.sincronizado, visto: today(), ...huellas()};
@@ -946,7 +947,7 @@ function renderNovedades(){
 }
 // ---- la memoria al día: dónde está floja, el detalle para decidir y la frase para arreglarlo en sesión ----
 let MT_OPEN = null, MT_POS = null;
-const POS_KEY = () => "tablero-pospuesto:" + (META?.organizacion||"") + ":" + (META?.modo||"");
+const POS_KEY = () => { const k = "tablero-pospuesto:" + (META?.organizacion||"") + ":completo"; try{ const v = "tablero-pospuesto:" + (META?.organizacion||"") + ":publico"; if(!localStorage.getItem(k) && localStorage.getItem(v)) localStorage.setItem(k, localStorage.getItem(v)); }catch(e){} return k; };
 function pospuestos(){
   if(MT_POS === null){ try{ MT_POS = JSON.parse(localStorage.getItem(POS_KEY()) || "{}") || {}; }catch(e){ MT_POS = {}; } }
   const t = today(); for(const k of Object.keys(MT_POS)) if(MT_POS[k] < t) delete MT_POS[k];
@@ -1148,8 +1149,8 @@ function colaRows(){
     if(c.tipo==="nota" && !c.proyecto && c.area){ const ar = areaBy[c.area]; if(!ar || ar.legible===false || (PEND_AREA && view.lvl==="pend" && c.area!==PEND_AREA)) return "";   // nota del área (desde el teléfono: un panorama, una prioridad); de un área que este tablero no lee, nada
       return `<div class="due-item static"><span class="pill">nota del área</span><span class="t">${esc(c.nota||"")}</span><span class="w">${esc(ar.nombre)} · <button type="button" class="lnk" data-go-area="${esc(ar.slug)}">ver el área</button> · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${esc(c.id)}">Deshacer</button>`:""}</span></div>`; }
     const p = byId[c.proyecto];
-    // de un proyecto que este tablero no muestra (no está, o es restringido) no sale el texto: la cola la escribe
-    // la sesión sin filtrar, y en el tablero público la lee cualquiera
+    // de un proyecto que este tablero no muestra (no está, o su cuenta no lo lee) no sale el texto: la cola la escribe
+    // la sesión sin filtrar
     if(!p || p.restringido){ if(!OWNER) return ""; return `<div class="due-item static orf"><span class="pill late">${p?"restringido":"sin proyecto"}</span><span class="t">Un cambio en un proyecto que este tablero no muestra; lo recoge su siguiente sesión.</span><span class="w">${esc(c.proyecto||"")} · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${esc(c.id)}">Deshacer</button>`:""}</span></div>`; }
     if(PEND_AREA && view.lvl==="pend" && p.area!==PEND_AREA) return "";
     const que = c.tipo==="fecha" ? `Fecha ${c.fecha_anterior?fmtD(c.fecha_anterior):"sin fecha"} → ${c.fecha_nueva?fmtD(c.fecha_nueva):"sin fecha"}: ${inline(c.paso)}`
@@ -1335,14 +1336,18 @@ const cierresPend = () => !META || !META.sincronizado ? [] : CIERRES.filter(c =>
 // el nombre lo pone el cierre sin filtrar: de un proyecto que este tablero no muestra, solo se dice que lo hay
 const nombresCierres = l => { const n = [...new Set(l.map(c => { const p = byId[c.proyecto]; return p && !p.restringido ? (p.nombre || c.nombre || c.proyecto) : null; }).filter(Boolean))]; const otros = l.filter(c => { const p = byId[c.proyecto]; return !p || p.restringido; }).length; if(otros) n.push(`${otros} en proyecto${otros===1?"":"s"} que este tablero no muestra`); return n.join(", "); };
 // Al abrir el tablero con cierres pendientes, el dueño lo pone al día solo, una vez por tanda (la marca es la hora del último cierre).
-// «Abrir» es cargar la página o volver a ella desde otra pestaña o ventana (alAbrir, abajo). Un cierre que llega con la página
-// ya a la vista no lanza nada: se ve el aviso con su botón. Si no, un tablero abierto al lado lanzaba la tarea en cada cierre.
-const CARGA = {c:false, m:false};
-function alAbrir(){ if(CARGA.c && CARGA.m) autoSync(); }
-document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") alAbrir(); });
+// Solo cuentan los cierres anteriores al momento en que se abrió: cargar la página, o volver a ella desde otra pestaña o
+// ventana (con el foco: desbloquear la pantalla o destapar la ventana no es abrirla). Un cierre que llega con la página a la
+// vista no lanza nada: se ve el aviso con su botón. Antes de la 1.18, un tablero abierto al lado lanzaba la tarea en cada cierre.
+// Se mira en cada lectura de la base, porque las primeras pueden venir de la caché y los cierres de verdad llegar después.
+// El minuto de margen es porque la hora de un cierre va en minutos: uno escrito justo después de abrir no cuenta como anterior.
+let ABIERTO = Date.now();
+function alAbrir(){ ABIERTO = Date.now(); autoSync(); }
+window.addEventListener("focus", () => { if(document.visibilityState === "visible") alAbrir(); });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible" && document.hasFocus()) alAbrir(); });
 function autoSync(){
   if(!OWNER || !META || SYNC_STATE || syncFalta()) return;
-  const pend = cierresPend(); if(!pend.length) return;
+  const pend = cierresPend().filter(c => new Date(c.hora).getTime() < ABIERTO - 60000); if(!pend.length) return;
   const marca = pend.map(c => c.hora).sort().pop();
   if(autoSync.hecha === marca) return;
   try{ if(localStorage.getItem("auto-sync") === marca) return; localStorage.setItem("auto-sync", marca); }catch(e){}
@@ -1400,7 +1405,7 @@ function staleBanner(){
   else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando su dueño lo ponga al día."}</span></div>`;
   if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.</span></div>`;
   // un tablero que era público pasa a mostrar todo lo que lee su cuenta (1.18): se dice una semana, con lo que implica
-  if(view.lvl === "root" && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
+  if(view.lvl === "root" && OWNER && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
   if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;
   // La carpeta puede ir detrás de la página: su metodo.md lo pone al día la primera cuenta con el plugin nuevo que abre sesión o sincroniza y puede escribir en ella.
   if(view.lvl === "root" && META.version_metodo && verMenor(META.version_metodo, VERSION_TABLERO)) out += `<div class="stale suave"><span>La carpeta usa todavía la versión <b>${esc(META.version_metodo)}</b> del método. Se pone al día sola en la próxima sesión o sincronización de alguien con el plugin actualizado y permiso para escribir en ella. Mientras tanto todo funciona igual.</span></div>`;
@@ -2082,7 +2087,7 @@ function _render(){
   const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
-  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; ${META.modo==="completo" ? "todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido»" : "nunca fuentes, taller ni lo restringido"}. La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
+  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido». La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
 }
 (async ()=>{
   render();
@@ -2098,9 +2103,8 @@ function _render(){
   db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("proyectos").onSnapshot(snap=>{ PROJ = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("cambios").onSnapshot(snap=>{ CAMBIOS = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
-  // solo la primera lectura de cada uno cuenta como abrir; las siguientes repintan sin lanzar nada
-  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); if(!CARGA.c){ CARGA.c = true; alAbrir(); } }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; if(META && SYNC_AUTO && !cierresPend().length) SYNC_AUTO = null; render(); if(!CARGA.m){ CARGA.m = true; alAbrir(); } }, ()=>{});
+  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); autoSync(); }, ()=>{});
+  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; if(META && SYNC_AUTO && !cierresPend().length) SYNC_AUTO = null; render(); autoSync(); }, ()=>{});
   db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});
 })();
 

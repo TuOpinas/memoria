@@ -118,8 +118,9 @@ const path = require('path');
     if(r2 !== 0) errores.push(`cierres: al volver a abrir, la misma tanda de cierres se lanzó otra vez (${r2})`);
     await ctx.close();
   }
-  // un cierre que llega con el tablero abierto no lanza nada: sale el aviso con su botón. Volver a la pestaña
-  // sí cuenta como abrirlo. Antes de la 1.18, un tablero abierto al lado lanzaba la tarea en cada cierre
+  // un cierre que llega con el tablero abierto no lanza nada: sale el aviso con su botón, también si después se vuelve a
+  // leer meta/estado. Volver a la pestaña (con el foco) sí cuenta como abrirlo. Antes de la 1.18, un tablero abierto al lado
+  // lanzaba la tarea en cada cierre
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
@@ -128,16 +129,38 @@ const path = require('path');
     await p.evaluate(() => {
       const h = new Date(Date.now() + 60000).toISOString().slice(0, 16) + 'Z';
       (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--x'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: h, cuenta: 'ana@ejemplo.test' };
-      window.__emitir('cierres');
+      window.__emitir('cierres'); window.__emitir('meta/estado');
     });
     await p.waitForTimeout(400);
     const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
     if(r.llamadas !== 0) errores.push(`abierto: un cierre que llega con la página abierta lanzó la puesta al día (${r.llamadas})`);
     if(!/1 sesión cerrada.*Cuentas/.test(r.banda)) errores.push(`abierto: no avisa del cierre que llegó con la página abierta (${r.banda.slice(0, 200)})`);
-    await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    // volver a la pestaña un poco después: el cierre ya es anterior a esa vuelta
+    await p.evaluate(() => { const c = window.__D.cierres['ventas--cuentas--x']; c.hora = new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z'; window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString(); window.__emitir('meta/estado'); window.__emitir('cierres'); });
+    await p.waitForTimeout(200);
+    const r1 = await p.evaluate(() => (window.__llamadas || []).length);
+    if(r1 !== 1) errores.push(`abierto: un cierre anterior a abrir la página que llega en una lectura posterior (la primera venía de la caché) no la puso al día una vez (${r1})`);
+    await ctx.close();
+  }
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`volver: ${e.message}`));
+    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(600);
+    // la página lleva diez minutos abierta (ABIERTO es global en la página); llega un cierre de hace dos minutos,
+    // con la página ya abierta: no lanza nada. Volver a la pestaña después sí, una vez
+    await p.evaluate(() => {
+      ABIERTO = Date.now() - 600000;
+      window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString();
+      (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--y'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z', cuenta: 'ana@ejemplo.test' };
+      window.__emitir('meta/estado'); window.__emitir('cierres');
+    });
+    await p.waitForTimeout(300);
+    const r0 = await p.evaluate(() => (window.__llamadas || []).length);
+    await p.evaluate(() => window.dispatchEvent(new Event('focus')));
     await p.waitForTimeout(300);
     const r2 = await p.evaluate(() => (window.__llamadas || []).length);
-    if(r2 !== 1) errores.push(`abierto: al volver a la pestaña con un cierre pendiente no se puso al día una vez (${r2})`);
+    if(r0 !== 0 || r2 !== 1) errores.push(`volver: con el cierre llegado con la página abierta y la vuelta a la pestaña, se esperaban 0 y luego 1 lanzamientos (${r0}, ${r2})`);
     await ctx.close();
   }
   await b.close();
