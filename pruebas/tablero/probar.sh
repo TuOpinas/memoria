@@ -40,7 +40,8 @@ casos = [(m("beto", "areas", "legal") == "sin-carpeta", "un área restringida de
          (m("ana", "proyectos", "ventas--ronda") == "sin-carpeta", "un proyecto restringido del área de la cuenta (dueña), sin carpeta, sale «sin carpeta»"),
          (m("ana", "areas", "legal") == "restringido", "un área restringida ajena sigue restringida"),
          (m("eva", "areas", "legal") == "sin-carpeta", "quien colabora en un área restringida sin carpeta la ve «sin carpeta»"),
-         (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra")]
+         (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra"),
+         (m("carla", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido del área donde la cuenta solo colabora sigue restringido: lo restringido de dentro es del dueño")]
 for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
 sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2
