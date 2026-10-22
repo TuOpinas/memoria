@@ -42,7 +42,7 @@ Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ni
 
 ```
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
-Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
+Al empezar, lee solo lo justo para saber dónde está cada cosa (con el plugin, su apertura mínima; sin él, `guia.md`) y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
 Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado, salvo para crear carpetas, mover, renombrar o mandar a la papelera cuando la consola de la computadora no ve la carpeta; si no la ves, pídeme que la añada. Sin ninguna carpeta conectada (desde el teléfono o la web), la raíz se puede leer por el conector de Drive, sin escribir nada en ella.
 Escribe solo donde tu cuenta es dueña o colabora, según `guia.md` y la línea «Colabora:» de cada proyecto, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.

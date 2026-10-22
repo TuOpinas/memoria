@@ -19,13 +19,15 @@ respuesta='{"type":"assistant","message":{"role":"assistant","content":[{"type":
 apertura_txt='{"type":"user","message":{"role":"user","content":[{"tool_use_id":"t1","type":"tool_result","content":"=== METODO (primera línea)\n# Método · versión 1.18.2"}]}}'
 apertura_lista='{"type":"user","message":{"role":"user","content":[{"tool_use_id":"t1","type":"tool_result","content":[{"type":"text","text":"=== METODO (primera línea)\n# Método"}]}]}}'
 codigo='{"type":"user","message":{"role":"user","content":[{"tool_use_id":"t2","type":"tool_result","content":"    80\tprint(\"=== METODO (primera línea)\")\n grep -Fq \"The user picked these folders on their computer\" [memoria-apertura]"}]}}'
-aviso='{"type":"attachment","attachment":{"type":"hook_additional_context","content":["[memoria-apertura] Esta conversación tiene carpetas conectadas…"]}}'
+miro='{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t3","name":"mcp__remote-devices__get_device_info","input":{}}]}}'
+enlazada='{"type":"user","isMeta":true,"message":{"role":"user","content":"<system-reminder>\nThis session is now linked to one of the user\x27s computers.\n</system-reminder>"}}'
+editado='{"type":"attachment","attachment":{"type":"edited_text_file","snippet":"MARCA=\x27[memoria-apertura]\x27"}}'
 escribe_marca='{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Write","input":{"content":"[memoria-apertura] … === METODO (primera línea)"}}]}}'
 tarea='{"type":"user","message":{"role":"user","content":"Pon al día el tablero (completo) de la carpeta de memoria de TuOpinas. Trabaja en español."}}'
 conv() { local f="$tmp/$1.jsonl"; shift; printf '%s\n' "$@" > "$f"; echo "$f"; }
-corre() { # corre <HOME> <transcript> [stop_hook_active] [last_assistant_message]: deja la salida en $tmp/out y el código en $tmp/rc
-  printf '{"session_id":"s","transcript_path":"%s","hook_event_name":"Stop","stop_hook_active":%s,"last_assistant_message":"%s"}' "$2" "${3:-false}" "${4:-Respuesta.}" \
-    | HOME="$1" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; }
+corre() { # corre <HOME> <transcript> [stop_hook_active] [last_assistant_message]: cada registro es una conversación (su nombre, el session_id)
+  printf '{"session_id":"%s","transcript_path":"%s","hook_event_name":"Stop","stop_hook_active":%s,"last_assistant_message":"%s"}' "$(basename "$2" .jsonl)" "$2" "${3:-false}" "${4:-Respuesta.}" \
+    | HOME="$1" CLAUDE_PLUGIN_DATA="$tmp/datos" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; }
 calla() { [ "$(cat "$tmp/rc")" = 0 ] && [ ! -s "$tmp/out" ] && [ ! -s "$tmp/err" ]; }
 recuerda() { [ "$(cat "$tmp/rc")" = 0 ] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["hookSpecificOutput"]; assert d["hookEventName"]=="Stop" and d["additionalContext"].startswith("[memoria-apertura]")' "$tmp/out" 2>/dev/null; }
 
@@ -40,9 +42,13 @@ grep -q 'si ninguna carpeta lo es' "$tmp/out"; ok $? "y deja seguir sin más si 
 corre "$tmp/casa-memoria" "$(conv e "$pregunta" "$apertura_txt" "$respuesta")"; calla; ok $? "con una apertura ya hecha no dice nada"
 corre "$tmp/casa-memoria" "$(conv e2 "$pregunta" "$apertura_lista" "$respuesta")"; calla; ok $? "también con el resultado en forma de lista"
 corre "$tmp/casa-memoria" "$(conv e3 "$pregunta" "$respuesta")" false "Memoria activa · TuOpinas · método 1.18.2"; calla; ok $? "la respuesta que termina ya abrió, aunque el registro vaya con retraso"
-corre "$tmp/casa-memoria" "$(conv f "$pregunta" "$respuesta" "$aviso" "$respuesta")"; calla; ok $? "recuerda una sola vez por conversación"
-corre "$tmp/casa-memoria" "$(conv g "$pregunta" "$escribe_marca" "$codigo" "$respuesta")"; recuerda; ok $? "mostrar o escribir el código del plugin no cuenta como apertura ni como recordatorio"
-corre "$tmp/casa-memoria" "$(conv t "$tarea" "$respuesta")"; calla; ok $? "en la puesta al día del tablero no dice nada"
+f="$(conv f "$pregunta" "$respuesta")"; corre "$tmp/casa-memoria" "$f"; corre "$tmp/casa-memoria" "$f"; calla; ok $? "recuerda una sola vez por conversación"
+corre "$tmp/casa-memoria" "$(conv g "$pregunta" "$escribe_marca" "$codigo" "$editado" "$respuesta")"; recuerda; ok $? "mostrar, escribir o editar el código del plugin no cuenta como apertura ni como recordatorio"
+corre "$tmp/casa-memoria" "$(conv t "$enlazada" "$tarea" "$respuesta")"; calla; ok $? "en la puesta al día del tablero no dice nada, aunque antes llegue el aviso de computadora enlazada"
+corre "$tmp/casa-vacia" "$(conv d2 "$elegidas" "$miro" "$respuesta")"; calla; ok $? "en la nube, si Claude ya miró las carpetas y no abrió, no hay memoria: no dice nada"
+d3="$(conv d3 "$elegidas" "$respuesta")"; printf '{"session_id":"d3","transcript_path":"%s"}' "$d3" | HOME="$tmp/casa-vacia" CLAUDE_PLUGIN_DATA="/dev/null/no" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "si no puede apuntar que ya recordó, no recuerda (no se repetiría)"
+printf '{"transcript_path":"%s"}' "$(conv sin "$pregunta" "$respuesta")" | HOME="$tmp/casa-memoria" CLAUDE_PLUGIN_DATA="$tmp/datos" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "sin session_id no dice nada"
+printf '{"session_id":"h0","transcript_path":"%s"}' "$(conv h0 "$pregunta" "$respuesta")" | env -u HOME bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "sin HOME no falla"
 corre "$tmp/casa-memoria" "$(conv h "$pregunta" "$respuesta")" true; calla; ok $? "lo que sigue a su propio recordatorio no se vuelve a mirar"
 corre "$tmp/casa-memoria" "$tmp/no-existe.jsonl"; calla; ok $? "sin registro de la conversación no dice nada"
 printf 'esto no es JSON' | HOME="$tmp/casa-memoria" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "con una entrada rota no dice nada"

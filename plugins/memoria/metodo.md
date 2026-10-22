@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.18.2 · huella 403b383 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.18.2 · huella 188680a · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -103,7 +103,7 @@ En el `fuentes/enlaces.md` público queda la fila que dice que ese material exis
 
 **Dónde escala.** En `restringido/` no entran nunca `proyecto.md`, `decisiones.md` ni `sesiones.md`. Si lo que hay que esconder es una decisión, el estado o el objetivo, el proyecto no se puede partir: se restringe entero.
 
-**El nombre se ve.** Quien no tiene acceso ve la carpeta en gris, con su nombre, y un botón para solicitarlo que llega a quien administra. Por eso la carpeta de dentro de un proyecto se llama siempre `restringido` y no dice de qué trata. Las áreas y los proyectos se siguen listando en `guia.md` y en `area.md` con su nombre y su dueño, estén restringidos o no: el equipo tiene que poder saber que existen y a quién pedir acceso; lo que no puede es leerlos. Y lo dicen: un área restringida lleva «Restringida» al inicio de su columna «Quién la lee» en `guia.md`, y un proyecto restringido empieza su línea del bloque `Proyectos` de su `area.md` por esa palabra: `` - `slug/` — restringido: … ``. Decir en la línea que una parte del proyecto está en `restringido/` no lo declara restringido. Es lo único que deja ver que algo está restringido a quien sí puede leerlo, por ejemplo a la herramienta que genera un tablero con la cuenta de quien administra la carpeta.
+**El nombre se ve.** Quien no tiene acceso ve la carpeta en gris, con su nombre, y un botón para solicitarlo que llega a quien administra. Por eso la carpeta de dentro de un proyecto se llama siempre `restringido` y no dice de qué trata. Las áreas y los proyectos se siguen listando en `guia.md` y en `area.md` con su nombre y su dueño, estén restringidos o no: el equipo tiene que poder saber que existen y a quién pedir acceso; lo que no puede es leerlos. Y lo dicen: un área restringida lleva «Restringida» al inicio de su columna «Quién la lee» en `guia.md` (si la palabra aparece en otra parte de la celda sin negarla, también cuenta: ante la duda, se trata como restringida), y un proyecto restringido empieza su línea del bloque `Proyectos` de su `area.md` por esa palabra: `` - `slug/` — restringido: … ``. Decir en la línea que una parte del proyecto está en `restringido/` no lo declara restringido. Es lo único que deja ver que algo está restringido a quien sí puede leerlo, por ejemplo a la herramienta que genera un tablero con la cuenta de quien administra la carpeta.
 
 Si una organización necesita que ni el nombre de un área se vea, o que quien administra la carpeta compartida no pueda ver algo, ese caso se resuelve con una carpeta compartida aparte y se escribe en las reglas propias de `guia.md`.
 
@@ -627,7 +627,7 @@ Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ni
 
 ```
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
-Lee `guia.md` al empezar y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
+Al empezar, lee solo lo justo para saber dónde está cada cosa (con el plugin, su apertura mínima; sin él, `guia.md`) y no leas nada más hasta saber qué necesitas: la carpeta se lee por niveles y `guia.md` dice dónde está cada cosa.
 Lee y escribe la carpeta por su copia en esta computadora, nunca por el conector de Google Drive aunque esté conectado, salvo para crear carpetas, mover, renombrar o mandar a la papelera cuando la consola de la computadora no ve la carpeta; si no la ves, pídeme que la añada. Sin ninguna carpeta conectada (desde el teléfono o la web), la raíz se puede leer por el conector de Drive, sin escribir nada en ella.
 Escribe solo donde tu cuenta es dueña o colabora, según `guia.md` y la línea «Colabora:» de cada proyecto, o donde te diga que trabajo si la cuenta no aparece, y en ningún otro sitio de la carpeta; si no está claro, pregúntamelo antes de escribir nada. Si algo le toca a otra área, dímelo y yo se lo pido a su dueño.
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.

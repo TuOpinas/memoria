@@ -3,8 +3,9 @@
 const fs = require('fs');
 const h = fs.readFileSync(process.argv[2], 'utf8');
 const desde = h.indexOf('const soloNombre'), hasta = h.indexOf('function projStatus(p){');
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const { noLeido, soloNombre } = new Function('esc', h.slice(desde, hasta) + '; return { noLeido, soloNombre };')(esc);
+// la función de escape es la de la página, no una de la prueba: si la página dejara de escapar, la prueba lo vería
+const linEsc = h.slice(h.indexOf('const esc = '), h.indexOf('\n', h.indexOf('const esc = ')));
+const { noLeido, soloNombre } = new Function(linEsc + '\n' + h.slice(desde, hasta) + '; return { noLeido, soloNombre };')();
 let fallos = 0;
 const ok = (c, q) => { console.log((c ? '  bien  ' : '  FALLA ') + q); if(!c) fallos++; };
 const area = (lectores, dueno = 'Beto Prueba', motivo = 'restringido') => noLeido({ motivo, lectores, dueno }, true).txt;
@@ -23,6 +24,8 @@ ok(soloNombre('Dirección (Ana, Beto)') === 'Dirección (Ana, Beto)', 'un parén
 ok(noLeido({ motivo: 'restringido', dueno: 'Beto Prueba' }, false).txt === 'Restringido. Si necesitas acceso, pídeselo a Beto Prueba.', 'un proyecto restringido, sin lectores');
 const sc = noLeido({ motivo: 'sin-carpeta', dueno: 'Ana Prueba' }, true);
 ok(sc.pill === 'No disponible' && sc.txt === 'Aún no se creó, no está sincronizada o tu cuenta no tiene acceso. Pregunta a Ana Prueba.', 'sin carpeta: las tres causas, sin mandar a pedir acceso');
+ok(area('Dirección (restringida)') === 'Restringida a Dirección. Si necesitas acceso, pídeselo a Beto Prueba.', 'la palabra en otra parte de la celda también cuenta, y no queda en el texto');
+ok(area('Todo el equipo, nada restringido') === 'Restringida. Si necesitas acceso, pídeselo a Beto Prueba.', 'una celda que lo niega no da lectores');
 const mio = noLeido({ motivo: 'sin-carpeta', dueno: 'Ana Prueba', mio: true }, true);
 ok(mio.txt === 'Aún no se creó o no está sincronizada en tu computadora.', 'sin carpeta de la propia cuenta: no le dice «pregunta a» a su dueño');
 ok(!area('Restringida: <img src=x onerror=alert(1)>').includes('<img'), 'lo que viene de la carpeta se escapa');

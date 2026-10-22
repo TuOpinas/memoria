@@ -776,11 +776,12 @@ entIdx = _memo1("ents", entIdx);
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
 const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
-const lectoresDe = l => { let t = (l||"").replace(/^[\W_]*restringid[oa]\b[*_»"”'’\s]*/i, "").replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
+const restringidaCelda = l => /restringid[oa]/i.test(l||"") && !/\b(?:nada|no|sin)\s+(?:\S+\s+)?restringid/i.test(l||"");
+const lectoresDe = l => { let t = l||""; t = /^[\W_]*restringid[oa]\b/i.test(t) ? t.replace(/^[\W_]*restringid[oa]\b[*_»"”'’\s]*/i, "") : t.replace(/\s*[(\[—–,-]?\s*restringid[oa]\s*[)\]]?/i, ""); t = t.trim().replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
   const r = fem ? "Restringida" : "Restringido", ella = fem ? "la" : "lo";
-  const lectores = /^[\W_]*restringid[oa]\b/i.test(x.lectores||"") ? esc(lectoresDe(x.lectores)) : "";
+  const lectores = restringidaCelda(x.lectores) ? esc(lectoresDe(x.lectores)) : "";
   if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` ${lectores}` : ""}. Si necesitas acceso, pídeselo a ${quien}.`};
   // de la cuenta que generó el tablero (x.mio): no hay a quién preguntar, la carpeta falta en su computadora
   if(m==="sin-carpeta" && x.mio) return {pill:"No disponible", txt:`Aún no se creó o no está sincronizad${fem?"a":"o"} en tu computadora.`};
@@ -1121,7 +1122,7 @@ function projTags(p){
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function projRow(p){
-  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
+  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):p.mio?"":`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
   if(p.cerrado) return `<div class="prow closed" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span></span><span class="s"><span class="st">${inline(p.estado_resumen)}</span></span></div>`;
   const live = stepsLive(p), t = today(), lim = addDays(7);
   const fs = live.map(s=>effDate(p,s));
@@ -1209,7 +1210,7 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 function renderResumen(){
   const tday = today(), nArch = AREAS.filter(archivada).length;
   const filas = areasVis().map(a => {
-    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span><span class="ar-p">Responde ${esc(soloNombre(a.dueno)||"su dueño")}</span></button>`;
+    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span>${a.mio?"":`<span class="ar-p">Responde ${esc(soloNombre(a.dueno)||"su dueño")}</span>`}</button>`;
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido && !p.cerrado);
     const cnt = {}; let nR = 0; for(const p of ps){ const e = projStatus(p); cnt[e.k] = (cnt[e.k]||0)+1; if(e.riesgo) nR++; }
     const pills = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`<span class="pill ${EST[k].pill}">${cnt[k]} ${EST[k].label.toLowerCase()}</span>`).join("") + (nR?`<span class="pill late">${nR} en riesgo</span>`:"");

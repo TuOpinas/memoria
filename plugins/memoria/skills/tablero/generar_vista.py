@@ -92,7 +92,10 @@ CUENTA_TABLERO = (_arg("--cuenta") or "").strip().lower()
 # proyecto en el bloque Proyectos de su área, con o sin marcas delante («**restringido**:»). Mismo criterio que abrir.py.
 RE_RESTRINGIDA = re.compile(r"^[\W_]*restringid[oa]\b", re.I)
 def restringida_celda(celda):
-    return bool(RE_RESTRINGIDA.match(celda or ""))
+    """«Quién la lee» declara el área restringida con la palabra, por convención al inicio; cualquier otra mención que no
+    la niegue («nada restringido», «no restringida», «sin restringir») también cuenta: ante la duda, cerrada."""
+    c = celda or ""
+    return bool(re.search(r"restringid[oa]", c, re.I)) and not re.search(r"\b(?:nada|no|sin)\s+(?:\w+\s+)?restringid", c, re.I)
 def sin_palabra_restringido(linea):
     """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
     return re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()

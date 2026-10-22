@@ -183,6 +183,11 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+def restringida_celda(celda):
+    """«Quién la lee» declara el área restringida con la palabra, por convención al inicio; cualquier otra mención que no
+    la niegue («nada restringido», «no restringida», «sin restringir») también cuenta: ante la duda, cerrada. Como el tablero."""
+    c = celda or ""
+    return bool(re.search(r"restringid[oa]", c, re.I)) and not re.search(r"\b(?:nada|no|sin)\s+(?:\w+\s+)?restringid", c, re.I)
 
 
 # ---------- nivel 0 ----------
@@ -237,7 +242,7 @@ for l in filas:
         de, co, av = cuentas(c[3])
         if av:
             print(f"(aviso: la celda Cuenta de «{c[0].strip('`')}» en guia.md: {av})")
-        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": bool(re.match(r"^[\W_]*restringid[oa]\b", c[4], re.I)),
+        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4],
                       "en_celda": set(CORREO.findall(c[3].lower())), "aviso": av})
     else:
         print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
@@ -309,6 +314,26 @@ def declarado(linea):
     return bool(re.match(r"^- `[^`]+`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", linea, re.I))
 
 
+def solo_nombre(d):
+    """El dueño sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
+    «Dirección (Ana, Beto)» se queda. Como el tablero."""
+    return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
+
+
+def lectores_de(celda):
+    """A quiénes se lee, para «restringida a …», de la celda «Quién la lee». Como el tablero."""
+    t = celda or ""
+    if re.match(r"^[\W_]*restringid[oa]\b", t, re.I):
+        t = re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*", "", t, flags=re.I)
+    else:
+        t = re.sub(r"\s*[(\[—–,-]?\s*restringid[oa]\s*[)\]]?", "", t, flags=re.I)
+    t = re.sub(r"^[:—–,-]\s*", "", t.strip())
+    t = re.sub(r"^(?:la|lo)\s+leen\s+", "", t, flags=re.I).strip()
+    m = re.fullmatch(r"\((.*)\)", t)
+    t = (m.group(1) if m else t).strip()
+    return "" if not t else t if re.match(r"^(?:a|al|para|solo|sólo|únicamente|por|entre)\b", t, re.I) else "a " + t
+
+
 def de_la_cuenta(a):
     """El área es de la cuenta de esta sesión: dueña o colabora. Entonces la puede leer aunque esté restringida."""
     return bool(CUENTA) and CUENTA in (a["cuentas_dueno"] | a["colaboran"])
@@ -318,11 +343,16 @@ def motivo_area(slug):
     """Por qué no se lee un área: restringida según guia.md (Drive no baja a la computadora lo que la cuenta no puede
     abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
     leer. El mismo criterio que el tablero con --cuenta."""
-    if any(a["slug"] == slug and a["restringida"] and not de_la_cuenta(a) for a in areas):
-        return "restringida para esta cuenta"
+    a = next((x for x in areas if x["slug"] == slug), None)
+    quien = solo_nombre(a["dueno"]) if a else "su dueño"
+    if a and a["restringida"] and not de_la_cuenta(a):
+        lect = lectores_de(a["lectores"])
+        return f"restringida{' ' + lect if lect else ''}; si hace falta acceso, se pide a {quien}"
     if not (RAIZ / slug).exists():
-        return "su carpeta no está en esta computadora: aún no se creó, no está sincronizada o la cuenta no tiene acceso"
-    return "no se pudo leer: sin permiso o sin descargar"
+        if a and de_la_cuenta(a):
+            return "es de esta cuenta, pero su carpeta aún no se creó o no está sincronizada en esta computadora"
+        return f"aún no se creó, no está sincronizada en esta computadora o la cuenta no tiene acceso; responde {quien}"
+    return f"no se pudo leer: sin permiso o sin descargar; responde {quien}"
 
 
 area_activa = ACTIVO.split("/")[0] if ACTIVO and "/" in ACTIVO else None
@@ -331,10 +361,10 @@ if not ACTIVO:
     for a in areas:
         if a["restringida"] and not de_la_cuenta(a):
             # lo restringido no sale salvo que la cuenta sea de esa área o el proyecto activo esté dentro
-            print(f"- {a['slug']}/ · restringida, dueño {a['dueno']}"); continue
+            print(f"- {a['slug']}/ · {motivo_area(a['slug'])}"); continue
         t = leer(RAIZ / a["slug"] / "area.md")
         if t is None:
-            print(f"- {a['slug']}/ · {motivo_area(a['slug'])}, dueño {a['dueno']}"); continue
+            print(f"- {a['slug']}/ · {motivo_area(a['slug'])}"); continue
         for slug, d in indice_proyectos(t).items():
             print(d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1))
     if no_legibles:
@@ -342,11 +372,12 @@ if not ACTIVO:
     if MINIMA:
         # lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto
         titulo("CLAUDE OUTPUTS")
-        co = RAIZ / "Claude outputs"
         try:
-            sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not p.name.startswith(".")), key=lambda p: p.stat().st_mtime, reverse=True)
+            co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
+            sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
+                             key=lambda p: p.stat().st_mtime, reverse=True)
         except OSError:
-            sueltos = []
+            co, sueltos = RAIZ / "Claude outputs", []
         if not sueltos:
             print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
         else:
