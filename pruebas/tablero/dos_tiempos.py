@@ -121,6 +121,11 @@ correr(TRAB / "copia-completo", TRAB / "dos-ret", "--desde-inventario", TRAB / "
 _est = json.loads((TRAB / "dos-ret" / "meta" / "estado.json").read_text(encoding="utf-8"))
 ok(_est.get("cola_retenida") == ["c3", "c9"], "lo que la sincronización deja en la cola a propósito llega a meta/estado")
 ok(_est.get("cola_ajena") == ["c9"], "lo que es de un área de otra cuenta llega aparte, para que la página diga a quién pasárselo")
+# con la cuenta que genera el tablero, en dos tiempos sale lo mismo que en la computadora (los motivos de lo que no se lee)
+correr(TRAB / "copia-completo", TRAB / "dos-beto", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo", "--version", "prueba", "--cuenta", "beto@ejemplo.test")
+subprocess.run([sys.executable, GEN, RAIZ, TRAB / "dir-beto", "--modo", "completo", "--version", "prueba", "--cuenta", "beto@ejemplo.test"], capture_output=True, text=True)
+_mot = lambda d: {f"{c}/{f.stem}": (json.loads(f.read_text(encoding="utf-8")).get("motivo"), json.loads(f.read_text(encoding="utf-8")).get("mio")) for c in ("areas", "proyectos") for f in (d / c).glob("*.json")}
+ok(_mot(TRAB / "dos-beto") == _mot(TRAB / "dir-beto") and _mot(TRAB / "dos-beto").get("areas/legal") == ("sin-carpeta", True), "con --cuenta, en dos tiempos los motivos salen igual que en la computadora")
 
 # huella por proyecto: lo que no cambió no se trae y su documento sale de la base; el resultado es el mismo que rehacerlo todo
 for modo in ("completo", "publico"):

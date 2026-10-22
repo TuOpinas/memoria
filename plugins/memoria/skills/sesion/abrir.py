@@ -4,8 +4,9 @@
 Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas] [--minima]
 
 Con --minima (la apertura mínima, la primera respuesta de cualquier conversación con la carpeta conectada) imprime solo
-la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta y una línea por proyecto de cada
-área legible: sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno.
+la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta, una línea por proyecto de cada
+área legible (de un área restringida, solo si es de la cuenta) y los archivos sueltos en «Claude outputs», con su fecha:
+sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno.
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
 cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
@@ -32,7 +33,7 @@ import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
-    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"]  (la raíz es la carpeta con guia.md y metodo.md)")
+    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md)")
 args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
@@ -308,10 +309,16 @@ def declarado(linea):
     return bool(re.match(r"^- `[^`]+`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", linea, re.I))
 
 
+def de_la_cuenta(a):
+    """El área es de la cuenta de esta sesión: dueña o colabora. Entonces la puede leer aunque esté restringida."""
+    return bool(CUENTA) and CUENTA in (a["cuentas_dueno"] | a["colaboran"])
+
+
 def motivo_area(slug):
     """Por qué no se lee un área: restringida según guia.md (Drive no baja a la computadora lo que la cuenta no puede
-    abrir, así que su carpeta tampoco está), sin carpeta en esta computadora, o no se pudo leer."""
-    if any(a["slug"] == slug and a["restringida"] for a in areas):
+    abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
+    leer. El mismo criterio que el tablero con --cuenta."""
+    if any(a["slug"] == slug and a["restringida"] and not de_la_cuenta(a) for a in areas):
         return "restringida para esta cuenta"
     if not (RAIZ / slug).exists():
         return "su carpeta no está en esta computadora: aún no se creó, no está sincronizada o la cuenta no tiene acceso"
@@ -322,8 +329,8 @@ area_activa = ACTIVO.split("/")[0] if ACTIVO and "/" in ACTIVO else None
 if not ACTIVO:
     titulo("PROYECTOS POR ÁREA (para saber cuál se abre)")
     for a in areas:
-        if a["restringida"]:
-            # lo restringido no sale salvo que el proyecto activo esté dentro, aunque la cuenta lo lea
+        if a["restringida"] and not de_la_cuenta(a):
+            # lo restringido no sale salvo que la cuenta sea de esa área o el proyecto activo esté dentro
             print(f"- {a['slug']}/ · restringida, dueño {a['dueno']}"); continue
         t = leer(RAIZ / a["slug"] / "area.md")
         if t is None:
@@ -332,6 +339,23 @@ if not ACTIVO:
             print(d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1))
     if no_legibles:
         print(f"\n(no se pudieron leer: {len(no_legibles)})")
+    if MINIMA:
+        # lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto
+        titulo("CLAUDE OUTPUTS")
+        co = RAIZ / "Claude outputs"
+        try:
+            sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not p.name.startswith(".")), key=lambda p: p.stat().st_mtime, reverse=True)
+        except OSError:
+            sueltos = []
+        if not sueltos:
+            print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
+        else:
+            print(f"{len(sueltos)} archivos sueltos")
+            for p in sueltos[:30]:
+                f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
+                print(f"- {p.relative_to(co).as_posix()}{f}")
+            if len(sueltos) > 30:
+                print(f"(y {len(sueltos) - 30} más)")
     sys.exit(0)
 
 # ---------- nivel 1 ----------

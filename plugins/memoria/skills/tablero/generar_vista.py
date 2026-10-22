@@ -95,7 +95,7 @@ def restringida_celda(celda):
     return bool(RE_RESTRINGIDA.match(celda or ""))
 def sin_palabra_restringido(linea):
     """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
-    return re.sub(r"^[\W_]*restringid[oa]\b[*_]*\s*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()
+    return re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()
 # --veredicto-metodo "<primera línea del metodo.md del plugin>": compara versión y huella con el metodo.md de la raíz,
 # en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 0 de tarea.md: la
 # comparación la hace el script, no quien lo lee. Mismo criterio que abrir.py de la skill sesion.
@@ -856,6 +856,8 @@ for a in areas_guia:
         # que el área sea de la cuenta que genera el tablero: entonces la puede leer, y lo que falta es la carpeta
         mia = bool(CUENTA_TABLERO) and CUENTA_TABLERO in set().union(*cuentas(a["cuenta"])[:2])
         area_doc["motivo"] = "restringido" if area_doc["restringido"] and not mia else motivo_de(carpeta / "area.md")
+        if mia:
+            area_doc["mio"] = True     # la página no le dice «pregunta a» a su propio dueño
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -899,6 +901,8 @@ for a in areas_guia:
             if linea:
                 pdoc["descripcion"] = linea
             pdoc["motivo"] = "restringido" if declarado else motivo_de(pc / "proyecto.md")
+            if mia:
+                pdoc["mio"] = True
             docs["proyectos"][pid] = pdoc
             continue
         fm, cuerpo = frontmatter(tp)

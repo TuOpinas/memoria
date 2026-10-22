@@ -30,13 +30,17 @@ python3 "$AQUI/comprobar.py" "$OUT/completo" "$OUT/viejo" "$OUT/migrado"
 # dice «pídeselo a ti»: sale «sin carpeta»
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/beto" --cuenta beto@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/ana" --cuenta ana@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/eva" --cuenta eva@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/carla" --cuenta carla@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
 python3 - "$OUT" <<'PY2'
 import json, sys, os
 m = lambda d, c, i: json.load(open(os.path.join(sys.argv[1], d, c, i + ".json"), encoding="utf-8")).get("motivo")
 casos = [(m("beto", "areas", "legal") == "sin-carpeta", "un área restringida de la cuenta que genera el tablero, sin carpeta, sale «sin carpeta»"),
          (m("beto", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido"),
          (m("ana", "proyectos", "ventas--ronda") == "sin-carpeta", "un proyecto restringido del área de la cuenta (dueña), sin carpeta, sale «sin carpeta»"),
-         (m("ana", "areas", "legal") == "restringido", "un área restringida ajena sigue restringida aunque la cuenta tenga una nota en su celda Dueño")]
+         (m("ana", "areas", "legal") == "restringido", "un área restringida ajena sigue restringida"),
+         (m("eva", "areas", "legal") == "sin-carpeta", "quien colabora en un área restringida sin carpeta la ve «sin carpeta»"),
+         (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra")]
 for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
 sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2

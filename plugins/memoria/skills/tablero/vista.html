@@ -776,12 +776,14 @@ entIdx = _memo1("ents", entIdx);
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
 const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
-const lectoresDe = l => { const t = (l||"").replace(/^[\W_]*restringid[oa]\b[*_]*\s*(?:a\s+|[:—–,-]\s*)?/i, "").trim(); const m = /^\((.*)\)$/.exec(t); return (m ? m[1] : t).trim(); };
+const lectoresDe = l => { let t = (l||"").replace(/^[\W_]*restringid[oa]\b[*_»"”'’\s]*/i, "").replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
   const r = fem ? "Restringida" : "Restringido", ella = fem ? "la" : "lo";
   const lectores = /^[\W_]*restringid[oa]\b/i.test(x.lectores||"") ? esc(lectoresDe(x.lectores)) : "";
-  if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` a ${lectores}` : ""}. Si necesitas acceso, pídeselo a ${quien}.`};
+  if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` ${lectores}` : ""}. Si necesitas acceso, pídeselo a ${quien}.`};
+  // de la cuenta que generó el tablero (x.mio): no hay a quién preguntar, la carpeta falta en su computadora
+  if(m==="sin-carpeta" && x.mio) return {pill:"No disponible", txt:`Aún no se creó o no está sincronizad${fem?"a":"o"} en tu computadora.`};
   if(m==="sin-carpeta") return {pill:"No disponible", txt:`Aún no se creó, no está sincronizad${fem?"a":"o"} o tu cuenta no tiene acceso. Pregunta a ${quien}.`};
   if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer. Responde ${quien}.`};
   if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día. Responde ${quien}.`};
