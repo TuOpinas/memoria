@@ -553,7 +553,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.18.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.18.2"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -772,18 +772,20 @@ afectan = _memo1("afectan", afectan);
 mtDatos = _memo1("mt", mtDatos);
 entIdx = _memo1("ents", entIdx);
 // por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14; «restringido» cuando la carpeta
-// lo declara, 1.18.1); sin motivo, se supone restringido. Del dueño, solo el nombre: la celda de guia.md puede llevar notas
-const soloNombre = d => (d||"").replace(/\s*\([^)]*\)/g,"").trim();
+// lo declara, 1.18.1); sin motivo, se supone restringido. Del dueño, solo el nombre: se quitan las notas entre paréntesis
+// de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
+const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
+// a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
+const lectoresDe = l => { const t = (l||"").replace(/^[\W_]*restringid[oa]\b[*_]*\s*(?:a\s+|[:—–,-]\s*)?/i, "").trim(); const m = /^\((.*)\)$/.exec(t); return (m ? m[1] : t).trim(); };
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
   const r = fem ? "Restringida" : "Restringido", ella = fem ? "la" : "lo";
-  const lectores = esc((x.lectores||"").replace(/^\s*restringid[oa]\b\s*[:—–-]?\s*/i, "").trim());
-  const pedir = `Si necesitas acceso, pídeselo a ${quien}.`;
-  if(m==="restringido") return {pill:r, txt:`${r}${/^restringid/i.test(x.lectores||"") && lectores ? ` a ${lectores}` : ""}. ${pedir}`};
-  if(m==="sin-carpeta") return {pill:"No disponible", txt:`No está en la computadora que generó el tablero: tu cuenta no tiene acceso o aún no se sincronizó. ${pedir}`};
+  const lectores = /^[\W_]*restringid[oa]\b/i.test(x.lectores||"") ? esc(lectoresDe(x.lectores)) : "";
+  if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` a ${lectores}` : ""}. Si necesitas acceso, pídeselo a ${quien}.`};
+  if(m==="sin-carpeta") return {pill:"No disponible", txt:`Aún no se creó, no está sincronizad${fem?"a":"o"} o tu cuenta no tiene acceso. Pregunta a ${quien}.`};
   if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer. Responde ${quien}.`};
   if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día. Responde ${quien}.`};
-  return {pill:r, txt:`${r}. ${pedir}`};
+  return {pill:r, txt:`${r}. Si necesitas acceso, pídeselo a ${quien}.`};
 }
 function projStatus(p){
   if(p.restringido) return {k:"sininiciar", ...EST.sininiciar, label:"Restringido", regla:"No se lee", riesgo:false};
@@ -1117,7 +1119,7 @@ function projTags(p){
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function projRow(p){
-  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion)+" · ":""}${nl.txt}</span></span></div>`; }
+  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
   if(p.cerrado) return `<div class="prow closed" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span></span><span class="s"><span class="st">${inline(p.estado_resumen)}</span></span></div>`;
   const live = stepsLive(p), t = today(), lim = addDays(7);
   const fs = live.map(s=>effDate(p,s));
@@ -2004,7 +2006,7 @@ function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
   if(p.restringido){
-    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}<p class="sub">${noLeido({...p, dueno: a.dueno, lectores: a.restringido ? a.lectores : ""}, false).txt}</p>`;
+    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}<p class="sub">${noLeido({...p, dueno: a.dueno}, false).txt}</p>`;
     main.innerHTML = ""; return;
   }
   const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;

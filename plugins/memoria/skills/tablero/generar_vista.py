@@ -85,6 +85,17 @@ def zona_horaria(raiz, defecto="America/Mexico_City"):
 TZ = zona_horaria(RAIZ) or datetime.timezone.utc
 def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
+# --cuenta <correo>: la cuenta que genera el tablero. Si la carpeta de un área suya (dueña o colabora) no está en la
+# computadora, no es que esté restringida para ella: aún no se creó o no se sincronizó (1.18.2)
+CUENTA_TABLERO = (_arg("--cuenta") or "").strip().lower()
+# Lo restringido se declara con la palabra al inicio: de la columna «Quién la lee» de guia.md, y de la línea del
+# proyecto en el bloque Proyectos de su área, con o sin marcas delante («**restringido**:»). Mismo criterio que abrir.py.
+RE_RESTRINGIDA = re.compile(r"^[\W_]*restringid[oa]\b", re.I)
+def restringida_celda(celda):
+    return bool(RE_RESTRINGIDA.match(celda or ""))
+def sin_palabra_restringido(linea):
+    """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
+    return re.sub(r"^[\W_]*restringid[oa]\b[*_]*\s*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()
 # --veredicto-metodo "<primera línea del metodo.md del plugin>": compara versión y huella con el metodo.md de la raíz,
 # en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 0 de tarea.md: la
 # comparación la hace el script, no quien lo lee. Mismo criterio que abrir.py de la skill sesion.
@@ -835,14 +846,16 @@ for a in areas_guia:
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
         # quienes colaboran, por su cuenta: el tablero es de su dueño y no se comparte
         "colaboran": sorted(cuentas(a["cuenta"])[1]),
-        "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
+        "lectores": a["lectores"], "restringido": restringida_celda(a["lectores"]), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
     if texto is None:
         area_doc["legible"] = False
         # por qué no se muestra. Lo que declara guia.md manda sobre lo que se ve en el disco: Drive no baja a la
-        # computadora las carpetas que la cuenta no puede abrir, y un área restringida parecería «sin carpeta»
-        area_doc["motivo"] = "restringido" if area_doc["restringido"] else motivo_de(carpeta / "area.md")
+        # computadora las carpetas que la cuenta no puede abrir, y un área restringida parecería «sin carpeta». Salvo
+        # que el área sea de la cuenta que genera el tablero: entonces la puede leer, y lo que falta es la carpeta
+        mia = bool(CUENTA_TABLERO) and CUENTA_TABLERO in set().union(*cuentas(a["cuenta"])[:2])
+        area_doc["motivo"] = "restringido" if area_doc["restringido"] and not mia else motivo_de(carpeta / "area.md")
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -874,11 +887,15 @@ for a in areas_guia:
             "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
-            # su línea del índice del área es pública: se muestra sin la palabra «restringido», y si la lleva, o el área
-            # está restringida, el motivo es ese aunque la carpeta no esté en la computadora (lo mismo que con un área)
+            # su línea del índice del área es pública: se muestra sin la palabra «restringido», y si la lleva, el motivo
+            # es ese aunque la carpeta no esté en la computadora (lo mismo que con un área). Que el área esté restringida
+            # no cuenta: si se llegó a sus proyectos es que la cuenta lee su area.md. Y si el área es de la cuenta que
+            # genera el tablero como dueña, lo restringido de dentro también lo lee (el dueño de un área lo es de lo
+            # restringido dentro de ella; quien colabora, no necesariamente)
             linea = ref.get("descripcion", "")
-            declarado = bool(re.match(r"^restringid[oa]\b", linea, re.I)) or area_doc["restringido"]
-            linea = re.sub(r"^restringid[oa]\b\s*[:—–-]?\s*", "", linea, flags=re.I).strip()
+            mia = bool(CUENTA_TABLERO) and CUENTA_TABLERO in cuentas(a["cuenta"])[0]
+            declarado = bool(RE_RESTRINGIDA.match(linea)) and not mia
+            linea = sin_palabra_restringido(linea) if RE_RESTRINGIDA.match(linea) else linea.strip()
             if linea:
                 pdoc["descripcion"] = linea
             pdoc["motivo"] = "restringido" if declarado else motivo_de(pc / "proyecto.md")

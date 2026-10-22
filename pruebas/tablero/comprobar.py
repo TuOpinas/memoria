@@ -57,6 +57,11 @@ ok(com["meta"]["estado"].get("tarea_manual") is False, "sin --tarea no hay tarea
 ok(com["areas"]["futura"]["legible"] is False and com["areas"]["futura"]["motivo"] == "sin-carpeta", "un área del mapa sin carpeta se marca «sin carpeta», no restringida")
 ok(com["areas"]["personas"]["legible"], "un área declarada «Restringida» que la cuenta lee se lee")
 ok(com["areas"]["legal"]["legible"] is False and com["areas"]["legal"]["motivo"] == "restringido", "un área declarada «Restringida» que no está en la computadora sale restringida, no «sin carpeta» (Drive no baja lo que la cuenta no abre)")
+ok(com["areas"]["futura"]["restringido"] is False, "«restringida» solo cuenta al inicio de «Quién la lee»: «Todo el equipo, nada restringido» no lo es")
+bon, sue, sec = (com["proyectos"].get(x, {}) for x in ("personas--bonos", "personas--sueldos", "ventas--secreto"))
+ok(bon.get("motivo") == "sin-carpeta", "un proyecto sin carpeta dentro de un área restringida que la cuenta lee sale «sin carpeta», no restringido")
+ok(sue.get("motivo") == "restringido" and sue.get("descripcion") == "sueldos individuales, solo Beto y Ana", "un proyecto declarado restringido dentro de un área restringida que la cuenta lee sale restringido, con su línea")
+ok(sec.get("motivo") == "restringido" and sec.get("descripcion") == "un acuerdo con un socio", "«**restringido**:» en el índice también lo declara, y la palabra no queda en la línea")
 ron = com["proyectos"].get("ventas--ronda", {})
 ok(ron.get("legible") is False and ron.get("motivo") == "restringido" and ron.get("descripcion") == "ronda de inversión, solo dirección", "un proyecto declarado restringido que no está en la computadora sale restringido, con su línea pública del índice y sin la palabra")
 sop = com["proyectos"]["operacion--soporte"]
