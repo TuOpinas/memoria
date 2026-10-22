@@ -9,7 +9,7 @@ const path = require('path');
   const errores = [];
   const vistas = [
     ['inicio', ''], ['pendientes', '#pendientes'], ['decisiones', '#decisiones'], ['entregables', '#entregables'],
-    ['area', '#a-ventas'], ['area-restringida', '#a-personas'],
+    ['area', '#a-ventas'], ['area-restringida', '#a-personas'], ['area-sin-acceso', '#a-legal'], ['proy-sin-acceso', '#p-ventas--ronda'],
     ['proyecto', '#p-ventas--cuentas-t-estado'], ['acciones', '#p-ventas--cuentas-t-pasos'],
     ['proy-entregables', '#p-ventas--cuentas-t-entregables'], ['proy-decisiones', '#p-ventas--cuentas-t-decisiones'], ['bitacora', '#p-ventas--cuentas-t-bitacora'],
     ['proy-restringido', '#p-ventas--precios'],
