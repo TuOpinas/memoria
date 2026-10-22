@@ -75,6 +75,8 @@ ok(rc == 0, "abrir.py --sin-fechas corre sobre la copia" + (f": {err[-300:]}" if
 
 def sin_lo_de_fechas(t):
     t = re.sub(r"=== REGISTROS.*?(?====)", "", t, flags=re.S)
+    # «Claude outputs» sin consola no está en la copia: se mira con device_list_dir (sale al final, en todos los modos)
+    t = re.sub(r"=== CLAUDE OUTPUTS.*", "", t, flags=re.S)
     return [l for l in t.split("\n") if "Trabajo sin sesión" not in l and "fecha de archivo" not in l]
 
 

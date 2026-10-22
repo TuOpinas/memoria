@@ -6,7 +6,8 @@ Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera
 Con --minima (la apertura mínima, la primera respuesta de cualquier conversación con la carpeta conectada) imprime solo
 la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta, una línea por proyecto de cada
 área legible (de un área restringida, solo si es de la cuenta) y los archivos sueltos en «Claude outputs», con su fecha:
-sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno.
+sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno. Lo suelto en «Claude outputs» sale en todos los
+modos, al final, también al abrir un proyecto, porque la primera respuesta de la conversación lo dice siempre.
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
 cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
@@ -361,6 +362,27 @@ def motivo_area(slug):
     return f"no se pudo leer: sin permiso o sin descargar; responde {quien}"
 
 
+def claude_outputs():
+    """Lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto.
+    Sale en todos los modos, también al abrir un proyecto: la primera respuesta de la conversación lo dice siempre."""
+    titulo("CLAUDE OUTPUTS")
+    try:
+        co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
+        sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
+                         key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        co, sueltos = RAIZ / "Claude outputs", []
+    if not sueltos:
+        print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
+        return
+    print(f"{len(sueltos)} archivos sueltos")
+    for p in sueltos[:30]:
+        f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
+        print(f"- {p.relative_to(co).as_posix()}{f}")
+    if len(sueltos) > 30:
+        print(f"(y {len(sueltos) - 30} más)")
+
+
 area_activa = ACTIVO.split("/")[0] if ACTIVO and "/" in ACTIVO else None
 if not ACTIVO:
     titulo("PROYECTOS POR ÁREA (para saber cuál se abre)")
@@ -375,24 +397,7 @@ if not ACTIVO:
             print(d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1))
     if no_legibles:
         print(f"\n(no se pudieron leer: {len(no_legibles)})")
-    if MINIMA:
-        # lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto
-        titulo("CLAUDE OUTPUTS")
-        try:
-            co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
-            sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
-                             key=lambda p: p.stat().st_mtime, reverse=True)
-        except OSError:
-            co, sueltos = RAIZ / "Claude outputs", []
-        if not sueltos:
-            print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
-        else:
-            print(f"{len(sueltos)} archivos sueltos")
-            for p in sueltos[:30]:
-                f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
-                print(f"- {p.relative_to(co).as_posix()}{f}")
-            if len(sueltos) > 30:
-                print(f"(y {len(sueltos) - 30} más)")
+    claude_outputs()
     sys.exit(0)
 
 # ---------- nivel 1 ----------
@@ -406,6 +411,7 @@ tp = leer(pc / "proyecto.md")
 if tp is None:
     titulo("PROYECTO")
     print("(no se pudo leer proyecto.md: el proyecto no existe, es restringido o no está descargado; se dice y se para)")
+    claude_outputs()
     sys.exit(0)
 titulo(f"PROYECTO {ACTIVO}/proyecto.md")
 print(tp.strip())
@@ -648,3 +654,4 @@ if viejos:
     print(f"(además, {viejos} decisiones de otros proyectos anteriores a la última sesión lo nombran en «Afecta a:»; ya se vieron)")
 if no_legibles:
     print(f"(no se pudieron leer {len(no_legibles)} archivos o carpetas: restringidos o sin descargar; no se supone qué hay)")
+claude_outputs()

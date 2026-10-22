@@ -46,6 +46,11 @@ ok("=== GUIA" not in o and "=== PREMISAS" not in o and "Quién responde" not in 
 ok("`ventas/cuentas/`" in o and "personas/ · restringida" in o and "nomina" not in o, "una línea por proyecto; de un área restringida ajena, solo su nombre")
 ok("legal/ · restringida a Ana Prueba y Beto Prueba; si hace falta acceso, se pide a Beto Prueba" in o, "un área restringida ajena sin carpeta sale restringida, con quién la lee y el dueño sin sus notas")
 ok("=== CLAUDE OUTPUTS" in o and "2 archivos sueltos" in o and "propuesta-NOMBRE-SUELTO.pdf" in o, "lista lo suelto en «Claude outputs», sin abrirlo")
+c, o = abrir()
+ok("=== CLAUDE OUTPUTS" in o and "propuesta-NOMBRE-SUELTO.pdf" in o, "sin proyecto también lista lo suelto en «Claude outputs»")
+c, o = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok("=== CLAUDE OUTPUTS" in o and "2 archivos sueltos" in o and o.rindex("=== CLAUDE OUTPUTS") > o.index("=== AVISOS"),
+   "al abrir un proyecto también lista lo suelto en «Claude outputs», al final (la primera respuesta lo dice siempre)")
 c, o = abrir("ventas/cuentas", "--minima", "--cuenta", "ana@ejemplo.test")
 ok("=== PROYECTO " not in o and "=== AVISOS" not in o, "con un proyecto pasado, la mínima no lo abre")
 c, o = abrir("--minima", "--cuenta", "beto@ejemplo.test")
