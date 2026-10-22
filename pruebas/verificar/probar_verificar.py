@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Prueba que verificar.sh compara el nombre del dueño y no la frase que puede seguirle en area.md.
+"""Prueba verificar.sh: el nombre del dueño de area.md, sin la frase que le sigue, y las copias en conflicto de Drive.
 
-Uso: python3 pruebas/verificar/probar_dueno.py
+Uso: python3 pruebas/verificar/probar_verificar.py
 """
 import pathlib, re, shutil, subprocess, sys, tempfile
 
@@ -34,6 +34,15 @@ a.write_text(t.replace(m.group(0), f"Dueño: {nombre}. Consume esta área cualqu
 ok(not dueno_distinto(), "una frase después del nombre no cuenta como otro dueño")
 a.write_text(t.replace(m.group(0), "Dueño: Otra Persona. Consume esta área cualquier conversación comercial."), encoding="utf-8")
 ok(len(dueno_distinto()) == 1, "otro nombre sí da el hallazgo")
+a.write_text(t, encoding="utf-8")
+print("verificar.sh: copias en conflicto de Drive")
+import shutil as _sh
+_sh.copy(R / "ventas" / "cuentas" / "decisiones.md", R / "ventas" / "cuentas" / "decisiones [Conflict].md")
+(R / "ventas" / "cuentas" / "fuentes").mkdir(exist_ok=True)
+(R / "ventas" / "cuentas" / "fuentes" / "contrato (1).md").write_text("x", encoding="utf-8")
+out = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True).stdout
+cf = [l for l in out.split("\n") if "copia en conflicto" in l]
+ok(len(cf) == 1 and "decisiones [Conflict].md" in cf[0], f"marca la copia con su original al lado, y solo esa ({len(cf)})")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

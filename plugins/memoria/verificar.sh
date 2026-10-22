@@ -155,6 +155,15 @@ if guia_txt:
         except Exception:
             h("zona horaria no válida en guia.md", "guia.md", "«%s»: tiene que ser una zona como America/Mexico_City o Europe/Madrid" % _z.group(1))
 
+# --- copias en conflicto de Drive: «sesiones (1).md» o «proyecto [Conflict].md» junto a su original ---
+CONFLICTO = re.compile(r"^(?P<base>.+?)\s*(\(\d+\)|\[[^\]]*conflict[^\]]*\])\.md$", re.I)
+for d_, ds_, fs_ in os.walk(raiz):
+    ds_[:] = [x for x in ds_ if not x.startswith(".")]
+    for f_ in fs_:
+        m_ = CONFLICTO.match(f_)
+        if m_ and os.path.isfile(os.path.join(d_, m_.group("base") + ".md")):
+            h("copia en conflicto de Drive", rel(os.path.join(d_, f_)), "dos personas escribieron %s.md a la vez: se juntan las dos versiones y la copia va a la papelera" % m_.group("base"))
+
 # --- áreas y proyectos ---
 for area, aruta in areas:
     amd = os.path.join(aruta, "area.md")
