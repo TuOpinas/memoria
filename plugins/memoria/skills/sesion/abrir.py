@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas] [--minima]
+
+Con --minima (la apertura mínima, la primera respuesta de cualquier conversación con la carpeta conectada) imprime solo
+la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta, una línea por proyecto de cada
+área legible (de un área restringida, solo si es de la cuenta) y los archivos sueltos en «Claude outputs», con su fecha:
+sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno.
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
 cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
@@ -28,7 +33,7 @@ import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
-    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"]  (la raíz es la carpeta con guia.md y metodo.md)")
+    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md)")
 args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
@@ -36,10 +41,13 @@ if "--cuenta" in args:
 PLUGIN = None
 if "--plugin" in args:
     i = args.index("--plugin"); PLUGIN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
+MINIMA = "--minima" in args
+if MINIMA:
+    args.remove("--minima")
 SIN_FECHAS = "--sin-fechas" in args
 if SIN_FECHAS:
     args.remove("--sin-fechas")
-ACTIVO = args[0].strip("/") if args else None
+ACTIVO = args[0].strip("/") if args and not MINIMA else None
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
     """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas
@@ -175,6 +183,15 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+def restringida_celda(celda):
+    """«Quién la lee» declara el área restringida: la palabra al inicio («Restringida: …», «Restringido a …»), o
+    «restringida» como palabra suelta en otra parte de la celda («Dirección (restringida)») sin negarla («nunca
+    restringida», «antes restringida»). «Los proyectos restringidos aparte» no la declara. Igual en abrir.py,
+    generar_vista.py y vista.html (restringidaCelda)."""
+    c = celda or ""
+    if re.match(r"^[\W_]*restringid[oa]s?\b", c, re.I):
+        return True
+    return bool(re.search(r"\brestringidas?\b", c, re.I)) and not re.search(r"\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid", c, re.I)
 
 
 # ---------- nivel 0 ----------
@@ -208,8 +225,13 @@ if PLUGIN is not None:
     else:
         ver = "MISMA VERSION, HUELLA DISTINTA: no se toca"
     print(f"Veredicto: {ver} (raíz {txt(vr)}, plugin {txt(vp)})")
-titulo("GUIA")
-print(guia.strip())
+if MINIMA:
+    titulo("ORGANIZACION")
+    m_ = re.search(r"^#\s+(.+)$", guia, re.M)
+    print((m_.group(1).split("·")[0].strip() if m_ else "(guia.md sin título)"))
+else:
+    titulo("GUIA")
+    print(guia.strip())
 
 areas = []
 filas = seccion(guia, "Áreas").split("\n")
@@ -224,7 +246,7 @@ for l in filas:
         de, co, av = cuentas(c[3])
         if av:
             print(f"(aviso: la celda Cuenta de «{c[0].strip('`')}» en guia.md: {av})")
-        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": "restring" in c[4].lower(),
+        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4],
                       "en_celda": set(CORREO.findall(c[3].lower())), "aviso": av})
     else:
         print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
@@ -254,8 +276,9 @@ for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
         f = next((x for x in partes[1:] if re.fullmatch(r"20\d\d-\d\d-\d\d", x)), "")
         premisas.append((m.group(1).upper(), l.strip(), r, f))
 reemplazadas = {r for _, _, r, _ in premisas if r}
-titulo("PREMISAS VIGENTES")
-print("\n".join(l for pid, l, _, _ in premisas if pid not in reemplazadas) or "(no hay base/premisas.md o no tiene premisas)")
+if not MINIMA:
+    titulo("PREMISAS VIGENTES")
+    print("\n".join(l for pid, l, _, _ in premisas if pid not in reemplazadas) or "(no hay base/premisas.md o no tiene premisas)")
 
 if CUENTA:
     titulo("CUENTA")
@@ -295,20 +318,81 @@ def declarado(linea):
     return bool(re.match(r"^- `[^`]+`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", linea, re.I))
 
 
+def solo_nombre(d):
+    """El dueño sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
+    «Dirección (Ana, Beto)» se queda. Como el tablero."""
+    return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
+
+
+def lectores_de(celda):
+    """A quiénes se lee, para «restringida a …», de la celda «Quién la lee». Como el tablero."""
+    t = celda or ""
+    if re.match(r"^[\W_]*restringid[oa]s?\b", t, re.I):
+        t = re.sub(r"^[\W_]*restringid[oa]s?\b[*_»\"”'’\s]*", "", t, flags=re.I)
+    else:
+        t = re.sub(r"\s*[(\[—–,-]?\s*\brestringidas?\b\s*[)\]]?", "", t, flags=re.I)
+    t = re.sub(r"^[:—–,-]\s*", "", t.strip())
+    t = re.sub(r"^(?:la|lo)\s+leen\s+", "", t, flags=re.I).strip()
+    m = re.fullmatch(r"\((.*)\)", t)
+    t = (m.group(1) if m else t).strip()
+    return "" if not t else t if re.match(r"^(?:a|al|para|solo|sólo|únicamente|por|entre)\b", t, re.I) else "a " + t
+
+
+def de_la_cuenta(a):
+    """El área es de la cuenta de esta sesión: dueña o colabora. Entonces la puede leer aunque esté restringida."""
+    return bool(CUENTA) and CUENTA in (a["cuentas_dueno"] | a["colaboran"])
+
+
+def motivo_area(slug):
+    """Por qué no se lee un área: restringida según guia.md (Drive no baja a la computadora lo que la cuenta no puede
+    abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
+    leer. El mismo criterio que el tablero con --cuenta, salvo un caso: un área restringida que la cuenta lee sin ser
+    dueña ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
+    su área; el tablero, que es solo de su dueño, la muestra entera."""
+    a = next((x for x in areas if x["slug"] == slug), None)
+    quien = solo_nombre(a["dueno"]) if a else "su dueño"
+    if a and a["restringida"] and not de_la_cuenta(a):
+        lect = lectores_de(a["lectores"])
+        return f"restringida{' ' + lect if lect else ''}; si hace falta acceso, se pide a {quien}"
+    if not (RAIZ / slug).exists():
+        if a and de_la_cuenta(a):
+            return "es de esta cuenta, pero su carpeta aún no se creó o no está sincronizada en esta computadora"
+        return f"aún no se creó, no está sincronizada en esta computadora o la cuenta no tiene acceso; responde {quien}"
+    return f"no se pudo leer: sin permiso o sin descargar; responde {quien}"
+
+
 area_activa = ACTIVO.split("/")[0] if ACTIVO and "/" in ACTIVO else None
 if not ACTIVO:
     titulo("PROYECTOS POR ÁREA (para saber cuál se abre)")
     for a in areas:
-        if a["restringida"]:
-            print(f"- {a['slug']}/ · restringida, dueño {a['dueno']}"); continue
+        if a["restringida"] and not de_la_cuenta(a):
+            # lo restringido no sale salvo que la cuenta sea de esa área o el proyecto activo esté dentro
+            print(f"- {a['slug']}/ · {motivo_area(a['slug'])}"); continue
         t = leer(RAIZ / a["slug"] / "area.md")
         if t is None:
-            motivo = "su carpeta no está en esta computadora" if not (RAIZ / a["slug"]).exists() else "no se pudo leer"
-            print(f"- {a['slug']}/ · {motivo}, dueño {a['dueno']}"); continue
+            print(f"- {a['slug']}/ · {motivo_area(a['slug'])}"); continue
         for slug, d in indice_proyectos(t).items():
             print(d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1))
     if no_legibles:
         print(f"\n(no se pudieron leer: {len(no_legibles)})")
+    if MINIMA:
+        # lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto
+        titulo("CLAUDE OUTPUTS")
+        try:
+            co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
+            sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
+                             key=lambda p: p.stat().st_mtime, reverse=True)
+        except OSError:
+            co, sueltos = RAIZ / "Claude outputs", []
+        if not sueltos:
+            print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
+        else:
+            print(f"{len(sueltos)} archivos sueltos")
+            for p in sueltos[:30]:
+                f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
+                print(f"- {p.relative_to(co).as_posix()}{f}")
+            if len(sueltos) > 30:
+                print(f"(y {len(sueltos) - 30} más)")
     sys.exit(0)
 
 # ---------- nivel 1 ----------
@@ -317,13 +401,6 @@ if "/" not in ACTIVO:
 pc = RAIZ / ACTIVO
 area_txt = leer(RAIZ / area_activa / "area.md")
 titulo(f"AREA {area_activa} · bloque Proyectos")
-def motivo_area(slug):
-    """El mismo motivo que da el nivel 0: sin carpeta, restringida según guia.md, o no se pudo leer."""
-    if not (RAIZ / slug).exists():
-        return "su carpeta no está en esta computadora"
-    if any(a["slug"] == slug and a["restringida"] for a in areas):
-        return "restringida para esta cuenta"
-    return "no se pudo leer: sin permiso o sin descargar"
 print(seccion(cabecera(area_txt)[1], "Proyectos") if area_txt is not None else f"(no se pudo leer area.md: {motivo_area(area_activa)})")
 tp = leer(pc / "proyecto.md")
 if tp is None:

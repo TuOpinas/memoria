@@ -9,8 +9,8 @@ Raíz inventada para probar el tablero. Ningún dato es real.
 | `ventas/` | Clientes, propuestas y precios | Ana Prueba | ana@ejemplo.test · colabora: carla@ejemplo.test | Todo el equipo |
 | `personas/` | Nómina y contratos del equipo | Beto Prueba | beto@ejemplo.test | Restringida: dirección |
 | `operacion/` | Área de soporte y entregas | Ana Prueba | ana@ejemplo.test | Todo el equipo |
-| `futura/` | Área en el mapa cuya carpeta aún no existe | Ana Prueba | ana@ejemplo.test | Todo el equipo |
-| `legal/` | Contratos con clientes y proveedores | Beto Prueba (escribe también Ana Prueba, dueña de `contratos/`) | beto@ejemplo.test | Restringida: Ana Prueba y Beto Prueba |
+| `futura/` | Área en el mapa cuya carpeta aún no existe | Ana Prueba | ana@ejemplo.test | Todo el equipo, nada restringido |
+| `legal/` | Contratos con clientes y proveedores | Beto Prueba (escribe también Ana Prueba, dueña de `contratos/`) | beto@ejemplo.test · colabora: eva@ejemplo.test | Restringida: Ana Prueba y Beto Prueba |
 | `archivo/` | Archivada: el sistema anterior, cerrado | Ana Prueba | ana@ejemplo.test | Todo el equipo |
 
 ## Quién responde por qué

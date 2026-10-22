@@ -36,6 +36,11 @@ if "--lector" in sys.argv:
         "ventas--cuentas--209901011000": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": H2, "cuenta": "ana@ejemplo.test"},
     }
 if "--cierres" in sys.argv:
+    # cierres anteriores a abrir la página y posteriores a la última sincronización, sin depender de cuánto tarde el
+    # recorrido en llegar a esta prueba: la página solo se pone al día sola con cierres de más de un minuto antes de abrirla
+    _m = lambda n: (_ahora - datetime.timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%MZ")
+    D["meta"]["estado"]["sincronizado"] = _m(10)
+    H1, H2 = _m(5), _m(4)
     D["cierres"] = {
         "ventas--cuentas--209901010900": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": H1, "cuenta": "ana@ejemplo.test"},
         "operacion--soporte--209901011000": {"proyecto": "operacion--soporte", "nombre": "Soporte", "hora": H2, "cuenta": "ana@ejemplo.test"},

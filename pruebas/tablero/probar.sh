@@ -26,6 +26,28 @@ python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/viejo" --modo publico --ve
 mkdir -p "$OUT/base-publica/meta"; printf '%s' '{"id":"estado","data":{"modo":"publico","organizacion":"Prueba"},"version":3}' > "$OUT/base-publica/meta/estado.json"
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/migrado" --previos "$OUT/base-publica" --version "${VERSION:-prueba}" >/dev/null
 python3 "$AQUI/comprobar.py" "$OUT/completo" "$OUT/viejo" "$OUT/migrado"
+# con la cuenta que genera el tablero: un área o un proyecto restringido que es suyo y falta en la computadora no le
+# dice «pídeselo a ti»: sale «sin carpeta»
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/beto" --cuenta beto@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/ana" --cuenta ana@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/eva" --cuenta eva@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/carla" --cuenta carla@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 - "$OUT" <<'PY2'
+import json, sys, os
+m = lambda d, c, i: json.load(open(os.path.join(sys.argv[1], d, c, i + ".json"), encoding="utf-8")).get("motivo")
+casos = [(m("beto", "areas", "legal") == "sin-carpeta", "un área restringida de la cuenta que genera el tablero, sin carpeta, sale «sin carpeta»"),
+         (m("beto", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido"),
+         (m("ana", "proyectos", "ventas--ronda") == "sin-carpeta", "un proyecto restringido del área de la cuenta (dueña), sin carpeta, sale «sin carpeta»"),
+         (m("ana", "areas", "legal") == "restringido", "un área restringida ajena sigue restringida"),
+         (m("eva", "areas", "legal") == "sin-carpeta", "quien colabora en un área restringida sin carpeta la ve «sin carpeta»"),
+         (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra"),
+         (m("carla", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido del área donde la cuenta solo colabora sigue restringido: lo restringido de dentro es del dueño")]
+for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
+sys.exit(0 if all(c for c, _ in casos) else 1)
+PY2
+# los textos de la página para lo que no se lee, con celdas reales
+node "$AQUI/textos.js" "$TABLERO/vista.html"
+python3 "$AQUI/paridad.py" "$TABLERO/../.."
 # una tarea sin horario: el tablero lo sabe, para no esperar que se ponga al día cada mañana
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/manual" --tarea trig_prueba --manual --version "${VERSION:-prueba}" >/dev/null
 python3 - "$OUT/manual/meta/estado.json" <<'PY'
@@ -49,6 +71,7 @@ python3 "$AQUI/../verificar/probar_verificar.py"
 python3 "$AQUI/../sesion/probar_preparar.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"
+bash "$AQUI/../hook/probar_control.sh"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo.html"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo-cierres.html" --cierres
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/migrado" "$OUT/migrado.html"
