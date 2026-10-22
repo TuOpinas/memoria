@@ -47,6 +47,7 @@ sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2
 # los textos de la página para lo que no se lee, con celdas reales
 node "$AQUI/textos.js" "$TABLERO/vista.html"
+python3 "$AQUI/paridad.py" "$TABLERO/../.."
 # una tarea sin horario: el tablero lo sabe, para no esperar que se ponga al día cada mañana
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/manual" --tarea trig_prueba --manual --version "${VERSION:-prueba}" >/dev/null
 python3 - "$OUT/manual/meta/estado.json" <<'PY'

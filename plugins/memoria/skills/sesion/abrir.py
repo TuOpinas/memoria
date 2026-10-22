@@ -184,10 +184,14 @@ def colaboran_en(quien):
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
 def restringida_celda(celda):
-    """«Quién la lee» declara el área restringida con la palabra, por convención al inicio; cualquier otra mención que no
-    la niegue («nada restringido», «no restringida», «sin restringir») también cuenta: ante la duda, cerrada. Como el tablero."""
+    """«Quién la lee» declara el área restringida: la palabra al inicio («Restringida: …», «Restringido a …»), o
+    «restringida» como palabra suelta en otra parte de la celda («Dirección (restringida)») sin negarla («nunca
+    restringida», «antes restringida»). «Los proyectos restringidos aparte» no la declara. Igual en abrir.py,
+    generar_vista.py y vista.html (restringidaCelda)."""
     c = celda or ""
-    return bool(re.search(r"restringid[oa]", c, re.I)) and not re.search(r"\b(?:nada|no|sin)\s+(?:\w+\s+)?restringid", c, re.I)
+    if re.match(r"^[\W_]*restringid[oa]s?\b", c, re.I):
+        return True
+    return bool(re.search(r"\brestringidas?\b", c, re.I)) and not re.search(r"\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid", c, re.I)
 
 
 # ---------- nivel 0 ----------
@@ -323,10 +327,10 @@ def solo_nombre(d):
 def lectores_de(celda):
     """A quiénes se lee, para «restringida a …», de la celda «Quién la lee». Como el tablero."""
     t = celda or ""
-    if re.match(r"^[\W_]*restringid[oa]\b", t, re.I):
-        t = re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*", "", t, flags=re.I)
+    if re.match(r"^[\W_]*restringid[oa]s?\b", t, re.I):
+        t = re.sub(r"^[\W_]*restringid[oa]s?\b[*_»\"”'’\s]*", "", t, flags=re.I)
     else:
-        t = re.sub(r"\s*[(\[—–,-]?\s*restringid[oa]\s*[)\]]?", "", t, flags=re.I)
+        t = re.sub(r"\s*[(\[—–,-]?\s*\brestringidas?\b\s*[)\]]?", "", t, flags=re.I)
     t = re.sub(r"^[:—–,-]\s*", "", t.strip())
     t = re.sub(r"^(?:la|lo)\s+leen\s+", "", t, flags=re.I).strip()
     m = re.fullmatch(r"\((.*)\)", t)
@@ -342,7 +346,9 @@ def de_la_cuenta(a):
 def motivo_area(slug):
     """Por qué no se lee un área: restringida según guia.md (Drive no baja a la computadora lo que la cuenta no puede
     abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
-    leer. El mismo criterio que el tablero con --cuenta."""
+    leer. El mismo criterio que el tablero con --cuenta, salvo un caso: un área restringida que la cuenta lee sin ser
+    dueña ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
+    su área; el tablero, que es solo de su dueño, la muestra entera."""
     a = next((x for x in areas if x["slug"] == slug), None)
     quien = solo_nombre(a["dueno"]) if a else "su dueño"
     if a and a["restringida"] and not de_la_cuenta(a):

@@ -72,7 +72,7 @@ Después de colocarlo, se dice en una línea qué es lo siguiente que hay que ha
 
 Es la carpeta donde la app de Claude deja lo que produce, fuera de cualquier proyecto (`convenciones`, sección 1). Ordenarla es llevar cada archivo a su proyecto.
 
-Lo pide la persona con la frase, o lo propone la apertura mínima de cualquier conversación cuando encuentra algo ahí (skill `sesion`); en los dos casos es este mismo recorrido.
+Lo pide la persona con la frase, o lo propone la apertura mínima de cualquier conversación cuando encuentra algo ahí (skill `sesion`); en los dos casos es este mismo recorrido. Cuando lo propone la apertura, entra solo lo de los últimos 14 días, salvo para el responsable de contexto, que coloca todo; con la frase, todo.
 
 1. Se listan los archivos de «Claude outputs» con su fecha, sin abrirlos. Por el nombre, la fecha y las sesiones de esos días en los `sesiones.md` de la raíz, se propone a qué proyecto va cada uno y si va a `entregables/` (se puede dar a alguien de fuera) o a `taller/`. Lo que no tiene proyecto claro se pregunta; lo que ya existe dentro de un proyecto con el mismo contenido es una copia y se propone quitarlo.
 2. La persona confirma la lista. Solo se mueve a las áreas que son suyas; lo que le toca a otra área se dice, con el nombre de su dueño, y se queda donde está.

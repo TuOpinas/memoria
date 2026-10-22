@@ -92,10 +92,15 @@ CUENTA_TABLERO = (_arg("--cuenta") or "").strip().lower()
 # proyecto en el bloque Proyectos de su área, con o sin marcas delante («**restringido**:»). Mismo criterio que abrir.py.
 RE_RESTRINGIDA = re.compile(r"^[\W_]*restringid[oa]\b", re.I)
 def restringida_celda(celda):
-    """«Quién la lee» declara el área restringida con la palabra, por convención al inicio; cualquier otra mención que no
-    la niegue («nada restringido», «no restringida», «sin restringir») también cuenta: ante la duda, cerrada."""
+    """«Quién la lee» declara el área restringida: la palabra al inicio («Restringida: …», «Restringido a …»), o
+    «restringida» como palabra suelta en otra parte de la celda («Dirección (restringida)») sin negarla («nunca
+    restringida», «antes restringida»). «Los proyectos restringidos aparte» no la declara. Igual en abrir.py,
+    generar_vista.py y vista.html (restringidaCelda)."""
     c = celda or ""
-    return bool(re.search(r"restringid[oa]", c, re.I)) and not re.search(r"\b(?:nada|no|sin)\s+(?:\w+\s+)?restringid", c, re.I)
+    if re.match(r"^[\W_]*restringid[oa]s?\b", c, re.I):
+        return True
+    return bool(re.search(r"\brestringidas?\b", c, re.I)) and not re.search(r"\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid", c, re.I)
+
 def sin_palabra_restringido(linea):
     """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
     return re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()

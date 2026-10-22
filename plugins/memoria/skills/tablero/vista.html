@@ -776,19 +776,21 @@ entIdx = _memo1("ents", entIdx);
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
 const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
-const restringidaCelda = l => /restringid[oa]/i.test(l||"") && !/\b(?:nada|no|sin)\s+(?:\S+\s+)?restringid/i.test(l||"");
-const lectoresDe = l => { let t = l||""; t = /^[\W_]*restringid[oa]\b/i.test(t) ? t.replace(/^[\W_]*restringid[oa]\b[*_»"”'’\s]*/i, "") : t.replace(/\s*[(\[—–,-]?\s*restringid[oa]\s*[)\]]?/i, ""); t = t.trim().replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
+const restringidaCelda = l => { const c = l||""; return /^[\W_]*restringid[oa]s?\b/i.test(c) || (/\brestringidas?\b/i.test(c) && !/\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid/i.test(c)); };
+const lectoresDe = l => { let t = l||""; t = /^[\W_]*restringid[oa]s?\b/i.test(t) ? t.replace(/^[\W_]*restringid[oa]s?\b[*_»"”'’\s]*/i, "") : t.replace(/\s*[(\[—–,-]?\s*\brestringidas?\b\s*[)\]]?/gi, ""); t = t.trim().replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
+  // del área de la cuenta que generó el tablero (x.mio): no se le dice que se lo pida o pregunte a sí misma
+  const resp = x.mio ? "" : ` Responde ${quien}.`, pedir = x.mio ? "" : ` Si necesitas acceso, pídeselo a ${quien}.`;
   const r = fem ? "Restringida" : "Restringido", ella = fem ? "la" : "lo";
   const lectores = restringidaCelda(x.lectores) ? esc(lectoresDe(x.lectores)) : "";
-  if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` ${lectores}` : ""}. Si necesitas acceso, pídeselo a ${quien}.`};
+  if(m==="restringido") return {pill:r, txt:`${r}${lectores ? ` ${lectores}` : ""}.${pedir}`};
   // de la cuenta que generó el tablero (x.mio): no hay a quién preguntar, la carpeta falta en su computadora
   if(m==="sin-carpeta" && x.mio) return {pill:"No disponible", txt:`Aún no se creó o no está sincronizad${fem?"a":"o"} en tu computadora.`};
   if(m==="sin-carpeta") return {pill:"No disponible", txt:`Aún no se creó, no está sincronizad${fem?"a":"o"} o tu cuenta no tiene acceso. Pregunta a ${quien}.`};
-  if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer. Responde ${quien}.`};
-  if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día. Responde ${quien}.`};
-  return {pill:r, txt:`${r}. Si necesitas acceso, pídeselo a ${quien}.`};
+  if(m==="sin-archivo") return {pill:"Sin ficha", txt:`Su carpeta existe pero no tiene ${fem?"area.md":"proyecto.md"}, o no se deja leer.${resp}`};
+  if(m==="sin-leer") return {pill:"Sin leer", txt:`No se pudo leer en la computadora donde se generó el tablero: sin descargar o sin acceso. Descárga${ella} o pide acceso, y pon el tablero al día.${resp}`};
+  return {pill:r, txt:`${r}.${pedir}`};
 }
 function projStatus(p){
   if(p.restringido) return {k:"sininiciar", ...EST.sininiciar, label:"Restringido", regla:"No se lee", riesgo:false};

@@ -29,17 +29,18 @@ MARCA='[memoria-apertura]'
 # 4. ya intervino en esta conversación
 SID="$(printf '%s' "$ENTRADA" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([A-Za-z0-9_.-]*\)".*/\1/p' | head -n 1)"
 [ -n "$SID" ] || exit 0
-SELLOS="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/memoria-control"
+SELLOS="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}/memoria-control-$(id -u 2>/dev/null || echo x)}"
+SELLOS="${SELLOS%/}/memoria-control"
 [ -e "$SELLOS/$SID" ] && exit 0
 # 2. ya hubo apertura: un resultado de herramienta que empieza por la cabecera de abrir.py (mostrar su código no cuenta)
 grep -Eq '"type":"tool_result","content":("|\[\{"type":"text","text":")=== METODO \(primera l' "$T" && exit 0
 # 3. la puesta al día del tablero: su prompt, como mensaje de la persona (en una sesión enlazada a la computadora,
-#    la primera línea de usuario es un aviso del sistema, no el prompt)
-grep -Eq '"(content|text)":"Pon al día el tablero \(' "$T" && exit 0
+#    la primera línea de usuario es un aviso del sistema, no el prompt; leer tarea-prompt.md no cuenta)
+grep '"type":"user"' "$T" | grep -v '"tool_result"' | grep -Eq '"(content|text)":"Pon al día el tablero \(' && exit 0
 
 # 1. hay carpetas conectadas
 RAIZ_LOCAL=""
-for g in "$HOME"/mnt/*/guia.md; do
+[ -n "$HOME" ] && for g in "$HOME"/mnt/*/guia.md; do
   [ -f "$g" ] && [ -f "$(dirname "$g")/metodo.md" ] && { RAIZ_LOCAL=1; break; }
 done
 ELEGIDAS=""

@@ -28,5 +28,6 @@ ok(area('Dirección (restringida)') === 'Restringida a Dirección. Si necesitas 
 ok(area('Todo el equipo, nada restringido') === 'Restringida. Si necesitas acceso, pídeselo a Beto Prueba.', 'una celda que lo niega no da lectores');
 const mio = noLeido({ motivo: 'sin-carpeta', dueno: 'Ana Prueba', mio: true }, true);
 ok(mio.txt === 'Aún no se creó o no está sincronizada en tu computadora.', 'sin carpeta de la propia cuenta: no le dice «pregunta a» a su dueño');
+ok(noLeido({ motivo: 'sin-archivo', dueno: 'Ana Prueba', mio: true }, true).txt.indexOf('Ana') < 0 && noLeido({ motivo: 'sin-leer', dueno: 'Ana Prueba', mio: true }, true).txt.indexOf('Ana') < 0, 'a su dueño no le dice «responde» él mismo, en ningún motivo');
 ok(!area('Restringida: <img src=x onerror=alert(1)>').includes('<img'), 'lo que viene de la carpeta se escapa');
 process.exit(fallos ? 1 : 0);

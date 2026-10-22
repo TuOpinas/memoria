@@ -45,6 +45,8 @@ corre "$tmp/casa-memoria" "$(conv e3 "$pregunta" "$respuesta")" false "Memoria a
 f="$(conv f "$pregunta" "$respuesta")"; corre "$tmp/casa-memoria" "$f"; corre "$tmp/casa-memoria" "$f"; calla; ok $? "recuerda una sola vez por conversación"
 corre "$tmp/casa-memoria" "$(conv g "$pregunta" "$escribe_marca" "$codigo" "$editado" "$respuesta")"; recuerda; ok $? "mostrar, escribir o editar el código del plugin no cuenta como apertura ni como recordatorio"
 corre "$tmp/casa-memoria" "$(conv t "$enlazada" "$tarea" "$respuesta")"; calla; ok $? "en la puesta al día del tablero no dice nada, aunque antes llegue el aviso de computadora enlazada"
+lee_tarea='{"type":"user","message":{"role":"user","content":[{"tool_use_id":"t9","type":"tool_result","content":"Pon al día el tablero ({{MODO}}) de la carpeta de memoria de {{ORGANIZACION}}."}]}}'
+corre "$tmp/casa-memoria" "$(conv t2 "$pregunta" "$lee_tarea" "$respuesta")"; recuerda; ok $? "leer el prompt de la tarea del tablero (al montarlo) no la confunde con la tarea"
 corre "$tmp/casa-vacia" "$(conv d2 "$elegidas" "$miro" "$respuesta")"; calla; ok $? "en la nube, si Claude ya miró las carpetas y no abrió, no hay memoria: no dice nada"
 d3="$(conv d3 "$elegidas" "$respuesta")"; printf '{"session_id":"d3","transcript_path":"%s"}' "$d3" | HOME="$tmp/casa-vacia" CLAUDE_PLUGIN_DATA="/dev/null/no" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "si no puede apuntar que ya recordó, no recuerda (no se repetiría)"
 printf '{"transcript_path":"%s"}' "$(conv sin "$pregunta" "$respuesta")" | HOME="$tmp/casa-memoria" CLAUDE_PLUGIN_DATA="$tmp/datos" bash "$CONTROL" >"$tmp/out" 2>"$tmp/err"; echo $? > "$tmp/rc"; calla; ok $? "sin session_id no dice nada"
