@@ -146,6 +146,19 @@ ok("está en la celda Cuenta de «ventas»" in oc_ and "colabora: otro@" in oc_,
 c, ob_ = abrir("--cuenta", "nadie@ejemplo.test")
 ok("está en la celda Cuenta" not in ob_, "a una cuenta que no está en la celda no se lo dice")
 (R / "guia.md").write_text(g_, encoding="utf-8")
+print("Copias en conflicto de Drive")
+c, oa_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok("Copia en conflicto" not in oa_, "sin copias, no hay aviso")
+shutil.copy(R / "ventas/cuentas/sesiones.md", R / "ventas/cuentas/sesiones (1).md")
+shutil.copy(R / "ventas/area.md", R / "ventas/area [Conflict].md")
+(R / "ventas/cuentas/notas (1).md").write_text("x", encoding="utf-8")   # sin original al lado: no es un conflicto
+c, oa_ = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+av_ = oa_.split("=== AVISOS")[1]
+ok("«sesiones (1).md» junto a «sesiones.md»" in av_ and "«area [Conflict].md» junto a «area.md»" in av_, "avisa de la copia del proyecto y de la del área")
+ok("notas (1).md" not in av_, "una copia sin su original al lado no cuenta")
+ok(av_.strip().split("\n")[1].lstrip("- ").startswith("Copia en conflicto"), "y va primero")
+for f_ in ("ventas/cuentas/sesiones (1).md", "ventas/area [Conflict].md", "ventas/cuentas/notas (1).md"):
+    (R / f_).unlink()
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

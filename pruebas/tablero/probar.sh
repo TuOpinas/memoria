@@ -40,8 +40,8 @@ python3 "$AQUI/../sesion/probar_abrir.py"
 python3 "$AQUI/../sesion/probar_cuentas.py"
 # sin consola en la computadora: la copia de la raíz en el contenedor (espejo.py) y los scripts sin fechas de archivo
 python3 "$AQUI/../sesion/probar_espejo.py"
-# verificar.sh: el nombre del dueño de area.md, sin la frase que le sigue
-python3 "$AQUI/../verificar/probar_dueno.py"
+# verificar.sh: el dueño de area.md por su nombre, y las copias en conflicto de Drive
+python3 "$AQUI/../verificar/probar_verificar.py"
 python3 "$AQUI/../sesion/probar_preparar.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"

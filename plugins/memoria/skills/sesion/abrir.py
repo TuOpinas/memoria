@@ -545,6 +545,21 @@ for origen, e, c in sin_fecha:
     avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su dueño la revise.")
 viejos = len(afecta) - len(nuevos)
 
+# copias en conflicto: cuando dos computadoras escriben el mismo archivo antes de sincronizarse, Drive guarda las dos
+# («sesiones (1).md», «proyecto [Conflict].md»). Solo cuenta una copia cuyo original está al lado. Van primero: hasta
+# juntarlas, una de las dos versiones no la lee nadie.
+CONFLICTO = re.compile(r"^(?P<base>.+?)\s*(\(\d+\)|\[[^\]]*conflict[^\]]*\])\.md$", re.I)
+for carpeta_, donde_ in ((pc, "este proyecto"), (RAIZ / area_activa, f"el área {area_activa}"), (RAIZ, "la raíz")):
+    try:
+        nombres_ = sorted(os.listdir(carpeta_))
+    except OSError:
+        continue
+    for n_ in nombres_:
+        m_ = CONFLICTO.match(n_)
+        if m_ and (carpeta_ / (m_.group("base") + ".md")).is_file():
+            avisos.insert(0, f"Copia en conflicto en {donde_}: «{n_}» junto a «{m_.group('base')}.md». Drive guardó dos versiones porque dos personas "
+                             f"escribieron a la vez; se juntan antes de seguir, como dice «Copias en conflicto» en cerrar.md.")
+
 ctx = leer(RAIZ / "base" / "contexto.md")
 fc = cabecera(ctx)[0].get("actualizado") if ctx else None
 if fecha_ok(fc) and (HOY - datetime.date.fromisoformat(fc)).days > 90:
