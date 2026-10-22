@@ -7,7 +7,7 @@ description: Contrato base del metodo de trabajo: estructura de carpetas, cabece
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Panorama` basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.17**
+Versión del método: **1.18**
 
 ## 1. Las tres capas de propiedad
 
@@ -251,11 +251,11 @@ La raíz es una carpeta compartida y su nombre se ve en Drive, así que ese sí 
 
 La superficie pública de un proyecto son `entregables/` y `decisiones.md`. Es lo que otra área puede leer para construir encima, y solo si el entregable está `vigente`. `area.md` y `proyecto.md` también se leen desde fuera, porque son el índice que lleva hasta esa superficie, y de `sesiones.md`, la cabecera de cada entrada (abajo).
 
-**Un proyecto es público** cuando su área no dice «Restringida» en la columna «Quién la lee» de `guia.md`, su línea del bloque `Proyectos` de su `area.md` no empieza por «restringido» y esa línea existe. Es el criterio que usan el tablero público, la marca de cierre y las notas de la cola (skill `sesion`): de un proyecto que no es público, fuera de su área y de los tableros completos no sale más que su nombre y su dueño.
+**Un proyecto es público** cuando su área no dice «Restringida» en la columna «Quién la lee» de `guia.md`, su línea del bloque `Proyectos` de su `area.md` no empieza por «restringido» y esa línea existe. Fuera de su área, de un proyecto que no es público no sale más que su nombre y su dueño. El tablero no aplica este criterio: es de una persona, no se comparte y muestra todo lo que lee su cuenta (desde la 1.18 no hay tablero público).
 
 El cuerpo de `sesiones.md`, `taller/`, `fuentes/` y todo lo que está restringido son taller privado. Nadie de fuera del área los lee ni los cita en `basado_en`. Un entregable sí cita el taller de su propio proyecto, que es de donde salió.
 
-De `sesiones.md` hay una parte pública: la cabecera de cada entrada, que es la fecha, el título y la línea «Trabajamos en». Dice qué está moviendo el proyecto sin contar cómo, y es lo que otra área, `consulta`, el director y el tablero público pueden leer de una bitácora ajena. «Avances» y «Pendiente» son el cuerpo y siguen siendo taller privado. Lo que otra área necesita saber de un proyecto está pensado para leerse sin la bitácora: su «En corto», su «Estado actual», sus decisiones y sus entregables vigentes, y el `Panorama` de su área.
+De `sesiones.md` hay una parte pública: la cabecera de cada entrada, que es la fecha, el título y la línea «Trabajamos en». Dice qué está moviendo el proyecto sin contar cómo, y es lo que otra área, `consulta` y el director pueden leer de una bitácora ajena. «Avances» y «Pendiente» son el cuerpo y siguen siendo taller privado. Lo que otra área necesita saber de un proyecto está pensado para leerse sin la bitácora: su «En corto», su «Estado actual», sus decisiones y sus entregables vigentes, y el `Panorama` de su área.
 
 Dentro de la misma área, un entregable puede citar en `basado_en` una fuente de otro proyecto del área, siempre la original y nunca una copia: un export vive en un solo `fuentes/` y los demás lo citan por su ruta. Entre áreas no se citan fuentes, solo entregables vigentes y decisiones.
 

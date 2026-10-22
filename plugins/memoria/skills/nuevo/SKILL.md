@@ -253,7 +253,7 @@ cada uno, qué se decidió y qué sigue.
 Se pone al día solo cuando lo abres después de cerrar sesiones, siempre que tu
 computadora esté encendida y la app de Claude abierta. Para ver lo que escribieron otras
 personas, pulsa **Sincronizar ahora**, junto al nombre de la organización. El tablero es
-tuyo: si quieres compartirlo, hazlo desde su menú.
+tuyo y no se comparte: muestra todo lo que tu cuenta lee. Quien quiera uno, que lo monte.
 
 Para sumar a un compañero, abre en el tablero **Ayuda › Sumar a un compañero**: dice qué
 hacer de tu lado y trae el mensaje con las instrucciones, listo para copiar. Quién lleva y

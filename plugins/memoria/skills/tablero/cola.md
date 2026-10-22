@@ -1,4 +1,4 @@
-Lo que se tocó en el tablero: los pasos 2 a 4 de la puesta al día del tablero ({{MODO}}) de {{ORGANIZACION}}. Anexo de `tarea.md`, junto a este archivo; se lee solo cuando la cola del paso 1 no está vacía, y sigue valiendo todo lo que dice `tarea.md` (SIN PEDIR NADA A NADIE, DÓNDE ESTÁ CADA COSA, LÍMITES). Al terminar el paso 4 se vuelve a `tarea.md`, paso 5.
+Lo que se tocó en el tablero: los pasos 2 a 4 de la puesta al día del tablero de {{ORGANIZACION}}. Anexo de `tarea.md`, junto a este archivo; se lee solo cuando la cola del paso 1 no está vacía, y sigue valiendo todo lo que dice `tarea.md` (SIN PEDIR NADA A NADIE, DÓNDE ESTÁ CADA COSA, LÍMITES). Al terminar el paso 4 se vuelve a `tarea.md`, paso 5.
 
 PASOS
 2. Junta los documentos de la cola en un JSON (lista, cada uno con su id, su version y sus campos) y escríbelo en la VM con device_bash en `$HOME/tablero/cola.json` (un heredoc; la cola es pequeña). Ejecuta desde $HOME/tablero: `python3 aplicar_cambios.py "<ruta de la raíz en $HOME/mnt>" cola.json --cuenta <correo>`. Devuelve un JSON con "aplicados", "sin_match", "errores", "para_sesion" y "para_su_dueno".
