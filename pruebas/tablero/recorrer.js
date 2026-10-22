@@ -90,7 +90,19 @@ const path = require('path');
   await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
-  await pasada('publico.html', 'publico-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  // un tablero que era público, ya puesto al día con la 1.18: Inicio lo dice, con lo que implica
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`migrado: ${e.message}`));
+    await p.goto('file://' + path.resolve(dir, 'migrado.html')); await p.waitForTimeout(600);
+    const banda = await p.evaluate(() => [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | '));
+    if(!/un solo tablero por persona/.test(banda) || !/quítale el acceso/.test(banda)) errores.push(`migrado: Inicio no avisa de que el tablero pasó a mostrarlo todo (${banda.slice(0, 200)})`);
+    const titulo = await p.title();
+    if(/completo/.test(titulo)) errores.push(`migrado: el título sigue diciendo «completo» (${titulo})`);
+    await p.screenshot({ path: path.join(out, 'migrado.png') });
+    await ctx.close();
+  }
   // cierres de sesión después de la última sincronización: al abrirlo, el dueño lo pone al día solo, una vez, y lo dice arriba
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
@@ -106,22 +118,26 @@ const path = require('path');
     if(r2 !== 0) errores.push(`cierres: al volver a abrir, la misma tanda de cierres se lanzó otra vez (${r2})`);
     await ctx.close();
   }
-  // la cola y los cierres los escribe la sesión sin filtrar: en el tablero público, un lector no ve nada de un
-  // proyecto que el tablero no muestra, ni en Pendientes, ni en Inicio, ni en la banda de cierres
+  // un cierre que llega con el tablero abierto no lanza nada: sale el aviso con su botón. Volver a la pestaña
+  // sí cuenta como abrirlo. Antes de la 1.18, un tablero abierto al lado lanzaba la tarea en cada cierre
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
-    p.on('pageerror', e => errores.push(`lector: ${e.message}`));
-    const url = 'file://' + path.resolve(dir, 'publico-lector.html');
-    for(const h of ['#', '#pendientes', '#a-ventas', '#p-ventas--cuentas-t-resumen']){
-      await p.goto(url + h); await p.waitForTimeout(500);
-      const t = await p.evaluate(() => document.body.innerText);
-      if(/SECRETO-COLA|SECRETO-TITULO/.test(t)) errores.push(`lector: en ${h} se ve el texto de la cola o el título de un cierre de un proyecto que el tablero no muestra`);
-    }
-    await p.goto(url + '#'); await p.waitForTimeout(500);
-    const banda = await p.evaluate(() => [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | '));
-    if(!/2 sesiones cerradas.*Cuentas, 1 en proyecto que este tablero no muestra/.test(banda)) errores.push(`lector: la banda de cierres no dice lo justo (${banda.slice(0, 200)})`);
-    await p.screenshot({ path: path.join(out, 'publico-lector.png') });
+    p.on('pageerror', e => errores.push(`abierto: ${e.message}`));
+    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(600);
+    await p.evaluate(() => {
+      const h = new Date(Date.now() + 60000).toISOString().slice(0, 16) + 'Z';
+      (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--x'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: h, cuenta: 'ana@ejemplo.test' };
+      window.__emitir('cierres');
+    });
+    await p.waitForTimeout(400);
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
+    if(r.llamadas !== 0) errores.push(`abierto: un cierre que llega con la página abierta lanzó la puesta al día (${r.llamadas})`);
+    if(!/1 sesión cerrada.*Cuentas/.test(r.banda)) errores.push(`abierto: no avisa del cierre que llegó con la página abierta (${r.banda.slice(0, 200)})`);
+    await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await p.waitForTimeout(300);
+    const r2 = await p.evaluate(() => (window.__llamadas || []).length);
+    if(r2 !== 1) errores.push(`abierto: al volver a la pestaña con un cierre pendiente no se puso al día una vez (${r2})`);
     await ctx.close();
   }
   await b.close();

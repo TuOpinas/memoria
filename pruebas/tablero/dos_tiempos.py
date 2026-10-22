@@ -3,10 +3,9 @@
 
 Uso: dos_tiempos.py <generar_vista.py> <plan_subida.py> <raiz> <carpeta-de-trabajo>
 
-Comprueba que, en los dos modos, generar sobre la copia de «leer» con el inventario da exactamente los mismos
-documentos que generar sobre la raíz; que la copia en público no trae nada restringido; que una copia incompleta
-o con archivos de más se rechaza; que un inventario de otro modo se rechaza; y que el plan de subida solo
-propone lo que cambió.
+Comprueba que generar sobre la copia de «leer» con el inventario da exactamente los mismos documentos que generar
+sobre la raíz; que una copia incompleta o con archivos de más se rechaza; que el --modo de una tarea de antes de la
+1.18 no cambia nada (hay un solo modo); y que el plan de subida solo propone lo que cambió.
 """
 import json, os, re, shutil, subprocess, sys, pathlib
 
@@ -46,8 +45,8 @@ def copiar(leer, destino):
 
 print("Dos tiempos: inventario en la computadora, generación sobre la copia")
 shutil.rmtree(TRAB, ignore_errors=True); TRAB.mkdir(parents=True)
-for modo in ("publico", "completo"):
-    r1 = correr(RAIZ, "--inventario", "--modo", modo)
+for modo in ("completo",):   # un solo modo desde la 1.18; los nombres de las carpetas de trabajo se quedan
+    r1 = correr(RAIZ, "--inventario")
     ok(r1.returncode == 0, f"{modo}: el inventario sale sin errores")
     salida = json.loads(r1.stdout)
     leer, inv = salida["leer"], salida["inventario"]
@@ -57,55 +56,51 @@ for modo in ("publico", "completo"):
     copia = TRAB / f"copia-{modo}"
     copiar(leer, copia)
     (TRAB / f"inv-{modo}.json").write_text(json.dumps(inv, ensure_ascii=False), encoding="utf-8")
-    correr(RAIZ, TRAB / f"directo-{modo}", "--modo", modo, "--version", "prueba")
-    r2 = correr(copia, TRAB / f"dos-{modo}", "--desde-inventario", TRAB / f"inv-{modo}.json", "--modo", modo, "--version", "prueba")
+    correr(RAIZ, TRAB / f"directo-{modo}", "--version", "prueba")
+    r2 = correr(copia, TRAB / f"dos-{modo}", "--desde-inventario", TRAB / f"inv-{modo}.json", "--version", "prueba")
     ok(r2.returncode == 0, f"{modo}: la generación sobre la copia sale sin errores")
     a, b = docs(TRAB / f"directo-{modo}"), docs(TRAB / f"dos-{modo}")
     distintos = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
     ok(not distintos, f"{modo}: los dos caminos dan los mismos documentos" + (f" (difieren: {', '.join(distintos[:5])})" if distintos else ""))
-    if modo == "publico":
-        ok(not any(r.startswith("personas/") for r in leer), "público: de un área restringida no se trae ningún archivo")
-        ok(not any(r.startswith(("ventas/precios/", "ventas/margenes/", "ventas/oculto/")) for r in leer),
-           "público: de un proyecto declarado restringido, o fuera del índice, no se trae ningún archivo")
 
 # una copia con un archivo vaciado o truncado tampoco
 truncado = sorted(copia.rglob("sesiones.md"))[0] if (copia := TRAB / "copia-completo") else None
 _g = truncado.read_bytes(); truncado.write_bytes(b"")
-r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json")
 ok(r.returncode == 3, "una copia con un archivo que llegó vacío o a medias se rechaza")
 truncado.write_bytes(_g)
 # un inventario copiado con un cambio se rechaza
 mal = json.loads((TRAB / "inv-completo.json").read_text(encoding="utf-8")); mal["version_metodo"] = "9.9"
 (TRAB / "inv-mal.json").write_text(json.dumps(mal), encoding="utf-8")
-r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-mal.json", "--modo", "completo")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-mal.json")
 ok(r.returncode == 4, "un inventario que se copió con algún cambio se rechaza")
 # una copia con un archivo de más (de una corrida anterior) o de menos no se acepta
 copia = TRAB / "copia-completo"
 extra = copia / "ventas" / "sobra.md"; extra.write_text("x", encoding="utf-8")
-r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json")
 ok(r.returncode == 3 and "no coincide" in r.stderr, "una copia con archivos de más se rechaza y dice qué hacer")
 extra.unlink()
 falta = sorted(copia.rglob("sesiones.md"))[0]; guardado = falta.read_bytes(); falta.unlink()
-r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "completo")
+r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json")
 ok(r.returncode == 3, "una copia a la que le falta un archivo se rechaza")
 falta.write_bytes(guardado)
 r = correr(copia, TRAB / "x", "--desde-inventario", TRAB / "inv-completo.json", "--modo", "publico")
-ok(r.returncode != 0 and "modo" in (r.stderr + r.stdout), "un inventario sacado en otro modo se rechaza")
+ok(r.returncode == 0, "una tarea de antes de la 1.18 que pasa --modo publico genera igual: hay un solo modo")
 
 # huella de la raíz: la misma raíz da la misma huella; tocar un archivo que el tablero lee la cambia; llega a meta/estado
 RAIZ2 = TRAB / "raiz-tocada"; shutil.rmtree(RAIZ2, ignore_errors=True); shutil.copytree(RAIZ, RAIZ2)   # copy2 conserva las fechas
-_s_a = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)
+_s_a = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario"], capture_output=True, text=True).stdout)
 r_a, _leer = _s_a["inventario"], _s_a["leer"]
-r_b = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)["inventario"]
+r_b = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario"], capture_output=True, text=True).stdout)["inventario"]
 ok(bool(r_a.get("huella_raiz")) and r_a["huella_raiz"] == r_b["huella_raiz"], "huella de la raíz: dos inventarios seguidos dan la misma")
-_al = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo", "--lineas", "--si-cambia", r_a["huella_raiz"]], capture_output=True, text=True).stdout.strip()
+_al = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--lineas", "--si-cambia", r_a["huella_raiz"]], capture_output=True, text=True).stdout.strip()
 ok(_al == "AL DIA", "con la huella guardada igual, el inventario solo dice «AL DIA»")
-_ln = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo", "--lineas", "--si-cambia", "otra"], capture_output=True, text=True).stdout.split("\n")
+_ln = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--lineas", "--si-cambia", "otra"], capture_output=True, text=True).stdout.split("\n")
 ok(json.loads(_ln[0]).get("sello") == r_a["sello"] and int(_ln[1]) == len(_leer) and _ln[2] == _leer[0], "con otra huella, el inventario sale en líneas: inventario, cuántos archivos y sus rutas")
 tocado = RAIZ2 / _leer[1]
 _st = tocado.stat()
 os.utime(tocado, (_st.st_atime, _st.st_mtime + 120))
-r_c = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)["inventario"]
+r_c = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario"], capture_output=True, text=True).stdout)["inventario"]
 ok(r_c["huella_raiz"] != r_a["huella_raiz"], "huella de la raíz: cambiar la fecha de un archivo que el tablero lee la cambia")
 _est = json.loads((TRAB / "dos-completo" / "meta" / "estado.json").read_text(encoding="utf-8"))
 ok(_est.get("huella_raiz") == json.loads((TRAB / "inv-completo.json").read_text(encoding="utf-8"))["huella_raiz"], "huella de la raíz: la generación la deja en meta/estado")
@@ -184,9 +179,9 @@ for modo in ("completo", "publico"):
 R4 = TRAB / "raiz-acento"; shutil.rmtree(R4, ignore_errors=True); shutil.copytree(RAIZ, R4)
 _area = next(R4.glob("*/area.md")).parent
 (_area / "diseño").mkdir(); (_area / "diseño" / "proyecto.md").write_text("---\nestado: vigente\nactualizado: 2026-08-01\n---\n\n# Diseño\n", encoding="utf-8")
-_i = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--modo", "completo"], capture_output=True, text=True).stdout)
+_i = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario"], capture_output=True, text=True).stdout)
 _pid = f"{_area.name}--diseño"
-_i2 = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--modo", "completo", "--sin-cambios", ",".join(_i["inventario"]["huellas"].values())], capture_output=True, text=True).stdout)
+_i2 = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--sin-cambios", ",".join(_i["inventario"]["huellas"].values())], capture_output=True, text=True).stdout)
 ok(_pid not in _i["inventario"]["huellas"] and _pid not in _i2["inventario"].get("reusar", []) and f"{_area.name}/diseño/proyecto.md" in _i2["leer"],
    "un proyecto con acentos en su carpeta no guarda huella y se trae siempre")
 

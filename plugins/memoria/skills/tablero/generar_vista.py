@@ -6,28 +6,26 @@ proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
 Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
-Uso: generar_vista.py <raiz> <carpeta-de-salida> [--modo publico|completo] [--tarea <id de la tarea programada que regenera la vista>] [--manual] [--version <versión del plugin que lo ejecuta>]
+Uso: generar_vista.py <raiz> <carpeta-de-salida> [--tarea <id de la tarea programada que regenera la vista>] [--manual] [--version <versión del plugin que lo ejecuta>]
 --manual: la tarea no tiene horario y solo corre desde el botón «Sincronizar ahora»
 La carpeta de salida va fuera de la raíz (es derivada y se regenera entera); nunca dentro de la carpeta de la organización.
 
 En dos tiempos, cuando la raíz está en otra computadora y el resultado tiene que llegar a Claude sin pasar por la conversación:
-  1. En la computadora:  generar_vista.py <raiz> --inventario [--modo …]
+  1. En la computadora:  generar_vista.py <raiz> --inventario
      Imprime un JSON con «leer» (las rutas, relativas a la raíz, de los archivos que hay que traer) e «inventario» (lo poco
      que el generador necesita y no está dentro de esos archivos: fechas de modificación, lo que no se pudo leer, la lista
      de proyectos y las carpetas sueltas). No escribe nada.
   2. Donde se tenga la copia de esos archivos, con su misma estructura:
-     generar_vista.py <copia> <carpeta-de-salida> --desde-inventario <inventario.json> [--modo …] [--tarea …] [--version …]
+     generar_vista.py <copia> <carpeta-de-salida> --desde-inventario <inventario.json> [--tarea …] [--version …]
      Comprueba que la copia trae exactamente los archivos de «leer» y genera lo mismo que el modo de un tiempo en la computadora.
 
 Sin consola en la computadora (la raíz no se monta en su shell), el inventario corre en el contenedor sobre una copia completa
 de la superficie pública que arma espejo.py, con --sin-fechas: las fechas de archivo de una copia son las de la copia, así que
 no se usan. Las huellas miran el contenido en lugar de la fecha, y no hay aviso de trabajo sin sesión ni fechas de archivo.
 
-Dos modos. «publico» (el de siempre si no se dice otro): la superficie pública del contrato. De un área cuya columna
-«Quién la lee» en guia.md dice «Restringida», y de un proyecto cuya línea del índice de area.md empieza por «restringido» o que no está en ese índice,
-solo nombre y dueño, aunque la cuenta que corre el script pueda leerlos; de cada sesión, solo su cabecera: fecha, título y «Trabajamos en».
-«completo»: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras. Un tablero completo no se comparte.
-En los dos modos, lo que la cuenta no puede leer sale como restringido.
+Un solo modo desde la 1.18: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras; lo que no
+puede leer sale como restringido, con su nombre y su dueño. El tablero es de su dueño y no se comparte. --modo se acepta
+y no se usa: las tareas montadas antes de la 1.18 lo pasan, con «publico» o «completo».
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
 proyectos/<area>--<slug>.json, cada uno con una huella de su contenido; un indice.json con la lista de archivos, huellas y
 tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta al día para «Por dónde empezar».
@@ -140,12 +138,8 @@ COLA_AJENA = json.loads(pathlib.Path(_aj).read_text(encoding="utf-8")) if _aj el
 _ret = _arg("--cola-retenida")
 COLA_RETENIDA = json.loads(pathlib.Path(_ret).read_text(encoding="utf-8")) if _ret else None
 # --ruta se acepta por compatibilidad con tareas viejas y no se guarda: la ruta de Drive lleva el correo de la persona
-MODO = (_arg("--modo") or "publico").lower()
-if MODO not in ("publico", "completo"):
-    sys.exit("--modo admite publico o completo")
-PUBLICO = MODO == "publico"
-if INV is not None and INV.get("modo") != MODO:
-    sys.exit(f"El inventario se sacó en modo {INV.get('modo')} y esto se genera en modo {MODO}: tienen que coincidir.")
+# un solo modo desde la 1.18; --modo, si llega de una tarea vieja, no cambia nada
+MODO = "completo"
 HOY = datetime.datetime.now(TZ).date().isoformat()
 
 def leer(p):
@@ -657,15 +651,9 @@ def fuera_de_la_memoria():
         if not arch: continue
         arch.sort(reverse=True)
         item = {"carpeta": n, "de_claude": n.lower() == "claude outputs", "archivos": len(arch), "ultimo": arch[0][0], "primero": arch[-1][0]}
-        if not PUBLICO:
-            item["nombres"] = [{"fecha": f_, "nombre": n_} for f_, n_ in arch[:40]]
+        item["nombres"] = [{"fecha": f_, "nombre": n_} for f_, n_ in arch[:40]]
         fuera_.append(item)
     return fuera_
-
-def es_declarado(ref, slug, indice):
-    # se declara restringido el proyecto cuya línea del índice empieza por «restringido»; mencionar que una parte suya lo está no cuenta.
-    # En público, un proyecto que no está en el índice del área tampoco se muestra: sin su línea no se sabe si es restringido
-    return bool(re.match(r"^[\W_]*restringid[oa]\b", ref["descripcion"], re.I)) or (PUBLICO and slug not in indice)
 
 def huella_copia(tamanos):
     """Huella de una copia: cada ruta (en NFC, para que los acentos de macOS no la cambien) con su tamaño."""
@@ -694,9 +682,6 @@ if INVENTARIO:
     _si_legible(RAIZ / "base" / "premisas.md")
     for a in areas_guia:
         carpeta = RAIZ / a["slug"]
-        restringida = "restring" in a["lectores"].lower()
-        if PUBLICO and restringida:
-            continue                      # en público, de un área restringida no se trae nada
         texto = leer(carpeta / "area.md")
         if texto is None:
             inv["motivos"][rel(carpeta / "area.md")] = por_que_no(carpeta / "area.md") or "sin-leer"
@@ -709,8 +694,6 @@ if INVENTARIO:
         for slug in slugs:
             pc = carpeta / slug
             ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-            if PUBLICO and es_declarado(ref, slug, indice):
-                continue                  # ni se lee ni se trae
             tp = leer(pc / "proyecto.md")
             if tp is None:
                 inv["motivos"][rel(pc / "proyecto.md")] = por_que_no(pc / "proyecto.md") or "sin-leer"
@@ -851,14 +834,14 @@ for a in areas_guia:
     area_doc = {
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
         # quienes colaboran, por su cuenta: solo en el tablero completo; el público no lleva correos de nadie
-        "colaboran": [] if PUBLICO else sorted(cuentas(a["cuenta"])[1]),
+        "colaboran": sorted(cuentas(a["cuenta"])[1]),
         "lectores": a["lectores"], "restringido": "restring" in a["lectores"].lower(), "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
-    if texto is None or (PUBLICO and area_doc["restringido"]):
+    if texto is None:
         area_doc["legible"] = False
-        # por qué no se muestra: declarada restringida, sin acceso, o la carpeta no está en esta computadora
-        area_doc["motivo"] = "declarada" if (PUBLICO and area_doc["restringido"]) else motivo_de(carpeta / "area.md")
+        # por qué no se muestra: sin acceso, o la carpeta no está en esta computadora
+        area_doc["motivo"] = motivo_de(carpeta / "area.md")
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
@@ -878,20 +861,19 @@ for a in areas_guia:
         pid = f"{a['slug']}--{slug}"
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
-        declarado = es_declarado(ref, slug, indice)
         if pid in previos:
             # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy
             pdoc = previos[pid]
             pdoc["orden"] = orden_p
             docs["proyectos"][pid] = pdoc
             continue
-        tp = None if (PUBLICO and declarado) else leer(pc / "proyecto.md")
+        tp = leer(pc / "proyecto.md")
         pdoc = {
             "id": pid, "area": a["slug"], "slug": slug, "nombre": slug, "orden": orden_p,
             "legible": tp is not None, "restringido": tp is None,
         }
         if tp is None:
-            pdoc["motivo"] = "declarado" if (PUBLICO and declarado) else motivo_de(pc / "proyecto.md")
+            pdoc["motivo"] = motivo_de(pc / "proyecto.md")
             docs["proyectos"][pid] = pdoc
             continue
         fm, cuerpo = frontmatter(tp)
@@ -949,8 +931,7 @@ for a in areas_guia:
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
-        # en público, de cada sesión solo su cabecera: fecha, título y «Trabajamos en» (contrato, sección 7)
-        pdoc["sesiones"] = [{"fecha": s["fecha"], "titulo": s["titulo"], "trabajamos": (s.get("trabajamos") or "").split("\n")[0].strip()} for s in ses[:5]] if PUBLICO else ses[:5]
+        pdoc["sesiones"] = ses[:5]
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -1032,6 +1013,11 @@ docs["meta"]["estado"] = {
     "fuera": [f for f in (fuera or []) if not f.get("guia")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
+# un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
+# cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes
+_est_previo = _de_la_base("meta", "estado") if PREVIOS else None
+if isinstance(_est_previo, dict) and _est_previo.get("modo") == "publico":
+    docs["meta"]["estado"]["paso_a_completo"] = HOY
 if INV is not None and INV.get("huella_raiz"):
     docs["meta"]["estado"]["huella_raiz"] = INV["huella_raiz"]
 if INV is not None and INV.get("huellas"):
