@@ -88,7 +88,7 @@ Si no hay avisos, no se menciona que no los hay.
 - **«PLUGIN ATRASADO»**: no se copia nada y se dice en una línea: «Esta carpeta usa una versión del método más nueva que la de tu Claude (<versión de la raíz> frente a <versión de tu plugin>). Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.»
 - **«MISMA VERSION, HUELLA DISTINTA»**: no se toca ni se dice nada.
 
-**Propuesta de trabajo.** Dos o tres focos, tomados de los siguientes pasos de `proyecto.md`, de lo pendiente en la última sesión y de los avisos, cada uno con una línea de por qué ahora. Primero lo que otra persona está esperando (un cuestionamiento abierto es el primero: basta con que el dueño diga si lo mantiene o lo cambia, y por qué), después lo que cierra algo empezado, al final lo que abre frente nuevo. Si un aviso afecta a un foco, se dice ahí mismo. Termina preguntando por cuál empezamos, y espera.
+**Propuesta de trabajo.** Dos o tres focos, tomados de los siguientes pasos de `proyecto.md`, de lo pendiente en la última sesión y de los avisos, cada uno con una línea de por qué ahora. Primero lo que otra persona está esperando (un cuestionamiento abierto es el primero: basta con que el dueño diga si lo mantiene o lo cambia, y por qué), después lo que cierra algo empezado, al final lo que abre frente nuevo. Si un aviso afecta a un foco, se dice ahí mismo. Si se dice cuánto lleva un foco, va en tiempo de trabajo con IA y aparte lo que espera a una persona (`escribir.md`, «Plazos»). Termina preguntando por cuál empezamos, y espera.
 
 ## Lo que nunca hago al abrir
 

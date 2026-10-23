@@ -90,6 +90,10 @@ Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proye
 
 Un proyecto cerrado no se borra ni se saca de la raíz. Se sigue citando, sus entregables vigentes se siguen consumiendo y su `decisiones.md` sigue explicando por qué las cosas están como están.
 
+### Plazos: en tiempo de trabajo con IA
+
+Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuesta de trabajo, un plan), se estima en el tiempo que de verdad cuesta trabajando con la IA, en sesiones o en horas, no en lo que tardaría un equipo de personas sin ella: construir, redactar o revisar algo acotado cabe casi siempre en una sesión. Lo que alarga un trabajo es lo que espera a una persona (que pruebe, apruebe, responda, firme o haga algo en otra herramienta), y eso se dice aparte, con quién y desde cuándo. Ante la duda, se da lo que cabe en la próxima sesión y lo que queda esperando a alguien, sin inventar fechas.
+
 ### La voz de `En corto` y del `Panorama`
 
 Los lee alguien con poco tiempo que no va a abrir nada más. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir estas dos secciones basta con este párrafo.
