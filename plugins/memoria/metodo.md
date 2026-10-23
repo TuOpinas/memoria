@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.18.4 · huella 8625888 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.18.4 · huella fb87ee3 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -414,7 +414,7 @@ Consumen esto: [áreas o personas]
 
 `En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
 
-`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe, como el `Panorama` del área, y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, también en el tablero que se comparte: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` sigue siendo válido: lo escribe su siguiente cierre.
+`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe, como el `Panorama` del área, y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, en la carpeta y en el tablero de cada uno: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` sigue siendo válido: lo escribe su siguiente cierre.
 
 `Dueño`, en `Quién participa`, es el dueño de todo el proyecto: responde por sus entregables y sus decisiones, y es quien pide publicar. Quien colabora registra las decisiones de su propio trabajo, y el dueño puede reemplazarlas (sección 1, «Quién colabora»). Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
@@ -603,10 +603,11 @@ Es trabajo de quien administra la carpeta, una vez por organización, antes de q
 
 **Los permisos**, como dice la sección 1 del contrato:
 
-- Todo el equipo, lectura en toda la unidad o la carpeta raíz.
-- Cada dueño de área y quien colabora en ella, edición en la carpeta de esa área; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto.
-- El responsable de contexto, edición en `guia.md` y `base/`.
-- Quien administra, administrador de la unidad, y nadie más.
+- Todo el equipo, «Lector» en la unidad (o en la carpeta raíz).
+- Cada dueño de área y quien colabora en ella, «Gestor de contenido» en la carpeta de esa área, que se da con clic derecho › Compartir sobre la carpeta; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto. «Colaborador» no sirve, porque no deja mover ni borrar archivos, y «Gestor de contenido» en la unidad entera abre la escritura en todas las áreas.
+- El responsable de contexto, «Gestor de contenido» en `guia.md` y `base/`.
+- Quien administra, «Administrador» de la unidad, y nadie más.
+- En «Mi unidad», sin unidad compartida, los roles son «Lector» y «Editor»: «Editor» donde arriba dice «Gestor de contenido».
 - Lo restringido se marca en su carpeta con el acceso limitado de Drive, desde la web. En una unidad compartida lo pone quien la administra; Google lo admite en unidades compartidas desde 2025.
 
 **En la computadora de cada persona**, Drive para escritorio solo transmite las unidades compartidas: no las copia enteras al disco como puede hacer con «Mi unidad». Por eso la carpeta se marca «Disponible sin conexión» en cada computadora, y se comprueba que sus archivos bajaron antes de conectar la carpeta a Claude. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual. La consola de Claude no la monta, así que esas computadoras trabajan sin consola (anexo `sin-consola.md`): todo funciona, algo más lento, y para mover archivos hace falta el conector de Google Drive activado en Claude. Nadie tiene que cambiar nada de Drive.
