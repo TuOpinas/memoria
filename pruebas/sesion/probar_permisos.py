@@ -104,5 +104,44 @@ mi = {"raiz": {"permisos": [u("ana@ejemplo.test", "owner"), u("carla@ejemplo.tes
       "areas": {"ventas": {"permisos": [u("ana@ejemplo.test", "owner"), u("carla@ejemplo.test", "writer")], "limitada": False}}}
 c, o = corre(mi)
 ok("«Mi unidad»" in o and "carla@ejemplo.test (colabora en ventas)" not in o, "en «Mi unidad», «Editor» es el rol bueno para escribir en el área")
+# lo que enseñó el tablero de Smile Pill el 2026-10-23: la cuenta de Claude no es la de Drive, el dueño «, de forma
+# provisional», y un área cuya celda dice «Sin cuenta de Claude: registra …»
+R4 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R, R4)
+gm = R4 / "guia.md"; g = gm.read_text()
+g = g.replace("| `ventas/` | Clientes, propuestas y precios | Ana Prueba | ana@ejemplo.test · colabora: carla@ejemplo.test |",
+              "| `ventas/` | Clientes, propuestas y precios | Ana Prueba, de forma provisional | ana@ejemplo.test · colabora: carla@ejemplo.test |", 1)
+g = g.replace("| `operacion/` | Área de soporte y entregas | Ana Prueba | ana@ejemplo.test |", "| `operacion/` | Área de soporte y entregas | Gabi Prueba | Sin cuenta de Claude: registra Ana Prueba |", 1)
+g = g.replace("Administra la carpeta: Ana Prueba", "Administra la carpeta compartida y pone o quita los accesos: Ana Prueba, de forma provisional. Hoy vive en otra unidad.\nEn Drive: ana@ejemplo.test es ana@empresa.test")
+gm.write_text(g)
+BASE4 = [u("ana@empresa.test", "organizer"), u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "reader"), u("eva@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader"), u("gabi@empresa.test", "reader")]
+d = bien(); d["raiz"]["permisos"] = BASE4
+d["areas"]["ventas"] = {"permisos": BASE4[:1] + [u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "fileOrganizer")], "limitada": False}
+d["areas"]["operacion"] = {"permisos": BASE4 + [u("gabi@empresa.test", "fileOrganizer")], "limitada": False}
+d["areas"]["futura"] = {"permisos": BASE4, "limitada": False}; d["areas"]["archivo"] = {"permisos": BASE4, "limitada": False}
+d = json.loads(json.dumps(d).replace("ana@ejemplo.test", "ana@empresa.test"))
+f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
+o4 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("ana@ejemplo.test" not in o4 and "No se sabe la cuenta de quien administra" not in o4, "«En Drive:» traduce la cuenta de Claude a la de Drive: ni «sin acceso» ni administrador desconocido")
+ok("Para cambiar" not in o4, f"con la cuenta de Drive declarada y el dueño «, de forma provisional», nada que cambiar ({[l for l in o4.split(chr(10)) if l.startswith('- ')][:3]})")
+ok("gabi@empresa.test escribe en operacion" in o4 and "el área no declara ninguna cuenta" in o4 and "si es su dueño Gabi Prueba" in o4, "quien escribe en un área sin cuenta declarada va a «Para comprobar», con el dueño por su nombre")
+d["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "reader")
+f.write_text(json.dumps(d)); o5 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("ana@empresa.test (dueño en ventas) no puede escribir en su área (tiene «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
+# «En Drive:» con « y », al revés, mal escrita; y la cuenta de Claude que también está en Drive
+def con_linea(linea, drive):
+    R5 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R4, R5)
+    g5 = R5 / "guia.md"; g5.write_text(g5.read_text().replace("En Drive: ana@ejemplo.test es ana@empresa.test", linea))
+    f5 = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f5.write_text(json.dumps(drive))
+    return subprocess.run([sys.executable, str(P), str(R5), "--drive", str(f5)], capture_output=True, text=True).stdout
+d2 = dict(d); d2["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "organizer")
+o6 = con_linea("En Drive: ana@ejemplo.test es ana@empresa.test y beto@ejemplo.test es beto@ejemplo.test", d2)
+ok("Para cambiar" not in o6, "«En Drive:» admite « y » entre pares")
+o7 = con_linea("En Drive: ana@empresa.test es ana@ejemplo.test", d2)
+ok("está al revés" in o7 and '"compartir"' not in o7.split("=== ACCIONES")[1], "una línea al revés se avisa y no se comparte nada a ciegas")
+o8 = con_linea("En Drive: ana@ejemplo.test ana@empresa.test; beto", d2)
+ok("no da dos correos" in o8 and "compartir" not in o8.split("=== ACCIONES")[1], "un tramo que no da dos correos se avisa, sin acción de compartir")
+d3 = json.loads(json.dumps(d2)); d3["raiz"]["permisos"].append(u("ana@ejemplo.test", "organizer"))
+o9 = con_linea("En Drive: ana@ejemplo.test es ana@empresa.test", d3)
+ok("ana@ejemplo.test tiene" not in o9 and "Para cambiar" not in o9, "la cuenta de Claude que también está en Drive es la misma persona, no alguien sin declarar")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

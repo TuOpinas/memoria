@@ -71,6 +71,8 @@ python3 "$AQUI/../verificar/probar_verificar.py"
 python3 "$AQUI/../sesion/probar_preparar.py"
 # los permisos de Drive contra lo declarado (skill sesion, permisos.py)
 python3 "$AQUI/../sesion/probar_permisos.py"
+# el cierre escribe con cerrar.py, archivo por archivo y sin pisar a nadie (1.20)
+python3 "$AQUI/../sesion/probar_cerrar.py"
 # la página con el detalle de cada proyecto aparte (1.19): cuántos textos se traen y cuándo
 python3 "$AQUI/probar_textos.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe

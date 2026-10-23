@@ -2,3 +2,4 @@
 .fuse_hidden*
 __pycache__/
 .claude/
+pruebas/evals/resultados/

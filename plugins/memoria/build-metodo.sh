@@ -81,7 +81,7 @@ trap 'rm -f "$CUERPO"' EXIT
   echo
   echo "# Procedimientos sin plugin"
   echo
-  echo 'Cerrar una sesión, registrar una premisa y publicar un documento, tal como los sigue Claude con el plugin. Donde se nombra una herramienta que no tienes (`abrir.py`, `device_bash`, `ArtifactData`, el tablero), haz lo mismo a mano o sáltalo. Lo que no se salta: los registros solo crecen, nada se registra sin el sí de quien decide, y nadie escribe fuera de su área.'
+  echo 'Cerrar una sesión, registrar una premisa y publicar un documento, tal como los sigue Claude con el plugin. Donde se nombra una herramienta que no tienes (`abrir.py`, `cerrar.py`, `device_bash`, `ArtifactData`, el tablero), haz lo mismo a mano o sáltalo: sin `cerrar.py`, escribe cada archivo del cierre a mano, releyéndolo justo antes. Lo que no se salta: los registros solo crecen, nada se registra sin el sí de quien decide, y nadie escribe fuera de su área.'
   for anexo in cerrar premisas; do
     [ -f "$SKILLS/sesion/$anexo.md" ] || { echo "Falta el anexo $anexo.md de sesion" >&2; exit 1; }
     echo
