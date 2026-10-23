@@ -43,6 +43,23 @@ _sh.copy(R / "ventas" / "cuentas" / "decisiones.md", R / "ventas" / "cuentas" / 
 out = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True).stdout
 cf = [l for l in out.split("\n") if "copia en conflicto" in l]
 ok(len(cf) == 1 and "decisiones [Conflict].md" in cf[0], f"marca la copia con su original al lado, y solo esa ({len(cf)})")
+print("verificar.sh: la clave afirma se cuenta y no bloquea")
+def sin_afirma():
+    r = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
+    m = re.search(r"Nota: (\d+) archivos? de entregables/ y taller/ sin `afirma:`", r.stdout)
+    return (int(m.group(1)) if m else 0), r.returncode, r.stdout
+n0, rc0, _ = sin_afirma()
+ok(n0 > 0, f"la raíz de prueba, sin afirma en sus entregables y taller, lo dice ({n0})")
+ent = next(p for p in R.rglob("*.md") if "/entregables/" in str(p).replace("\\", "/") and p.read_text(encoding="utf-8").startswith("---") and "estado: reemplazado" not in p.read_text(encoding="utf-8"))
+tx = ent.read_text(encoding="utf-8")
+ent.write_text(tx.replace("\nactualizado:", '\nafirma: "Una cosa que el documento sostiene."\nactualizado:', 1), encoding="utf-8")
+n1, rc1, _ = sin_afirma()
+ok(n1 == n0 - 1, f"un entregable con afirma deja de contarse ({n0} → {n1})")
+ok(rc1 == rc0, "no cambia el código de salida: no bloquea")
+ent.write_text(tx.replace("\nactualizado:", '\nafirma: ""\nactualizado:', 1), encoding="utf-8")
+n2, _, _ = sin_afirma()
+ok(n2 == n0, "una afirma vacía cuenta como sin afirma")
+ent.write_text(tx, encoding="utf-8")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

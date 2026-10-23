@@ -12,8 +12,9 @@ Uso:  barrido.py <copia> <salida> [--cola <volcado de «cambios»>] [--hoy AAAA-
           el generador ya puso ahí) y, si tampoco está, el de esta máquina, que va en UTC: no es una fecha para escribir.
       barrido.py --cola-pendiente <volcado de «cambios»>   → imprime cuántos cambios de la cola NO son propuestas
       barrido.py --sumar-juicio <salida> <juicio.json> [--cola <volcado de «cambios»>]
-          suma al barrido las decisiones que el modelo juzgó: <juicio.json> es una lista de
-          {"proyecto": "area--slug", "fecha": "AAAA-MM-DD", "decision": "una línea"}, solo de lo que «para_juicio» pidió
+          suma al barrido lo que el modelo juzgó: <juicio.json> es {"decisiones": [{"proyecto": "area--slug",
+          "fecha": "AAAA-MM-DD", "decision": "una línea"}], "afirma": [{"ruta": "area/proyecto/entregables/x.md",
+          "afirma": "una línea"}]}, solo de lo que «para_juicio» y «para_afirma» pidieron (una lista sola vale como decisiones)
 
 Detecta, con lo que está escrito y sin modelo:
   estado-desfasado  `proyecto.md` es más viejo que la última sesión que registra `sesiones.md`.
@@ -21,8 +22,12 @@ Detecta, con lo que está escrito y sin modelo:
                     sesiones: el registro parece darlo por hecho y el paso sigue ahí.
   rotacion          `sesiones.md` o `decisiones.md` pasa de 1.500 líneas, o su entrada más nueva es de otro año que la
                     más vieja: toca archivarlo (`escribir.md`, sección 8).
-y deja en «para_juicio» lo que solo un modelo puede decidir: las sesiones de los últimos días que cuentan una decisión
-(«decidimos», «se acordó»…) cuando `decisiones.md` no tiene ninguna entrada de esa fecha.
+y deja para el modelo lo que solo un modelo puede decidir:
+  para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
+                `decisiones.md` no tiene ninguna entrada de esa fecha.
+  para_afirma   los entregables que no llevan `afirma:` (hasta 6 por corrida, los vigentes primero), con su título y el
+                arranque de su cuerpo, para que el modelo escriba la línea que dice qué sostienen. Los del `taller/`
+                llegan cuando el inventario de la computadora los traiga a la copia.
 
 Cada propuesta tiene un id estable (`prop-<clase>-<huella>`): la misma observación no se vuelve a proponer, una que
 el dueño descartó (estado «descartada») no vuelve, y una que ya no es cierta (el dueño puso al día lo que decía) se
@@ -38,6 +43,7 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
            "paso pasos hacer hecho hacer queda quedó falta".split())
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
 LIMITE_LINEAS = 1500
+MAX_AFIRMA = 6
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
 
 
@@ -111,6 +117,10 @@ def huella(*partes):
     return hashlib.sha1("\x1f".join(partes).encode("utf-8")).hexdigest()[:10]
 
 
+def id_juicio(clase, pid, clave):
+    return f"prop-{clase}-{huella(pid, clave)}"
+
+
 def cargar_cola(carpeta):
     docs = []
     if carpeta and pathlib.Path(carpeta).exists():
@@ -132,8 +142,9 @@ def proyectos_de(copia):
             yield area.name, proy
 
 
-def barrer(copia, hoy):
-    props, juicio, vistos = [], [], []
+def barrer(copia, hoy, hay_propuesta=lambda i: False):
+    """(propuestas, para_juicio, para_afirma, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
+    props, juicio, afirma, vistos, validas = [], [], [], [], set()
     for area, proy in proyectos_de(copia):
         pid = f"{area}--{proy.name}"
         vistos.append(pid)
@@ -179,40 +190,76 @@ def barrer(copia, hoy):
         # decisiones que se cuentan en una sesión y no están registradas
         fechas_dec = {e[0] for e in entradas(dec_t)}
         limite = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=14)).isoformat()
+        for e in reales:
+            if e[0] not in fechas_dec and DECIDIO.search(" ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))):
+                validas.add(id_juicio("decision-sin-registrar", pid, "decision|" + e[0]))      # sigue siendo cierta mientras no se registre
         for e in reales[:3]:
             if e[0] >= limite and e[0] not in fechas_dec:
                 texto = " ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))
-                if DECIDIO.search(texto):
+                if DECIDIO.search(texto) and not hay_propuesta(id_juicio("decision-sin-registrar", pid, "decision|" + e[0])):
                     juicio.append({"proyecto": pid, "fecha": e[0], "extracto": una_linea(texto, 600)})
-    return props, juicio, vistos
+        # entregables que no dicen qué sostienen
+        for f in sorted((proy / "entregables").glob("*.md")) if (proy / "entregables").is_dir() else []:
+            ft = leer(f)
+            cab = cabecera(ft)
+            if cab.get("estado") == "reemplazado" or cab.get("afirma", "").strip():
+                continue
+            ruta = f"{area}/{proy.name}/entregables/{f.name}"
+            validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
+            if not hay_propuesta(id_juicio("afirma", pid, "afirma|" + ruta)):
+                cuerpo = re.sub(r"^---\s*\n.*?\n---\s*\n", "", ft, count=1, flags=re.S)
+                titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
+                arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
+                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente"})
+    afirma.sort(key=lambda x: (not x["_vigente"], x["ruta"]))
+    afirma = [{k: v for k, v in x.items() if k != "_vigente"} for x in afirma[:MAX_AFIRMA]]
+    return props, juicio, afirma, vistos, validas
 
 
 def sumar_juicio(salida, juicio, cola):
     """Convierte lo que el modelo juzgó en propuestas, sin dejarle escribir documentos de la cola: solo cuenta lo que el
-    barrido pidió juzgar (mismo proyecto y misma fecha), con una línea de texto; lo ya propuesto no se repite."""
+    barrido pidió juzgar (mismo proyecto y misma fecha, o la misma ruta), con una línea de texto; lo ya propuesto no se repite."""
     bar = json.loads((salida / "barrido.json").read_text(encoding="utf-8"))
+    if isinstance(juicio, list):
+        juicio = {"decisiones": juicio}
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
+    pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     ya = {d["id"] for d in cargar_cola(cola) if d["data"].get("tipo") == "propuesta"} | {x["id"] for x in bar["anadir"]}
     ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
-    nuevas = 0
-    for j in juicio if isinstance(juicio, list) else []:
+    nuevas = {"decisiones": 0, "afirma": 0}
+
+    def guardar(pid, data):
+        (salida / "cambios").mkdir(parents=True, exist_ok=True)
+        (salida / "cambios" / f"{pid}.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        bar["anadir"].append({"id": pid, "archivo": f"cambios/{pid}.json"}); ya.add(pid)
+
+    for j in juicio.get("decisiones", []) if isinstance(juicio.get("decisiones"), list) else []:
         if not isinstance(j, dict) or (j.get("proyecto"), j.get("fecha")) not in pedido:
             continue
         dec = una_linea(str(j.get("decision") or ""), 200)
-        if not dec:
+        pid = id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"])
+        if not dec or pid in ya:
             continue
-        pid = f"prop-decision-sin-registrar-{huella(j['proyecto'], 'decision|' + j['fecha'])}"
-        if pid in ya:
+        guardar(pid, {"tipo": "propuesta", "clase": "decision-sin-registrar", "proyecto": j["proyecto"],
+                      "texto": una_linea(f"Registrar en decisiones.md lo que la sesión del {j['fecha']} cuenta como decidido: {dec}"),
+                      "por_que": "sesiones.md la narra y decisiones.md no tiene entrada de esa fecha", "origen": "barrido",
+                      "estado": "pendiente", "creado": ahora})
+        nuevas["decisiones"] += 1
+    for j in juicio.get("afirma", []) if isinstance(juicio.get("afirma"), list) else []:
+        if not isinstance(j, dict) or j.get("ruta") not in pedido_afirma:
             continue
-        data = {"tipo": "propuesta", "clase": "decision-sin-registrar", "proyecto": j["proyecto"],
-                "texto": una_linea(f"Registrar en decisiones.md lo que la sesión del {j['fecha']} cuenta como decidido: {dec}"),
-                "por_que": "sesiones.md la narra y decisiones.md no tiene entrada de esa fecha", "origen": "barrido",
-                "estado": "pendiente", "creado": ahora}
-        (salida / "cambios").mkdir(parents=True, exist_ok=True)
-        (salida / "cambios" / f"{pid}.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        bar["anadir"].append({"id": pid, "archivo": f"cambios/{pid}.json"}); ya.add(pid); nuevas += 1
+        linea = una_linea(str(j.get("afirma") or "").replace('"', "'"), 200)
+        proy = pedido_afirma[j["ruta"]]
+        pid = id_juicio("afirma", proy, "afirma|" + j["ruta"])
+        if not linea or pid in ya:
+            continue
+        guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea,
+                      "texto": una_linea(f"Añadir a la cabecera de {j['ruta']}: afirma: «{linea}»"),
+                      "por_que": "el inventario del tablero necesita saber qué sostiene cada pieza", "origen": "barrido",
+                      "estado": "pendiente", "creado": ahora})
+        nuevas["afirma"] += 1
     (salida / "barrido.json").write_text(json.dumps(bar, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas_por_juicio": nuevas}, ensure_ascii=False))
+    print(json.dumps({"propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"]}, ensure_ascii=False))
 
 
 def main():
@@ -239,10 +286,10 @@ def main():
         hoy = hoy or datetime.date.today().isoformat()
     if not fecha_ok(hoy):
         sys.exit("--hoy no es una fecha AAAA-MM-DD")
-    props, juicio, vistos = barrer(copia, hoy)
     existentes = [d for d in cargar_cola(opt("--cola")) if d["data"].get("tipo") == "propuesta"]
     ya = {d["id"]: d for d in existentes}
-    nuevos_ids = {p["id"] for p in props}
+    props, juicio, afirma, vistos, validas = barrer(copia, hoy, lambda i: i in ya)
+    nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
     anadir = []
@@ -257,9 +304,9 @@ def main():
         if d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(
-        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "proyectos": vistos}, ensure_ascii=False, indent=1), encoding="utf-8")
+        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "proyectos": vistos}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar),
-                      "para_juicio": len(juicio), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
+                      "para_juicio": len(juicio), "para_afirma": len(afirma), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

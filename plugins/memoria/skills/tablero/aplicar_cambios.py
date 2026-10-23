@@ -243,7 +243,7 @@ for c in cargar():
         rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")})
     elif t == "propuesta":
         if not partes(c)[0] or any(not texto_de_una_linea(c.get(k)) for k in ("texto",)) or \
-           any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase")):
+           any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")):
             rep["rechazados"].append({"id": c["id"], "detalle": "propuesta sin proyecto «area--slug», sin texto, o con saltos de línea"})
             continue
         rep["propuestas"].append(c["id"])

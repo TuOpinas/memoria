@@ -45,7 +45,7 @@ Tres comprobaciones, resueltas con el usuario en dos o tres líneas, no con un i
 
 Antes de escribirlo compruebo que de verdad es un entregable: **¿se lo puedo dar a alguien de fuera del proyecto?** Si la respuesta es no, lo que me están pidiendo vive en `taller/` y lo digo. Un inventario que hubo que levantar, unas notas de conversación o el análisis intermedio del que saldrá después el entregable son taller, aunque estén bien escritos.
 
-**Cabecera**: tres claves. `estado: borrador` siempre al crear, la fecha de hoy en `actualizado`, y en `basado_en` todas las rutas que se usaron de verdad. La clave la escribo yo siempre; la persona no tiene que rellenarla. No se listan archivos que se leyeron por encima y no aportaron nada. No hay clave de dueño: el dueño es el del proyecto, en `proyecto.md`. Si este documento tiene otro responsable, se dice en la primera línea del cuerpo, debajo del título.
+**Cabecera**: cuatro claves. `estado: borrador` siempre al crear, la fecha de hoy en `actualizado`, en `afirma` una línea que diga qué sostiene el documento (no de qué trata; con la regla de `escribir.md`, sección 5: la leen todos los que leen el área, así que nada restringido ni datos personales), y en `basado_en` todas las rutas que se usaron de verdad. Al actualizar un entregable cuya conclusión cambió, `afirma` cambia con ella. La clave la escribo yo siempre; la persona no tiene que rellenarla. No se listan archivos que se leyeron por encima y no aportaron nada. No hay clave de dueño: el dueño es el del proyecto, en `proyecto.md`. Si este documento tiene otro responsable, se dice en la primera línea del cuerpo, debajo del título.
 
 El `taller/` del propio proyecto sí se cita en `basado_en`: es de donde sale el entregable. El de otro proyecto no, igual que su `fuentes/`. Una fuente de otro proyecto de la misma área se cita por su ruta original, nunca se copia a este `fuentes/`. Fuentes de otra área no se citan: de otra área solo entregables vigentes y decisiones. El material guardado en `restringido/` no se cita directamente; se cita su fila de `fuentes/enlaces.md`.
 
@@ -79,6 +79,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Escribir una afirmación que no sale de una fuente citable
 - Dejar `basado_en` vacía en un entregable que escribí yo
+- Crear un entregable sin `afirma`
 - Citar en `basado_en` un `sesiones.md`, una fuente o un `taller/` de otra área, o un archivo de `restringido/`
 - Construir sobre un entregable que no esté `vigente`, sin avisar de que no lo está
 - Crear un entregable nuevo cuando ya hay uno vigente sobre el mismo tema

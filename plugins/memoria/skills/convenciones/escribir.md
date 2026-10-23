@@ -183,6 +183,7 @@ Todo `.md` empieza con una cabecera de estas claves y ninguna más, con dos exce
 ---
 estado: vigente
 actualizado: 2026-08-29
+afirma: "El tope de 5.000 MXN deja fuera las compras recurrentes."
 basado_en:
   - base/contexto.md
   - compras/automatizacion-ordenes/fuentes/entrevista-ana.md
@@ -191,12 +192,12 @@ basado_en:
 
 Inmediatamente después va el título en `#`, para que quien abra el archivo sin renderizador vea de qué trata en la primera línea legible.
 
-| Archivo | `estado` | `actualizado` | `basado_en` |
-|---|---|---|---|
-| Entregables | sí | sí | sí, obligatoria |
-| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo |
-| `proyecto.md`, `base/` | sí | sí | no |
-| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no |
+| Archivo | `estado` | `actualizado` | `basado_en` | `afirma` |
+|---|---|---|---|---|
+| Entregables | sí | sí | sí, obligatoria | sí, obligatoria al crearlos |
+| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo | opcional |
+| `proyecto.md`, `base/` | sí | sí | no | no |
+| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no | no |
 
 `area.md` y los registros llevan `vigente` desde que se crean y no lo cambian: son índice y registro, no algo que se publique. Lo que pasa de `borrador` a `vigente` es lo demás.
 
@@ -211,6 +212,8 @@ El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y
 **actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real, en la zona horaria de la organización (sección 4).
 
 **basado_en**: rutas relativas a la raíz de todo lo que se usó para escribir el archivo. Es lo que permite detectar que un entregable quedó desactualizado cuando cambia algo aguas arriba. Es obligatoria en los entregables y la escribe la skill, no la persona. Para material adoptado sin trazabilidad se permite la lista vacía `[]`, y `revisar` la pide completa antes de publicar. Los registros, las fuentes y los archivos de `base/` no llevan esta clave.
+
+**afirma**: una línea que dice qué sostiene la pieza, no de qué trata: «El tope de 5.000 MXN deja fuera las compras recurrentes», no «Análisis de compras». Es lo que deja ver, sin abrir el documento, qué hay en un proyecto y si sigue valiendo. Una sola línea de hasta unos 200 caracteres, sin saltos, entre comillas si lleva dos puntos. La escribe la skill, como `basado_en`: es obligatoria en lo que crea `entregable` desde la 1.21 y opcional en lo que ya existe y en `taller/`; el barrido del tablero propone una línea para cada archivo que no la tiene y su dueño acepta las que valen. La leen todos los que leen el área, en el tablero, aunque el cuerpo del taller sea privado, así que lleva la regla de `En corto`: nada de `restringido/` ni datos personales. Añadir o cambiar `afirma` sin tocar el contenido no mueve `actualizado`: esa fecha es la del último cambio de contenido, y moverla escondería lo que quedó viejo frente a una decisión o frente a su base. Los registros, `area.md`, `proyecto.md`, `base/` y `fuentes/` no la llevan.
 
 No hay clave de dueño. El dueño vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
 

@@ -42,6 +42,7 @@ raiz = sys.argv[1]
 ESTADOS = {"borrador", "vigente", "reemplazado"}
 PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
 hallazgos = set()
+sin_afirma = []   # entregables y taller sin «afirma:»: se cuentan, no bloquean (opcional en lo que ya existía)
 SUELTOS_OK = {"guia.md", "metodo.md", "desktop.ini", "Icon\r"}
 ROTADO = re.compile(r"^(sesiones|decisiones)-\d{4}(-\d+)?\.md$")   # el registro que se rota por año
 
@@ -283,6 +284,8 @@ for dp, dn, fn in os.walk(raiz):
             h("fecha mal formada", r, a.group(1))
         if "/entregables/" in r and "basado_en" not in fm:
             h("entregable sin basado_en", r)
+        if ("/entregables/" in r or "/taller/" in r) and estado != "reemplazado" and not re.search(r"^afirma: *[^\s'\"]|^afirma: *['\"][^'\"\s]", fm, re.M):
+            sin_afirma.append(r)
         # un [[ dentro de codigo, en linea o en bloque, no es un enlace: es hablar de ellos
         sin_codigo = re.sub(r"`[^`\n]*`", "", re.sub(r"```.*?```", "", txt, flags=re.S))
         if "[[" in sin_codigo:
@@ -294,12 +297,18 @@ for dp, dn, fn in os.walk(raiz):
         if f == "enlaces.md" and len([l for l in txt.splitlines() if l.startswith("|")]) <= 2:
             h("enlaces.md sin filas", r)
 
+def nota_afirma():
+    if sin_afirma:
+        print("\nNota: %d archivo%s de entregables/ y taller/ sin `afirma:`. No bloquea: es opcional en lo que ya existía; el barrido del tablero propone una línea y su dueño la acepta." % (len(sin_afirma), "" if len(sin_afirma) == 1 else "s"))
+
 if not hallazgos:
     print("La raíz cumple el contrato.")
+    nota_afirma()
     sys.exit(0)
 print("%d hallazgos:\n" % len(hallazgos))
 ancho = max(len(c) for c, _, _ in hallazgos)
 for clase, ruta, detalle in sorted(hallazgos):
     print("  %-*s  %s%s" % (ancho, clase, ruta, ("  (" + detalle + ")") if detalle else ""))
+nota_afirma()
 sys.exit(1)
 PY

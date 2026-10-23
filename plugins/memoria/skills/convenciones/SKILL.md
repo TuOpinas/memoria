@@ -233,7 +233,7 @@ Un archivo vivo se reescribe y refleja el presente; un registro solo crece, con 
 
 ## 5. Cabecera
 
-Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`), `actualizado` y `basado_en`, salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
+Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`), `actualizado` y `basado_en` (y, en entregables y taller, `afirma`: una línea con lo que la pieza sostiene), salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
 
 ## 6. Nombres
 

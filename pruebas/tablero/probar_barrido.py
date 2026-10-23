@@ -45,6 +45,11 @@ try:
     proyecto(raiz, "ventas", "cerrado", "2026-08-01", [], sesion("2026-10-10", "x", "y"))
     t = raiz / "ventas/cerrado/proyecto.md"; t.write_text(t.read_text().replace("En marcha.", "Proyecto terminado el 2026-10-10"), encoding="utf-8")
 
+    for n, cab, cuerpo in [("sin.md", "estado: vigente", "# Tope de compras\n\nEl tope deja fuera lo recurrente."),
+                           ("con.md", 'estado: vigente\nafirma: "Ya lo dice."', "# Con\n\nTexto."),
+                           ("viejo.md", "estado: reemplazado", "# Viejo\n\nTexto."),
+                           ("borrador.md", "estado: borrador", "# Borrador\n\nTexto.")]:
+        escribir(raiz / "ventas/limpio/entregables" / n, f"---\n{cab}\nactualizado: 2026-10-01\n---\n{cuerpo}\n")
     salida = tmp / "s1"; salida.mkdir()
     b, docs = correr(raiz, salida)
     por = lambda clase: sorted(d["proyecto"] for d in docs.values() if d["clase"] == clase)
@@ -105,6 +110,26 @@ try:
     ok(dj["clase"] == "decision-sin-registrar" and "\n" not in dj["texto"] and "2026-10-22" in dj["texto"], "la propuesta nombra la fecha y va en una sola línea")
     r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj), str(tmp / "juicio.json")], capture_output=True, text=True)
     ok(json.loads(r.stdout)["propuestas_nuevas_por_juicio"] == 0, "repetirlo no duplica")
+
+    print("afirma")
+    pa = [x["ruta"] for x in bj["para_afirma"]]
+    ok(pa == ["ventas/limpio/entregables/sin.md", "ventas/limpio/entregables/borrador.md"], f"pide afirma solo de lo que no la tiene y no está reemplazado, vigentes primero ({pa})")
+    escribir(tmp / "juicio2.json", json.dumps({"afirma": [
+        {"ruta": "ventas/limpio/entregables/sin.md", "afirma": 'El tope deja fuera "lo recurrente".'},
+        {"ruta": "ventas/limpio/entregables/con.md", "afirma": "no se pidió"}]}))
+    r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj), str(tmp / "juicio2.json")], capture_output=True, text=True)
+    bj = json.loads((sj / "barrido.json").read_text(encoding="utf-8"))
+    af = [x for x in bj["anadir"] if x["id"].startswith("prop-afirma-")]
+    ok(json.loads(r.stdout)["propuestas_afirma"] == 1 and len(af) == 1, "solo entra el afirma que se pidió")
+    da = json.loads((sj / af[0]["archivo"]).read_text(encoding="utf-8"))
+    ok(da["clase"] == "afirma" and da["ruta"].endswith("sin.md") and '"' not in da["afirma"] and "\n" not in da["texto"], "la propuesta lleva ruta y línea, sin comillas dobles")
+    ok(json.loads(subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj), str(tmp / "juicio2.json")], capture_output=True, text=True).stdout)["propuestas_afirma"] == 0, "repetirlo no duplica")
+    # con la propuesta ya en la cola, no se vuelve a pedir
+    (tmp / "cola3").mkdir()
+    escribir(tmp / "cola3" / f"{af[0]['id']}.json", json.dumps({"id": af[0]["id"], "data": da, "version": 1}))
+    s3 = tmp / "s3afirma"; s3.mkdir()
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s3), "--cola", str(tmp / "cola3"), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    ok([x["ruta"] for x in json.loads((s3 / "barrido.json").read_text())["para_afirma"]] == ["ventas/limpio/entregables/borrador.md"], "lo ya propuesto no se vuelve a pedir")
 
     print("aplicar_cambios.py y las propuestas")
     guia = raiz / "guia.md"
