@@ -43,7 +43,7 @@ Quien escribe en un área o en un proyecto sin ser su dueño (`convenciones`, se
 
 - **Cambiar el dueño de un área**: «[nombre] con [correo] es el dueño del área [área]» cambia el Dueño y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
 
-En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta, y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
+En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta; cuando diga que ya lo puso, se ofrece comprobarlo (skill `sesion`, anexo `permisos.md`); y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
 ---
 
