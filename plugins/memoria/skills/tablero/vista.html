@@ -428,7 +428,11 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hq{all:unset;cursor:pointer;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--rule);color:var(--muted);font:600 11px/1 var(--f-mono);vertical-align:2px;margin-left:6px;flex:none}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
 .hq:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-.hc{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:28px;align-items:start}
+.hc{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,230px);gap:28px;align-items:start}
+.hc-doc{gap:0}.hc-grupo{display:grid;gap:0}.hc-grupo + .hc-grupo{margin-top:26px}
+.hc-gt{padding-bottom:8px;border-bottom:2px solid var(--signal);color:var(--signal)}
+.hc-sec{display:grid;gap:14px;padding:22px 0;border-top:1px solid var(--rule-soft);scroll-margin-top:12px}.hc-gt + .hc-sec{border-top:none}
+.hc-st{font:600 21px/1.25 var(--f-display);color:var(--ink);margin:0}
 .hc-toc{position:sticky;top:12px;align-self:start;display:grid;gap:14px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable;padding:2px 4px 12px 0}
 #hc-list{display:grid;gap:22px}
 .hc-toc #hc-q{position:sticky;top:0;z-index:1;box-shadow:0 -4px 0 var(--ground)}
@@ -525,6 +529,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hc-sig{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;border-top:1px solid var(--rule-soft);padding-top:12px}
 @media (max-width:760px){
   .hc{grid-template-columns:1fr;gap:16px}
+  .hc-toc{order:-1}
   .hc-toc{position:static;max-height:none;overflow:visible;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:12px}
   .hc-def{grid-template-columns:1fr}
   .hc-def dd{border-top:none;padding-top:0}
@@ -1831,20 +1836,62 @@ function ayudaToc(arts, cur){
 }
 // artículos fundidos en 1.14.11: sus enlaces viejos siguen llevando a donde está ahora su texto
 const AYUDA_ALIAS = {necesitas:"conectarte", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
+// La ayuda es un solo documento (1.19): todos los artículos seguidos, con el índice al lado para saltar a cada uno y la
+// sección actual marcada mientras se baja; cada sección se sigue enlazando sola (#ayuda-<id>) desde los «?» del tablero.
+let HC_CUR = null;
 function renderAyuda(id){
   id = AYUDA_ALIAS[id] || id;
   const head = document.getElementById("head"), main = document.getElementById("main");
-  const arts = ayudaArts(), a = arts.find(x=>x.id===id) || arts[0], i = arts.indexOf(a), sig = arts[i+1];
-  head.innerHTML = `<div class="eyebrow">Ayuda · ${esc(a.g)}</div><h1>${esc(a.t)}</h1>`;
+  const arts = ayudaArts(), a = arts.find(x=>x.id===id) || arts[0];
+  const grupos = [...new Set(arts.map(x=>x.g))];
+  head.innerHTML = `<div class="eyebrow">Ayuda</div><h1>Cómo funciona la memoria</h1>`;
   main.innerHTML = `<div class="hc">
-    <nav class="hc-toc" aria-label="Artículos de ayuda"><details id="hc-det"${window.innerWidth > 760 || HQ ? " open" : ""}><summary>Todos los artículos</summary>
+    <article class="hc-art hc-doc">${grupos.map(g => `<div class="hc-grupo" data-grupo="${esc(g)}"><span class="eyebrow hc-gt">${esc(g)}</span>${arts.filter(x=>x.g===g).map(x => `<section class="hc-sec" id="ay-${x.id}" data-sec="${x.id}"><h2 class="hc-st">${esc(x.t)}</h2>${x.h}</section>`).join("")}</div>`).join("")}
+      <p class="empty" id="hc-nada" hidden></p></article>
+    <nav class="hc-toc" aria-label="Secciones de la ayuda"><details id="hc-det"${window.innerWidth > 760 || HQ ? " open" : ""}><summary>Todas las secciones</summary>
       <div style="display:grid;gap:14px"><input type="search" id="hc-q" class="search" placeholder="Buscar en la ayuda" aria-label="Buscar en la ayuda" value="${esc(HQ)}">
       <div id="hc-list">${ayudaToc(arts, a.id)}</div></div>
     </details></nav>
-    <article class="hc-art">${a.h}${sig?`<p class="hc-sig"><span class="eyebrow">Siguiente</span><button type="button" class="lnk" data-help="${sig.id}">${esc(sig.t)} ›</button></p>`:""}</article>
   </div>`;
-  requestAnimationFrame(hcToc);
+  HC_CUR = a.id; hcFiltrar();
+  const saltar = a !== arts[0];
+  requestAnimationFrame(() => { if(saltar) irSeccion(a.id, true); hcToc(); });
+  // lo que llega después (avisos arriba, la base) mueve la página: se vuelve a dejar la sección arriba una vez
+  if(saltar) setTimeout(() => { if(view.lvl === "ayuda" && HC_CUR === a.id){ const s = document.getElementById("ay-" + a.id); if(s && Math.abs(s.getBoundingClientRect().top - (window.innerWidth <= 760 ? 56 : 12)) > 30) irSeccion(a.id, true); } }, 450);
 }
+// salta a una sección sin volver a pintar la ayuda
+function irSeccion(id, sinHistoria){
+  id = AYUDA_ALIAS[id] || id;
+  const s = document.getElementById("ay-" + id); if(!s) return;
+  if(s.hidden){ HQ = ""; const q = document.getElementById("hc-q"); if(q) q.value = ""; hcFiltrar(); }
+  // en el teléfono el índice va arriba: se pliega antes de medir, y se deja sitio para el botón fijo del índice
+  const movil = window.innerWidth <= 760;
+  if(movil){ const d = document.getElementById("hc-det"); if(d) d.open = false; }
+  window.scrollTo({top: Math.max(0, s.getBoundingClientRect().top + window.scrollY - (movil ? 56 : 12))});
+  hcMarcar(id, !sinHistoria);
+}
+function hcMarcar(id, conHistoria){
+  if(!id || id === HC_CUR && !conHistoria) return;
+  HC_CUR = id; view = {lvl:"ayuda", id};
+  document.querySelectorAll("#hc-list .hc-i").forEach(b => b.dataset.help === id ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
+  const h = "#ayuda-" + id; if(location.hash !== h) (conHistoria ? history.pushState : history.replaceState).call(history, null, "", h);
+  const c = document.querySelector('#hc-list [aria-current="page"]'), t = document.querySelector(".hc-toc");
+  if(c && t && window.innerWidth > 760){ const y = c.getBoundingClientRect().top - t.getBoundingClientRect().top; if(y < 40 || y + c.offsetHeight > t.clientHeight - 20) t.scrollTop += y - t.clientHeight/3; HC_Y = t.scrollTop; }
+}
+// la búsqueda deja en el documento solo las secciones que la nombran, y el índice igual
+function hcFiltrar(){
+  const q = _norm(HQ.trim()); let n = 0;
+  document.querySelectorAll(".hc-sec").forEach(s => { const ok = q.length < 2 || _norm(s.textContent).includes(q); s.hidden = !ok; n += ok ? 1 : 0; });
+  document.querySelectorAll(".hc-grupo").forEach(g => { g.hidden = ![...g.querySelectorAll(".hc-sec")].some(s => !s.hidden); });
+  const nada = document.getElementById("hc-nada"); if(nada){ nada.hidden = n > 0; nada.textContent = n ? "" : `Ninguna sección habla de «${HQ.trim()}».`; }
+}
+// mientras se baja, el índice marca la sección que se está leyendo
+let _HC_T = null;
+window.addEventListener("scroll", () => { if(!view || view.lvl !== "ayuda") return; clearTimeout(_HC_T); _HC_T = setTimeout(() => {
+  let cur = null; for(const s of document.querySelectorAll(".hc-sec:not([hidden])")){ if(s.getBoundingClientRect().top <= 120) cur = s.dataset.sec; else break; }
+  const pr = document.querySelector(".hc-sec:not([hidden])");
+  hcMarcar(cur || (pr && pr.dataset.sec), false);
+}, 60); }, {passive:true});
 // el índice de la ayuda cabe siempre en la pantalla y se recorre con su propio scroll, sin mover el artículo;
 // al cambiar de artículo conserva dónde estaba y deja a la vista el artículo actual
 let HC_Y = 0;
@@ -1869,8 +1916,9 @@ window.addEventListener("resize", ()=>{ if(view && view.lvl==="ayuda") hcFit(tru
 document.addEventListener("scroll", e=>{ if(e.target && e.target.classList && e.target.classList.contains("hc-toc")) HC_Y = e.target.scrollTop; }, {capture:true, passive:true});
 // «?» junto a un bloque del tablero: abre el artículo que lo explica
 const hq = (id, que) => `<button type="button" class="hq" data-help="${id}" aria-label="Ayuda: ${esc(que)}" ${tip("Qué es esto")}>?</button>`;
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-help],[data-go-help]"); if(!b) return; e.preventDefault(); go({lvl:"ayuda", id: b.dataset.help || "empezar"}); });
-document.addEventListener("input", e => { if(e.target.id!=="hc-q") return; HQ = e.target.value; const l = document.getElementById("hc-list"); if(l) l.innerHTML = ayudaToc(ayudaArts(), view.id); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-help],[data-go-help]"); if(!b) return; e.preventDefault(); const id = b.dataset.help || "empezar";
+  if(view.lvl === "ayuda" && b.dataset.help && document.getElementById("ay-" + (AYUDA_ALIAS[id] || id))) irSeccion(id); else go({lvl:"ayuda", id}); });
+document.addEventListener("input", e => { if(e.target.id!=="hc-q") return; HQ = e.target.value; const l = document.getElementById("hc-list"); if(l) l.innerHTML = ayudaToc(ayudaArts(), HC_CUR || view.id); hcFiltrar(); });
 // ---- lo que explica: premisas, panoramas y cuestionamientos ----
 const refDec = (p, d) => `${p.area}/${p.slug}#${d.id}`;
 // ---- la voz del director: líneas de estado calculadas con campos que ya existen, sin inventar nada ----
