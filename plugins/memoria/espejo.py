@@ -284,6 +284,8 @@ def devolver(copia, raiz_dispositivo, forzar, salidas):
         for d, ds, fs in os.walk(copia):
             for f in fs:
                 r = (pathlib.Path(d) / f).relative_to(copia).as_posix()
+                if f.endswith(".cerrar-tmp"):   # un temporal de cerrar.py que quedó a medias: nunca se devuelve
+                    continue
                 if r not in conocidos and e["instantanea"].get(r) != huella(pathlib.Path(d) / f):
                     sin_registrar.append(r)
     lotes, lote = [], []

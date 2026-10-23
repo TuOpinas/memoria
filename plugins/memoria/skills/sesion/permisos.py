@@ -100,15 +100,20 @@ def raiz_declarada(raiz):
             ctx = s.split(":", 1)[-1]
         elif s.lower().startswith("administra"):
             adm = s.split(":", 1)[-1]
-        elif s.lower().startswith("en drive"):
+        elif re.match(r"^(en\s+)?(google\s+)?drive\s*:", s, re.I):
             en_drive = s.split(":", 1)[-1]
     # «En Drive: jjalfaro@me.com es juanjo@tuopinas.mx, ana@x es ana@y»: la cuenta de Claude de la tabla y la cuenta con
-    # la que esa persona entra a Drive, cuando no son la misma. Lo declarado se compara en Drive con la segunda.
-    drive_de = {}
-    for par in re.split(r"[,;·]", en_drive.lower()):
+    # la que esa persona entra a Drive, cuando no son la misma. Lo declarado se compara en Drive con la segunda. Lo que
+    # no se deja leer se avisa, porque callar da justo los falsos avisos que la línea quiere evitar.
+    drive_de, avisos_drive = {}, []
+    for par in re.split(r"[,;·]|\s+y\s+", en_drive.lower()):
+        if not par.strip():
+            continue
         cs = CORREO.findall(par)
-        if len(cs) == 2:
-            drive_de[cs[0]] = cs[1]
+        if len(cs) != 2:
+            avisos_drive.append(f"el tramo «{par.strip()[:60]}» de «En Drive:» no da dos correos (va «cuenta@claude es cuenta@drive»)")
+            continue
+        drive_de[cs[0]] = cs[1]
     # cuenta de cada nombre, por la tabla de áreas (el dueño) y por los correos que la línea lleve entre paréntesis;
     # el nombre, sin lo que siga a una coma («Juanjo Jiménez-Alfaro, de forma provisional»)
     por_nombre = {}
@@ -116,6 +121,12 @@ def raiz_declarada(raiz):
         if a["dueno"] and len(a["duenos"]) == 1:
             n = a["dueno"].split(",")[0].strip().lower()
             por_nombre.setdefault(n, set()).update(a["duenos"])
+    en_tabla = set(c for a in areas for c in a["en_celda"]) | set(CORREO.findall((ctx + " " + adm).lower()))
+    for c, d in drive_de.items():
+        if c not in en_tabla and d in en_tabla:
+            avisos_drive.append(f"en «En Drive:», {c} es {d} está al revés: primero va la cuenta de la tabla ({d}) y después la de Drive")
+        elif c not in en_tabla:
+            avisos_drive.append(f"en «En Drive:», {c} no está en ninguna celda Cuenta ni en «Quién responde por qué»: comprueba el correo")
     def cuentas_de(linea):
         out = set(CORREO.findall(linea.lower()))
         nombres = re.sub(r"\([^)]*\)", "", linea)
@@ -185,7 +196,7 @@ def raiz_declarada(raiz):
                 no_mirados.append((f"{a['slug']}/{slug}/ (restringido, sin carpeta aquí)", False))
             else:
                 no_mirados.append((f"{a['slug']}/{slug}/ (en el índice del área, sin carpeta aquí)", True))
-    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip(), no_mirados, drive_de
+    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip(), no_mirados, (drive_de, avisos_drive)
 
 
 def plan(raiz):
@@ -206,9 +217,10 @@ def plan(raiz):
 
 
 def comparar(raiz, drive):
-    areas, proyectos, admins, ctxc, adm, ctx, no_mirados, drive_de = raiz_declarada(raiz)
+    areas, proyectos, admins, ctxc, adm, ctx, no_mirados, (drive_de, avisos_drive) = raiz_declarada(raiz)
     # lo declarado, con la cuenta con la que cada quien entra a Drive («En Drive:» de guia.md)
     d = lambda c: drive_de.get(c, c)
+    claude_de = {v: k for k, v in drive_de.items()}
     for a in areas:
         a["duenos"] = set(map(d, a["duenos"])); a["colaboran"] = set(map(d, a["colaboran"])); a["leen"] = set(map(d, a["leen"])); a["en_celda"] = set(map(d, a["en_celda"]))
     for p in proyectos:
@@ -237,6 +249,21 @@ def comparar(raiz, drive):
         return e in admins or (not admins and rol in ("organizer", "owner"))
     hall, notas, acciones, a_decidir = [], [], [], 0
     rr, rg, ra = roles(raizp)
+    # si Drive conoce también a la persona por su cuenta de Claude, es la misma persona: se mira como la de Drive
+    def alias(r):
+        for c in list(r):
+            dc = drive_de.get(c)
+            if not dc or dc == c:
+                continue
+            if dc not in r:
+                r[dc] = r.pop(c)
+            else:   # las dos cuentas en Drive: la persona es una, con el rol más alto de los dos
+                orden = ["reader", "commenter", "writer", "fileOrganizer", "organizer", "owner"]
+                r[dc] = max(r.pop(c), r[dc], key=lambda x: orden.index(x) if x in orden else -1)
+        return r
+    alias(rr)
+    for n_ in avisos_drive:
+        notas.append(n_)
     if not raizp:
         hall.append("No llegaron los permisos de la raíz: sin ellos no se puede revisar nada. Vuelve a leerlos con el conector de Google Drive.")
     if not admins and rr:
@@ -288,8 +315,10 @@ def comparar(raiz, drive):
         if rr and e not in rr and not any(e in (a["duenos"] | a["colaboran"]) and a["restringida"] for a in areas):
             if por_grupo:
                 notas.append(f"{e} aparece en guia.md o en un proyecto y no figura con su correo en la carpeta: puede entrar por un grupo o por el dominio; si no, compártesela como «Lector».")
+            elif avisos_drive or e in claude_de:
+                notas.append(f"{e} aparece en guia.md o en un proyecto y no figura en la carpeta; la línea «En Drive:» no se deja leer entera: corrígela antes de compartir nada.")
             else:
-                hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector».")
+                hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector» (si entra a Drive con otra cuenta, decláralo en «En Drive:» de guia.md).")
                 acciones.append({"tipo": "compartir", "cuenta": e, "carpeta": "", "rol": "reader"})
     def limitar(carpeta, conservan, sin_resolver, ar):
         """La acción de limitar con el conector, solo si se sabe a quién conservar; si no, queda para la web."""
@@ -309,6 +338,7 @@ def comparar(raiz, drive):
                 notas.append(f"El área {a['slug']}/ no se encontró en Drive con esta cuenta: puede faltar la carpeta o no tener acceso.")
             continue
         ar, ag, aa = roles(info.get("permisos"))
+        alias(ar)
         abiertos_en(f"El área {a['slug']}/", aa, ag, hall, notas)
         for e in sorted(a["duenos"] | a["colaboran"]):
             rol = ar.get(e)
@@ -350,6 +380,7 @@ def comparar(raiz, drive):
         conservan = ar_["duenos"] | ar_["colaboran"] | p["colaboran"] | p["dueno"]
         if info:
             pr, pg, pa = roles(info.get("permisos"))
+            alias(pr)
             abiertos_en(f"El proyecto {p['id']}/", pa, pg, hall, notas)
             for e in sorted(p["colaboran"]):
                 rol = pr.get(e)
@@ -363,7 +394,7 @@ def comparar(raiz, drive):
         if p["tiene_restringido"] or p["id"] in (drive.get("restringidos") or {}):
             ri = (drive.get("restringidos") or {}).get(p["id"])
             if ri is not None and not ri.get("limitada"):
-                rr_, _, _ = roles(ri.get("permisos"))
+                rr_, _, _ = roles(ri.get("permisos")); alias(rr_)
                 acc = limitar(p["id"] + "/restringido", conservan, p["dueno_sin"], rr_)
                 hall.append(f"La carpeta restringido/ de {p['id']} no tiene acceso limitado en Drive: la lee todo el equipo." + web(p["dueno_sin"] if not acc else []))
                 if acc:

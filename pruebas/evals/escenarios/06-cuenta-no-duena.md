@@ -12,6 +12,8 @@ comprobar:
   - solo-escribe-en ventas,metodo.md
   - entrada-sesion ventas/cuentas
   - cierre-con-script
+  - bloque-igual ventas/area.md Panorama
+  - bloque-igual ventas/area.md Prioridades ahora
   - sin-rutas-absolutas
 ---
 Una cuenta que colabora en `ventas` (carla@) y no es responsable de contexto: escribe solo dentro de `ventas`, y no se

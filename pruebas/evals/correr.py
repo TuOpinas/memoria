@@ -11,7 +11,7 @@ Uso: python3 pruebas/evals/correr.py [escenario ...] [--modelo opus|sonnet|haiku
 
 Cada escenario es un .md con cabecera: raiz (carpeta de pruebas/tablero/ o ruta), cuenta (correo de la conversación),
 consola (si/no), plataforma (darwin/win32), max_turnos, preparar (pasos sobre la copia de la raíz antes de empezar),
-turnos (lo que la persona dice, en orden) y comprobar (las comprobaciones, abajo). Deja en la carpeta de salida un
+turnos (lo que la persona dice, en orden), entre (lo que otra persona hace después del turno N: «N paso») y comprobar (las comprobaciones, abajo). Deja en la carpeta de salida un
 JSON con las medidas y las comprobaciones de cada escenario, y la transcripción de cada uno.
 """
 import argparse
@@ -75,17 +75,22 @@ def preparar_raiz(e, trabajo):
     shutil.copytree(origen, raiz)
     # la cuenta de la conversación es la de quien corre el eval (Claude Code la pone); el escenario dice qué cuenta de la
     # raíz de prueba ocupa esa persona (`cuenta: ana@ejemplo.test`), y en la copia esa cuenta se escribe con el correo real
-    real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "")
-    papel = e.get("cuenta", "ana@ejemplo.test")
-    if real and real != papel:
+    real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip().lower()
+    papel = e.get("cuenta", "ana@ejemplo.test").lower()
+    if not real:
+        raise SystemExit("No se sabe la cuenta de la conversación (CLAUDE_CODE_USER_EMAIL): corre los evals desde una sesión de Claude Code, o ponla en esa variable.")
+    patron = re.compile(r"(?<![\w.+'-])" + re.escape(papel) + r"(?![\w-])", re.I)
+    if real != papel:
         for d, _, fs in os.walk(raiz):
             for f in fs:
                 if f.endswith(".md"):
                     p = pathlib.Path(d, f)
                     t = p.read_text(encoding="utf-8", errors="replace")
-                    if papel in t:
-                        p.write_text(t.replace(papel, real), encoding="utf-8")
-    # fechas de archivo fijas, como en probar.sh: todo del 2026-08-01 salvo un entregable tocado hoy
+                    if real in t.lower():
+                        raise SystemExit(f"{e['nombre']}: la cuenta real {real} ya aparece en {p.relative_to(raiz)}: tendría dos papeles.")
+                    if patron.search(t):
+                        p.write_text(patron.sub(real, t), encoding="utf-8")
+    # fechas de archivo fijas, como en probar.sh: todo del 2026-08-01
     viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
     for d, _, fs in os.walk(raiz):
         for f in fs:
@@ -152,9 +157,11 @@ def preparar_plugin(origen, trabajo):
     version = version_de(origen) or "0.0.0"
     while any(not mayor(version, v) for v in instaladas):
         a, b, c = version.split("."); version = f"{a}.{b}.{int(c) + 1}"
-    dest = PLUGINS_INSTALADOS / "evals" / "memoria"
-    if dest.exists():
-        shutil.rmtree(dest)
+    # restos de una corrida anterior que murió a medias (una copia con versión inventada que la siguiente sesión real
+    # elegiría): fuera, siempre, al arrancar
+    for viejo in PLUGINS_INSTALADOS.glob("evals*"):
+        shutil.rmtree(viejo, ignore_errors=True)
+    dest = PLUGINS_INSTALADOS / f"evals-{os.getpid()}" / "memoria"
     shutil.copytree(origen, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     pj = dest / ".claude-plugin" / "plugin.json"
     pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
@@ -202,13 +209,14 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
                         if isinstance(b, TextBlock):
                             turno["respuestas"].append(b.text)
                         elif isinstance(b, ToolUseBlock):
-                            turno["herramientas"].append({"nombre": b.name, "entrada": b.input})
+                            turno["herramientas"].append({"id": b.id, "nombre": b.name, "entrada": b.input})
                             medidas["llamadas"][b.name] = medidas["llamadas"].get(b.name, 0) + 1
                 elif isinstance(m, UserMessage) and isinstance(m.content, list):
                     for b in m.content:
                         if isinstance(b, ToolResultBlock) and turno["herramientas"]:
                             cont = b.content if isinstance(b.content, str) else json.dumps(b.content, ensure_ascii=False)
-                            turno["herramientas"][-1]["resultado"] = (cont or "")[:4000]
+                            h = next((x for x in turno["herramientas"] if x["id"] == b.tool_use_id), turno["herramientas"][-1])
+                            h["resultado"] = (cont or "")[:4000]
                 elif isinstance(m, ResultMessage):
                     u = m.usage or {}
                     medidas["tokens_entrada"] += u.get("input_tokens", 0)
@@ -291,9 +299,9 @@ def _(ctx, arg):
     for t in ctx["turnos"]:
         for h in t["herramientas"]:
             cmd = json.dumps(h["entrada"], ensure_ascii=False)
-            if "abrir.py" in cmd and arg in cmd and "--minima" not in cmd:
-                return True, "abrir.py con el proyecto"
-    return False, "abrir.py no corrió con el proyecto"
+            if "abrir.py" in cmd and arg in cmd and "--minima" not in cmd and "REGISTROS" in (h.get("resultado") or ""):
+                return True, "abrir.py con el proyecto, y respondió"
+    return False, "abrir.py no corrió con el proyecto (o no respondió)"
 
 
 @comprobacion("apertura-minima")
@@ -301,7 +309,7 @@ def _(ctx, arg):
     for t in ctx["turnos"]:
         for h in t["herramientas"]:
             cmd = json.dumps(h["entrada"], ensure_ascii=False)
-            if "abrir.py" in cmd and "--minima" in cmd:
+            if "abrir.py" in cmd and "--minima" in cmd and "=== CUENTA" in (h.get("resultado") or ""):
                 return True, "abrir.py --minima corrió"
     return False, "abrir.py --minima no corrió"
 
@@ -397,6 +405,28 @@ def _(ctx, arg):
     return texto in t, f"«{texto[:60]}» {'está' if texto in t else 'no está'} en {r}"
 
 
+@comprobacion("cambia")
+def _(ctx, arg):
+    """cambia <ruta>: el archivo cambió."""
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    return arg in c, f"{arg} {'cambió' if arg in c else 'no cambió'}"
+
+
+@comprobacion("no-existe")
+def _(ctx, arg):
+    return not (ctx["raiz"] / arg).exists(), f"{arg} {'no existe' if not (ctx['raiz'] / arg).exists() else 'sigue ahí'}"
+
+
+@comprobacion("bloque-igual")
+def _(ctx, arg):
+    """bloque-igual <ruta> <bloque>: el bloque «## bloque» del archivo quedó como estaba."""
+    r, _, nombre = arg.partition(" ")
+    bl = lambda t: (re.search(r"^## " + re.escape(nombre) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S) or [None, ""])[1]
+    antes = bl(ctx["antes_textos"].get(r, "")); p = ctx["raiz"] / r
+    ahora = bl(p.read_text(encoding="utf-8", errors="replace") if p.exists() else "")
+    return antes.strip() == ahora.strip(), f"«{nombre}» de {r} {'igual' if antes.strip() == ahora.strip() else 'cambió'}"
+
+
 @comprobacion("conserva-entradas")
 def _(ctx, arg):
     """conserva-entradas <area>/<proyecto>: sesiones.md tiene todas las entradas del original y de su copia en conflicto."""
@@ -411,10 +441,19 @@ def _(ctx, arg):
 
 @comprobacion("cierre-con-script")
 def _(ctx, arg):
-    """El cierre escribió con cerrar.py (una llamada), no con Write/Edit ni con un script propio."""
-    con = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if "cerrar.py" in json.dumps(h["entrada"], ensure_ascii=False) and h["nombre"].endswith(("device_bash", "Bash")))
-    a_mano = [h["nombre"] for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in json.dumps(h["entrada"]) for k in ("sesiones.md", "decisiones.md", "proyecto.md", "area.md"))]
-    return con > 0 and not a_mano, f"cerrar.py: {con} llamadas" + (f"; a mano: {', '.join(a_mano)}" if a_mano else "")
+    """El cierre escribió con cerrar.py (una llamada que devolvió «escritos»), no con Write/Edit, ni con un script o una
+    redirección propios sobre los cuatro archivos."""
+    REG = ("sesiones.md", "decisiones.md", "proyecto.md", "area.md")
+    con = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if "cerrar.py" in json.dumps(h["entrada"], ensure_ascii=False) and h["nombre"].endswith(("device_bash", "Bash")) and '"escritos"' in (h.get("resultado") or ""))
+    a_mano = []
+    for t in ctx["turnos"]:
+        for h in t["herramientas"]:
+            ent = json.dumps(h["entrada"], ensure_ascii=False)
+            if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in ent for k in REG):
+                a_mano.append(h["nombre"])
+            elif h["nombre"].endswith(("device_bash", "Bash")) and "cerrar.py" not in ent and any(k in ent for k in REG) and re.search(r"(>>?|\btee\b|open\([^)]*['\"]w|write_text|cat\s*>)", ent):
+                a_mano.append(h["nombre"] + ": " + ent[:80])
+    return con > 0 and not a_mano, f"cerrar.py con «escritos»: {con}" + (f"; a mano: {'; '.join(a_mano)}" if a_mano else "")
 
 
 @comprobacion("herramienta")
@@ -484,6 +523,24 @@ def main():
     ap.add_argument("--plugin", default=str(PLUGIN))
     a = ap.parse_args()
     nombres = a.escenarios or sorted(p.stem for p in (AQUI / "escenarios").glob("*.md"))
+    cerrojo = pathlib.Path(tempfile.gettempdir()) / "memoria-evals.lock"
+    try:
+        fd = os.open(cerrojo, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise SystemExit(f"Ya hay evals corriendo ({cerrojo}); si no es verdad, borra ese archivo.")
+    os.close(fd)
+    import atexit, signal
+    def limpiar(*_):
+        for d in PLUGINS_INSTALADOS.glob("evals*"):
+            shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree("/mnt/user-data/uploads/Prueba", ignore_errors=True)
+        try:
+            cerrojo.unlink()
+        except OSError:
+            pass
+    atexit.register(limpiar)
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sig, lambda *_: sys.exit(1))
     plugin, version = preparar_plugin(pathlib.Path(a.plugin), None)
     salida = pathlib.Path(a.salida) if a.salida else AQUI / "resultados" / f"{HOY}-{version}-{a.modelo}"
     salida.mkdir(parents=True, exist_ok=True)
@@ -503,7 +560,7 @@ def main():
                 print("   error: " + str(err)[:300])
             (salida / "resultados.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=1), encoding="utf-8")
     finally:
-        shutil.rmtree(plugin.parent, ignore_errors=True)
+        limpiar()
     print(f"\n{'Todo bien.' if not fallos else str(fallos) + ' fallo(s).'} Resultados en {salida}")
     sys.exit(1 if fallos else 0)
 

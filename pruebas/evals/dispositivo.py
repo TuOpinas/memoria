@@ -12,6 +12,7 @@ Lo que device_stage_files copia va a /mnt/user-data/uploads/<nombre de la raíz>
 """
 import asyncio
 import json
+import re
 import os
 import pathlib
 import shutil
@@ -43,6 +44,7 @@ class Dispositivo:
         self.uploads = pathlib.Path(uploads) / nombre
         self.llamadas = []   # (herramienta, argumentos) en orden, para los evals
         self.staged = {}     # stagedPath -> devicePath
+        self.borrar = False  # como la computadora: rm no funciona hasta que se concede el permiso
 
     # --- rutas ---
     def real(self, ruta):
@@ -50,15 +52,23 @@ class Dispositivo:
         if r.startswith("~/"):
             r = r.replace("~", self.ruta_disp.rsplit("/Documents", 1)[0], 1)
         base = self.ruta_disp
+        rel = None
         if r == base or r.startswith(base + "/"):
             rel = r[len(base):].lstrip("/")
-            return self.raiz / rel if rel else self.raiz
-        # lo que dice device_bash ($HOME/mnt/...) también vale
-        m = f"mnt/Memoria--{self.nombre}"
-        if m in r:
-            rel = r.split(m, 1)[1].lstrip("/")
-            return self.raiz / rel if rel else self.raiz
-        return None
+        else:
+            # lo que dice device_bash ($HOME/mnt/...) también vale
+            m = f"mnt/Memoria--{self.nombre}"
+            if m in r:
+                rel = r.split(m, 1)[1].lstrip("/")
+        if rel is None:
+            return None
+        p = (self.raiz / rel).resolve() if rel else self.raiz
+        # nunca fuera de la raíz, como la herramienta real
+        try:
+            p.relative_to(self.raiz)
+        except ValueError:
+            return None
+        return p
 
     def disp(self, real):
         rel = pathlib.Path(real).resolve().relative_to(self.raiz).as_posix()
@@ -94,6 +104,9 @@ class Dispositivo:
 
     async def device_bash(self, args):
         self.llamadas.append(("device_bash", args))
+        cmd = args.get("command", "")
+        if not self.borrar and re.search(r"(^|[;&|\s])(rm|rmdir|unlink)\s", cmd + " ") and f"mnt/Memoria--{self.nombre}" in cmd:
+            return {"content": [{"type": "text", "text": "rm: Operation not permitted\n[exit 1]"}]}
         env = {"HOME": str(self.hogar), "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C.UTF-8", "TZ": "America/Mexico_City"}
         try:
             r = subprocess.run(["bash", "-c", args.get("command", "")], cwd=self.hogar, env=env, capture_output=True, text=True,
@@ -114,7 +127,7 @@ class Dispositivo:
                 return self._json({"error": f"No existe o no es un archivo: {ruta}"}, error=True)
             dest = self.uploads / p.relative_to(self.raiz)
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(p, dest)
+            shutil.copyfile(p, dest)   # como la herramienta real: la fecha de la copia es la de la traída
             st = p.stat()
             self.staged[str(dest)] = self.disp(p)
             out.append({"devicePath": self.disp(p), "stagedPath": str(dest), "mtimeMs": int(st.st_mtime * 1000), "bytes": st.st_size, "ok": True})
@@ -144,6 +157,7 @@ class Dispositivo:
 
     async def device_request_delete_permission(self, args):
         self.llamadas.append(("device_request_delete_permission", args))
+        self.borrar = True
         return self._json({"granted": args.get("paths") or []})
 
     def _json(self, d, error=False):

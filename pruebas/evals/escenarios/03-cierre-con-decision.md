@@ -15,6 +15,7 @@ comprobar:
   - entrada-sesion ventas/cuentas
   - en-corto ventas/cuentas
   - cierre-con-script
+  - cambia ventas/area.md
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
   - sin-rutas-absolutas
 ---

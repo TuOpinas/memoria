@@ -2,11 +2,11 @@
 
 Las pruebas de `pruebas/` comprueban los scripts y la página. Los evals comprueban **lo que Claude hace con las skills**: una conversación guionada contra una raíz de prueba, con el plugin cargado y una computadora de mentira, y al final se mira lo que respondió, qué herramientas llamó y qué cambió en la raíz.
 
-Cuestan tokens del plan (cada escenario es una conversación con el modelo: entre 0,5 y 1,5 USD en Opus, 30 a 90 segundos), así que corren antes de publicar una versión y cuando se pide, no en cada commit.
+Cuestan tokens del plan (cada escenario es una conversación con el modelo: entre 0,5 y 1,5 USD en Opus, 30 a 90 segundos; el 07, sin consola, más), así que corren antes de publicar una versión y cuando se pide, no en cada commit.
 
 ## Correr
 
-Desde una sesión de Claude Code (usa la cuenta de la sesión; con `ANTHROPIC_API_KEY` también vale):
+Desde una sesión de Claude Code (usa la cuenta de la sesión, que toma de `CLAUDE_CODE_USER_EMAIL`; con una clave de API hay que poner esa variable con el correo que la raíz de prueba va a declarar):
 
 ```
 python3 pruebas/evals/correr.py                       # todos los escenarios, con Opus
@@ -48,7 +48,7 @@ comprobar:
 
 Pasos de `preparar` y `entre`: `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `otro-cierre <area>/<proyecto>`.
 
-Comprobaciones: `recuadro`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `en-corto <a>/<p>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`. Se añaden en `correr.py` con `@comprobacion`.
+Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <ruta> <bloque>`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `en-corto <a>/<p>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`. Se añaden en `correr.py` con `@comprobacion`.
 
 ## Los escenarios
 
@@ -59,6 +59,9 @@ Comprobaciones: `recuadro`, `apertura-minima`, `apertura-completa <a>/<p>`, `pre
 | 03 | Cierre con una decisión | la decisión se enseña y se escribe solo con el sí; entrada, decisión, `En corto`, línea del área; con `cerrar.py` |
 | 04 | Otra persona cierra mientras | las dos entradas y los dos pasos quedan; Claude dice que alguien escribió |
 | 05 | Copia en conflicto de Drive | se juntan todas las entradas; la copia a la papelera con el sí |
-| 06 | Cuenta que solo colabora | escribe solo en `ventas`; no se le habla de «Claude outputs» |
+| 06 | Cuenta que solo colabora | escribe solo en `ventas`; no toca el Panorama; no se le habla de «Claude outputs» |
+| 07 | Cierre sin consola (Windows) con otra persona cerrando mientras | copia por `device_stage_files`, `cerrar.py --sin-fechas` sobre la copia, `device_commit_files` con rechazo por fecha y repetición; nada se pierde |
 
-Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20): la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí; el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt`; «Descartamos: no consta» como relleno.
+Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20), y qué pasó con cada cosa: la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí (corregido en `cerrar.md`); el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); «Descartamos: no consta» como relleno (corregido en `cerrar.md`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt` (dos llamadas de más; sin cambio todavía, pendiente de ver si se repite).
+
+Comprobaciones añadidas por la revisión de la 1.20: `cierre-con-script` exige que la llamada devolviera «escritos» y marca como «a mano» una redirección o un script propio sobre los cuatro archivos; `apertura-completa` exige que `abrir.py` respondiera. Lo que queda sin medir: que una sesión real (no un eval) elija una copia `plugins/evals-*` que una corrida muerta dejó atrás; por eso `correr.py` borra esas copias al arrancar y al salir, también con SIGTERM, y no deja correr dos evals a la vez.

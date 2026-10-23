@@ -126,6 +126,22 @@ ok("Para cambiar" not in o4, f"con la cuenta de Drive declarada y el dueño «, 
 ok("gabi@empresa.test escribe en operacion" in o4 and "el área no declara ninguna cuenta" in o4 and "si es su dueño Gabi Prueba" in o4, "quien escribe en un área sin cuenta declarada va a «Para comprobar», con el dueño por su nombre")
 d["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "reader")
 f.write_text(json.dumps(d)); o5 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
-ok("ana@empresa.test (dueño en ventas)" not in o5 or "(tiene «Lector»)" in o5, "la frase de quien no puede escribir en su área está bien formada")
+ok("ana@empresa.test (dueño en ventas) no puede escribir en su área (tiene «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
+# «En Drive:» con « y », al revés, mal escrita; y la cuenta de Claude que también está en Drive
+def con_linea(linea, drive):
+    R5 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R4, R5)
+    g5 = R5 / "guia.md"; g5.write_text(g5.read_text().replace("En Drive: ana@ejemplo.test es ana@empresa.test", linea))
+    f5 = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f5.write_text(json.dumps(drive))
+    return subprocess.run([sys.executable, str(P), str(R5), "--drive", str(f5)], capture_output=True, text=True).stdout
+d2 = dict(d); d2["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "organizer")
+o6 = con_linea("En Drive: ana@ejemplo.test es ana@empresa.test y beto@ejemplo.test es beto@ejemplo.test", d2)
+ok("Para cambiar" not in o6, "«En Drive:» admite « y » entre pares")
+o7 = con_linea("En Drive: ana@empresa.test es ana@ejemplo.test", d2)
+ok("está al revés" in o7 and '"compartir"' not in o7.split("=== ACCIONES")[1], "una línea al revés se avisa y no se comparte nada a ciegas")
+o8 = con_linea("En Drive: ana@ejemplo.test ana@empresa.test; beto", d2)
+ok("no da dos correos" in o8 and "compartir" not in o8.split("=== ACCIONES")[1], "un tramo que no da dos correos se avisa, sin acción de compartir")
+d3 = json.loads(json.dumps(d2)); d3["raiz"]["permisos"].append(u("ana@ejemplo.test", "organizer"))
+o9 = con_linea("En Drive: ana@ejemplo.test es ana@empresa.test", d3)
+ok("ana@ejemplo.test tiene" not in o9 and "Para cambiar" not in o9, "la cuenta de Claude que también está en Drive es la misma persona, no alguien sin declarar")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

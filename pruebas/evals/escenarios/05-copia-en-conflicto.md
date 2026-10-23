@@ -13,6 +13,8 @@ comprobar:
   - menciona conflicto@1
   - conserva-entradas ventas/cuentas
   - contiene ventas/cuentas/sesiones.md ENTRADA-CONFLICTO
+  - herramienta device_request_delete_permission
+  - no-existe ventas/cuentas/sesiones (1).md
   - solo-escribe-en ventas/cuentas,metodo.md
 ---
 Drive dejó `sesiones (1).md` junto a `sesiones.md` con una entrada que el original no tiene. La apertura avisa de la
