@@ -48,6 +48,10 @@ const path = require('path');
     if(!atraso) errores.push(`${etiqueta}: Inicio no avisa de que la carpeta usa una versión anterior del método`);
     const boton = await p.evaluate(() => { const b = document.querySelector('.sync-ico'); return b ? { pend: b.classList.contains('pend'), off: b.classList.contains('off') } : null; });
     if(!boton || boton.off || boton.pend) errores.push(`${etiqueta}: el botón cuenta como pendiente un cambio que la sincronización dejó a propósito, o no está (${JSON.stringify(boton)})`);
+    // las propuestas del barrido viven en la cola pero no cuentan como lo marcado aquí; salen en «la memoria al día», y las descartadas no
+    const prop = await p.evaluate(async () => { const b = document.querySelector('[data-mt-open="ventas--cuentas"]'); if(!b) return null; b.click(); await new Promise(r => setTimeout(r, 250)); const m = document.querySelector('.modal'); return m ? m.textContent : ''; });
+    await p.keyboard.press('Escape');
+    if(prop === null || !/Propuestas de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en «la memoria al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
     await p.goto(url + '#p-ventas--cuentas-t-resumen'); await p.waitForTimeout(400);
     const donde = await p.evaluate(() => [...document.querySelectorAll('.brief p')].map(x=>x.textContent).join(' | '));
     if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);

@@ -568,7 +568,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
 const VERSION_TABLERO = "1.20.1"; // la misma que el plugin memoria; la sube release.sh
-let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
+let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const today = () => { const n = new Date(); return new Date(n.getTime()-n.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
@@ -615,6 +615,8 @@ function md(text){
 const isHeader = s => /^[A-Za-zÁÉÍÓÚáéíóúñÑ][^.]{0,30}:$/.test(s.texto.trim());
 const key = (pid, texto) => pid + "||" + texto;
 // índice de la cola por paso: se rehace solo cuando llega una cola nueva, no en cada consulta
+const CLASE_PROP = {"estado-desfasado":"Estado viejo", "paso-hecho":"Paso hecho", "rotacion":"Archivar", "decision-sin-registrar":"Decisión sin registrar", "afirma":"Qué afirma"};
+const propsDe = pid => PROPUESTAS.filter(c=>c.proyecto===pid && c.estado!=="descartada").sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 let _PEND_SRC = null, _PEND_IDX = null;
 const _PEND_VACIO = Object.freeze({fecha:null, hecho:null, corregir:null});
 function pend(pid, texto){
@@ -1050,6 +1052,8 @@ function mtDatos(){
     if(afe.length){ it.push({k:"afe", afe, txt:`${afe.length} decisi${afe.length===1?"ón":"ones"} de otros proyectos posterior${afe.length===1?"":"es"} a su última sesión`}); fr.push("repasa las decisiones de otros proyectos que le afectan y llegaron después de su última sesión"); }
     const cola = CAMBIOS.filter(c=>c.proyecto===p.id && (c.tipo==="nota" || c.tipo==="corregir" || (c.tipo==="hecho" && !c.nota)));
     if(cola.length){ it.push({k:"cola", cola, txt:`${cola.length} cosa${cola.length===1?"":"s"} marcada${cola.length===1?"":"s"} aquí espera${cola.length===1?"":"n"} sesión`}); fr.push("registra lo que se marcó en el tablero"); }
+    const prop = propsDe(p.id);
+    if(prop.length){ it.push({k:"prop", prop, txt:`${prop.length} propuesta${prop.length===1?"":"s"} de la memoria espera${prop.length===1?"":"n"} tu decisión`}); fr.push("repasa las propuestas de la memoria y di cuáles aceptas y cuáles descartas"); }
     it.sort((a,b)=>(b.k==="sinses")-(a.k==="sinses"));
     if(it.length) filas.push({id:p.id, p, it, frase:`abre sesión en ${p.area}/${p.slug} y pon al día su memoria: ${fr.join("; ")}`});
   }
@@ -1094,6 +1098,7 @@ function mtModal(){
     if(x.k==="fuera"){ const r = x.r, rango = r.primero && r.primero!==r.ultimo ? `del ${fmtD(r.primero)} al ${fmtD(r.ultimo)}` : `del ${fmtD(r.ultimo)}`;
       const intro = r.de_claude ? `La app de Claude guarda en la carpeta «Claude outputs» lo que produce cuando no se le dice dónde. Ahí no es de ningún proyecto: nadie lo encuentra, no aparece en este tablero y se pierde de vista. Hay ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}. La frase de abajo abre una sesión que propone a qué proyecto va cada uno y los mueve cuando lo confirmas; lo de áreas que no son tuyas se queda para su dueño.` : `La carpeta «${esc(r.carpeta)}» está en la raíz pero no es de ningún área de la guía. Tiene ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}.`;
       return `<h3>${r.de_claude ? "Lo que dejó Claude fuera de los proyectos" : "Carpeta fuera de las áreas"} <span class="c">${r.archivos}</span></h3><p class="more" style="margin:0">${intro}</p>${(r.nombres||[]).length ? `<ul class="ent-l">${r.nombres.slice(0,12).map(n=>`<li><code>${esc(n.nombre)}</code> <span class="more">· ${fmtD(n.fecha)}</span></li>`).join("")}</ul>${r.archivos>12?`<p class="more" style="margin:0">Y ${r.archivos-12} más.</p>`:""}` : ""}`; }
+    if(x.k==="prop") return `<h3>Propuestas de la memoria <span class="c">${x.prop.length}</span></h3><p class="more" style="margin:0">Las dejó el barrido al ponerse al día el tablero, mirando lo que cambió. No cambian nada: en la sesión del proyecto, Claude te las enseña y escribe solo las que aceptas.</p><div class="due-list">${x.prop.map(c=>`<div class="due-item static"><span class="pill soon">${esc(CLASE_PROP[c.clase]||"Propuesta")}</span><span class="t">${esc(c.texto||"")}<span class="more" style="display:block">${esc(c.por_que||"")}</span></span><span class="w">${esc((c.creado||"").slice(0,10))}</span></div>`).join("")}</div>`;
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
     return "";
   };
@@ -2242,7 +2247,7 @@ function _render(){
   render();
   db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("proyectos").onSnapshot(snap=>{ const nuevos = snap.docs.map(s=>({id:s.id, ...s.data()})); olvidarTextos(nuevos); PROJ = nuevos.sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
-  db.collection("cambios").onSnapshot(snap=>{ CAMBIOS = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
+  db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROPUESTAS = todo.filter(c=>c.tipo==="propuesta"); render(); }, ()=>{});   // las propuestas del barrido viven en la misma cola pero no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
   db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
   db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; render(); }, ()=>{});
   db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});

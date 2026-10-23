@@ -19,6 +19,9 @@ D["cambios"] = {
     "c2": {"tipo": "hecho", "proyecto": "ventas--cuentas", "paso": "Preparar el contrato de Cliente Uno con la plantilla de propuesta.", "nota": None, "creado": "2026-10-02T11:00:00-06:00"},
     # una fecha que la sincronización dejó a propósito (de otra cuenta): el botón no la cuenta
     "c3": {"tipo": "fecha", "proyecto": "ventas--cuentas", "paso": "Llamar a Cliente Uno", "fecha": "2026-10-30", "creado": "2026-10-02T12:00:00-06:00"},
+    # lo que deja el barrido: una propuesta viva y una que el dueño descartó; no cuentan como «marcado aquí»
+    "prop-paso-hecho-a1": {"tipo": "propuesta", "clase": "paso-hecho", "proyecto": "ventas--cuentas", "texto": "Quitar de «Siguientes pasos»: «PRUEBA-PROPUESTA-VIVA».", "por_que": "sesiones.md (2026-10-01) lo cuenta en Avances", "origen": "barrido", "estado": "pendiente", "creado": "2026-10-02T09:00:00-06:00"},
+    "prop-estado-desfasado-b2": {"tipo": "propuesta", "clase": "estado-desfasado", "proyecto": "ventas--cuentas", "texto": "PRUEBA-PROPUESTA-DESCARTADA", "por_que": "x", "origen": "barrido", "estado": "descartada", "creado": "2026-10-02T09:05:00-06:00"},
 }
 # el tablero tiene su tarea del botón y la última sincronización retuvo c3
 D.setdefault("meta", {}).setdefault("estado", {}).update({"tarea": "trig_prueba", "tarea_manual": True, "cola_retenida": ["c3"]})

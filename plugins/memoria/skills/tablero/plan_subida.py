@@ -16,6 +16,8 @@ Compara huellas e imprime un JSON con:
            {op, collection, doc_id, file_path, existe}. «existe» dice si el documento ya está en la base:
            esos llevan «if_version» con la versión que dio la lectura. meta/estado va siempre, como «update» (o «set» si la base está vacía).
   Los documentos de la base que ya no salen de la raíz van en los lotes como «delete» (con su if_version).
+  Si <salida-del-generador>/barrido.json existe (lo deja `barrido.py`), suma a los lotes las propuestas nuevas de la cola
+  («set» en «cambios», sin if_version) y las que ya no valen («delete» con el if_version que dio la lectura de la cola).
   «sin_cambios»: cuántos documentos no hace falta tocar; «borrados»: cuántos deletes hay en los lotes.
   «no_se_suben»: lo que la base rechazaría (un doc_id con espacios o acentos, un documento de más de 1 MB);
            se dice en el resumen, y el resto se sube igual.
@@ -98,7 +100,23 @@ for e in escrituras:
     orden.append(e)
     if e["collection"] == "proyectos" and e["doc_id"] in _det:
         orden.append(_det.pop(e["doc_id"]))
-orden += list(_det.values()) + borrar + _meta
+# las propuestas del barrido (colección «cambios», que el generador no toca): nuevas como «set», las que ya no valen como «delete»
+propuestas = []
+_b = SALIDA / "barrido.json"
+if _b.exists():
+    bar = json.loads(_b.read_text(encoding="utf-8"))
+    for x in bar.get("anadir", []):
+        f = SALIDA / x["archivo"]
+        if not ID_VALIDO.match(x["id"]) or not f.exists() or f.stat().st_size > LIMITE:
+            invalidos.append(f"cambios/{x['id']}"); continue
+        propuestas.append({"op": "set", "collection": "cambios", "doc_id": x["id"], "file_path": str(f), "existe": False, "bytes": f.stat().st_size})
+    for x in bar.get("borrar", []):
+        if ID_VALIDO.match(x["id"]):
+            e = {"op": "delete", "collection": "cambios", "doc_id": x["id"]}
+            if x.get("if_version") is not None:
+                e["if_version"] = x["if_version"]
+            propuestas.append(e)
+orden += list(_det.values()) + borrar + propuestas + _meta
 lotes, actual, peso = [], [], 0
 for e in orden:
     b = e.get("bytes", 200) + 300
@@ -110,4 +128,5 @@ if actual:
     lotes.append(actual)
 
 print(json.dumps({"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar),
+                  "propuestas": {"nuevas": sum(1 for e in propuestas if e["op"] == "set"), "retiradas": sum(1 for e in propuestas if e["op"] == "delete")},
                   "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}, ensure_ascii=False, indent=1))
