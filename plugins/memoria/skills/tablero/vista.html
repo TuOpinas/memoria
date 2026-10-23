@@ -1288,12 +1288,33 @@ const areaChips = (cur, attr) => `<div class="chips">${[["","Todas"],...AREAS.ma
 let DEC_OPEN = new Set(), DEC_N = 30, DEC_CONF = false;
 const decKey = (p, d) => p.id+"|"+(d.fecha||"")+"|"+(d.titulo||"");
 const MES_L = _fmt({month:"long",year:"numeric"}, "Sin fecha");
+// el detalle de un proyecto llega aparte (1.19): el porqué de las decisiones viejas, la bitácora menos la última
+// sesión y el estado completo. Se trae la primera vez que hace falta y se guarda mientras la página siga abierta.
+const TEXTOS = {}, TEXTOS_PIDIENDO = new Set();
+function traerTextos(pid){
+  if(TEXTOS[pid] || TEXTOS_PIDIENDO.has(pid) || !DB) return;
+  TEXTOS_PIDIENDO.add(pid);
+  // una sola lectura, con la misma suscripción que usa el resto de la página, y se suelta en cuanto llega
+  let fin = null, listo = false;
+  const llega = s => { if(listo) return; listo = true; const d = s && s.exists !== false && s.data ? s.data() : null; TEXTOS[pid] = d || {}; TEXTOS_PIDIENDO.delete(pid); try{ fin && fin(); }catch(e){} render(); };
+  try{ fin = DB.doc("detalle/"+pid).onSnapshot(llega, () => llega(null)); if(listo && fin) fin(); }
+  catch(e){ llega(null); }
+}
+function conTexto(d, p){ if(!d.texto_aparte) return d; const x = ((TEXTOS[p.id]||{}).decisiones||{})[d.texto_aparte]; return x ? {...d, ...x} : d; }
+const CARGANDO = `<p class="more">Cargando…</p>`;
+// el estado completo: null mientras llega
+function estadoDe(p){ if(!p.estado_aparte) return p.estado_actual||""; if(!TEXTOS[p.id]){ traerTextos(p.id); return null; } return TEXTOS[p.id].estado_actual||""; }
+// las sesiones de la bitácora: la última viene con el proyecto y las demás, del detalle
+function sesionesDe(p){ const s = p.sesiones||[]; if(!p.sesiones_aparte) return {s, falta:false}; if(!TEXTOS[p.id]){ traerTextos(p.id); return {s, falta:true}; } return {s: s.concat(TEXTOS[p.id].sesiones||[]), falta:false}; }
 function decItem(d, p, conProy){
   const k = decKey(p, d), open = DEC_OPEN.has(k);
+  if(open && d.texto_aparte && !TEXTOS[p.id]) traerTextos(p.id);
+  const falta = open && d.texto_aparte && !TEXTOS[p.id];
+  d = conTexto(d, p);
   const esC = d.tipo==="cuestionamiento", cqA = (d.cuestionado_por||[]).filter(c=>c.abierto);
   const w = [esC?`<span class="pill ${d.abierto?"soon":"closed"}">cuestionamiento${d.abierto?" abierto":" respondido"}</span>`:"", cqA.length?`<span class="pill soon">cuestionada</span>`:"", isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su dueño. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
   return `<div class="dl-i"><button type="button" class="dl-b" data-dec-open="${esc(k)}" aria-expanded="${open}"><time>${d.fecha?fmtD(d.fecha):""}</time><span class="dl-t">${inline(d.titulo)}</span><span class="dl-c" aria-hidden="true">${open?"−":"+"}</span>${w?`<span class="dl-w">${w}</span>`:""}</button>
-    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
+    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
 }
 function decList(items, conProy, limite){
   let mes = null, out = "";
@@ -1342,7 +1363,7 @@ function buscar(q){
   const out = {proyectos:[], decisiones:[], entregables:[], acciones:[]};
   for(const p of PROJ){ if(p.restringido) continue;
     if(hit(p.nombre)||hit(p.objetivo)||hit(p.estado_resumen)) out.proyectos.push(p);
-    for(const d of (p.decisiones||[])) if(hit(d.titulo)||hit(d.porque)) out.decisiones.push({p,d});
+    for(const d of (p.decisiones||[])) if(hit(d.titulo)||hit(conTexto(d,p).porque)) out.decisiones.push({p,d});
     for(const e of (p.entregables||[])) if(hit(e.nombre)||hit(e.titulo)||hit(e.descripcion)) out.entregables.push({p,e});
     for(const s of stepsLive(p)) if(hit(s.texto)) out.acciones.push({p,s});
   }
@@ -2060,7 +2081,7 @@ function renderProj(p){
     body = `${cuest}
       ${cortoCard(p) || `<div class="card brief"><h3>Dónde está</h3><p>${projLinea(p)}</p></div>`}
       <div class="card"><h3>Para qué</h3><dl class="facts"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd><dt>Terminado significa</dt><dd>${inline(p.terminado)||"—"}</dd><dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd><dt>Lo usan</dt><dd>${inline(p.consumen)||"—"}</dd></dl></div>
-      ${cortoPartes(p) ? `<div class="card"><h3>En detalle</h3>${EST_FULL.has(p.id) ? `<div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div><button type="button" class="leer" data-est-full="${esc(p.id)}">Ver menos</button>` : `<p class="more">El estado completo del proyecto, para quien trabaja en él.</p><button type="button" class="leer" data-est-full="${esc(p.id)}">Leer el detalle</button>`}</div>` : `<div class="card"><h3>En qué está</h3><div class="md">${md(p.estado_actual) || `<p class="empty">Sin estado escrito.</p>`}</div></div>`}
+      ${cortoPartes(p) ? `<div class="card"><h3>En detalle</h3>${EST_FULL.has(p.id) ? `<div class="md">${(e=>e===null?CARGANDO:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div><button type="button" class="leer" data-est-full="${esc(p.id)}">Ver menos</button>` : `<p class="more">El estado completo del proyecto, para quien trabaja en él.</p><button type="button" class="leer" data-est-full="${esc(p.id)}">Leer el detalle</button>`}</div>` : `<div class="card"><h3>En qué está</h3><div class="md">${(e=>e===null?CARGANDO:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div></div>`}
       <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada publicado todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
       <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
   } else if(tab==="estado"){
@@ -2099,7 +2120,8 @@ function renderProj(p){
     body = grp("Publicados", ents.filter(e=>e.estado==="vigente")) + grp("En borrador", ents.filter(e=>e.estado==="borrador")) + grp("Archivos sin estado", ents.filter(e=>!e.estado && e.formato!=="md")) + grp("Reemplazados", ents.filter(e=>e.estado==="reemplazado"));
     if(!body) body = `<div class="card"><p class="empty">Este proyecto no tiene entregables todavía.</p></div>`;
   } else {
-    body = `<div class="card">${(p.sesiones||[]).length ? p.sesiones.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} entradas más recientes de ${p.sesiones_registro||nS}.</p>`:"") + (META && META.modo!=="completo" && p.sesiones.length ? `<p class="more">La bitácora es taller privado del área: aquí solo la fecha, el título y en qué se trabajó. El detalle está en <code>sesiones.md</code>.</p>` : "") : `<p class="empty">Sin sesiones registradas.</p>`}</div>`;
+    const SS = sesionesDe(p);
+    body = `<div class="card">${SS.s.length ? SS.s.map(s=>`<article class="dec"><div class="hd"><time>${fmtL(s.fecha)}</time>${s.titulo.replace(s.fecha,"").trim()?`<h3>${inline(s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,""))}</h3>`:""}</div><dl>${s.trabajamos?`<dt>Trabajamos en</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}${s.pendiente?`<dt>Pendiente</dt><dd>${inline(s.pendiente)}</dd>`:""}</dl></article>`).join("") + (nS>p.sesiones.length?`<p class="more">Las ${p.sesiones.length} entradas más recientes de ${p.sesiones_registro||nS}.</p>`:"") + (META && META.modo!=="completo" && p.sesiones.length ? `<p class="more">La bitácora es taller privado del área: aquí solo la fecha, el título y en qué se trabajó. El detalle está en <code>sesiones.md</code>.</p>` : "") : `<p class="empty">Sin sesiones registradas.</p>`}${SS.falta?CARGANDO:""}</div>`;
   }
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); renderProj(p); });
