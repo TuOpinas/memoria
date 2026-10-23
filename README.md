@@ -81,13 +81,17 @@ Las skills participan: cuando `donde-va`, `migrar`, `entregable` o el cierre de 
 
 ## Estado y soporte
 
-El método está vivo: cambia seguido y cada versión dice en la sección de abajo qué hay que hacer en cada raíz. Se publica tal cual, sin soporte ni garantía de ningún tipo. Los issues y las propuestas son bienvenidos, pero no hay compromiso de respuesta ni de plazo.
+El método está vivo: cambia seguido y cada versión dice en la sección de abajo qué hay que hacer en cada raíz. Se publica tal cual, sin soporte ni garantía de ningún tipo, y sin compromiso de versiones ni de compatibilidad. Quien lo instala responde por su carpeta y por los permisos de su Drive.
 
-*Published as is, in Spanish, with no support or warranty.*
+**Nada de tu carpeta pasa por TuOpinas.** El plugin no tiene servidor ni conector nuestro: lee y escribe archivos `.md` en la carpeta que tú conectas, con las herramientas de tu propia cuenta de Claude, y puedes leer aquí todo lo que corre.
+
+Los issues son bienvenidos y las contribuciones siguen `CONTRIBUTING.md`; no hay compromiso de respuesta ni de plazo.
+
+*Published as is, in Spanish, with no support, no warranty and no commitment of versions or compatibility. Nothing of yours passes through TuOpinas: there is no server or connector of ours. Contributions: see `CONTRIBUTING.md`.*
 
 ## Licencia
 
-MIT, ver `LICENSE`. Puedes usarlo, adaptarlo y redistribuirlo, también con fines comerciales, siempre que conserves el aviso de copyright de TuOpinas. Si lo adaptas para otra organización, se agradece que lo cites.
+MIT, ver `LICENSE`. Puedes usarlo, adaptarlo y redistribuirlo, también con fines comerciales, siempre que conserves el aviso de copyright de TuOpinas; la licencia excluye toda garantía y toda responsabilidad. El nombre TuOpinas y su logotipo quedan fuera de la licencia: no los uses para presentar una adaptación como si fuera nuestra. Si la adaptas para otra organización, se agradece que lo cites. Lo que alguien contribuya entra bajo esta misma licencia (`CONTRIBUTING.md`).
 
 ## Versiones
 
