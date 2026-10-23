@@ -5,6 +5,7 @@ Anexo de la skill `sesion`. Compara los permisos reales de la carpeta en Drive c
 ## Cuándo
 
 - **Lo pide el responsable de contexto**: «revisa los permisos», «¿están bien los permisos de Drive?», «¿quién puede escribir dónde?».
+- **Lo pide quien administra para aplicar los cambios**: «aplica los permisos» (abajo, «Aplicar lo que el conector permite»).
 - **Al cerrar una sesión suya en la que cambió quién escribe o qué se restringe**: un área nueva, alguien añadido como dueño o colaborador en `guia.md` o en un proyecto, un área o un proyecto declarado restringido, una carpeta `restringido/` nueva. Se propone en una línea al final del cierre («¿Reviso ahora que Drive coincide?») y se hace con su sí.
 - **Al terminar de montar una raíz o sumar a alguien** (skill `nuevo`), cuando quien administra dice que ya dio los permisos.
 
@@ -20,7 +21,7 @@ Solo en la sesión del responsable de contexto (CUENTA de `abrir.py` dice «es l
    - Los permisos: `get_file_permissions` de la raíz y de cada carpeta del plan. Los de una carpeta traen también los heredados de la unidad.
    Una carpeta que no aparece con esta cuenta va como `null`: puede no existir o estar restringida para ella, y no se deduce más.
 3. **La comparación.** Se escribe `drive.json` con la forma que dice la cabecera de `permisos.py` (en la computadora, con un heredoc en `$HOME/memoria/`, fuera de la raíz; sin consola, en el contenedor) y se corre `python3 permisos.py "<raíz>" --drive drive.json`.
-4. **Qué se dice.** Lo que imprime, en llano y casi tal cual: primero «Para cambiar en Drive», una línea por persona o carpeta con el cambio exacto (el rol que tiene, el que debería tener y en qué carpeta), y después «Para comprobar». Si todo cuadra, una línea. Si quien administra no es el responsable de contexto, se dice que esos cambios los hace quien administra, con su nombre. No se guarda nada en la carpeta: la revisión vale para ese momento y se repite cuando haga falta. Si lo que no cuadra es la declaración (alguien escribe a propósito y `guia.md` no lo dice), se propone corregir `guia.md` en esa misma sesión, con el sí de la persona.
+4. **Qué se dice.** Lo que imprime, en llano y casi tal cual: primero «Para cambiar en Drive», una línea por persona o carpeta con el cambio exacto (el rol que tiene, el que debería tener y en qué carpeta), y después «Para comprobar». Si todo cuadra, una línea. Si quien administra no es el responsable de contexto, se dice que esos cambios los hace quien administra, con su nombre. No se guarda nada en la carpeta: la revisión vale para ese momento y se repite cuando haga falta. Si la cuenta tiene tablero, se guarda en su base para que Inicio lo muestre: con `ArtifactData`, un `set` del documento `meta/permisos` con `revisado` (la hora, ISO 8601) y lo que imprime `permisos.py … --tablero` (`cambios`, `comprobar`, `tipo_unidad`). Si lo que no cuadra es la declaración (alguien escribe a propósito y `guia.md` no lo dice), se propone corregir `guia.md` en esa misma sesión, con el sí de la persona.
 
 ## Aplicar lo que el conector permite
 
