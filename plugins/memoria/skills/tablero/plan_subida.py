@@ -44,7 +44,7 @@ if "--guardada" in sys.argv:
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
 MAX = int(sys.argv[sys.argv.index("--max-bytes") + 1]) if "--max-bytes" in sys.argv else 900_000
-COLECCIONES = ("areas", "proyectos")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
+COLECCIONES = ("areas", "proyectos", "detalle")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
 ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como doc_id
 LIMITE = 1_000_000                                                    # un documento solo no puede pasar del cuerpo de un lote
 
@@ -88,7 +88,17 @@ for col in COLECCIONES:
 # meta/estado va el último: lleva la huella de la raíz, y si un lote anterior falla, la siguiente
 # puesta al día no debe creer que el tablero ya estaba al día
 _meta = [e for e in escrituras if (e["collection"], e["doc_id"]) == ("meta", "estado")]
-orden = [e for e in escrituras if e not in _meta] + borrar + _meta
+# el detalle de un proyecto va pegado a su proyecto, para que caigan en el mismo lote cuando quepan: si el lote falla,
+# la página no se queda con un proyecto nuevo y su detalle viejo (o al revés)
+_det = {e["doc_id"]: e for e in escrituras if e["collection"] == "detalle"}
+orden = []
+for e in escrituras:
+    if e in _meta or e["collection"] == "detalle":
+        continue
+    orden.append(e)
+    if e["collection"] == "proyectos" and e["doc_id"] in _det:
+        orden.append(_det.pop(e["doc_id"]))
+orden += list(_det.values()) + borrar + _meta
 lotes, actual, peso = [], [], 0
 for e in orden:
     b = e.get("bytes", 200) + 300

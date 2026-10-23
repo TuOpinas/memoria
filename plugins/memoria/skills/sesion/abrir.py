@@ -313,6 +313,10 @@ def primera_frase(l, minimo=40, maximo=220):
     """Hasta el primer punto que cierra frase fuera de paréntesis y de `código` (no «S. de R.L.»: lo que sigue va en
     minúscula o es otra inicial); si no lo hay antes de «maximo», se corta en una palabra con «…»."""
     nivel, cod = 0, False
+    # «restringido: dueño Nombre. Descripción…»: el dueño no es la primera frase; se salta y se corta la descripción
+    m = re.match(r"^(.*?[—–:-]\s*restringid[oa]\s*:\s*due[ñn][oa]\s+[^.;]+[.;]\s*)(.+)$", l, re.I)
+    if m:
+        return m.group(1) + primera_frase(m.group(2), min(minimo, 20), maximo)
     for i, ch in enumerate(l):
         if ch == "`":
             cod = not cod
@@ -395,7 +399,7 @@ def claude_outputs():
     --cuenta): a las demás no se les dice nada al abrir, y lo que cae ahí en su conversación lo recoge el hook."""
     titulo("CLAUDE OUTPUTS")
     if CUENTA and not es_resp:
-        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/)")
+        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/" + ("; sin consola, device_list_dir de la carpeta y lo de los últimos 14 días)" if SIN_FECHAS else ")"))
         return
     try:
         co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")

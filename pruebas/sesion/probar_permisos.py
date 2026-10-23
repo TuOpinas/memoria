@@ -32,7 +32,7 @@ c, o = subprocess.run([sys.executable, str(P), str(R), "--plan"], capture_output
 r = subprocess.run([sys.executable, str(P), str(R), "--plan"], capture_output=True, text=True).stdout
 ok("área personas/ (declarada restringida)" in r and "restringido ventas/cuentas/restringido/" in r and "proyecto operacion/soporte/ (con «Colabora:»)" in r, "el plan nombra áreas, proyectos con colaboradores o restringidos y carpetas restringido/")
 c, o = corre(bien())
-ok(c == 0 and "Todo cuadra" in o, "con los permisos que declara la carpeta, todo cuadra")
+ok(c == 0 and "Todo cuadra" in o and "Para cambiar" not in o and "No se pudo mirar personas/bonos/" in o, "con los permisos que declara la carpeta, todo cuadra, y dice qué no pudo mirar")
 d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "fileOrganizer"), u("carla@ejemplo.test", "reader"), u("eva@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader")]
 c, o = corre(d)
 ok("beto@ejemplo.test tiene «Gestor de contenido» en toda la carpeta" in o and "Cámbiale el rol a «Lector» en la raíz y dale «Gestor de contenido» solo en la carpeta de personas, legal" in o, "quien escribe en toda la unidad sin administrarla: bajarlo a Lector y darle su área")
@@ -68,7 +68,35 @@ def acciones(o):
     return json.loads(o.split("=== ACCIONES\n", 1)[1].strip())
 d = bien(); d["areas"]["personas"]["limitada"] = False; d["raiz"]["permisos"] = [x for x in BASE if x["email"] != "carla@ejemplo.test"]
 c, o = corre(d); a = acciones(o)
-ok({"tipo": "limitar", "carpeta": "personas", "conservan": ["beto@ejemplo.test"]} in a["con_conector"] and {"tipo": "compartir", "cuenta": "carla@ejemplo.test", "carpeta": "", "rol": "reader"} in a["con_conector"], "propone con el conector limitar lo declarado restringido y compartir como Lector a quien falta")
+ok(not any(x["tipo"] == "limitar" for x in a["con_conector"]) and "aquí no se sabe la cuenta de dirección" in o and {"tipo": "compartir", "cuenta": "carla@ejemplo.test", "carpeta": "", "rol": "reader"} in a["con_conector"], "limitar con el conector solo si se sabe a quién conservar: «dirección» no es una cuenta, va a la web; compartir como Lector a quien falta")
+d = bien(); d["areas"]["legal"] = {"permisos": BASE, "limitada": False}
+c, o = corre(d); a = acciones(o)
+ok({"tipo": "limitar", "carpeta": "legal", "conservan": ["beto@ejemplo.test", "eva@ejemplo.test"], "escriben": []} in a["con_conector"], "limitar con el conector conserva a quien lee (guia.md) y a quien escribe, sin quien administra")
+d = bien(); d["proyectos"]["operacion/soporte"]["limitada"] = False
+d["areas"]["operacion"]["permisos"] = BASE[:4] + [u("dani@ejemplo.test", "fileOrganizer")]
+# un proyecto declarado restringido con dueño en su proyecto.md y colaborador: conservan el dueño del área, el colaborador y el dueño
+import shutil
+R2 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R, R2)
+am = R2 / "operacion" / "area.md"; am.write_text(am.read_text().replace("- `soporte/`", "- `soporte/` — restringido:", 1))
+f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
+o2 = subprocess.run([sys.executable, str(P), str(R2), "--drive", str(f)], capture_output=True, text=True).stdout; a2 = acciones(o2)
+ok({"tipo": "limitar", "carpeta": "operacion/soporte", "conservan": ["dani@ejemplo.test"], "escriben": ["dani@ejemplo.test"]} in a2["con_conector"], "limitar un proyecto conserva a quien colabora y dice quién escribe (el dueño que administra no hace falta)")
+g = bien(); g["raiz"]["permisos"] = BASE + [{"email": "equipo@ejemplo.test", "role": "fileOrganizer", "type": "group"}, {"role": "reader", "type": "domain", "domain": "ejemplo.test"}]
+c, o = corre(g)
+ok("El grupo equipo@ejemplo.test tiene «Gestor de contenido»" in o and "la lee todo el dominio ejemplo.test" in o, "un grupo que escribe y un dominio que lee se ven, no se tiran")
+g["raiz"]["permisos"] = [x for x in g["raiz"]["permisos"] if x.get("email") != "carla@ejemplo.test"]
+c, o = corre(g); a = acciones(o)
+ok("carla@ejemplo.test aparece en guia.md o en un proyecto y no figura con su correo" in o and "puede entrar por un grupo" in o and not any(x["tipo"] == "compartir" for x in a["con_conector"]), "con un grupo o un dominio en la raíz, a quien no figura no se le comparte a ciegas")
+g = bien(); g["raiz"]["permisos"] = BASE + [{"role": "writer", "type": "anyone"}]
+c, o = corre(g)
+ok("está abierta a cualquiera con el enlace con «Colaborador»" in o, "«cualquiera con el enlace» que escribe es un cambio, no un silencio")
+R3 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R, R3)
+gm = R3 / "guia.md"; gm.write_text(gm.read_text().replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Juanjo").replace("| ana@ejemplo.test · colabora: carla@ejemplo.test |", "| ana@ejemplo.test, carla@ejemplo.test |", 1))
+d = bien(); d["areas"]["ventas"]["permisos"] = BASE[:1] + [u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "fileOrganizer")]
+f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
+o3 = subprocess.run([sys.executable, str(P), str(R3), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("No se sabe la cuenta de quien administra la carpeta («Juanjo»" in o3 and "ana@ejemplo.test" in o3.split("se tomó por administrador")[1].split("\n")[0], "sin la cuenta de quien administra, se dice a quién se tomó por administrador")
+ok("La celda Cuenta del área ventas/ no se deja leer" in o3 and "cámbiale el rol a «Lector» ahí" not in o3 and "corrige la celda antes de tocar su rol" in o3, "una celda Cuenta que no se deja leer no manda bajar a nadie: pide corregirla")
 d = bien(); d["raiz"]["permisos"][1] = u("beto@ejemplo.test", "fileOrganizer")
 c, o = corre(d); a = acciones(o)
 ok(a["con_conector"] == [] and a["a_mano"] >= 1, "bajar un rol no se puede con el conector: queda a mano")

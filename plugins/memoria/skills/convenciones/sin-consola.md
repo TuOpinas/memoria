@@ -35,7 +35,7 @@ Una carpeta vacía no se puede devolver: aparece con su primer archivo. Si la es
 
 ## Mover, renombrar y mandar a la papelera
 
-Las herramientas de la computadora no mueven, no borran y no crean carpetas vacías. Sin consola, esto se hace con el conector de Google Drive, y es la única vez que una sesión con la carpeta conectada lo usa: para localizar archivos y carpetas, crear carpetas, mover, renombrar y mandar a la papelera; nunca para leer ni para escribir contenido. Antes de mover algo que esta sesión cambió, se devuelve; después de moverlo, se mueve igual en la copia.
+Las herramientas de la computadora no mueven, no borran y no crean carpetas vacías. Sin consola, esto se hace con el conector de Google Drive, y es, con los permisos (`permisos.md` de `sesion`), lo único para lo que una sesión con la carpeta conectada lo usa: para localizar archivos y carpetas, crear carpetas, mover, renombrar y mandar a la papelera; nunca para leer ni para escribir contenido. Antes de mover algo que esta sesión cambió, se devuelve; después de moverlo, se mueve igual en la copia.
 
 - **La raíz en Drive**: `search_files` con `title = 'guia.md'` y `excludeContentSnippets`; es la carpeta padre (`parentId`) del que tiene el mismo tamaño que el `guia.md` de la carpeta y un `metodo.md` al lado (`parentId = '<id>' and title = 'metodo.md'`). Si hay dudas entre dos, se pregunta. Su id vale para toda la conversación.
 - **Cada archivo o carpeta**, tramo a tramo desde la raíz: `parentId = '<id del tramo anterior>' and title = '<tramo>'`.

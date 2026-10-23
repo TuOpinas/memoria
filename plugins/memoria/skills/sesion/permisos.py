@@ -10,12 +10,14 @@ Uso:
   permisos.py <raiz> --drive drive.json --tablero   lo mismo en JSON, para meta/permisos del tablero
 
 drive.json:
-  {"raiz": {"permisos": [{"email": "...", "role": "organizer"}, ...]},
+  {"raiz": {"permisos": [{"email": "...", "role": "organizer", "type": "user"}, ...]},
    "areas": {"<area>": {"permisos": [...], "limitada": false} | null},
    "proyectos": {"<area>/<proyecto>": {"permisos": [...], "limitada": false} | null},
    "restringidos": {"<area>/<proyecto>": {"permisos": [...], "limitada": true} | null}}
 «limitada» es el inheritedPermissionsDisabled de la carpeta (acceso limitado); null, que no se encontró en Drive.
-Los permisos de una carpeta incluyen los heredados de la unidad, como los da el conector.
+Los permisos de una carpeta incluyen los heredados de la unidad, como los da el conector. «type» es el del conector
+(user, group, domain, anyone); sin él se toma por user. Un grupo se avisa y no se cuenta como persona; un dominio o
+«cualquiera con el enlace» se avisa siempre.
 """
 import json, pathlib, re, sys
 
@@ -86,9 +88,10 @@ def raiz_declarada(raiz):
             cab = True; continue
         c = [x.strip() for x in l.strip().strip("|").split("|")]
         if len(c) >= 5:
-            de, co, _ = cuentas(c[3])
+            de, co, aviso = cuentas(c[3])
             areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": c[0].strip("`").rstrip("/"), "dueno": solo_nombre(c[2]),
-                          "duenos": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4]})
+                          "duenos": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4],
+                          "aviso": aviso, "en_celda": set(CORREO.findall((c[3] or "").lower()))})
     quien = seccion(guia, "Quién responde por qué")
     ctx, adm = "", ""
     for l in quien.split("\n"):
@@ -110,10 +113,28 @@ def raiz_declarada(raiz):
             out |= por_nombre.get(n, set())
         return out
     admins, ctxc = cuentas_de(adm), cuentas_de(ctx)
-    proyectos = []
+    def nombres_de(texto):
+        """(cuentas, nombres sin cuenta) de una lista de personas: «Ana Prueba y Beto Prueba», «dirección», «a@x, b@x»."""
+        out, sin = set(CORREO.findall((texto or "").lower())), []
+        for n in re.split(r",|\by\b|\be\b|·|;", re.sub(r"\([^)]*\)", "", texto or "")):
+            n = n.strip().rstrip(".").strip()
+            if not n or CORREO.fullmatch(n.lower()):
+                continue
+            if n.lower() in por_nombre:
+                out |= por_nombre[n.lower()]
+            else:
+                sin.append(n)
+        return out, sin
+    for a in areas:
+        # quién lee un área restringida: lo que sigue a «Restringida:» en «Quién la lee», resuelto por la tabla
+        m = re.search(r"restringid[oa]s?\s*:\s*(.*)$", a["lectores"], re.I | re.S)
+        a["leen"], a["leen_sin_cuenta"] = nombres_de(m.group(1)) if m else (set(), [])
+    proyectos, no_mirados = [], []
     for a in areas:
         dir_a = raiz / a["slug"]
         if not dir_a.is_dir():
+            if a["restringida"]:
+                no_mirados.append((f"los proyectos de {a['slug']}/ (área restringida sin carpeta aquí)", True))
             continue
         lineas = {}
         for l in seccion(re.sub(r"^---.*?^---\s*$", "", leer(dir_a / "area.md") or "", count=1, flags=re.S | re.M), "Proyectos").split("\n"):
@@ -124,19 +145,40 @@ def raiz_declarada(raiz):
             hijos = sorted(d for d in dir_a.iterdir() if d.is_dir() and not d.name.startswith("."))
         except OSError:
             hijos = []
+        vistos = set()
         for d in hijos:
             pm = leer(d / "proyecto.md")
             if pm is None and d.name not in lineas:
                 continue
-            col = colaboran_en(seccion(pm or "", "Quién participa"))
-            proyectos.append({"id": f"{a['slug']}/{d.name}", "area": a["slug"], "colaboran": col,
+            vistos.add(d.name)
+            quien = seccion(pm or "", "Quién participa")
+            col = colaboran_en(quien)
+            md = re.search(r"^\s*[-*]?\s*\**\s*due[ñn][oa]\s*\**\s*:\s*(.+)$", quien, re.I | re.M)
+            if not md:
+                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*due[ñn][oa]\s+([^.;,]+)", lineas.get(d.name, ""), re.I)
+            dueno, dueno_sin = nombres_de(md.group(1)) if md else (set(), [])
+            if pm is None and d.name in lineas:
+                no_mirados.append((f"{a['slug']}/{d.name}/ (sin proyecto.md legible aquí)", True))
+            proyectos.append({"id": f"{a['slug']}/{d.name}", "area": a["slug"], "colaboran": col, "dueno": dueno, "dueno_sin": dueno_sin,
                               "restringido": bool(re.match(r"^[\W_]*restringid[oa]\b", lineas.get(d.name, ""), re.I)),
                               "tiene_restringido": (d / "restringido").is_dir()})
-    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip()
+        for slug, linea in lineas.items():
+            if slug in vistos:
+                continue
+            if re.match(r"^[\W_]*restringid[oa]\b", linea, re.I):
+                # restringido para esta cuenta: su acceso limitado se mira en Drive igual; quién colabora, no
+                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*due[ñn][oa]\s+([^.;,]+)", linea, re.I)
+                dueno, dueno_sin = nombres_de(md.group(1)) if md else (set(), [])
+                proyectos.append({"id": f"{a['slug']}/{slug}", "area": a["slug"], "colaboran": set(), "dueno": dueno, "dueno_sin": dueno_sin,
+                                  "restringido": True, "tiene_restringido": False})
+                no_mirados.append((f"{a['slug']}/{slug}/ (restringido, sin carpeta aquí)", False))
+            else:
+                no_mirados.append((f"{a['slug']}/{slug}/ (en el índice del área, sin carpeta aquí)", True))
+    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip(), no_mirados
 
 
 def plan(raiz):
-    areas, proyectos, admins, ctxc, adm, ctx = raiz_declarada(raiz)
+    areas, proyectos, admins, ctxc, adm, ctx, no_mirados = raiz_declarada(raiz)
     print("Carpetas que hay que mirar en Drive (permisos y si tienen acceso limitado):")
     print("- la raíz (la unidad compartida, o la carpeta raíz en «Mi unidad»)")
     for a in areas:
@@ -148,28 +190,59 @@ def plan(raiz):
             print(f"- restringido {p['id']}/restringido/")
     if not admins:
         print(f"(aviso: no se sabe la cuenta de quien administra la carpeta: «{adm or 'no consta'}» en guia.md)")
+    for n, _ in no_mirados:
+        print(f"(no se pudo mirar: {n}; sin consola, tráelo con espejo.py permisos)")
 
 
 def comparar(raiz, drive):
-    areas, proyectos, admins, ctxc, adm, ctx = raiz_declarada(raiz)
+    areas, proyectos, admins, ctxc, adm, ctx, no_mirados = raiz_declarada(raiz)
     raizp = (drive.get("raiz") or {}).get("permisos") or []
     mi_unidad = not any(x.get("role") in ("organizer", "fileOrganizer") for x in raizp) and any(x.get("role") == "owner" for x in raizp)
     NOM = ROL_MI if mi_unidad else ROL
     ESCRIBE_BIEN = {"writer", "owner"} if mi_unidad else {"organizer", "fileOrganizer"}
     BIEN = "«Editor»" if mi_unidad else "«Gestor de contenido»"
     def roles(perms):
-        r = {}
+        """Personas (correo → rol); los grupos aparte, y los permisos sin persona (dominio, cualquiera con el enlace)."""
+        r, grupos, abiertos = {}, {}, []
         for x in perms or []:
             e = (x.get("email") or x.get("emailAddress") or "").lower()
-            if e:
+            t = (x.get("type") or ("user" if e else "")).lower()
+            if t == "group" and e:
+                grupos[e] = x.get("role", "")
+            elif t in ("domain", "anyone") or not e:
+                abiertos.append(("todo el dominio" + (f" {x['domain']}" if x.get("domain") else "") if t == "domain" else
+                                 "cualquiera con el enlace" if t == "anyone" else "una entrada sin correo", x.get("role", "")))
+            else:
                 r[e] = x.get("role", "")
-        return r
+        return r, grupos, abiertos
     def admin(e, rol):
         return e in admins or (not admins and rol in ("organizer", "owner"))
-    hall, notas, acciones = [], [], []
-    rr = roles(raizp)
+    hall, notas, acciones, a_decidir = [], [], [], 0
+    rr, rg, ra = roles(raizp)
     if not raizp:
         hall.append("No llegaron los permisos de la raíz: sin ellos no se puede revisar nada. Vuelve a leerlos con el conector de Google Drive.")
+    if not admins and rr:
+        org = sorted(e for e, rol in rr.items() if rol in ("organizer", "owner"))
+        notas.append(f"No se sabe la cuenta de quien administra la carpeta («{adm or 'no consta'}» en guia.md), así que se tomó por administrador a quien tiene «{NOM.get('owner' if mi_unidad else 'organizer')}» en la raíz: {', '.join(org) or 'nadie'}. Pon su correo en guia.md.")
+    for a in areas:
+        if a["aviso"]:
+            notas.append(f"La celda Cuenta del área {a['slug']}/ no se deja leer ({a['aviso']}): hasta que se corrija no se puede decir quién debe escribir ahí.")
+    def abiertos_en(donde, abiertos, grupos, hall, notas):
+        """Lo que no es una persona: un dominio o el enlace, siempre; un grupo, para comprobar a sus miembros."""
+        for que, rol in abiertos:
+            if rol in ESCRIBE:
+                hall.append(f"{donde} está abierta a {que} con «{NOM.get(rol, rol)}»: puede escribir cualquiera. Quítalo desde la web y comparte solo con las personas de guia.md.")
+            else:
+                notas.append(f"{donde} la lee {que} («{NOM.get(rol, rol)}»). Si no es a propósito, quítalo desde la web.")
+        for g, rol in sorted(grupos.items()):
+            if rol in ESCRIBE and not admin(g, rol):
+                hall.append(f"El grupo {g} tiene «{NOM.get(rol, rol)}» en {donde.lower()}: puede escribir todo su miembro. Bájalo a «Lector» y da la escritura por persona, como dice guia.md.")
+            else:
+                notas.append(f"{donde} la lee el grupo {g} («{NOM.get(rol, rol)}»): esta revisión no ve a sus miembros; comprueba en Google quién está en él.")
+    abiertos_en("La carpeta entera", ra, rg, hall, notas)
+    por_grupo = bool(rg or ra)
+    def sin_acceso(donde):
+        return " no figura con su correo en " + donde + (" (puede entrar por un grupo o por el dominio: compruébalo)" if por_grupo else " (no tiene acceso)")
     # 1. la raíz: quien no administra, solo lectura; quien administra, como dice guia.md
     escriben_en_raiz = set()
     for e, rol in sorted(rr.items()):
@@ -178,8 +251,11 @@ def comparar(raiz, drive):
             suyas = [a["slug"] for a in areas if e in a["duenos"] | a["colaboran"]]
             if suyas:
                 hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas. Cámbiale el rol a «Lector» en la raíz y dale {BIEN} solo en la carpeta de {', '.join(suyas)}.")
+            elif any(e in a["en_celda"] and a["aviso"] for a in areas):
+                notas.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta y aparece en una celda Cuenta que no se deja leer: corrige la celda antes de tocar su rol.")
             else:
-                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y no figura en guia.md como dueño ni colaborador de ninguna. Cámbiale el rol a «Lector» en la raíz; si debe escribir en un área, que el responsable de contexto lo declare en guia.md y dale {BIEN} en esa carpeta.")
+                a_decidir += 1
+                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara dueño ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
     for e in sorted(admins):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")
@@ -192,8 +268,21 @@ def comparar(raiz, drive):
         declaradas |= p["colaboran"]
     for e in sorted(declaradas | ctxc):
         if rr and e not in rr and not any(e in (a["duenos"] | a["colaboran"]) and a["restringida"] for a in areas):
-            hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector».")
-            acciones.append({"tipo": "compartir", "cuenta": e, "carpeta": "", "rol": "reader"})
+            if por_grupo:
+                notas.append(f"{e} aparece en guia.md o en un proyecto y no figura con su correo en la carpeta: puede entrar por un grupo o por el dominio; si no, compártesela como «Lector».")
+            else:
+                hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector».")
+                acciones.append({"tipo": "compartir", "cuenta": e, "carpeta": "", "rol": "reader"})
+    def limitar(carpeta, conservan, sin_resolver, ar):
+        """La acción de limitar con el conector, solo si se sabe a quién conservar; si no, queda para la web."""
+        conservan = sorted(c for c in conservan if not admin(c, ar.get(c, "")))
+        escriben = [c for c in conservan if ar.get(c) in ESCRIBE]
+        if sin_resolver or not conservan:
+            return None
+        return {"tipo": "limitar", "carpeta": carpeta, "conservan": conservan, "escriben": escriben}
+    def web(sin_resolver):
+        return (" Hazlo desde la web, que enseña quién conserva el acceso: aquí no se sabe la cuenta de " + ", ".join(sin_resolver) + "."
+                if sin_resolver else " Márcala con acceso limitado.")
     # 2. cada área: escriben su dueño y quienes colaboran, nadie más
     for a in areas:
         info = (drive.get("areas") or {}).get(a["slug"])
@@ -201,7 +290,8 @@ def comparar(raiz, drive):
             if not a["restringida"] and (raiz / a["slug"]).is_dir():
                 notas.append(f"El área {a['slug']}/ no se encontró en Drive con esta cuenta: puede faltar la carpeta o no tener acceso.")
             continue
-        ar = roles(info.get("permisos"))
+        ar, ag, aa = roles(info.get("permisos"))
+        abiertos_en(f"El área {a['slug']}/", aa, ag, hall, notas)
         for e in sorted(a["duenos"] | a["colaboran"]):
             rol = ar.get(e)
             papel = "dueño" if e in a["duenos"] else "colabora"
@@ -210,18 +300,25 @@ def comparar(raiz, drive):
             if rol == "writer" and not mi_unidad:
                 hall.append(f"{e} ({papel} en {a['slug']}) tiene «Colaborador» en su área, que no deja mover ni borrar archivos: cámbialo a «Gestor de contenido» en la carpeta {a['slug']}.")
             else:
-                hall.append(f"{e} ({papel} en {a['slug']}) no puede escribir en su área" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else " (no tiene acceso)") + f": dale {BIEN} en la carpeta {a['slug']}.")
+                hall.append(f"{e} ({papel} en {a['slug']}) no puede escribir en su área" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else sin_acceso("su carpeta")) + f": dale {BIEN} en la carpeta {a['slug']}.")
         for e, rol in sorted(ar.items()):
             if rol in ESCRIBE and e not in a["duenos"] | a["colaboran"] and not admin(e, rol) and e not in escriben_en_raiz:
-                hall.append(f"{e} puede escribir en {a['slug']} («{NOM.get(rol, rol)}») sin ser su dueño ni colaborar en ella: cámbiale el rol a «Lector» ahí, o que el responsable de contexto lo declare como colaborador en guia.md.")
+                if a["aviso"] and e in a["en_celda"]:
+                    notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y aparece en su celda Cuenta, que no se deja leer: corrige la celda antes de tocar su rol.")
+                else:
+                    a_decidir += 1
+                    hall.append(f"{e} puede escribir en {a['slug']} («{NOM.get(rol, rol)}») y guia.md no lo declara dueño ni colaborador de esa área. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md; si no, cámbiale el rol a «Lector» ahí.")
         lim = bool(info.get("limitada"))
         if a["restringida"] and not lim:
-            hall.append(f"El área {a['slug']}/ está declarada restringida en guia.md, pero en Drive no tiene acceso limitado: la lee todo el equipo. Márcala con acceso limitado desde la web.")
-            acciones.append({"tipo": "limitar", "carpeta": a["slug"], "conservan": sorted(a["duenos"] | a["colaboran"])})
+            conservan = a["duenos"] | a["colaboran"] | a["leen"] | set(c for p in proyectos if p["area"] == a["slug"] for c in p["colaboran"] | p["dueno"])
+            acc = limitar(a["slug"], conservan, a["leen_sin_cuenta"], ar)
+            hall.append(f"El área {a['slug']}/ está declarada restringida en guia.md, pero en Drive no tiene acceso limitado: la lee todo el equipo." + web(a["leen_sin_cuenta"] if not acc else []))
+            if acc:
+                acciones.append(acc)
         elif lim and not a["restringida"]:
             hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: escribe «Restringida: …» en su columna «Quién la lee», o quita el acceso limitado.")
         elif lim:
-            fuera = sorted(e for e in ar if e not in a["duenos"] | a["colaboran"] and not admin(e, ar[e]))
+            fuera = sorted(e for e in ar if e not in a["duenos"] | a["colaboran"] | a["leen"] and not admin(e, ar[e]))
             if fuera:
                 notas.append(f"El área restringida {a['slug']}/ la leen además {', '.join(fuera)}; guia.md dice «{a['lectores']}». Compruébalo.")
     # 3. proyectos: quien colabora en uno escribe en su carpeta; los declarados restringidos, con acceso limitado
@@ -229,30 +326,40 @@ def comparar(raiz, drive):
         info = (drive.get("proyectos") or {}).get(p["id"])
         if (p["colaboran"] or p["restringido"]) and info is None and p["id"] in (drive.get("proyectos") or {}):
             notas.append(f"El proyecto {p['id']}/ no se encontró en Drive con esta cuenta.")
+        ar_ = next((a for a in areas if a["slug"] == p["area"]), {"duenos": set(), "colaboran": set()})
+        conservan = ar_["duenos"] | ar_["colaboran"] | p["colaboran"] | p["dueno"]
         if info:
-            pr = roles(info.get("permisos"))
+            pr, pg, pa = roles(info.get("permisos"))
+            abiertos_en(f"El proyecto {p['id']}/", pa, pg, hall, notas)
             for e in sorted(p["colaboran"]):
                 rol = pr.get(e)
                 if rol not in ESCRIBE_BIEN:
-                    hall.append(f"{e} colabora en {p['id']} pero no puede escribir en su carpeta" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else " (no tiene acceso)") + f": dale {BIEN} en la carpeta {p['id']}.")
+                    hall.append(f"{e} colabora en {p['id']} pero no puede escribir en su carpeta" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else sin_acceso("ella")) + f": dale {BIEN} en la carpeta {p['id']}.")
             if p["restringido"] and not info.get("limitada"):
-                hall.append(f"El proyecto {p['id']}/ está declarado restringido en su area.md, pero en Drive no tiene acceso limitado. Márcalo desde la web.")
-                ar_ = next((a for a in areas if a["slug"] == p["area"]), {"duenos": set(), "colaboran": set()})
-                acciones.append({"tipo": "limitar", "carpeta": p["id"], "conservan": sorted(ar_["duenos"] | ar_["colaboran"] | p["colaboran"])})
+                acc = limitar(p["id"], conservan, p["dueno_sin"], pr)
+                hall.append(f"El proyecto {p['id']}/ está declarado restringido en su area.md, pero en Drive no tiene acceso limitado." + web(p["dueno_sin"] if not acc else []))
+                if acc:
+                    acciones.append(acc)
         if p["tiene_restringido"] or p["id"] in (drive.get("restringidos") or {}):
             ri = (drive.get("restringidos") or {}).get(p["id"])
             if ri is not None and not ri.get("limitada"):
-                hall.append(f"La carpeta restringido/ de {p['id']} no tiene acceso limitado en Drive: la lee todo el equipo. Márcala con acceso limitado desde la web.")
-                ar_ = next((a for a in areas if a["slug"] == p["area"]), {"duenos": set(), "colaboran": set()})
-                acciones.append({"tipo": "limitar", "carpeta": p["id"] + "/restringido", "conservan": sorted(ar_["duenos"] | ar_["colaboran"] | p["colaboran"])})
+                rr_, _, _ = roles(ri.get("permisos"))
+                acc = limitar(p["id"] + "/restringido", conservan, p["dueno_sin"], rr_)
+                hall.append(f"La carpeta restringido/ de {p['id']} no tiene acceso limitado en Drive: la lee todo el equipo." + web(p["dueno_sin"] if not acc else []))
+                if acc:
+                    acciones.append(acc)
+    for n, importa in no_mirados:
+        if importa:
+            notas.append(f"No se pudo mirar {n}: sus «Colabora:» y si está restringido quedan sin revisar.")
     if JSON_TABLERO:
         # lo que el tablero de quien responde por el contexto guarda en meta/permisos (skill tablero)
-        print(json.dumps({"tipo_unidad": "mi-unidad" if mi_unidad else "unidad", "cambios": hall, "comprobar": notas}, ensure_ascii=False))
+        print(json.dumps({"tipo_unidad": "mi-unidad" if mi_unidad else "unidad", "cambios": hall, "comprobar": notas,
+                          "acciones": {"con_conector": acciones, "a_mano": len(hall) - len(acciones) - a_decidir, "a_decidir": a_decidir}}, ensure_ascii=False))
         return
     print("=== PERMISOS")
     print(f"Tipo: {'«Mi unidad» (roles Lector y Editor)' if mi_unidad else 'unidad compartida'}")
-    if not hall and not notas:
-        print("Todo cuadra: los permisos de Drive son los que declara la carpeta.")
+    if not hall:
+        print("Todo cuadra: los permisos de Drive son los que declara la carpeta." + (" Queda algo por comprobar:" if notas else ""))
     if hall:
         print(f"Para cambiar en Drive ({len(hall)}):")
         for h in hall:
@@ -264,7 +371,7 @@ def comparar(raiz, drive):
     # lo que el conector de Google Drive deja hacer, con el sí de quien administra (anexo permisos.md); el resto, a mano
     print("=== ACCIONES")
     print(json.dumps({"tipo_unidad": "mi-unidad" if mi_unidad else "unidad", "con_conector": acciones,
-                      "a_mano": len(hall) - len(acciones)}, ensure_ascii=False))
+                      "a_mano": len(hall) - len(acciones) - a_decidir, "a_decidir": a_decidir}, ensure_ascii=False))
 
 
 JSON_TABLERO = "--tablero" in sys.argv
