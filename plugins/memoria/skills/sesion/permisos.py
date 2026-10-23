@@ -7,6 +7,7 @@ anexo permisos.md).
 Uso:
   permisos.py <raiz> --plan              qué carpetas hay que mirar en Drive (áreas, proyectos, restringido/)
   permisos.py <raiz> --drive drive.json  qué no cuadra, en llano, con lo que hay que cambiar en Drive
+  permisos.py <raiz> --drive drive.json --tablero   lo mismo en JSON, para meta/permisos del tablero
 
 drive.json:
   {"raiz": {"permisos": [{"email": "...", "role": "organizer"}, ...]},
@@ -165,7 +166,7 @@ def comparar(raiz, drive):
         return r
     def admin(e, rol):
         return e in admins or (not admins and rol in ("organizer", "owner"))
-    hall, notas = [], []
+    hall, notas, acciones = [], [], []
     rr = roles(raizp)
     if not raizp:
         hall.append("No llegaron los permisos de la raíz: sin ellos no se puede revisar nada. Vuelve a leerlos con el conector de Google Drive.")
@@ -192,6 +193,7 @@ def comparar(raiz, drive):
     for e in sorted(declaradas | ctxc):
         if rr and e not in rr and not any(e in (a["duenos"] | a["colaboran"]) and a["restringida"] for a in areas):
             hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector».")
+            acciones.append({"tipo": "compartir", "cuenta": e, "carpeta": "", "rol": "reader"})
     # 2. cada área: escriben su dueño y quienes colaboran, nadie más
     for a in areas:
         info = (drive.get("areas") or {}).get(a["slug"])
@@ -215,6 +217,7 @@ def comparar(raiz, drive):
         lim = bool(info.get("limitada"))
         if a["restringida"] and not lim:
             hall.append(f"El área {a['slug']}/ está declarada restringida en guia.md, pero en Drive no tiene acceso limitado: la lee todo el equipo. Márcala con acceso limitado desde la web.")
+            acciones.append({"tipo": "limitar", "carpeta": a["slug"], "conservan": sorted(a["duenos"] | a["colaboran"])})
         elif lim and not a["restringida"]:
             hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: escribe «Restringida: …» en su columna «Quién la lee», o quita el acceso limitado.")
         elif lim:
@@ -234,10 +237,18 @@ def comparar(raiz, drive):
                     hall.append(f"{e} colabora en {p['id']} pero no puede escribir en su carpeta" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else " (no tiene acceso)") + f": dale {BIEN} en la carpeta {p['id']}.")
             if p["restringido"] and not info.get("limitada"):
                 hall.append(f"El proyecto {p['id']}/ está declarado restringido en su area.md, pero en Drive no tiene acceso limitado. Márcalo desde la web.")
+                ar_ = next((a for a in areas if a["slug"] == p["area"]), {"duenos": set(), "colaboran": set()})
+                acciones.append({"tipo": "limitar", "carpeta": p["id"], "conservan": sorted(ar_["duenos"] | ar_["colaboran"] | p["colaboran"])})
         if p["tiene_restringido"] or p["id"] in (drive.get("restringidos") or {}):
             ri = (drive.get("restringidos") or {}).get(p["id"])
             if ri is not None and not ri.get("limitada"):
                 hall.append(f"La carpeta restringido/ de {p['id']} no tiene acceso limitado en Drive: la lee todo el equipo. Márcala con acceso limitado desde la web.")
+                ar_ = next((a for a in areas if a["slug"] == p["area"]), {"duenos": set(), "colaboran": set()})
+                acciones.append({"tipo": "limitar", "carpeta": p["id"] + "/restringido", "conservan": sorted(ar_["duenos"] | ar_["colaboran"] | p["colaboran"])})
+    if JSON_TABLERO:
+        # lo que el tablero de quien responde por el contexto guarda en meta/permisos (skill tablero)
+        print(json.dumps({"tipo_unidad": "mi-unidad" if mi_unidad else "unidad", "cambios": hall, "comprobar": notas}, ensure_ascii=False))
+        return
     print("=== PERMISOS")
     print(f"Tipo: {'«Mi unidad» (roles Lector y Editor)' if mi_unidad else 'unidad compartida'}")
     if not hall and not notas:
@@ -250,7 +261,15 @@ def comparar(raiz, drive):
         print("Para comprobar:")
         for n in notas:
             print(f"- {n}")
+    # lo que el conector de Google Drive deja hacer, con el sí de quien administra (anexo permisos.md); el resto, a mano
+    print("=== ACCIONES")
+    print(json.dumps({"tipo_unidad": "mi-unidad" if mi_unidad else "unidad", "con_conector": acciones,
+                      "a_mano": len(hall) - len(acciones)}, ensure_ascii=False))
 
+
+JSON_TABLERO = "--tablero" in sys.argv
+if JSON_TABLERO:
+    sys.argv.remove("--tablero")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or not (pathlib.Path(sys.argv[1]) / "guia.md").is_file():

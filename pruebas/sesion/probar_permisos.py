@@ -63,6 +63,15 @@ ok("eva@ejemplo.test" not in o, "a quien solo colabora en un área restringida n
 d = bien(); d["raiz"]["permisos"] = [x for x in BASE if x["email"] != "carla@ejemplo.test"]
 c, o = corre(d)
 ok("carla@ejemplo.test aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta" in o, "quien figura en guia.md sin acceso a la carpeta")
+import re as _re
+def acciones(o):
+    return json.loads(o.split("=== ACCIONES\n", 1)[1].strip())
+d = bien(); d["areas"]["personas"]["limitada"] = False; d["raiz"]["permisos"] = [x for x in BASE if x["email"] != "carla@ejemplo.test"]
+c, o = corre(d); a = acciones(o)
+ok({"tipo": "limitar", "carpeta": "personas", "conservan": ["beto@ejemplo.test"]} in a["con_conector"] and {"tipo": "compartir", "cuenta": "carla@ejemplo.test", "carpeta": "", "rol": "reader"} in a["con_conector"], "propone con el conector limitar lo declarado restringido y compartir como Lector a quien falta")
+d = bien(); d["raiz"]["permisos"][1] = u("beto@ejemplo.test", "fileOrganizer")
+c, o = corre(d); a = acciones(o)
+ok(a["con_conector"] == [] and a["a_mano"] >= 1, "bajar un rol no se puede con el conector: queda a mano")
 mi = {"raiz": {"permisos": [u("ana@ejemplo.test", "owner"), u("carla@ejemplo.test", "reader"), u("beto@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader")]},
       "areas": {"ventas": {"permisos": [u("ana@ejemplo.test", "owner"), u("carla@ejemplo.test", "writer")], "limitada": False}}}
 c, o = corre(mi)
