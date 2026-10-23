@@ -1,0 +1,512 @@
+#!/usr/bin/env python3
+"""Evals del plugin: conversaciones guionadas contra una raíz de prueba, con el plugin cargado y una computadora de
+mentira (dispositivo.py), que comprueban lo que Claude hace con las skills, no solo lo que hacen los scripts.
+
+Cuestan tokens del plan (cada escenario es una conversación con el modelo), así que corren antes de publicar una
+versión y cuando se pide, no en cada commit. Corren desde una sesión de Claude Code (usan su cuenta) o con una clave
+de API en ANTHROPIC_API_KEY.
+
+Uso: python3 pruebas/evals/correr.py [escenario ...] [--modelo opus|sonnet|haiku|<id>] [--salida <carpeta>] [--plugin <carpeta del plugin>]
+     sin escenarios corre todos los de escenarios/. El escenario se nombra por su archivo sin «.md».
+
+Cada escenario es un .md con cabecera: raiz (carpeta de pruebas/tablero/ o ruta), cuenta (correo de la conversación),
+consola (si/no), plataforma (darwin/win32), max_turnos, preparar (pasos sobre la copia de la raíz antes de empezar),
+turnos (lo que la persona dice, en orden) y comprobar (las comprobaciones, abajo). Deja en la carpeta de salida un
+JSON con las medidas y las comprobaciones de cada escenario, y la transcripción de cada uno.
+"""
+import argparse
+import asyncio
+import datetime
+import hashlib
+import json
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+AQUI = pathlib.Path(__file__).resolve().parent
+REPO = AQUI.parent.parent
+PLUGIN = REPO / "plugins" / "memoria"
+PLUGINS_INSTALADOS = pathlib.Path("/root/.claude/plugins")
+sys.path.insert(0, str(AQUI))
+from dispositivo import Dispositivo  # noqa: E402
+
+from zoneinfo import ZoneInfo
+HOY = datetime.datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()   # la zona que se le da a la conversación
+ALIAS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5", "fable": "claude-fable-5-1"}
+
+
+# ---------- el escenario ----------
+def leer_escenario(p):
+    t = p.read_text(encoding="utf-8")
+    m = re.match(r"^---\n(.*?)\n---\n?(.*)$", t, re.S)
+    if not m:
+        raise SystemExit(f"{p}: sin cabecera")
+    e, clave = {"nombre": p.stem, "descripcion": m.group(2).strip()}, None
+    for l in m.group(1).split("\n"):
+        if not l.strip():
+            continue
+        if re.match(r"^\s+-\s", l) and clave:
+            e.setdefault(clave, []).append(l.strip()[2:].strip().strip('"'))
+        elif ":" in l and not l.startswith(" "):
+            clave, v = l.split(":", 1)
+            clave, v = clave.strip(), v.strip()
+            if v:
+                e[clave] = v
+            else:
+                e[clave] = []
+    for k in ("turnos", "comprobar", "preparar", "entre"):
+        e.setdefault(k, [])
+    e["consola"] = e.get("consola", "si").lower() not in ("no", "false")
+    e["plataforma"] = e.get("plataforma", "win32" if not e["consola"] else "darwin")
+    e["max_turnos"] = int(e.get("max_turnos", 40))
+    return e
+
+
+def preparar_raiz(e, trabajo):
+    origen = pathlib.Path(e.get("raiz", "raiz"))
+    if not origen.is_absolute():
+        origen = AQUI.parent / "tablero" / origen
+    raiz = trabajo / "Prueba"
+    shutil.copytree(origen, raiz)
+    # la cuenta de la conversación es la de quien corre el eval (Claude Code la pone); el escenario dice qué cuenta de la
+    # raíz de prueba ocupa esa persona (`cuenta: ana@ejemplo.test`), y en la copia esa cuenta se escribe con el correo real
+    real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "")
+    papel = e.get("cuenta", "ana@ejemplo.test")
+    if real and real != papel:
+        for d, _, fs in os.walk(raiz):
+            for f in fs:
+                if f.endswith(".md"):
+                    p = pathlib.Path(d, f)
+                    t = p.read_text(encoding="utf-8", errors="replace")
+                    if papel in t:
+                        p.write_text(t.replace(papel, real), encoding="utf-8")
+    # fechas de archivo fijas, como en probar.sh: todo del 2026-08-01 salvo un entregable tocado hoy
+    viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+    for d, _, fs in os.walk(raiz):
+        for f in fs:
+            os.utime(os.path.join(d, f), (viejo, viejo))
+    for paso in e["preparar"]:
+        aplicar_paso(e, raiz, paso)
+    return raiz
+
+
+def aplicar_paso(e, raiz, paso):
+    """Un paso de «preparar» (antes de empezar) o de «entre» (después de un turno: lo que otra persona hace mientras)."""
+    if True:
+        orden, _, arg = paso.partition(" ")
+        if orden == "copia-en-conflicto":      # copia-en-conflicto <ruta.md>: una copia «(1)» con una entrada más
+            p = raiz / arg
+            t = p.read_text(encoding="utf-8")
+            partes = t.split("\n## ", 1)
+            extra = "## 2026-09-30 (desde otra computadora)\nSesión de: Carla Prueba\nTrabajamos en: la copia en conflicto, para la prueba.\nAvances: ENTRADA-CONFLICTO escrita en la otra copia.\nPendiente: nada.\n\n"
+            (p.parent / (p.stem + " (1)" + p.suffix)).write_text(partes[0] + "\n" + extra + ("## " + partes[1] if len(partes) > 1 else ""), encoding="utf-8")
+        elif orden == "tocar":                 # tocar <ruta>: fecha de archivo de ahora (trabajo sin sesión)
+            os.utime(raiz / arg, None)
+        elif orden == "escribir":              # escribir <ruta> <texto>: añade una línea al final
+            r, _, texto = arg.partition(" ")
+            with open(raiz / r, "a", encoding="utf-8") as f:
+                f.write(texto + "\n")
+        elif orden == "otro-cierre":           # otro-cierre <area>/<proyecto>: otra persona cierra sesión ahora (entrada arriba y un paso nuevo)
+            ses = raiz / arg / "sesiones.md"
+            t = ses.read_text(encoding="utf-8")
+            entrada = f"## {HOY} (cierre de otra persona)\nSesión de: Carla Prueba · plugin 1.19.0\nTrabajamos en: OTRO-CIERRE la revisión de la propuesta.\nAvances: OTRO-CIERRE propuesta revisada.\nPendiente: mandarla.\n\n"
+            i = t.index("\n## ") + 1 if "\n## " in t else len(t)
+            ses.write_text(t[:i] + entrada + t[i:], encoding="utf-8")
+            pr = raiz / arg / "proyecto.md"
+            tp = pr.read_text(encoding="utf-8")
+            pr.write_text(tp.replace("## Siguientes pasos\n", "## Siguientes pasos\n- OTRO-CIERRE mandar la propuesta revisada a Cliente Uno.\n", 1), encoding="utf-8")
+        else:
+            raise SystemExit(f"{e['nombre']}: paso desconocido «{paso}»")
+
+
+def huellas(raiz):
+    out = {}
+    for d, _, fs in os.walk(raiz):
+        for f in fs:
+            p = pathlib.Path(d, f)
+            out[p.relative_to(raiz).as_posix()] = hashlib.sha1(p.read_bytes()).hexdigest()
+    return out
+
+
+# ---------- el plugin que se prueba ----------
+def version_de(p):
+    try:
+        return json.loads((p / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def mayor(a, b):
+    return tuple(int(x) for x in a.split(".")) > tuple(int(x) for x in b.split("."))
+
+
+def preparar_plugin(origen, trabajo):
+    """Una copia del plugin donde la skill lo encuentra (bajo /root/.claude/plugins, que es donde busca `sesion`),
+    con una versión mayor que cualquier otra copia instalada, para que la elija; y metodo.md regenerado con ella."""
+    instaladas = [v for p in PLUGINS_INSTALADOS.glob("*/*/memoria*") for v in [version_de(p)] if v and ".trash" not in str(p)]
+    version = version_de(origen) or "0.0.0"
+    while any(not mayor(version, v) for v in instaladas):
+        a, b, c = version.split("."); version = f"{a}.{b}.{int(c) + 1}"
+    dest = PLUGINS_INSTALADOS / "evals" / "memoria"
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(origen, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    pj = dest / ".claude-plugin" / "plugin.json"
+    pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
+    subprocess.run(["bash", str(dest / "build-metodo.sh")], check=True, capture_output=True)
+    return dest, version
+
+
+def sembrar_scripts(plugin, hogar):
+    """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
+    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py"]),
+                           ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
+        d = hogar / destino
+        d.mkdir(parents=True, exist_ok=True)
+        for r in rutas:
+            shutil.copy2(plugin / r, d / pathlib.Path(r).name)
+
+
+# ---------- la conversación ----------
+async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
+    from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, TextBlock, ToolResultBlock, ToolUseBlock, UserMessage
+
+    # la conversación es de un proyecto de Claude (como en el uso real); la cuenta es la de quien corre el eval, y la
+    # raíz de prueba ya la declara en el papel que pide el escenario (preparar_raiz)
+    anexo = "# attachedProject\nThis session is attached to the Project \"Prueba\"."
+    opciones = ClaudeAgentOptions(
+        system_prompt={"type": "preset", "preset": "claude_code", "append": anexo},
+        mcp_servers={"remote-devices": disp.servidor()},
+        plugins=[{"type": "local", "path": str(plugin)}],
+        permission_mode="bypassPermissions",
+        model=ALIAS.get(modelo, modelo) if modelo else None,
+        max_turns=e["max_turnos"],
+        cwd=str(cwd),
+        env={"IS_SANDBOX": "1", "TZ": "America/Mexico_City"},
+        setting_sources=[],
+    )
+    turnos, medidas = [], {"tokens_entrada": 0, "tokens_salida": 0, "cache_leida": 0, "cache_escrita": 0, "costo_usd": 0.0, "duracion_s": 0.0, "llamadas": {}}
+    t0 = time.time()
+    async with ClaudeSDKClient(options=opciones) as c:
+        for i, texto in enumerate(e["turnos"]):
+            turno = {"persona": texto, "respuestas": [], "herramientas": [], "huellas": None}
+            await c.query(texto)
+            async for m in c.receive_response():
+                if isinstance(m, AssistantMessage):
+                    for b in m.content:
+                        if isinstance(b, TextBlock):
+                            turno["respuestas"].append(b.text)
+                        elif isinstance(b, ToolUseBlock):
+                            turno["herramientas"].append({"nombre": b.name, "entrada": b.input})
+                            medidas["llamadas"][b.name] = medidas["llamadas"].get(b.name, 0) + 1
+                elif isinstance(m, UserMessage) and isinstance(m.content, list):
+                    for b in m.content:
+                        if isinstance(b, ToolResultBlock) and turno["herramientas"]:
+                            cont = b.content if isinstance(b.content, str) else json.dumps(b.content, ensure_ascii=False)
+                            turno["herramientas"][-1]["resultado"] = (cont or "")[:4000]
+                elif isinstance(m, ResultMessage):
+                    u = m.usage or {}
+                    medidas["tokens_entrada"] += u.get("input_tokens", 0)
+                    medidas["tokens_salida"] += u.get("output_tokens", 0)
+                    medidas["cache_leida"] += u.get("cache_read_input_tokens", 0)
+                    medidas["cache_escrita"] += u.get("cache_creation_input_tokens", 0)
+                    medidas["costo_usd"] += m.total_cost_usd or 0
+                    medidas["modelos"] = sorted((m.model_usage or {}).keys())
+                    if m.is_error:
+                        turno["error"] = m.result
+            turno["huellas"] = huellas(disp.raiz)
+            turnos.append(turno)
+            # lo que otra persona hace entre este turno y el siguiente («entre: N paso»)
+            for paso in e["entre"]:
+                n, _, resto = paso.partition(" ")
+                if n.rstrip(":") == str(i + 1):
+                    aplicar_paso(e, disp.raiz, resto.strip())
+            with open(transcripcion, "a", encoding="utf-8") as f:
+                f.write(f"\n\n## Turno {i + 1} · persona\n\n{texto}\n")
+                for h in turno["herramientas"]:
+                    f.write(f"\n### herramienta · {h['nombre']}\n\n```\n{json.dumps(h['entrada'], ensure_ascii=False)[:1500]}\n```\n")
+                    if h.get("resultado"):
+                        f.write(f"\n```\n{h['resultado'][:1500]}\n```\n")
+                f.write("\n### Claude\n\n" + "\n\n".join(turno["respuestas"]) + "\n")
+    medidas["duracion_s"] = round(time.time() - t0, 1)
+    medidas["turnos_modelo"] = sum(len(t["herramientas"]) for t in turnos) + len(turnos)
+    return turnos, medidas
+
+
+# ---------- las comprobaciones ----------
+def cambiados(antes, despues):
+    return sorted(set(k for k in set(antes) | set(despues) if antes.get(k) != despues.get(k)))
+
+
+def texto_de(turno):
+    return "\n".join(turno["respuestas"])
+
+
+def entradas_registro(texto):
+    return re.findall(r"^## (\d{4}-\d{2}-\d{2}.*)$", texto, re.M)
+
+
+COMPROBACIONES = {}
+def comprobacion(nombre):
+    def deco(f):
+        COMPROBACIONES[nombre] = f
+        return f
+    return deco
+
+
+@comprobacion("recuadro")
+def _(ctx, arg):
+    """La primera respuesta lleva el recuadro «Memoria activa»."""
+    t = texto_de(ctx["turnos"][0])
+    return "Memoria activa" in t, "en la primera respuesta" if "Memoria activa" in t else "no está en la primera respuesta"
+
+
+@comprobacion("sin-escrituras")
+def _(ctx, arg):
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    return not c, "nada cambió en la raíz" if not c else "cambió: " + ", ".join(c)
+
+
+@comprobacion("nada-hasta-el-turno")
+def _(ctx, arg):
+    """nada-hasta-el-turno N [<ruta>,...]: la raíz no cambia antes del turno N (lo que se registra se enseña y espera el sí),
+    salvo las rutas dichas (metodo.md, que la apertura pone al día)."""
+    n, _, salvo = arg.partition(" ")
+    n, salvo = int(n), [x.strip() for x in salvo.split(",") if x.strip()]
+    for i, t in enumerate(ctx["turnos"][: n - 1], 1):
+        c = [x for x in cambiados(ctx["antes"], t["huellas"]) if x not in salvo]
+        if c:
+            return False, f"ya había cambiado en el turno {i}: " + ", ".join(c)
+    return True, f"nada escrito antes del turno {n}"
+
+
+@comprobacion("apertura-completa")
+def _(ctx, arg):
+    """apertura-completa <area>/<proyecto>: abrir.py corrió con ese proyecto (no solo --minima)."""
+    for t in ctx["turnos"]:
+        for h in t["herramientas"]:
+            cmd = json.dumps(h["entrada"], ensure_ascii=False)
+            if "abrir.py" in cmd and arg in cmd and "--minima" not in cmd:
+                return True, "abrir.py con el proyecto"
+    return False, "abrir.py no corrió con el proyecto"
+
+
+@comprobacion("apertura-minima")
+def _(ctx, arg):
+    for t in ctx["turnos"]:
+        for h in t["herramientas"]:
+            cmd = json.dumps(h["entrada"], ensure_ascii=False)
+            if "abrir.py" in cmd and "--minima" in cmd:
+                return True, "abrir.py --minima corrió"
+    return False, "abrir.py --minima no corrió"
+
+
+@comprobacion("entrada-sesion")
+def _(ctx, arg):
+    """entrada-sesion <area>/<proyecto>: sesiones.md tiene una entrada nueva arriba, con la fecha de hoy."""
+    p = ctx["raiz"] / arg / "sesiones.md"
+    ent = entradas_registro(p.read_text(encoding="utf-8")) if p.exists() else []
+    antes = ctx["antes_textos"].get(f"{arg}/sesiones.md", "")
+    nuevas = [x for x in ent if x not in entradas_registro(antes)]
+    if nuevas and ent[0] in nuevas and ent[0].startswith(HOY):
+        return True, f"arriba: «{ent[0]}»"
+    return False, "sin entrada nueva de hoy arriba" + (f" (arriba: «{ent[0]}»)" if ent else "")
+
+
+@comprobacion("decision-registrada")
+def _(ctx, arg):
+    p = ctx["raiz"] / arg / "decisiones.md"
+    ent = entradas_registro(p.read_text(encoding="utf-8")) if p.exists() else []
+    antes = entradas_registro(ctx["antes_textos"].get(f"{arg}/decisiones.md", ""))
+    nuevas = [x for x in ent if x not in antes]
+    return bool(nuevas) and ent[0] in nuevas and ent[0].startswith(HOY), ("registrada: «" + ent[0] + "»") if nuevas else "sin decisión nueva"
+
+
+@comprobacion("en-corto")
+def _(ctx, arg):
+    p = ctx["raiz"] / arg / "proyecto.md"
+    t = p.read_text(encoding="utf-8") if p.exists() else ""
+    m = re.search(r"^## En corto\s*\n(.*?)(?=^## )", t, re.M | re.S)
+    if not m:
+        return False, "sin bloque En corto"
+    cuerpo = m.group(1).strip()
+    return cuerpo.startswith(HOY) or HOY in cuerpo.split("\n")[0], "primera línea: " + cuerpo.split("\n")[0][:100]
+
+
+@comprobacion("solo-escribe-en")
+def _(ctx, arg):
+    """solo-escribe-en <carpeta>[,<carpeta>]: todo lo que cambió está dentro de esas carpetas."""
+    permitidas = [a.strip().strip("/") for a in arg.split(",")]
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    fuera = [x for x in c if not any(x == p or x.startswith(p + "/") for p in permitidas)]
+    return not fuera, "fuera de lo permitido: " + ", ".join(fuera) if fuera else f"cambió solo dentro de {arg}: " + ", ".join(c)
+
+
+@comprobacion("sin-rutas-absolutas")
+def _(ctx, arg):
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    malas = []
+    for x in c:
+        p = ctx["raiz"] / x
+        if p.is_file() and p.suffix == ".md" and x != "metodo.md":
+            t = p.read_text(encoding="utf-8", errors="replace")
+            if re.search(r"/Users/|C:/Users|\$HOME|/mnt/user-data|computer://", t):
+                malas.append(x)
+    return not malas, "con rutas absolutas: " + ", ".join(malas) if malas else "sin rutas absolutas en lo escrito"
+
+
+@comprobacion("no-menciona")
+def _(ctx, arg):
+    for i, t in enumerate(ctx["turnos"], 1):
+        if arg.lower() in texto_de(t).lower():
+            return False, f"lo menciona en el turno {i}"
+    return True, f"no menciona «{arg}»"
+
+
+@comprobacion("menciona")
+def _(ctx, arg):
+    """menciona <texto>[@N]: alguna respuesta (o la del turno N) lo dice."""
+    texto, _, n = arg.partition("@")
+    turnos = [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
+    for t in turnos:
+        if texto.lower() in texto_de(t).lower():
+            return True, f"dice «{texto}»"
+    return False, f"no dice «{texto}»"
+
+
+@comprobacion("pregunta-claude-outputs")
+def _(ctx, arg):
+    """La primera respuesta pregunta si se colocan los archivos de «Claude outputs» (AskUserQuestion o texto)."""
+    t = ctx["turnos"][0]
+    pregunta = any(h["nombre"] == "AskUserQuestion" and "Claude outputs" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
+    pregunta = pregunta or re.search(r"coloco|colocar", texto_de(t), re.I) is not None and "Claude outputs" in texto_de(t)
+    return pregunta, "pregunta por Claude outputs" if pregunta else "no pregunta por Claude outputs"
+
+
+@comprobacion("contiene")
+def _(ctx, arg):
+    """contiene <ruta> <texto>: el archivo de la raíz lo contiene al final."""
+    r, _, texto = arg.partition(" ")
+    p = ctx["raiz"] / r
+    t = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
+    return texto in t, f"«{texto[:60]}» {'está' if texto in t else 'no está'} en {r}"
+
+
+@comprobacion("conserva-entradas")
+def _(ctx, arg):
+    """conserva-entradas <area>/<proyecto>: sesiones.md tiene todas las entradas del original y de su copia en conflicto."""
+    p = ctx["raiz"] / arg / "sesiones.md"
+    ent = entradas_registro(p.read_text(encoding="utf-8")) if p.exists() else []
+    faltan = []
+    for k, t in ctx["antes_textos"].items():
+        if k.startswith(arg + "/sesiones") and k.endswith(".md"):
+            faltan += [x for x in entradas_registro(t) if x not in ent]
+    return not faltan, "faltan: " + "; ".join(faltan) if faltan else f"las {len(ent)} entradas están"
+
+
+@comprobacion("cierre-con-script")
+def _(ctx, arg):
+    """El cierre escribió con cerrar.py (una llamada), no con Write/Edit ni con un script propio."""
+    con = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if "cerrar.py" in json.dumps(h["entrada"], ensure_ascii=False) and h["nombre"].endswith(("device_bash", "Bash")))
+    a_mano = [h["nombre"] for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in json.dumps(h["entrada"]) for k in ("sesiones.md", "decisiones.md", "proyecto.md", "area.md"))]
+    return con > 0 and not a_mano, f"cerrar.py: {con} llamadas" + (f"; a mano: {', '.join(a_mano)}" if a_mano else "")
+
+
+@comprobacion("herramienta")
+def _(ctx, arg):
+    """herramienta <nombre>: se llamó al menos una vez."""
+    n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg))
+    return n > 0, f"{arg}: {n} llamadas"
+
+
+@comprobacion("sin-herramienta")
+def _(ctx, arg):
+    n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg))
+    return n == 0, f"{arg}: {n} llamadas"
+
+
+@comprobacion("llamadas-maximo")
+def _(ctx, arg):
+    """llamadas-maximo N[@T]: como mucho N llamadas a herramientas en total (o en el turno T)."""
+    n, _, t = arg.partition("@")
+    total = len(ctx["turnos"][int(t) - 1]["herramientas"]) if t else sum(len(x["herramientas"]) for x in ctx["turnos"])
+    return total <= int(n), f"{total} llamadas (tope {n})"
+
+
+def comprobar(e, ctx):
+    out = []
+    for linea in e["comprobar"]:
+        nombre, _, arg = linea.partition(" ")
+        f = COMPROBACIONES.get(nombre)
+        if not f:
+            out.append({"comprobacion": linea, "ok": False, "detalle": "comprobación desconocida"}); continue
+        try:
+            ok, detalle = f(ctx, arg.strip())
+        except Exception as ex:  # noqa: BLE001
+            ok, detalle = False, f"falló la comprobación: {ex}"
+        out.append({"comprobacion": linea, "ok": bool(ok), "detalle": detalle})
+    return out
+
+
+# ---------- correr ----------
+def correr(e, plugin, version, modelo, salida):
+    trabajo = pathlib.Path(tempfile.mkdtemp(prefix="eval-"))
+    raiz = preparar_raiz(e, trabajo)
+    uploads = pathlib.Path("/mnt/user-data/uploads") / "Prueba"
+    if uploads.exists():
+        shutil.rmtree(uploads)
+    disp = Dispositivo(raiz, "Prueba", consola=e["consola"], plataforma=e["plataforma"], hogar=trabajo / "hogar")
+    sembrar_scripts(plugin, disp.hogar)
+    antes = huellas(raiz)
+    antes_textos = {k: (raiz / k).read_text(encoding="utf-8", errors="replace") for k in antes if k.endswith(".md")}
+    cwd = trabajo / "conversacion"; cwd.mkdir()
+    transcripcion = salida / f"{e['nombre']}.md"
+    transcripcion.write_text(f"# {e['nombre']} · {modelo or 'modelo por defecto'} · plugin {version} · {HOY}\n\n{e['descripcion']}\n", encoding="utf-8")
+    turnos, medidas = asyncio.run(conversar(e, disp, plugin, modelo, cwd, transcripcion))
+    ctx = {"turnos": turnos, "antes": antes, "antes_textos": antes_textos, "raiz": raiz, "dispositivo": disp}
+    resultado = {"escenario": e["nombre"], "modelo": modelo, "plugin": version, "fecha": HOY, "consola": e["consola"],
+                 "medidas": medidas, "archivos_cambiados": cambiados(antes, turnos[-1]["huellas"]) if turnos else [],
+                 "comprobaciones": comprobar(e, ctx), "errores": [t["error"] for t in turnos if t.get("error")],
+                 "transcripcion": str(transcripcion), "raiz_final": str(raiz)}
+    return resultado
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("escenarios", nargs="*")
+    ap.add_argument("--modelo", default="opus")
+    ap.add_argument("--salida")
+    ap.add_argument("--plugin", default=str(PLUGIN))
+    a = ap.parse_args()
+    nombres = a.escenarios or sorted(p.stem for p in (AQUI / "escenarios").glob("*.md"))
+    plugin, version = preparar_plugin(pathlib.Path(a.plugin), None)
+    salida = pathlib.Path(a.salida) if a.salida else AQUI / "resultados" / f"{HOY}-{version}-{a.modelo}"
+    salida.mkdir(parents=True, exist_ok=True)
+    resultados, fallos = [], 0
+    try:
+        for n in nombres:
+            e = leer_escenario(AQUI / "escenarios" / f"{n}.md")
+            print(f"\n== {n}", flush=True)
+            r = correr(e, plugin, version, a.modelo, salida)
+            resultados.append(r)
+            m = r["medidas"]
+            print(f"   {m['duracion_s']} s · {sum(m['llamadas'].values())} llamadas · {m['tokens_entrada'] + m['cache_leida'] + m['cache_escrita']} tokens entrada · {m['tokens_salida']} salida · ${m['costo_usd']:.2f}")
+            for c in r["comprobaciones"]:
+                print(("   bien  " if c["ok"] else "   FALLA ") + c["comprobacion"] + " — " + c["detalle"])
+                fallos += 0 if c["ok"] else 1
+            for err in r["errores"]:
+                print("   error: " + str(err)[:300])
+            (salida / "resultados.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=1), encoding="utf-8")
+    finally:
+        shutil.rmtree(plugin.parent, ignore_errors=True)
+    print(f"\n{'Todo bien.' if not fallos else str(fallos) + ' fallo(s).'} Resultados en {salida}")
+    sys.exit(1 if fallos else 0)
+
+
+if __name__ == "__main__":
+    main()

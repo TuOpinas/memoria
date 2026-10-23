@@ -467,6 +467,7 @@ if CUENTA:
     print(f"{CUENTA}: {rol}")
 # para el cierre: cuándo cambió cada registro por última vez; si cambian mientras dura la sesión, otra persona escribió
 titulo("REGISTROS (hora de la última escritura)")
+print(f"ahora: {datetime.datetime.now(TZ).isoformat(timespec='seconds')}   (para --abierto de cerrar.py)")
 for n_ in ("proyecto.md", "decisiones.md", "sesiones.md"):
     if SIN_FECHAS:
         try:
