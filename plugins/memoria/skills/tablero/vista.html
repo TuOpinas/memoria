@@ -1395,16 +1395,18 @@ let SYNC_STATE = null, SYNC_DESDE = null, SYNC_AUTO = null;
 const cierresPend = () => !META || !META.sincronizado ? [] : CIERRES.filter(c => { const h = c.hora ? new Date(c.hora).getTime() : NaN; return h > new Date(META.sincronizado).getTime() && h <= Date.now() + 5*60000; });
 // el nombre lo pone el cierre sin filtrar: de un proyecto que este tablero no muestra, solo se dice que lo hay
 const nombresCierres = l => { const n = [...new Set(l.map(c => { const p = byId[c.proyecto]; return p && !p.restringido ? (p.nombre || c.nombre || c.proyecto) : null; }).filter(Boolean))]; const otros = l.filter(c => { const p = byId[c.proyecto]; return !p || p.restringido; }).length; if(otros) n.push(`${otros} en proyecto${otros===1?"":"s"} que este tablero no muestra`); return n.join(", "); };
-// Al abrir el tablero con cierres pendientes, el dueño lo pone al día solo, una vez por tanda (la marca es la hora del último cierre).
+// Hasta la 1.18: al abrir el tablero con cierres pendientes, el dueño lo ponía al día solo, una vez por tanda.
 // Solo cuentan los cierres anteriores al momento en que se abrió: cargar la página, o volver a ella desde otra pestaña o
 // ventana (con el foco: desbloquear la pantalla o destapar la ventana no es abrirla). Un cierre que llega con la página a la
 // vista no lanza nada: se ve el aviso con su botón. Antes de la 1.18, un tablero abierto al lado lanzaba la tarea en cada cierre.
 // Se mira en cada lectura de la base, porque las primeras pueden venir de la caché y los cierres de verdad llegar después.
 // El minuto de margen es porque la hora de un cierre va en minutos: uno escrito justo después de abrir no cuenta como anterior.
 let ABIERTO = Date.now();
-function alAbrir(){ ABIERTO = Date.now(); autoSync(); }
+function alAbrir(){ ABIERTO = Date.now(); }
 window.addEventListener("focus", () => { if(document.visibilityState === "visible") alAbrir(); });
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible" && document.hasFocus()) alAbrir(); });
+// Hasta la 1.18 la página se ponía al día sola al abrirse tras un cierre; desde la 1.19 solo avisa y espera al botón:
+// cada puesta al día es una tarea que gasta del plan, y varias sesiones al día lanzaban varias. Ya no se llama.
 function autoSync(){
   if(!OWNER || !META || SYNC_STATE || syncFalta()) return;
   const pend = cierresPend().filter(c => new Date(c.hora).getTime() < ABIERTO - 60000); if(!pend.length) return;
@@ -1459,7 +1461,7 @@ const verMenor = (a, b) => { const x = String(a).split(".").map(Number), y = Str
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
-  // cierres de sesión que el tablero aún no muestra: al abrirlo, su dueño lo pone al día solo
+  // cierres de sesión que el tablero aún no muestra: se avisa y su dueño lo pone al día con el botón (1.19)
   const pc = cierresPend();
   if(pc.length && SYNC_AUTO && (SYNC_STATE === "corriendo" || SYNC_STATE === "lanzada")) out += `<div class="stale info"><span>Poniéndose al día: hubo <b>${pc.length} sesi${pc.length===1?"ón":"ones"}</b> desde la última sincronización (${esc(nombresCierres(pc))}). Tarda unos minutos; la página se actualiza sola al terminar.</span></div>`;
   else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando su dueño lo ponga al día."}</span></div>`;
@@ -1498,7 +1500,7 @@ function ayudaArts(){
       <li><b>Hablas normal.</b> Unas pocas frases activan cada cosa (<button type="button" class="lnk" data-help="frases">Qué decirle a Claude</button>).</li>
       <li><b>Claude escribe solo en tu área</b> y nunca da nada por aprobado. Si algo toca a otra área, te dice a quién avisar.</li>
       <li><b>La historia no se borra.</b> Las decisiones y la bitácora de cada proyecto solo crecen: nadie edita lo que ya está registrado.</li>
-      <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día solo cuando lo abres después de cerrar una sesión, y te dice por dónde empezar.</li>
+      <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día cuando se lo pides, avisa cuando hay sesiones que todavía no muestra, y te dice por dónde empezar.</li>
     </ul>`},
   {g:"Para empezar", id:"para-que", t:"Para qué sirve la memoria", h:`
     <p>Cada conversación con Claude empieza de cero: lo que se le explicó ayer, en otra conversación o en la de un compañero, no lo sabe. La memoria hace que la siguiente conversación, la tuya o la de cualquiera de ${ORG}, empiece sabiendo lo que pasó. Cuesta dos frases por sesión, abrir y cerrar, y confirmar las decisiones al cerrar; a cambio, nadie vuelve a explicarle el contexto a nadie.</p>
@@ -1589,7 +1591,7 @@ function ayudaArts(){
       <thead><tr><th>Dices</th><th>Pasa</th></tr></thead>
       <tbody>
         <tr><td>${F("abre sesión en X")}<br>${F("¿en qué quedamos con X?")}<br>${F("¿cómo va X?")}</td><td>Te pone al día y propone por dónde seguir. Solo lee. Si X es un proyecto tuyo, preguntar cómo va ya abre la sesión.</td></tr>
-        <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó (las decisiones, con tu confirmación) y deja apuntado el cierre para que tu tablero se ponga al día cuando lo abras.</td></tr>
+        <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó (las decisiones, con tu confirmación) y deja apuntado el cierre para que tu tablero te avise de que tiene algo nuevo que traer.</td></tr>
         <tr><td>${F("¿qué sabemos de X?")}</td><td>Busca en toda la carpeta y te dice qué hay y dónde. No escribe nada.</td></tr>
         <tr><td>${F("¿dónde guardo esto?")} y pegas o adjuntas</td><td>Lo coloca en su sitio y te dice dónde quedó.</td></tr>
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
@@ -1626,7 +1628,7 @@ function ayudaArts(){
       <dt>Cambié de computadora y el botón «Sincronizar ahora» no hace nada.</dt><dd>El botón está ligado a la computadora donde montaste el tablero. En la nueva, con la carpeta conectada, dile a Claude ${F("cambié de computadora: pon al día la tarea del tablero")} y aprueba el cambio que te pide la app.</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su dueño.</dd>
-      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando cierras la sesión y vuelves a abrir el tablero, con tu computadora encendida y la app abierta: se pone al día solo y tarda unos minutos. Si lo hizo otra persona, pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}.</dd>
+      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, arriba verás el aviso de que hay sesiones que aún no muestra.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
       <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es dueña o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
     </dl>`},
@@ -1656,7 +1658,7 @@ function ayudaArts(){
       <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
     </figure>
     <dl class="hc-def">
-      <dt>Al abrirlo, después de cerrar una sesión</dt><dd>Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada. La próxima vez que lo abres (o vuelves a su pestaña), el tablero ve que hay sesiones que aún no muestra, avisa arriba de cuántas y de cuáles, y se pone al día solo: trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si lo tienes a la vista mientras cierras, no se lanza nada: sale el aviso con su botón, para que varias sesiones seguidas no pongan en marcha una puesta al día cada una. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
+      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, arriba te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
       <dt>Lo que escriben otras personas</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Para traerlo, el botón «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o dile a Claude ${F("sincroniza el tablero")}. El botón no corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Inicio lo avisa una semana.</dd>
@@ -1674,7 +1676,7 @@ function ayudaArts(){
         <tr><td>Marcar una prioridad del área como cumplida o retirada</td><td>el dueño del área</td><td>Una sesión suya la quita de las prioridades.</td></tr>
       </tbody>
     </table></div>
-    <p class="hc-nota">La puesta al día ocurre cuando abres el tablero después de cerrar sesiones, con el botón «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
+    <p class="hc-nota">La puesta al día ocurre cuando pulsas «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
   {g:"El tablero", id:"estado-proyecto", t:"Cómo lee cada proyecto", h:`
     <p>De cada proyecto, el tablero enseña tres cosas: cómo va, en qué estado está y qué pasos tiene. Solo la primera la escribe una persona con Claude; las otras dos las calcula el tablero con lo que hay escrito.</p>
     <h3 class="hc-h">Cómo va</h3>
@@ -1764,7 +1766,7 @@ function ayudaArts(){
         <div class="hc-claude-g">
           <div class="hc-pieza"><b>Tus sesiones, con el plugin</b><small>Abres sesión, trabajas y la cierras. El plugin pone las reglas del método y se actualiza solo con Sync automatically.</small></div>
           <svg class="hc-flecha" viewBox="0 0 44 14" aria-hidden="true"><path d="M2 7h40M8 2L2 7l6 5M36 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div class="hc-pieza tablero"><b>El tablero</b><small>Se pone al día al abrirlo después de cerrar sesiones, o con su botón. Lo que marcas en él vuelve a la carpeta en la siguiente puesta al día o sesión.</small></div>
+          <div class="hc-pieza tablero"><b>El tablero</b><small>Se pone al día con su botón, cuando lo pides; avisa si hay sesiones que aún no muestra. Lo que marcas en él vuelve a la carpeta en la siguiente puesta al día o sesión.</small></div>
         </div>
       </div>
       <figcaption>Sin la computadora, desde el teléfono o la web, Claude puede leer la carpeta en Drive, pero no escribe nada en ella.</figcaption>
@@ -2210,8 +2212,8 @@ function _render(){
   db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("proyectos").onSnapshot(snap=>{ PROJ = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
   db.collection("cambios").onSnapshot(snap=>{ CAMBIOS = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
-  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); autoSync(); }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; if(META && SYNC_AUTO && !cierresPend().length) SYNC_AUTO = null; render(); autoSync(); }, ()=>{});
+  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
+  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; if(META && SYNC_AUTO && !cierresPend().length) SYNC_AUTO = null; render(); }, ()=>{});
   db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});
 })();
 

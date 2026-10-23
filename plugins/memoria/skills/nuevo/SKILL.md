@@ -250,9 +250,9 @@ cada uno, qué se decidió y qué sigue.
    muestra cada parte y qué puedes hacer desde ahí. Cada parte tiene además un «?» con
    su explicación.
 
-Se pone al día solo cuando lo abres después de cerrar sesiones, siempre que tu
-computadora esté encendida y la app de Claude abierta. Para ver lo que escribieron otras
-personas, pulsa **Sincronizar ahora**, junto al nombre de la organización. El tablero es
+Se pone al día cuando lo pides: pulsa **Sincronizar ahora**, junto al nombre de la
+organización, con tu computadora encendida y la app de Claude abierta. Al abrirlo te avisa
+si hay sesiones cerradas que todavía no muestra. El tablero es
 tuyo y no se comparte: muestra todo lo que tu cuenta lee. Quien quiera uno, que lo monte.
 
 Para sumar a un compañero, abre en el tablero **Ayuda › Sumar a un compañero**: dice qué

@@ -45,7 +45,7 @@ En una organización de Claude Team o Enterprise, el propietario puede distribui
 | `migrar` | Adoptar una carpeta que venía de otra estructura, sin borrar los originales |
 | `director` | Mirar un área entera: su panorama, lo que pide atención, lo que no cuadra y lo que otras áreas decidieron que le toca |
 | `calidad` | Revisión de calidad a fondo de un proyecto, un entregable, un desarrollo o la carpeta entera, contra su objetivo y con revisores independientes; incluye la auditoría de la carpeta |
-| `tablero` | Montar y mantener una página personal que muestra la carpeta entera, puesta al día sola cuando su dueño la abre después de cerrar sesiones, y con la ayuda dentro |
+| `tablero` | Montar y mantener una página personal que muestra la carpeta entera, puesta al día cuando su dueño la pide, y con la ayuda dentro |
 
 El plugin trae además las dos plantillas del método (brief y comparativo), dentro de la skill `nuevo`, el archivo `metodo.md` generado y tres scripts:
 

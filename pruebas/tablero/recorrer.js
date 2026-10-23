@@ -103,7 +103,7 @@ const path = require('path');
     await p.screenshot({ path: path.join(out, 'migrado.png') });
     await ctx.close();
   }
-  // cierres de sesión después de la última sincronización: al abrirlo, el dueño lo pone al día solo, una vez, y lo dice arriba
+  // cierres de sesión después de la última sincronización: al abrirlo no lanza nada (1.19), avisa arriba con el botón
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
@@ -111,7 +111,7 @@ const path = require('path');
     const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
     await p.goto(url); await p.waitForTimeout(600);
     const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
-    if(r.llamadas !== 1 || !/Poniéndose al día: hubo 2 sesiones .*Cuentas, Soporte/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes no se pone al día solo una vez ni lo dice (${JSON.stringify(r).slice(0, 300)})`);
+    if(r.llamadas !== 0 || !/2 sesiones cerradas.*Cuentas, Soporte.*Sincronizar ahora/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes tiene que avisar con el botón y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
     await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
     await p.reload(); await p.waitForTimeout(600);
     const r2 = await p.evaluate(() => (window.__llamadas || []).length);
@@ -139,7 +139,7 @@ const path = require('path');
     await p.evaluate(() => { const c = window.__D.cierres['ventas--cuentas--x']; c.hora = new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z'; window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString(); window.__emitir('meta/estado'); window.__emitir('cierres'); });
     await p.waitForTimeout(200);
     const r1 = await p.evaluate(() => (window.__llamadas || []).length);
-    if(r1 !== 1) errores.push(`abierto: un cierre anterior a abrir la página que llega en una lectura posterior (la primera venía de la caché) no la puso al día una vez (${r1})`);
+    if(r1 !== 0) errores.push(`abierto: la página no se pone al día sola desde la 1.19 (${r1})`);
     await ctx.close();
   }
   {
@@ -160,7 +160,7 @@ const path = require('path');
     await p.evaluate(() => window.dispatchEvent(new Event('focus')));
     await p.waitForTimeout(300);
     const r2 = await p.evaluate(() => (window.__llamadas || []).length);
-    if(r0 !== 0 || r2 !== 1) errores.push(`volver: con el cierre llegado con la página abierta y la vuelta a la pestaña, se esperaban 0 y luego 1 lanzamientos (${r0}, ${r2})`);
+    if(r0 !== 0 || r2 !== 0) errores.push(`volver: ni el cierre llegado con la página abierta ni la vuelta a la pestaña lanzan nada desde la 1.19 (${r0}, ${r2})`);
     await ctx.close();
   }
   await b.close();
