@@ -406,6 +406,18 @@ def _(ctx, arg):
     return texto in t, f"«{texto[:60]}» {'está' if texto in t else 'no está'} en {r}"
 
 
+@comprobacion("no-contiene")
+def _(ctx, arg):
+    """no-contiene <texto>: ningún .md que cambió en la raíz lo contiene (lo que el cierre nunca guarda)."""
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    dentro = []
+    for x in c:
+        p = ctx["raiz"] / x
+        if p.is_file() and p.suffix == ".md" and arg.lower() in p.read_text(encoding="utf-8", errors="replace").lower():
+            dentro.append(x)
+    return not dentro, f"«{arg}» está en: " + ", ".join(dentro) if dentro else f"«{arg}» no quedó en lo escrito"
+
+
 @comprobacion("cambia")
 def _(ctx, arg):
     """cambia <ruta>: el archivo cambió."""

@@ -98,6 +98,18 @@ Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuest
 
 Los lee alguien con poco tiempo que no va a abrir nada más. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir estas dos secciones basta con este párrafo.
 
+### Qué guarda el cierre y qué no
+
+**Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `En corto`, `Estado actual` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
+
+**Nunca**:
+- Un **valor vivo**: lo que cambia sin que nadie edite la memoria (un saldo, un precio de lista, cuántos registros hay en un sistema, el estado de un ticket). Se consulta en su fuente cuando hace falta; una cifra que sí se guarda lleva fecha y fuente (prohibición 13).
+- Lo que **se puede consultar en una fuente**: se cita dónde está, no se copia.
+- **Credenciales**, ni datos personales que el trabajo no necesita.
+- Lo que la propia sesión **probó y desechó sin llegar a decisión**: un intento, un borrador tirado, un error corregido en la misma conversación. Lo que se descartó al decidir sí va, en `Descartamos`.
+
+Ante la duda de si algo merece quedar, se pregunta; no se guarda por si acaso.
+
 ## 4. Vivo o registro, nunca las dos cosas
 
 **Un archivo vivo se reescribe** y siempre refleja el presente. Nadie necesita leer su historia para entenderlo.

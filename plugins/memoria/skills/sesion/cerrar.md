@@ -16,6 +16,8 @@ De cada archivo el script hace leer → cambiar → escribir bajo un cerrojo y, 
 
 **Si la cuenta colabora y no es la del dueño** (sección CUENTA EN EL PROYECTO de `abrir.py`), cierra igual: bitácora, decisiones de su trabajo con su nombre en `Decidió`, `En corto`, `Estado actual` y `Siguientes pasos`. No publica nada, ni toca `Prioridades ahora`, el `Panorama` ni la línea `Colabora:` de `Quién participa` (`convenciones`, sección 1, «Quién colabora»). Si colabora solo en este proyecto y no puede escribir `area.md`, la línea del paso 5 se prepara y se le pasa al dueño del área.
 
+**Qué entra y qué no.** Lo que el cierre guarda siempre y lo que nunca está en `escribir.md` («Qué guarda el cierre y qué no»). Antes de preparar `cambios.json` se pasa por esa lista lo que la sesión trae: un valor vivo, algo que se consulta en su fuente, una credencial o un intento desechado se quedan fuera, y ante la duda se pregunta en el mismo mensaje que enseña las decisiones.
+
 **0. La cola del tablero**, si se leyó al abrir. Lo que la sesión resolvió se borra de la cola con `ArtifactData` y la versión leída: un hecho ya quitado de «Siguientes pasos» y contado en `sesiones.md`, una nota ya registrada donde le tocaba, una corrección ya aplicada reescribiendo el paso o el estado actual, una fecha ya puesta en su línea, una prioridad ya quitada de «Prioridades ahora» de `area.md` porque el dueño del área lo pidió en esta sesión. Lo que no se resolvió se queda, y el tablero lo sigue mostrando como pendiente.
 
 **1. Lo que se hizo y aún no está en la carpeta.** Lo producido se guarda al crearlo, así que esto no debería pasar; si algo de la sesión (un documento, un PDF, un análisis) solo existe en la conversación, se guarda ahora en `entregables/` o en `taller/` como borrador, antes de registrar nada. Lo mismo con lo que la app haya dejado en «Claude outputs» durante esta sesión: se mueve a este proyecto y deja de estar ahí.
@@ -87,6 +89,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 - Dar por cerrado un pendiente sin preguntar. Si no sé si algo quedó resuelto, lo pregunto
 - Borrar de la cola del tablero un cambio que la carpeta todavía no refleja
 - Registrar una decisión sin enseñarla antes y sin un sí
+- Guardar lo que la regla de retención deja fuera (`escribir.md`), ni «por si acaso»
 
 ## Ejemplo de cierre
 
