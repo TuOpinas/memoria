@@ -220,13 +220,14 @@ body{padding-inline:0;padding-block:0}
 .sync-ico svg{width:18px;height:18px}
 .sync-ico:hover{background:var(--signal-dim);color:var(--signal)}
 .sync-ico:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-.sync-ico.done{color:var(--signal)}
+.sync-ico.done{color:var(--signal);cursor:progress}
 .sync-ico.off{opacity:.45}
 .sync-ico.pend::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn-fill)}
 .sync-ico.busy{color:var(--muted);cursor:progress}
-.sync-ico.busy svg{animation:gira 1s linear infinite}
+.sync-ico.busy svg,.sync-ico.done svg{animation:gira 1s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.sync-ico.busy svg{animation:none}}
+@keyframes late{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.sync-ico.busy svg,.sync-ico.done svg{animation:late 1.4s ease-in-out infinite}}
 .side-i{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;font-size:13.5px;color:var(--ink-soft)}
 .side-i span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .side-i.top{grid-template-columns:minmax(0,1fr) auto;font-weight:600;color:var(--ink)}
@@ -430,8 +431,8 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
 .hq:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .hc{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,230px);gap:28px;align-items:start}
-.hc-doc{gap:0}.hc-grupo{display:grid;gap:0}.hc-grupo + .hc-grupo{margin-top:44px}
-.hc-gt{display:block;padding:10px 14px;margin:0 -22px;border-top:3px solid var(--signal);border-bottom:1px solid var(--rule);background:var(--signal-dim);color:var(--signal);font-size:13px;letter-spacing:.12em}
+.hc-doc{gap:0}.hc-grupo{display:grid;gap:0}.hc-grupo + .hc-grupo{margin-top:72px}
+.hc-gt{display:block;padding:0 0 8px;margin:0;border-bottom:1px solid var(--rule);color:var(--muted);font-size:12px;letter-spacing:.1em}
 .hc-sec{display:grid;gap:14px;padding:26px 0 30px;border-top:1px solid var(--rule);scroll-margin-top:12px}.hc-gt + .hc-sec{border-top:none;padding-top:22px}
 .hc-st{font:700 24px/1.2 var(--f-display);color:var(--ink);margin:0;padding-left:12px;border-left:4px solid var(--signal)}
 .hc-toc{position:sticky;top:12px;align-self:start;display:grid;gap:14px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable;padding:2px 4px 12px 0}
@@ -536,7 +537,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
   .hc-def{grid-template-columns:1fr}
   .hc-def dd{border-top:none;padding-top:0}
   .hc-art{padding:16px}
-  .hc-gt{margin:0 -16px}
+  .hc-grupo + .hc-grupo{margin-top:48px}
   .hc-toc summary{display:block;cursor:pointer;font-weight:600;color:var(--signal);font-size:14.5px}
   .hc-fijo{display:inline-flex;position:fixed;right:16px;bottom:16px;z-index:5;padding:10px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--signal);font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.14);cursor:pointer}
   .hc-toc details[open] summary{margin-bottom:10px}
@@ -566,7 +567,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.20.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.20.1"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1418,7 +1419,7 @@ function renderBuscar(){
   if(r.pendientes) main.innerHTML += `<p class="more">Buscando también en el detalle de ${r.pendientes} proyecto${r.pendientes===1?"":"s"}…</p>`;
 }
 // ---- sincronizar ahora ----
-let SYNC_STATE = null, SYNC_DESDE = null;
+let SYNC_STATE = null, SYNC_DESDE = null, SYNC_LANZADA_EN = 0;
 // Cierres de sesión que el tablero aún no muestra: los deja el cierre (skill sesion, cerrar.md, paso 11) en la colección
 // «cierres» y la sincronización borra los que ya recogió. Cuentan los que son posteriores a la última sincronización.
 // una marca con la hora adelantada (puesta a mano) no cuenta: no puede ser de un cierre que ya pasó
@@ -1433,7 +1434,7 @@ async function sincronizar(){
   SYNC_STATE = "corriendo"; SYNC_DESDE = META.sincronizado || null; render();
   try{
     await MCP.callTool("Claude Code Remote", "fire_trigger", {trigger_id: META.tarea});
-    SYNC_STATE = "lanzada"; flash("Sincronización lanzada. Tarda unos minutos; el tablero se pone al día solo cuando termina.");
+    SYNC_STATE = "lanzada"; SYNC_LANZADA_EN = Date.now(); flash("Sincronización lanzada. Tarda unos minutos; el tablero se pone al día solo cuando termina.");
   }catch(e){
     const code = e && e.code;
     SYNC_STATE = null;
@@ -1449,6 +1450,7 @@ function syncBtn(){
   // Lo escrito en la carpeta después de esa hora no lo puede ver; si no cambió nada, la tarea lo comprueba al empezar y termina enseguida.
   if(!OWNER || !META) return "";
   if(SYNC_STATE === "lanzada" && META.sincronizado && META.sincronizado !== SYNC_DESDE) SYNC_STATE = null;   // ya terminó
+  if(SYNC_STATE === "lanzada" && Date.now() - SYNC_LANZADA_EN > 20*60000) SYNC_STATE = null;   // la tarea no avisó en 20 min: el botón vuelve a su estado y se puede volver a pulsar
   const falta = syncFalta(), listo = !falta;
   // Solo cuenta lo que la sincronización de verdad pasa a la carpeta: no lo que dejó a propósito para su dueño o para una sesión.
   const retenida = new Set(META.cola_retenida || []);
@@ -1460,10 +1462,11 @@ function syncBtn(){
   const cuando = min===null ? "" : haceMin(min);
   const tipTxt = !listo ? `Sincronizar ahora: ${falta}.`
     : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
-    : SYNC_STATE==="lanzada" ? "Sincronización lanzada. Tarda unos minutos; el tablero se actualiza solo al terminar. Si nada cambió en la carpeta, termina enseguida."
+    : SYNC_STATE==="lanzada" ? "Sincronizando: tarda unos minutos y el tablero se actualiza solo al terminar; las flechas paran entonces. Si nada cambió en la carpeta, termina enseguida."
     : pend ? (nCierres && !mec ? `Hace falta sincronizar: ${nCierres} sesi${nCierres===1?"ón cerrada":"ones cerradas"} después de la última vez.` : mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: la página y los datos del tablero son de versiones distintas, y la sincronización los pone a la par.") + (cuando ? ` Última vez ${cuando}.` : "")
     : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
-  const ico = SYNC_STATE==="lanzada" ? `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>` : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
+  // Un solo icono, las flechas: giran mientras se lanza la tarea y mientras corre, y paran cuando el tablero ya está al día.
+  const ico = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M16.5 8.5A6.5 6.5 0 0 0 5 6.2M3.5 11.5A6.5 6.5 0 0 0 15 13.8"/><path d="M16.5 3.5v5h-5M3.5 16.5v-5h5"/></svg>`;
   const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"");
   return `<span class="sync-g"><button type="button" class="sync-ico${cls}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora${pend?": hace falta":""}" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>${listo && cuando && !SYNC_STATE ? `<span class="sync-cuando" aria-hidden="true">${esc(min < 2 ? "ahora" : min < 60 ? `${min} min` : min < 1440 ? `${Math.floor(min/60)} h` : `${Math.floor(min/1440)} d`)}</span>` : ""}</span>`;
 }

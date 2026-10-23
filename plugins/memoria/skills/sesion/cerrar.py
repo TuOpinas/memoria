@@ -9,7 +9,7 @@ sobre la versión que está en el disco. Lo que otra persona escribió desde que
 
 Uso:
   cerrar.py <raiz> <area>/<proyecto> <cambios.json> [--cuenta <correo>] [--abierto <hora ISO de la línea «ahora» de abrir.py>]
-            [--sin-fechas] [--forzar <ruta>]... [--fuera-del-area <ruta>]...
+            [--sin-fechas] [--forzar <ruta>]... [--fuera-del-area <ruta>]... [--cualquier-fecha]
 
 cambios.json, todo opcional:
   {"sesion": "## AAAA-MM-DD\\nTrabajamos en: …\\nAvances: …\\nPendiente: …\\nSesión de: Nombre · plugin X.Y.Z",
@@ -20,7 +20,9 @@ cambios.json, todo opcional:
    "panorama": "texto entero del bloque Panorama de area.md, sin el encabezado",
    "otros": [{"ruta": "<relativa a la raíz, dentro del área del proyecto>", "reemplazos": [{"de": "…", "a": "…"}]}, …]}
 
-Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · »;
+Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
+fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
+contenedor, que van en UTC y por la tarde ya dicen mañana; una fecha distinta a propósito pasa solo con --cualquier-fecha;
 cada ruta de «otros» está dentro del área del proyecto (fuera, solo con --fuera-del-area y nunca guia.md, base/ ni
 restringido/). Con --cuenta, el Panorama lo escribe solo el dueño del área (la celda Cuenta de guia.md) y la línea del
 proyecto en area.md, el dueño o quien colabora en el área; lo que no toca va en «rechazados». Cada entrada de registro va
@@ -345,6 +347,7 @@ def main(argv):
     raiz, activo = pathlib.Path(argv[1]), argv[2].strip("/")
     opciones, args = {"--cuenta": None, "--abierto": None}, argv[4:]
     sin_fechas, forzar, fuera = "--sin-fechas" in args, set(), set()
+    cualquier_fecha = "--cualquier-fecha" in args
     i = 0
     while i < len(args):
         a = args[i]
@@ -354,7 +357,7 @@ def main(argv):
             forzar.add(args[i + 1].strip("/")); i += 2
         elif a == "--fuera-del-area" and i + 1 < len(args):
             fuera.add(args[i + 1].strip("/")); i += 2
-        elif a == "--sin-fechas":
+        elif a in ("--sin-fechas", "--cualquier-fecha"):
             i += 1
         else:
             print(f"No entiendo «{a}».", file=sys.stderr); return 2
@@ -388,6 +391,18 @@ def main(argv):
     for d in cambios.get("decisiones") or []:
         if not re.match(r"^## \d{4}-\d{2}-\d{2} · \S", d.strip()):
             malos.append("cada decisión tiene que empezar por «## AAAA-MM-DD · Título»")
+    # la fecha de cada entrada es la del día en la zona de la organización: hoy, o ayer si la sesión cruzó la medianoche
+    if not malos and not cualquier_fecha:
+        hoy = datetime.datetime.now(tz).date()
+        validas = {hoy.isoformat(), (hoy - datetime.timedelta(days=1)).isoformat()}
+        for que, e in [("«sesion»", ses)] + [("una decisión", d) for d in cambios.get("decisiones") or []]:
+            if not e:
+                continue
+            f = e.strip()[3:13]
+            if f not in validas:
+                malos.append(f"{que} lleva la fecha {f} y hoy es {hoy.isoformat()} en {getattr(tz, 'key', tz)} (la línea HOY de abrir.py): "
+                             "las fechas de la carpeta van en la zona de la organización, no en la del reloj de la consola o del contenedor; "
+                             "si la fecha es a propósito, --cualquier-fecha")
     otros = []
     for o in cambios.get("otros") or []:
         r = str(o.get("ruta", "")).replace("\\", "/").strip("/")

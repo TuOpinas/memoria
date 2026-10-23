@@ -49,6 +49,7 @@ Escribe solo donde tu cuenta es dueña o colabora, según `guia.md` y la línea 
 No des por aprobado ningún documento ni edites lo ya registrado en decisiones o sesiones.
 Si una carpeta no se deja leer, está restringida: dímelo y sigue con lo que sí puedas leer, sin suponer lo que hay dentro.
 Lo que hagas para un proyecto, un documento, un PDF o un análisis, guárdalo en su carpeta en cuanto exista, como borrador, y no en «Claude outputs»; cerrar sesión es registrar lo que pasó, no guardar.
+Las fechas que escribas en la carpeta son las del día en la zona horaria de la organización, la línea HOY de la apertura; nunca la del reloj de la consola ni del contenedor, que van en UTC y por la tarde ya dicen mañana.
 Antes de guardar algo, pregúntate si alguien más lo va a leer y si contiene datos que no todos deben ver. Si algo parece confidencial, avísame y propón moverlo; no lo muevas tú.
 ```
 

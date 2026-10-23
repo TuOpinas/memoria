@@ -36,7 +36,7 @@ if [ -z "$HOOK_SALIDA" ] || ! printf '%s' "$HOOK_SALIDA" | grep -q 'Antes de gua
   echo "El hook de arranque no inyecta el bloque de instrucciones (¿cambió la primera o la última línea del bloque en montaje.md?). Corrígelo antes de publicar." >&2; exit 1
 fi
 # una sola frase para cuándo se pone al día el tablero: si vuelve «al cerrar sesión» a los sitios que la copiaban, se avisa
-FRASE_VIEJA="se pone al día (cada vez que|al) (su dueño )?cierr|puesta al d[ií]a al cerrar cada sesi|se regenera cada vez que esa persona cierra|pone al d[ií]a sola|al d[ií]a sola al abrir|al abrirlo tras un cierre|abre despu[eé]s de cerrar|lanza al abrirse"
+FRASE_VIEJA="se pone al día (cada vez que|al) (su dueño )?cierr|puesta al d[ií]a al cerrar cada sesi|se regenera cada vez que esa persona cierra|(tablero|p[aá]gina) se pone al d[ií]a sola|al d[ií]a sola al abrir|al abrirlo tras un cierre|abre despu[eé]s de cerrar|lanza al abrirse"
 VIEJA="$( { grep -nE "$FRASE_VIEJA" "$PLUGIN_DIR/skills/tablero/SKILL.md" "$PLUGIN_DIR/skills/convenciones/montaje.md" "$PLUGIN_DIR/skills/nuevo/SKILL.md" "$PLUGIN_DIR/skills/tablero/vista.html" "$PLUGIN_DIR/skills/tablero/tarea.md" "$PLUGIN_DIR/skills/tablero/regenerar.md" "$PLUGIN_DIR/skills/sesion/SKILL.md" "$PLUGIN_DIR/skills/sesion/cerrar.md"; sed -n '1,/^## Versiones/p' "$README" | grep -nE "$FRASE_VIEJA" | sed 's/^/README.md:/'; } 2>/dev/null || true)"
 if [ -n "$VIEJA" ]; then
   echo "Alguien volvió a escribir que el tablero se pone al día al cerrar sesión; la frase canónica vive en la regla «Se pone al día» de skills/tablero/SKILL.md:" >&2; printf '%s\n' "$VIEJA" >&2; exit 1

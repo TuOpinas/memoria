@@ -106,6 +106,8 @@ Los lee alguien con poco tiempo que no va a abrir nada más. La primera frase di
 
 Un registro nunca vive dentro de un archivo vivo, porque la primera reescritura lo borra.
 
+**La fecha de una entrada, y la de `actualizado`, es la del día en la zona horaria de la organización** («Zona horaria:» de `guia.md`; la línea HOY de `abrir.py`), no la del reloj de la consola ni del contenedor, que van en UTC y por la tarde ya dicen mañana. Una entrada fechada mañana desordena el registro: queda encima de las de hoy que se escriban después, y `cerrar.py` la rechaza.
+
 ### Formato de `decisiones.md`
 
 Único para todos los proyectos:
@@ -194,7 +196,7 @@ Inmediatamente después va el título en `#`, para que quien abra el archivo sin
 
 El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y tiene requisitos: los aplica la skill `revisar`. Ninguna otra skill cambia ese estado por su cuenta. Que un borrador esté a medias o terminado se dice en `Estado actual` de `proyecto.md`.
 
-**actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real.
+**actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real, en la zona horaria de la organización (sección 4).
 
 **basado_en**: rutas relativas a la raíz de todo lo que se usó para escribir el archivo. Es lo que permite detectar que un entregable quedó desactualizado cuando cambia algo aguas arriba. Es obligatoria en los entregables y la escribe la skill, no la persona. Para material adoptado sin trazabilidad se permite la lista vacía `[]`, y `revisar` la pide completa antes de publicar. Los registros, las fuentes y los archivos de `base/` no llevan esta clave.
 
