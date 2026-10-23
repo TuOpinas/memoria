@@ -430,10 +430,10 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
 .hq:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .hc{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,230px);gap:28px;align-items:start}
-.hc-doc{gap:0}.hc-grupo{display:grid;gap:0}.hc-grupo + .hc-grupo{margin-top:26px}
-.hc-gt{padding-bottom:8px;border-bottom:2px solid var(--signal);color:var(--signal)}
-.hc-sec{display:grid;gap:14px;padding:22px 0;border-top:1px solid var(--rule-soft);scroll-margin-top:12px}.hc-gt + .hc-sec{border-top:none}
-.hc-st{font:600 21px/1.25 var(--f-display);color:var(--ink);margin:0}
+.hc-doc{gap:0}.hc-grupo{display:grid;gap:0}.hc-grupo + .hc-grupo{margin-top:44px}
+.hc-gt{display:block;padding:10px 14px;margin:0 -22px;border-top:3px solid var(--signal);border-bottom:1px solid var(--rule);background:var(--signal-dim);color:var(--signal);font-size:13px;letter-spacing:.12em}
+.hc-sec{display:grid;gap:14px;padding:26px 0 30px;border-top:1px solid var(--rule);scroll-margin-top:12px}.hc-gt + .hc-sec{border-top:none;padding-top:22px}
+.hc-st{font:700 24px/1.2 var(--f-display);color:var(--ink);margin:0;padding-left:12px;border-left:4px solid var(--signal)}
 .hc-toc{position:sticky;top:12px;align-self:start;display:grid;gap:14px;max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable;padding:2px 4px 12px 0}
 #hc-list{display:grid;gap:22px}
 .hc-toc #hc-q{position:sticky;top:0;z-index:1;box-shadow:0 -4px 0 var(--ground)}
@@ -536,6 +536,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
   .hc-def{grid-template-columns:1fr}
   .hc-def dd{border-top:none;padding-top:0}
   .hc-art{padding:16px}
+  .hc-gt{margin:0 -16px}
   .hc-toc summary{display:block;cursor:pointer;font-weight:600;color:var(--signal);font-size:14.5px}
   .hc-fijo{display:inline-flex;position:fixed;right:16px;bottom:16px;z-index:5;padding:10px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--signal);font-weight:600;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.14);cursor:pointer}
   .hc-toc details[open] summary{margin-bottom:10px}
@@ -1474,7 +1475,7 @@ function staleBanner(){
   const pc = cierresPend();
   if(pc.length && (SYNC_STATE === "corriendo" || SYNC_STATE === "lanzada")) out += `<div class="stale info"><span>Poniéndose al día: hubo <b>${pc.length} sesi${pc.length===1?"ón":"ones"}</b> desde la última sincronización (${esc(nombresCierres(pc))}). Tarda unos minutos; la página se actualiza sola al terminar.</span></div>`;
   else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando su dueño lo ponga al día."}</span></div>`;
-  if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.${verMenor(META.pagina_actualizada.desde, "1.19.0") ? ` Desde la 1.19 se pone al día solo cuando lo pides: con el botón junto al nombre, o con «sincroniza el tablero»; al abrirlo te avisa de las sesiones que aún no muestra.${AREAS.length > 1 ? " Si en la carpeta escriben varias personas, puedes pedir la tarea diaria: «pon el tablero al día cada mañana»." : ""}` : ""}</span></div>`;
+  if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.${verMenor(META.pagina_actualizada.desde, "1.19.0") && !verMenor(META.pagina_actualizada.version, "1.19.0") ? ` Desde la 1.19 se pone al día solo cuando lo pides: con el botón junto al nombre, o con «sincroniza el tablero»; al abrirlo te avisa de las sesiones que aún no muestra.${AREAS.length > 1 ? " Si en la carpeta escriben varias personas, puedes pedir la tarea diaria: «pon el tablero al día cada mañana»." : ""}` : ""}</span></div>`;
   // un tablero que era público pasa a mostrar todo lo que lee su cuenta (1.18): se dice una semana, con lo que implica
   if(view.lvl === "root" && OWNER && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
   if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;

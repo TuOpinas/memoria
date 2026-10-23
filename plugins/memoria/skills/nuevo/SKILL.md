@@ -91,6 +91,7 @@ las prioridades y el panorama del área son de su dueño.
 
 Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
+En Drive: [solo si alguien entra a Drive con otra cuenta que la de la tabla: `cuenta@claude es cuenta@drive`, separadas por comas; si no, la línea no va]
 Cada área, su dueño de la tabla de arriba.
 Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 
