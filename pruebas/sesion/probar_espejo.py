@@ -67,6 +67,25 @@ for f in (R / ACTIVO / "entregables").iterdir():
     (C / ACTIVO / "entregables").mkdir(parents=True, exist_ok=True)
     shutil.copy(f, C / ACTIVO / "entregables" / f.name)
 
+# los permisos sin consola: el proyecto.md de cada proyecto del índice, y permisos.py sobre la copia ve lo mismo que sobre la raíz
+PERM = PLUGIN / "skills" / "sesion" / "permisos.py"
+rp, pedidas_p = 0, []
+while rp < 4:
+    rc, outp, _ = corre(ESPEJO, "permisos", C)
+    if rc != 0 or outp.strip() == "COMPLETA":
+        break
+    rp += 1
+    for r in outp.split():
+        pedidas_p.append(r)
+        if (R / r).is_file():
+            (C / r).parent.mkdir(parents=True, exist_ok=True); shutil.copy(R / r, C / r)
+        else:
+            corre(ESPEJO, "falta", C, r)
+ok(outp.strip() == "COMPLETA" and rp == 1 and "operacion/soporte/proyecto.md" in pedidas_p and "personas/bonos/proyecto.md" in pedidas_p, f"«permisos» pide el proyecto.md de cada proyecto del índice en una ronda ({rp})")
+_, plan_r, _ = corre(PERM, R, "--plan"); _, plan_c, _ = corre(PERM, C, "--plan")
+norm = lambda o: sorted(l for l in o.split("\n") if l.startswith("- ") and not l.startswith("- restringido "))   # las restringido/ se buscan en Drive
+ok(norm(plan_r) == norm(plan_c) and "proyecto operacion/soporte/ (con «Colabora:»)" in plan_c, "permisos.py --plan sobre la copia ve los mismos proyectos que sobre la raíz")
+
 print("Sin consola: abrir.py sobre la copia")
 _, a_raiz, _ = corre(ABRIR, R, ACTIVO, "--cuenta", "ana@ejemplo.com")
 rc, a_copia, err = corre(ABRIR, C, ACTIVO, "--cuenta", "ana@ejemplo.com", "--sin-fechas")

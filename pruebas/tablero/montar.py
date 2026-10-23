@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Monta una página de prueba: la página del tablero con una base falsa que trae lo generado.
 Uso: montar.py <vista.html> <salida-del-generador> <página.html> [--cierres] [--lector]
---cierres: con dos cierres de sesión posteriores a la última sincronización, para probar que la página se pone al día sola.
+--cierres: con dos cierres de sesión posteriores a la última sincronización, para probar que la página avisa con el botón y no lanza nada (1.19).
 --lector: quien abre la página es un lector (ni dueño ni editor), y la cola y los cierres traen cosas de proyectos que
 el tablero no muestra (restringidos o fuera del índice), escritas por una sesión sin filtrar: nada de eso debe verse."""
 import json, glob, os, sys, datetime
@@ -37,7 +37,7 @@ if "--lector" in sys.argv:
     }
 if "--cierres" in sys.argv:
     # cierres anteriores a abrir la página y posteriores a la última sincronización, sin depender de cuánto tarde el
-    # recorrido en llegar a esta prueba: la página solo se pone al día sola con cierres de más de un minuto antes de abrirla
+    # recorrido en llegar a esta prueba: cuentan los cierres de más de un minuto antes de abrirla
     _m = lambda n: (_ahora - datetime.timedelta(minutes=n)).strftime("%Y-%m-%dT%H:%MZ")
     D["meta"]["estado"]["sincronizado"] = _m(10)
     H1, H2 = _m(5), _m(4)

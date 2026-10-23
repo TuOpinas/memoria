@@ -21,6 +21,11 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
       minutos.
 
+  espejo.py permisos <copia>
+      Qué traer para revisar los permisos (skill sesion, anexo permisos.md) sobre la copia: el proyecto.md de cada proyecto
+      del índice de cada área, por rondas como «rutas» (primero guia.md y los area.md si faltan). Lo que no se trae se
+      apunta con «falta»: permisos.py --plan dice qué quedó sin mirar.
+
   espejo.py falta <copia> <ruta>...
       Apunta lo que no existe en la computadora (device_stage_files rechazó la llamada por ese archivo) para no pedirlo más.
 
@@ -167,6 +172,26 @@ def rutas(copia, activo):
                     ronda += [f"{a}/{p}/decisiones.md" for p in proyectos_de(leer(copia / a / "area.md"))]
                 ronda += [f"{activo}/{n}" for n in ("proyecto.md", "decisiones.md", "sesiones.md")]
             ronda = [r for r in dict.fromkeys(ronda) if falta(r) and not set(r.split("/")[:-1]) & set(FUERA)]
+    print("\n".join(ronda) if ronda else "COMPLETA")
+    return 0
+
+
+def permisos(copia):
+    """Lo que permisos.py necesita además de la apertura: el proyecto.md de cada proyecto del índice de cada área."""
+    copia = pathlib.Path(copia)
+    faltan = set(estado(copia)["faltan"])
+    ausente = lambda r: not (copia / r).is_file() and r not in faltan
+    ronda = [r for r in ("guia.md",) if ausente(r)]
+    if not ronda:
+        guia = leer(copia / "guia.md")
+        if guia is None:
+            print("Sin guia.md en la copia: no es la raíz, o la cuenta no la lee.", file=sys.stderr)
+            return 1
+        areas = areas_de(guia)
+        ronda = [f"{a}/area.md" for a in areas if ausente(f"{a}/area.md")]
+        if not ronda:
+            for a in areas:
+                ronda += [f"{a}/{p}/proyecto.md" for p in proyectos_de(leer(copia / a / "area.md")) if ausente(f"{a}/{p}/proyecto.md")]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0
 
@@ -343,6 +368,8 @@ def main(argv):
     orden, copia, resto = argv[1], argv[2], argv[3:]
     if orden == "rutas":
         return rutas(copia, resto[0].strip("/") if resto else None)
+    if orden == "permisos":
+        return permisos(copia)
     if orden == "falta":
         return falta(copia, resto)
     if orden == "registrar":

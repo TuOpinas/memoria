@@ -827,6 +827,19 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
         d_ = _de_la_base("proyectos", pid) if PREVIOS else None
         if not isinstance(d_, dict) or d_.get("id") != pid:
             faltan.append(pid); continue
+        # lo que se partió al detalle (1.19) vuelve a su sitio, para partirlo abajo igual que un proyecto rehecho
+        if any(d_.get(k) for k in ("sesiones_aparte", "estado_aparte")) or any(x.get("texto_aparte") for x in d_.get("decisiones") or []):
+            det_ = _de_la_base("detalle", pid)
+            if not isinstance(det_, dict):
+                faltan.append(f"detalle/{pid}"); continue
+            for x in d_.get("decisiones") or []:
+                k_ = x.pop("texto_aparte", None)
+                if k_:
+                    x.update((det_.get("decisiones") or {}).get(k_) or {})
+            if d_.pop("sesiones_aparte", None):
+                d_["sesiones"] = (d_.get("sesiones") or []) + (det_.get("sesiones") or [])
+            if d_.pop("estado_aparte", None):
+                d_["estado_actual"] = det_.get("estado_actual") or ""
         # fuera lo que sale de cruzarlo con los demás proyectos, que se vuelve a calcular abajo
         for k in ("huella", "cuestionamientos_abiertos"):
             d_.pop(k, None)
@@ -1067,6 +1080,38 @@ if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 if COLA_AJENA is not None:
     docs["meta"]["estado"]["cola_ajena"] = sorted(str(x) for x in COLA_AJENA)
+
+# ---------- el detalle, aparte (1.19) ----------
+# La página carga todos los proyectos al abrirse, y casi la mitad de lo que bajaba era texto que solo se lee al entrar
+# en un proyecto. De cada proyecto se queda en «proyectos» lo que pintan el inicio, las listas y el resumen, y va a
+# «detalle/<proyecto>», que la página trae al pedirlo: el porqué y los descartes de las decisiones que no son de las
+# cinco más recientes (los cuestionamientos se quedan enteros), las sesiones de la bitácora menos la última, y el estado
+# actual completo cuando el proyecto tiene «En corto» (sin él, el resumen lo enseña entero y se queda).
+# Un proyecto reutilizado de la base (--sin-cambios) se vuelve a juntar con su detalle al leerlo, y se parte igual aquí.
+DECISIONES_ENTERAS = 5
+docs["detalle"] = {}
+for pid, pd in docs["proyectos"].items():
+    det, textos, n_ = {}, {}, 0
+    for i, d_ in enumerate(pd.get("decisiones") or []):
+        if d_.get("tipo") == "cuestionamiento":
+            continue
+        n_ += 1
+        if n_ <= DECISIONES_ENTERAS:
+            continue
+        t_ = {c: d_.pop(c) for c in ("porque", "descartamos") if d_.get(c)}
+        if t_:
+            k = d_.get("id") or f"n{i}"
+            textos[k] = t_; d_["texto_aparte"] = k
+    if textos:
+        det["decisiones"] = textos
+    ses_ = pd.get("sesiones") or []
+    if len(ses_) > 1:
+        det["sesiones"] = ses_[1:]; pd["sesiones"] = ses_[:1]; pd["sesiones_aparte"] = len(ses_) - 1
+    ea = (pd.get("estado_actual") or "").strip()
+    if pd.get("en_corto") and len(ea) > len((pd.get("estado_resumen") or "").strip()) + 20:
+        det["estado_actual"] = pd.pop("estado_actual"); pd["estado_aparte"] = True
+    if det:
+        docs["detalle"][pid] = det
 
 # ---------- escribir ----------
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día

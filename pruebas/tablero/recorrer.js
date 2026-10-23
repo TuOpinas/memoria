@@ -103,7 +103,7 @@ const path = require('path');
     await p.screenshot({ path: path.join(out, 'migrado.png') });
     await ctx.close();
   }
-  // cierres de sesión después de la última sincronización: al abrirlo, el dueño lo pone al día solo, una vez, y lo dice arriba
+  // cierres de sesión después de la última sincronización: al abrirlo no lanza nada (1.19), avisa arriba con el botón
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
@@ -111,56 +111,59 @@ const path = require('path');
     const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
     await p.goto(url); await p.waitForTimeout(600);
     const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
-    if(r.llamadas !== 1 || !/Poniéndose al día: hubo 2 sesiones .*Cuentas, Soporte/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes no se pone al día solo una vez ni lo dice (${JSON.stringify(r).slice(0, 300)})`);
+    if(r.llamadas !== 0 || !/2 sesiones cerradas.*Cuentas, Soporte.*Sincronizar ahora/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes tiene que avisar con el botón y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
     await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
     await p.reload(); await p.waitForTimeout(600);
     const r2 = await p.evaluate(() => (window.__llamadas || []).length);
     if(r2 !== 0) errores.push(`cierres: al volver a abrir, la misma tanda de cierres se lanzó otra vez (${r2})`);
     await ctx.close();
   }
-  // un cierre que llega con el tablero abierto no lanza nada: sale el aviso con su botón, también si después se vuelve a
-  // leer meta/estado. Volver a la pestaña (con el foco) sí cuenta como abrirlo. Antes de la 1.18, un tablero abierto al lado
-  // lanzaba la tarea en cada cierre
+  // un cierre que llega con el tablero abierto no lanza nada (desde la 1.19 nada se pone al día solo): sale el aviso con su botón
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
     p.on('pageerror', e => errores.push(`abierto: ${e.message}`));
     await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(600);
     await p.evaluate(() => {
-      const h = new Date(Date.now() + 60000).toISOString().slice(0, 16) + 'Z';
-      (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--x'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: h, cuenta: 'ana@ejemplo.test' };
-      window.__emitir('cierres'); window.__emitir('meta/estado');
+      window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString();
+      (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--x'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z', cuenta: 'ana@ejemplo.test' };
+      window.__emitir('meta/estado'); window.__emitir('cierres');
     });
     await p.waitForTimeout(400);
+    await p.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await p.waitForTimeout(300);
     const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
-    if(r.llamadas !== 0) errores.push(`abierto: un cierre que llega con la página abierta lanzó la puesta al día (${r.llamadas})`);
-    if(!/1 sesión cerrada.*Cuentas/.test(r.banda)) errores.push(`abierto: no avisa del cierre que llegó con la página abierta (${r.banda.slice(0, 200)})`);
-    // volver a la pestaña un poco después: el cierre ya es anterior a esa vuelta
-    await p.evaluate(() => { const c = window.__D.cierres['ventas--cuentas--x']; c.hora = new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z'; window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString(); window.__emitir('meta/estado'); window.__emitir('cierres'); });
-    await p.waitForTimeout(200);
-    const r1 = await p.evaluate(() => (window.__llamadas || []).length);
-    if(r1 !== 1) errores.push(`abierto: un cierre anterior a abrir la página que llega en una lectura posterior (la primera venía de la caché) no la puso al día una vez (${r1})`);
+    if(r.llamadas !== 0) errores.push(`abierto: un cierre que llega con la página abierta, o volver a la pestaña, lanzó la puesta al día (${r.llamadas})`);
+    if(!/1 sesión cerrada.*Cuentas.*Sincronizar ahora/.test(r.banda)) errores.push(`abierto: no avisa con el botón del cierre que llegó con la página abierta (${r.banda.slice(0, 200)})`);
     await ctx.close();
   }
+  // el detalle de un proyecto (bitácora vieja, estado entero, porqués) se vuelve a traer cuando el proyecto cambia en la
+  // base con la página abierta: una sincronización que mueve una sesión al detalle no la hace desaparecer (1.19)
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
-    p.on('pageerror', e => errores.push(`volver: ${e.message}`));
-    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(600);
-    // la página lleva diez minutos abierta (ABIERTO es global en la página); llega un cierre de hace dos minutos,
-    // con la página ya abierta: no lanza nada. Volver a la pestaña después sí, una vez
+    p.on('pageerror', e => errores.push(`detalle: ${e.message}`));
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-bitacora'); await p.waitForTimeout(800);
+    const fechas = () => p.evaluate(() => [...document.querySelectorAll('#main article.dec time')].map(t => t.textContent));
+    const antes = await fechas();
+    if(antes.length !== 2) errores.push(`detalle: la bitácora de Cuentas tenía que enseñar dos sesiones, una del proyecto y otra del detalle (${antes.join(', ')})`);
+    const pie = await p.evaluate(() => [...document.querySelectorAll('#main .more')].map(x => x.textContent).join(' | '));
+    if(/Las 1 entradas/.test(pie)) errores.push(`detalle: el pie de la bitácora cuenta mal (${pie.slice(0, 120)})`);
     await p.evaluate(() => {
-      ABIERTO = Date.now() - 600000;
-      window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString();
-      (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--y'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z', cuenta: 'ana@ejemplo.test' };
-      window.__emitir('meta/estado'); window.__emitir('cierres');
+      const D = window.__D, pr = D.proyectos['ventas--cuentas'], de = D.detalle['ventas--cuentas'];
+      de.sesiones = pr.sesiones.concat(de.sesiones || []);
+      pr.sesiones = [{ fecha: '2026-10-20', titulo: '2026-10-20 (cierre nuevo)', trabajamos: 'NUEVA-SESION en la llamada.', avances: 'cerrada', pendiente: '' }];
+      pr.sesiones_total = 3; pr.sesiones_registro = 3; pr.huella = 'otra'; de.huella = 'otra';
+      window.__emitir('proyectos');
     });
-    await p.waitForTimeout(300);
-    const r0 = await p.evaluate(() => (window.__llamadas || []).length);
-    await p.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await p.waitForTimeout(300);
-    const r2 = await p.evaluate(() => (window.__llamadas || []).length);
-    if(r0 !== 0 || r2 !== 1) errores.push(`volver: con el cierre llegado con la página abierta y la vuelta a la pestaña, se esperaban 0 y luego 1 lanzamientos (${r0}, ${r2})`);
+    await p.waitForTimeout(800);
+    const despues = await fechas();
+    if(despues.length !== 3 || !(await p.evaluate(() => document.querySelector('#main').textContent.includes('NUEVA-SESION')))) errores.push(`detalle: tras cambiar el proyecto en la base, la bitácora tenía que enseñar tres sesiones con la nueva (${despues.join(', ')})`);
+    // un detalle que la base no tiene no se pinta como vacío
+    await p.evaluate(() => { delete window.__D.detalle['ventas--cuentas']; window.__D.proyectos['ventas--cuentas'].huella = 'otra-mas'; window.__emitir('proyectos'); });
+    await p.waitForTimeout(600);
+    const txt = await p.evaluate(() => document.querySelector('#main').textContent);
+    if(!/No se pudo traer el detalle/.test(txt)) errores.push(`detalle: sin el documento de detalle, la bitácora tenía que decirlo y no pintarse vacía`);
     await ctx.close();
   }
   await b.close();

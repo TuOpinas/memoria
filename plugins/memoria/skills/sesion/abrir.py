@@ -232,7 +232,15 @@ if MINIMA:
     print((m_.group(1).split("·")[0].strip() if m_ else "(guia.md sin título)"))
 else:
     titulo("GUIA")
-    print(guia.strip())
+    # la receta para conectarse y la nota de la versión son para personas: no hacen falta para trabajar (1.19)
+    omitidas, guia_sesion = [], guia
+    for sec in ("Cómo conectarte", "Versión del método"):
+        m_ = re.search(r"^##\s+" + re.escape(sec) + r"\s*$.*?(?=^##\s|\Z)", guia_sesion, re.M | re.S)
+        if m_:
+            guia_sesion = guia_sesion[:m_.start()] + guia_sesion[m_.end():]; omitidas.append(sec)
+    print(guia_sesion.strip())
+    if omitidas:
+        print(f"(se omiten {' y '.join('«' + s + '»' for s in omitidas)}: si hacen falta, se leen en guia.md)")
 
 areas = []
 filas = seccion(guia, "Áreas").split("\n")
@@ -299,6 +307,29 @@ if CUENTA:
         if a["aviso"] and CUENTA in a["en_celda"] and CUENTA not in a["cuentas_dueno"] | a["colaboran"]:
             print(f"(aviso para decirlo: esta cuenta está en la celda Cuenta de «{a['slug']}» en guia.md, pero no cuenta como suya: {a['aviso']}. "
                   f"Se escribe «correo del dueño · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
+
+
+def primera_frase(l, minimo=40, maximo=220):
+    """Hasta el primer punto que cierra frase fuera de paréntesis y de `código` (no «S. de R.L.»: lo que sigue va en
+    minúscula o es otra inicial); si no lo hay antes de «maximo», se corta en una palabra con «…»."""
+    nivel, cod = 0, False
+    # «restringido: dueño Nombre. Descripción…»: el dueño no es la primera frase; se salta y se corta la descripción
+    m = re.match(r"^(.*?[—–:-]\s*restringid[oa]\s*:\s*due[ñn][oa]\s+[^.;]+[.;]\s*)(.+)$", l, re.I)
+    if m:
+        return m.group(1) + primera_frase(m.group(2), min(minimo, 20), maximo)
+    for i, ch in enumerate(l):
+        if ch == "`":
+            cod = not cod
+        elif not cod and ch == "(":
+            nivel += 1
+        elif not cod and ch == ")":
+            nivel = max(0, nivel - 1)
+        elif ch == "." and not cod and nivel == 0 and i >= minimo and (i + 1 == len(l) or (l[i + 1] == " " and (i + 2 >= len(l) or l[i + 2].isupper() or l[i + 2] in "«`")) ):
+            if not re.search(r"\b[A-ZÁÉÍÓÚÑ]$", l[:i]):
+                return l[:i + 1]
+        if i >= maximo:
+            return l[:l.rfind(" ", 0, maximo)].rstrip(",;:") + "…"
+    return l
 
 
 def indice_proyectos(texto_area):
@@ -368,7 +399,7 @@ def claude_outputs():
     --cuenta): a las demás no se les dice nada al abrir, y lo que cae ahí en su conversación lo recoge el hook."""
     titulo("CLAUDE OUTPUTS")
     if CUENTA and not es_resp:
-        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/)")
+        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/" + ("; sin consola, device_list_dir de la carpeta y lo de los últimos 14 días)" if SIN_FECHAS else ")"))
         return
     try:
         co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
@@ -398,7 +429,9 @@ if not ACTIVO:
         if t is None:
             print(f"- {a['slug']}/ · {motivo_area(a['slug'])}"); continue
         for slug, d in indice_proyectos(t).items():
-            print(d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1))
+            # solo para saber cuál se abre: la primera frase de la línea, no el resumen entero (1.19)
+            l_ = d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1)
+            print(primera_frase(l_))
     if no_legibles:
         print(f"\n(no se pudieron leer: {len(no_legibles)})")
     claude_outputs()

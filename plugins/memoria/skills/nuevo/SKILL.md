@@ -43,7 +43,7 @@ Quien escribe en un área o en un proyecto sin ser su dueño (`convenciones`, se
 
 - **Cambiar el dueño de un área**: «[nombre] con [correo] es el dueño del área [área]» cambia el Dueño y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
 
-En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta, y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
+En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta; cuando diga que ya lo puso, se ofrece comprobarlo (skill `sesion`, anexo `permisos.md`); y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
 ---
 
@@ -250,9 +250,9 @@ cada uno, qué se decidió y qué sigue.
    muestra cada parte y qué puedes hacer desde ahí. Cada parte tiene además un «?» con
    su explicación.
 
-Se pone al día solo cuando lo abres después de cerrar sesiones, siempre que tu
-computadora esté encendida y la app de Claude abierta. Para ver lo que escribieron otras
-personas, pulsa **Sincronizar ahora**, junto al nombre de la organización. El tablero es
+Se pone al día cuando lo pides: pulsa **Sincronizar ahora**, junto al nombre de la
+organización, con tu computadora encendida y la app de Claude abierta. Al abrirlo te avisa
+si hay sesiones cerradas que todavía no muestra. El tablero es
 tuyo y no se comparte: muestra todo lo que tu cuenta lee. Quien quiera uno, que lo monte.
 
 Para sumar a un compañero, abre en el tablero **Ayuda › Sumar a un compañero**: dice qué
@@ -397,7 +397,7 @@ Nada más: ni proyectos vacíos, ni plantillas, ni un `README`.
 
 ## Si el área es restringida
 
-La carpeta y su `area.md` se crean igual, en su sitio de la raíz, y su fila en `guia.md` dice que está restringida. Lo que cambia es el permiso, y la skill no lo pone: se dice qué carpeta hay que limitar y con acceso para quién, y se avisa de que hasta que no se haga, lo que hay dentro lo lee todo el equipo. Ponerle el acceso limitado a una carpeta lo hace quien administra la carpeta compartida, desde la web de Drive.
+La carpeta y su `area.md` se crean igual, en su sitio de la raíz, y su fila en `guia.md` dice que está restringida. Lo que cambia es el permiso, y esta skill no lo pone: se dice qué carpeta hay que limitar y con acceso para quién (lo aplica quien administra desde la web, o Claude en su sesión con «aplica los permisos», anexo `permisos.md` de `sesion`), y se avisa de que hasta que no se haga, lo que hay dentro lo lee todo el equipo. Ponerle el acceso limitado a una carpeta lo hace quien administra la carpeta compartida, desde la web de Drive.
 
 Un área que ya existe no se convierte en restringida por las buenas: se dice qué carpeta habría que limitar y se espera confirmación, porque cambia quién ve qué y eso lo decide su dueño.
 
@@ -421,7 +421,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 ## Qué escribo y dónde
 
-**1. La carpeta**, con nombre en minúsculas y guiones, sin número de fase ni de etapa, dentro del área del dueño. Si el proyecto entero no lo puede leer todo el equipo y su área sí, se dice que hay que limitar el acceso a esta carpeta y quién tiene que hacerlo, y su línea en el bloque `Proyectos` del área empieza por «restringido». Si solo una parte no lo puede leer, el proyecto se crea normal y esa parte va a `restringido/`.
+**1. La carpeta**, con nombre en minúsculas y guiones, sin número de fase ni de etapa, dentro del área del dueño. Si el proyecto entero no lo puede leer todo el equipo y su área sí, se dice que hay que limitar el acceso a esta carpeta y quién tiene que hacerlo, y su línea en el bloque `Proyectos` del área empieza por «restringido: dueño Nombre.» y sigue con la descripción. Si solo una parte no lo puede leer, el proyecto se crea normal y esa parte va a `restringido/`.
 
 **2. `proyecto.md`**, con la estructura fija de `escribir.md`, sección 3. Se rellena con las respuestas: `Quién participa` lleva al dueño, `En corto` lleva la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; `Estado actual` queda como "arrancando" y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
 

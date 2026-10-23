@@ -69,9 +69,14 @@ python3 "$AQUI/../sesion/probar_espejo.py"
 # verificar.sh: el dueño de area.md por su nombre, y las copias en conflicto de Drive
 python3 "$AQUI/../verificar/probar_verificar.py"
 python3 "$AQUI/../sesion/probar_preparar.py"
+# los permisos de Drive contra lo declarado (skill sesion, permisos.py)
+python3 "$AQUI/../sesion/probar_permisos.py"
+# la página con el detalle de cada proyecto aparte (1.19): cuántos textos se traen y cuándo
+python3 "$AQUI/probar_textos.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"
 bash "$AQUI/../hook/probar_control.sh"
+bash "$AQUI/../hook/probar_salidas.sh"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo.html"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo-cierres.html" --cierres
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/migrado" "$OUT/migrado.html"

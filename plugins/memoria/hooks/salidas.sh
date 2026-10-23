@@ -15,7 +15,7 @@
 # Nunca frena con un error: rechaza con permissionDecision «deny», que Claude lee como motivo y no como fallo, y avisa
 # con additionalContext. Sin raíz de memoria, ante cualquier duda o fallo, deja pasar sin decir nada. Sin python ni jq:
 # grep, sed y awk, como los otros hooks. Sin consola (Google Drive en Windows) no hay raíz bajo $HOME/mnt y no hace
-# nada: queda la apertura, que lista lo suelto.
+# nada: queda la apertura, que ahí mira la carpeta con device_list_dir para toda cuenta (skill sesion).
 set -u
 HOME="${HOME:-}"
 ENTRADA="$(cat 2>/dev/null)" || exit 0

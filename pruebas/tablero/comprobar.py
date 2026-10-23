@@ -63,7 +63,7 @@ ok(bon.get("motivo") == "sin-carpeta", "un proyecto sin carpeta dentro de un ár
 ok(sue.get("motivo") == "restringido" and sue.get("descripcion") == "sueldos individuales, solo Beto y Ana", "un proyecto declarado restringido dentro de un área restringida que la cuenta lee sale restringido, con su línea")
 ok(sec.get("motivo") == "restringido" and sec.get("descripcion") == "un acuerdo con un socio", "«**restringido**:» en el índice también lo declara, y la palabra no queda en la línea")
 ron = com["proyectos"].get("ventas--ronda", {})
-ok(ron.get("legible") is False and ron.get("motivo") == "restringido" and ron.get("descripcion") == "ronda de inversión, solo dirección", "un proyecto declarado restringido que no está en la computadora sale restringido, con su línea pública del índice y sin la palabra")
+ok(ron.get("legible") is False and ron.get("motivo") == "restringido" and ron.get("descripcion") == "dueño Beto Prueba. Ronda de inversión, solo dirección", "un proyecto declarado restringido que no está en la computadora sale restringido, con su línea pública del índice y sin la palabra")
 sop = com["proyectos"]["operacion--soporte"]
 ok(sop["ultima_sesion"] == "2026-08-15", "una entrada «(tarea)» de la bitácora no cuenta como sesión")
 ok(any(s_.get("fecha") == "2026-08-20" for s_ in sop["pasos"]), "un plazo vencido no se esconde porque la tarea movió «actualizado»")

@@ -216,6 +216,12 @@ plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], captur
 escr = [e for l in plan["lotes"] for e in l]
 ok(any(e["doc_id"] == uno.stem and e["op"] == "set" and e["existe"] for e in escr), "plan: un proyecto que cambió se sube entero, marcado como existente")
 ok(any(e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: un proyecto que ya no sale de la raíz se borra")
+(volcado / "detalle").mkdir(exist_ok=True); (volcado / "detalle" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
+plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
+escr = [e for l in plan["lotes"] for e in l]
+ok(any(e["collection"] == "detalle" and e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: el detalle de un proyecto que ya no sale también se borra (1.19)")
+ids = [(e["collection"], e["doc_id"]) for e in e0]
+ok(all(("detalle", d) not in ids or ids.index(("detalle", d)) == ids.index(("proyectos", d)) + 1 for _, d in ids if _ == "proyectos"), "plan: el detalle de un proyecto va justo después de su proyecto, para caer en el mismo lote")
 ok(all(pathlib.Path(e["file_path"]).is_file() for e in escr if e["op"] != "delete"), "plan: cada escritura apunta a un archivo que existe")
 ok(all(len(l) <= 50 for l in plan["lotes"]), "plan: ningún lote pasa de 50 entradas")
 ok([e for l in plan["lotes"] for e in l][-1]["doc_id"] == "estado", "plan: meta/estado va el último, para que un lote que falla no deje la huella nueva")
