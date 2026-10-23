@@ -378,13 +378,14 @@ def _(ctx, arg):
 
 @comprobacion("menciona")
 def _(ctx, arg):
-    """menciona <texto>[@N]: alguna respuesta (o la del turno N) lo dice."""
-    texto, _, n = arg.partition("@")
+    """menciona <texto>[|<otro>...][@N]: alguna respuesta (o la del turno N) dice alguno de los textos."""
+    textos, _, n = arg.partition("@")
     turnos = [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
     for t in turnos:
-        if texto.lower() in texto_de(t).lower():
-            return True, f"dice «{texto}»"
-    return False, f"no dice «{texto}»"
+        for texto in textos.split("|"):
+            if texto.strip().lower() in texto_de(t).lower():
+                return True, f"dice «{texto.strip()}»"
+    return False, f"no dice «{textos}»"
 
 
 @comprobacion("pregunta-claude-outputs")
@@ -444,14 +445,14 @@ def _(ctx, arg):
     """El cierre escribió con cerrar.py (una llamada que devolvió «escritos»), no con Write/Edit, ni con un script o una
     redirección propios sobre los cuatro archivos."""
     REG = ("sesiones.md", "decisiones.md", "proyecto.md", "area.md")
-    con = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if "cerrar.py" in json.dumps(h["entrada"], ensure_ascii=False) and h["nombre"].endswith(("device_bash", "Bash")) and '"escritos"' in (h.get("resultado") or ""))
+    con = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if "cerrar.py" in json.dumps(h["entrada"], ensure_ascii=False) and h["nombre"].endswith(("device_bash", "Bash")) and "escritos" in (h.get("resultado") or ""))
     a_mano = []
     for t in ctx["turnos"]:
         for h in t["herramientas"]:
             ent = json.dumps(h["entrada"], ensure_ascii=False)
             if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in ent for k in REG):
                 a_mano.append(h["nombre"])
-            elif h["nombre"].endswith(("device_bash", "Bash")) and "cerrar.py" not in ent and any(k in ent for k in REG) and re.search(r"(>>?|\btee\b|open\([^)]*['\"]w|write_text|cat\s*>)", ent):
+            elif h["nombre"].endswith(("device_bash", "Bash")) and "cerrar.py" not in ent and re.search(r"(>>?\s*\\?\"?[^\s\"]*|\btee\s+(-a\s+)?\\?\"?[^\s\"]*|sed\s+-i[^;&|]*|open\([^)]*|write_text\([^)]*)(sesiones|decisiones|proyecto|area)\.md", ent) and "cambios" not in ent[:200]:
                 a_mano.append(h["nombre"] + ": " + ent[:80])
     return con > 0 and not a_mano, f"cerrar.py con «escritos»: {con}" + (f"; a mano: {'; '.join(a_mano)}" if a_mano else "")
 

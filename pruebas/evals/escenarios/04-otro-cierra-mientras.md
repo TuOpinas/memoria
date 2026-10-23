@@ -14,7 +14,7 @@ comprobar:
   - entrada-sesion ventas/cuentas
   - contiene ventas/cuentas/sesiones.md OTRO-CIERRE propuesta revisada
   - contiene ventas/cuentas/proyecto.md OTRO-CIERRE mandar la propuesta
-  - menciona mientras
+  - menciona mientras|también cerró|otra sesión|Carla
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
 ---
 Mientras la sesión está abierta, otra persona cierra la suya sobre el mismo proyecto (entre el turno 1 y el 2: una

@@ -94,6 +94,7 @@ Si no hay avisos, no se menciona que no los hay.
 
 - Escribir algo, salvo poner al día `metodo.md` cuando la raíz está atrasada
 - Escribir nada después de abrir sin haber cargado antes el anexo `escribir.md` de `convenciones`
+- Tocar `proyecto.md`, `sesiones.md`, `decisiones.md` o `area.md` a mano durante la sesión (`sed`, `Write`, un `cat >`): lo que la persona pide cambiar ahí se escribe al cerrar con `cerrar.py`, o antes con el mismo script si quiere verlo ya (`cerrar.md`)
 - Leer más de lo que imprime `abrir.py`, o, sin él, más del nivel 0 y el nivel 1
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Deducir lo que hay en una carpeta que no se deja leer: se dice qué es y de quién, y ahí se para
