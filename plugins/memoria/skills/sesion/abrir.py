@@ -204,6 +204,7 @@ except OSError:
 guia = leer(RAIZ / "guia.md") or ""
 print("=== METODO (primera línea)")
 print(linea_metodo)
+print(f"HOY: {HOY.isoformat()} · zona {getattr(TZ, 'key', TZ)} · la fecha de todo lo que se escribe hoy en la carpeta; no la del reloj de la consola ni del contenedor, que van en UTC")
 
 def version_huella(linea):
     """(tupla de la versión, huella) de una primera línea de metodo.md; (None, None) si no la trae."""
