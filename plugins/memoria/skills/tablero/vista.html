@@ -264,6 +264,10 @@ body{padding-inline:0;padding-block:0}
 .enf{border-color:var(--signal)}
 .enf-n{font:600 12px var(--f-mono);color:var(--on-signal);background:var(--signal);border-radius:999px;width:22px;height:22px;display:inline-grid;place-items:center;flex:none}
 .frase{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.restr{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start;background:var(--warn-dim);border:1px solid var(--warn-fill);border-left-width:4px;border-radius:8px;padding:12px 14px;margin-top:10px;color:var(--ink)}
+.restr .lk{color:var(--warn);grid-row:span 4;padding-top:2px}.restr .lk svg{width:20px;height:20px;display:block}
+.restr b.rt{color:var(--warn);font-size:15px}.restr p{margin:0;font-size:14px;color:var(--ink-soft)}.restr .frase{margin-top:6px}
+.lock-i{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:4px;color:var(--warn)}.lock-i svg{width:100%;height:100%;display:block}.side-lock{margin-right:0;flex:0 0 auto}
 .frase-t{flex:1 1 280px;min-width:0;font:13px/1.5 var(--f-mono);background:var(--code);padding:8px 10px;border-radius:6px;white-space:normal;overflow-wrap:anywhere}
 /* inicio: barra de acciones y enfoque compacto */
 .acc-bar{display:flex;gap:8px;flex-wrap:wrap}
@@ -553,7 +557,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.18.3"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.18.4"; // la misma que el plugin memoria; la sube release.sh
 let AREAS = [], PROJ = [], META = null, CAMBIOS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -778,6 +782,21 @@ const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,""
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
 const restringidaCelda = l => { const c = l||""; return /^[\W_]*restringid[oa]s?\b/i.test(c) || (/\brestringidas?\b/i.test(c) && !/\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid/i.test(c)); };
 const lectoresDe = l => { let t = l||""; t = /^[\W_]*restringid[oa]s?\b/i.test(t) ? t.replace(/^[\W_]*restringid[oa]s?\b[*_»"”'’\s]*/i, "") : t.replace(/\s*[(\[—–,-]?\s*\brestringidas?\b\s*[)\]]?/gi, ""); t = t.trim().replace(/^[:—–,-]\s*/, "").replace(/^(?:la|lo)\s+leen\s+/i, "").trim(); const m = /^\((.*)\)$/.exec(t); t = (m ? m[1] : t).trim(); return !t ? "" : /^(?:a|al|para|solo|sólo|únicamente|por|entre)\b/i.test(t) ? t : "a " + t; };
+const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+const lockPill = nl => /^Restringid/.test(nl.pill) ? `<span class="lock-i">${LOCK}</span>${nl.pill}` : nl.pill;
+// lo restringido, como aviso propio (1.18.4): panel ámbar con candado, quién lo lee, a quién pedirlo y un mensaje listo
+// para pedir acceso; lo demás que no se lee sigue en una línea
+function avisoNoLeido(x, fem, nombre){
+  const nl = noLeido(x, fem);
+  if((x.motivo || "sin-acceso") !== "restringido") return `<p class="sub">${nl.txt}</p>`;
+  const r = fem ? "Restringida" : "Restringido", lectores = restringidaCelda(x.lectores) ? esc(lectoresDe(x.lectores)) : "";
+  const duenoN = soloNombre(x.dueno), org = META && META.organizacion || "la organización";
+  const msg = `Hola${duenoN ? " " + duenoN.split(/\s+/)[0] : ""}, ¿me das acceso ${fem ? "al área" : "al proyecto"} «${nombre}» de la memoria de ${org}? Gracias.`;
+  return `<div class="restr" role="note"><span class="lk">${LOCK}</span><b class="rt">${r}</b>
+    <p>${lectores ? `Acceso limitado ${lectores}.` : "Tu cuenta no tiene acceso."}</p>
+    ${x.mio ? "" : `<p>Si lo necesitas, pídeselo a <b>${esc(duenoN || (fem ? "su dueña" : "su dueño"))}</b>.</p>
+    <div class="frase"><code class="frase-t">${esc(msg)}</code><button type="button" class="chip" data-copy="${esc(msg)}" data-copy-msg="Copiado. Mándaselo por el canal de siempre.">Copiar solicitud</button></div>`}</div>`;
+}
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
   // del área de la cuenta que generó el tablero (x.mio): no se le dice que se lo pida o pregunte a sí misma
@@ -873,7 +892,7 @@ const NAT_HINT = {
   condicional:"Se hace cuando pase algo: ponle la fecha en que toca mirarlo, o déjalo para después", rutina:"Se hace siempre, no una vez: va a las prioridades del área o se vuelve un hábito", caducidad:"Toca revisar algo en una fecha: no vence, se revisa"};
 function natPill(s, p){ if(!s.naturaleza) return ""; const n = p ? effNat(p, s) : s.naturaleza; const c = p ? pend(p.id, s.texto).corregir : null; return `${n==="accion" && !c ? "" : `<span class="pill nat ${n}" ${tip(NAT_HINT[n]||"")}>${NAT[n]||n}${c?" ⟳":""}</span>`}${(s.puntos||0)>=5?`<span class="pill imp" ${tip("Importante: "+[s.prioridad_area?"está en las prioridades del área":"", s.cliente_o_dinero?"toca cliente o dinero":"", s.desbloquea?"desbloquea otros proyectos":""].filter(Boolean).join(" · "))}>importante</span>`:""}`; }
 async function copiar(txt, btn){
-  try{ await navigator.clipboard.writeText(txt); flash("Copiado. Pégalo en una conversación con la carpeta conectada."); }
+  try{ await navigator.clipboard.writeText(txt); flash(btn && btn.dataset.copyMsg || "Copiado. Pégalo en una conversación con la carpeta conectada."); }
   catch(e){ const r = document.createRange(); const el = btn.previousElementSibling; if(el){ r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); flash("Selecciona y copia el texto."); } }
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-copy]"); if(b){ e.preventDefault(); copiar(b.dataset.copy, b); } });
@@ -1124,7 +1143,7 @@ function projTags(p){
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function projRow(p){
-  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${nl.pill}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):p.mio?"":`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
+  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${lockPill(nl)}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):p.mio?"":`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
   if(p.cerrado) return `<div class="prow closed" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span></span><span class="s"><span class="st">${inline(p.estado_resumen)}</span></span></div>`;
   const live = stepsLive(p), t = today(), lim = addDays(7);
   const fs = live.map(s=>effDate(p,s));
@@ -1212,7 +1231,7 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 function renderResumen(){
   const tday = today(), nArch = AREAS.filter(archivada).length;
   const filas = areasVis().map(a => {
-    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${noLeido(a,true).pill}</span></span>${a.mio?"":`<span class="ar-p">Responde ${esc(soloNombre(a.dueno)||"su dueño")}</span>`}</button>`;
+    if(a.legible===false) return `<button type="button" class="ar-i" data-go-area="${esc(a.slug)}"><b>${esc(a.nombre)}</b><span class="ar-s"><span class="pill none">${lockPill(noLeido(a,true))}</span></span>${a.mio?"":`<span class="ar-p">Responde ${esc(soloNombre(a.dueno)||"su dueño")}</span>`}</button>`;
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(p=>p && !p.restringido && !p.cerrado);
     const cnt = {}; let nR = 0; for(const p of ps){ const e = projStatus(p); cnt[e.k] = (cnt[e.k]||0)+1; if(e.riesgo) nR++; }
     const pills = EST_ORDEN.filter(k=>k!=="cerrado" && cnt[k]).map(k=>`<span class="pill ${EST[k].pill}">${cnt[k]} ${EST[k].label.toLowerCase()}</span>`).join("") + (nR?`<span class="pill late">${nR} en riesgo</span>`:"");
@@ -1483,7 +1502,7 @@ function ayudaArts(){
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
       <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta. Conéctala en el proyecto, no en una conversación suelta, y cuando Claude pida permiso para usarla, deja que lo haga siempre.</span></li>
       <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced, y entre tus plugins Memoria tiene que estar encendido: en algunas versiones se instala apagado. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
-      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con una línea, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
+      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
       <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
     <dl class="hc-def">
@@ -1495,7 +1514,7 @@ function ayudaArts(){
     <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
     <ol class="hc-pasos">
       <li><b>Ponla en el mapa, como dueña o como colaboradora</b><span>Si va a llevar un área, su correo va en la columna Cuenta de esa área: ${F("añade a [nombre] con [correo] como dueño del área [área] en guia.md")}. Si va a trabajar en el área de otra persona, va en la misma celda como colaboradora: ${F("añade a [nombre] con [correo] como colaborador del área [área]")}. Si solo va a trabajar en un proyecto, se declara en ese proyecto: ${F("añade a [nombre] con [correo] como colaborador de este proyecto")}, en una sesión del dueño del área. La tabla de <code>guia.md</code> la escribe ${CTX}. Sin nada de eso, Claude le preguntará antes de escribir.</span></li>
-      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: lectura de toda la carpeta ${ORG}, y permiso de editor en la carpeta del área donde va a escribir, o solo en la del proyecto si colabora en uno. Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
+      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: «Lector» en toda la carpeta ${ORG}, y «Gestor de contenido» en la carpeta del área donde va a escribir (clic derecho › Compartir), o solo en la del proyecto si colabora en uno. «Colaborador» no sirve, porque no deja mover ni borrar archivos, y «Gestor de contenido» en la unidad entera le abriría la escritura en todas las áreas. Si la carpeta está en «Mi unidad» y no en una unidad compartida, los roles son «Lector» y «Editor». Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
       <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
     </ol>
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
@@ -1506,7 +1525,7 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Mejor una unidad compartida</dt><dd>Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y la carpeta va en «Mi unidad» de quien administra, compartida con el equipo. Entonces los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.</dd>
       <dt>La raíz</dt><dd>La unidad entera o una carpeta de su primer nivel, con <code>guia.md</code> y <code>metodo.md</code> dentro. Una sola por organización, con un nombre sin signos raros.</dd>
-      <dt>Los permisos</dt><dd>Todo el equipo, lectura en toda la carpeta. Cada dueño de área y quien colabora en ella, edición en la carpeta de su área; quien colabora en un solo proyecto, solo en la de ese proyecto. Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
+      <dt>Los permisos</dt><dd>En la unidad compartida, todo el equipo como «Lector» y solo quien la administra como «Administrador». En la carpeta de cada área (clic derecho › Compartir), «Gestor de contenido» para su dueño y quienes colaboran en ella; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto. Nunca «Colaborador», que no deja mover ni borrar archivos, ni «Gestor de contenido» en la unidad entera, que abre la escritura en todas las áreas. En «Mi unidad», los roles son «Lector» y «Editor». Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
       <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual: Claude trabaja con ella algo más lento, y para mover archivos necesita el conector de Google Drive activado en Claude.</dd>
     </dl>
     <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
@@ -1571,7 +1590,7 @@ function ayudaArts(){
   {g:"Cada día", id:"si-algo-falla", t:"Si algo falla", h:`
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
-      <dt>Al abrir sesión no aparece la línea «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
+      <dt>Al abrir sesión no aparece el recuadro «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
       <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en el mapa de <code>guia.md</code>, ni como dueño ni como colaborador, ni en el proyecto donde trabajas. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
       <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
@@ -1972,8 +1991,8 @@ function renderSide(){
   const nArch = AREAS.filter(archivada).length;
   h += areasVis().map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
-    return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
-      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${dot(p)}<span>${esc(p.nombre)}</span></button>`).join("")}</div>`;
+    return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}${a.legible===false && /^Restringid/.test(noLeido(a,true).pill) ? ` <span class="lock-i" ${tip("Restringida")}>${LOCK}</span>` : ""}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
+      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span>${esc(p.nombre)}</span></button>`).join("")}</div>`;
   }).join("");
   if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
   h += `<div class="side-leg">${["encurso","bloqueado","parado","sininiciar","cerrado"].map(k=>`<span ${tip(EST[k].desc)}><i class="dot ${EST[k].dot}"></i>${EST[k].label.toLowerCase()}</span>`).join("")}<span ${tip(RIESGO.desc)}><i class="dot ok risk"></i>en riesgo</span></div>`;
@@ -1988,7 +2007,7 @@ function renderArea(a){
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
   head.innerHTML = `<div class="eyebrow">Área</div><h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
     <div class="meta"><span>Dueño: <b>${esc(a.dueno)}</b></span>${(a.colaboran||[]).length?`<span>Colaboran: <b>${a.colaboran.map(esc).join(", ")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span>${a.actualizado?`<span>Actualizada el <b>${fmtL(a.actualizado)}</b></span>`:""}</div>`;
-  if(a.legible===false){ main.innerHTML = `<div class="card"><p class="sub">${noLeido(a,true).txt}</p></div>`; return; }
+  if(a.legible===false){ main.innerHTML = `<div class="card">${avisoNoLeido(a, true, a.nombre)}</div>`; return; }
   const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
   const hace30 = addDays(-30);
   const recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
@@ -2011,7 +2030,7 @@ function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
   if(p.restringido){
-    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}<p class="sub">${noLeido({...p, dueno: a.dueno}, false).txt}</p>`;
+    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}${avisoNoLeido({...p, dueno: p.dueno || a.dueno}, false, p.nombre)}`;
     main.innerHTML = ""; return;
   }
   const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;

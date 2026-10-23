@@ -18,10 +18,11 @@ Es trabajo de quien administra la carpeta, una vez por organización, antes de q
 
 **Los permisos**, como dice la sección 1 del contrato:
 
-- Todo el equipo, lectura en toda la unidad o la carpeta raíz.
-- Cada dueño de área y quien colabora en ella, edición en la carpeta de esa área; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto.
-- El responsable de contexto, edición en `guia.md` y `base/`.
-- Quien administra, administrador de la unidad, y nadie más.
+- Todo el equipo, «Lector» en la unidad (o en la carpeta raíz).
+- Cada dueño de área y quien colabora en ella, «Gestor de contenido» en la carpeta de esa área, que se da con clic derecho › Compartir sobre la carpeta; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto. «Colaborador» no sirve, porque no deja mover ni borrar archivos, y «Gestor de contenido» en la unidad entera abre la escritura en todas las áreas.
+- El responsable de contexto, «Gestor de contenido» en `guia.md` y `base/`.
+- Quien administra, «Administrador» de la unidad, y nadie más.
+- En «Mi unidad», sin unidad compartida, los roles son «Lector» y «Editor»: «Editor» donde arriba dice «Gestor de contenido».
 - Lo restringido se marca en su carpeta con el acceso limitado de Drive, desde la web. En una unidad compartida lo pone quien la administra; Google lo admite en unidades compartidas desde 2025.
 
 **En la computadora de cada persona**, Drive para escritorio solo transmite las unidades compartidas: no las copia enteras al disco como puede hacer con «Mi unidad». Por eso la carpeta se marca «Disponible sin conexión» en cada computadora, y se comprueba que sus archivos bajaron antes de conectar la carpeta a Claude. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual. La consola de Claude no la monta, así que esas computadoras trabajan sin consola (anexo `sin-consola.md`): todo funciona, algo más lento, y para mover archivos hace falta el conector de Google Drive activado en Claude. Nadie tiene que cambiar nada de Drive.

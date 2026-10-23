@@ -43,7 +43,7 @@ Quien escribe en un área o en un proyecto sin ser su dueño (`convenciones`, se
 
 - **Cambiar el dueño de un área**: «[nombre] con [correo] es el dueño del área [área]» cambia el Dueño y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
 
-En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida (editor en la carpeta del área, o solo en la del proyecto), que pone quien administra la carpeta, y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
+En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta, y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
 ---
 
@@ -264,8 +264,9 @@ quién colabora en cada área se le dice a Claude con una frase:
 - «añade a [nombre] con [correo] como colaborador de este proyecto»: en una sesión del dueño
   del área, dentro del proyecto.
 
-Además, quien administra la carpeta compartida le da permiso de editor en la carpeta del área,
-o solo en la del proyecto.
+Además, quien administra la carpeta compartida le da «Gestor de contenido» en la carpeta del área
+(«Editor» si la carpeta está en «Mi unidad»), o solo en la del proyecto; nunca «Colaborador» ni
+«Gestor de contenido» en la unidad entera.
 
 **Paso 8. Ten el tablero siempre a mano en Chrome**
 

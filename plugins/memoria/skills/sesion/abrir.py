@@ -364,8 +364,12 @@ def motivo_area(slug):
 
 def claude_outputs():
     """Lo que la app dejó en «Claude outputs»: nombre y fecha, sin abrir nada; se propone colocarlo en su proyecto.
-    Sale en todos los modos, también al abrir un proyecto: la primera respuesta de la conversación lo dice siempre."""
+    Sale en todos los modos, también al abrir un proyecto, pero solo a la cuenta del responsable de contexto (o sin
+    --cuenta): a las demás no se les dice nada al abrir, y lo que cae ahí en su conversación lo recoge el hook."""
     titulo("CLAUDE OUTPUTS")
+    if CUENTA and not es_resp:
+        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/)")
+        return
     try:
         co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
         sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
