@@ -797,6 +797,9 @@ function avisoNoLeido(x, fem, nombre){
     ${x.mio ? "" : `<p>Si lo necesitas, pídeselo a <b>${esc(duenoN || (fem ? "su dueña" : "su dueño"))}</b>.</p>
     <div class="frase"><code class="frase-t">${esc(msg)}</code><button type="button" class="chip" data-copy="${esc(msg)}" data-copy-msg="Copiado. Mándaselo por el canal de siempre.">Copiar solicitud</button></div>`}</div>`;
 }
+// de un proyecto restringido solo se ve su línea del área; si empieza por «dueño Nombre.» (o «dueña:»), ese es su dueño
+// y el resto, su descripción (1.19)
+function descDueno(p){ const m = /^\s*due[ñn][oa]s?\s*:?\s+([^.;\n]+)[.;]\s*/i.exec(p.descripcion||""); return m ? {dueno: m[1].trim(), desc: p.descripcion.slice(m[0].length)} : {dueno: "", desc: p.descripcion||""}; }
 function noLeido(x, fem){
   const m = x.motivo || "sin-acceso", quien = esc(soloNombre(x.dueno) || (fem ? "su dueña" : "su dueño"));
   // del área de la cuenta que generó el tablero (x.mio): no se le dice que se lo pida o pregunte a sí misma
@@ -1143,7 +1146,7 @@ function projTags(p){
 }
 const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function projRow(p){
-  if(p.restringido){ const nl = noLeido({...p, dueno: p.dueno || areaBy[p.area]?.dueno},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${lockPill(nl)}</span></span></span><span class="s"><span class="st">${p.descripcion?inline(p.descripcion):p.mio?"":`Responde ${esc(soloNombre(p.dueno || areaBy[p.area]?.dueno)||"su dueño")}`}</span></span></div>`; }
+  if(p.restringido){ const dd = descDueno(p), du = dd.dueno || p.dueno || areaBy[p.area]?.dueno; const nl = noLeido({...p, dueno: du},false); return `<div class="prow restricted" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags"><span class="pill none">${lockPill(nl)}</span></span></span><span class="s"><span class="st">${dd.desc?inline(dd.desc):""}${p.mio?"":`${dd.desc?" · ":""}Responde ${esc(soloNombre(du)||"su dueño")}`}</span></span></div>`; }
   if(p.cerrado) return `<div class="prow closed" role="button" tabindex="0" data-go-proj="${esc(p.id)}"><span class="n"><b>${esc(p.nombre)}</b><span class="tags">${projTags(p)}</span></span><span class="s"><span class="st">${inline(p.estado_resumen)}</span></span></div>`;
   const live = stepsLive(p), t = today(), lim = addDays(7);
   const fs = live.map(s=>effDate(p,s));
@@ -2030,7 +2033,10 @@ function renderProj(p){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
   if(p.restringido){
-    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${p.descripcion?`<p class="sub">${inline(p.descripcion)}</p>`:""}${avisoNoLeido({...p, dueno: p.dueno || a.dueno}, false, p.nombre)}`;
+    const dd = descDueno(p), du = dd.dueno || p.dueno || a.dueno;
+    head.innerHTML = `<div class="eyebrow">${esc(a.nombre)}</div><h1>${esc(p.nombre)}</h1>${dd.desc?`<p class="sub">${inline(dd.desc)}</p>`:""}
+    <div class="meta"><span>Dueño: <b>${esc(soloNombre(du))}</b></span><span>Área: <b>${esc(a.nombre)}</b> · ${esc(soloNombre(a.dueno))}</span><span>La lee: <b>${/^Restringid/.test(noLeido(p,false).pill) ? "Restringido" : esc(noLeido(p,false).pill)}</b></span></div>
+    ${avisoNoLeido({...p, dueno: du}, false, p.nombre)}`;
     main.innerHTML = ""; return;
   }
   const est = projStatus(p), hace = p.ultima_sesion ? diasDesde(p.ultima_sesion) : null;
