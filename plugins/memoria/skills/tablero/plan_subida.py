@@ -21,10 +21,11 @@ Con --cierre (el tablero ya estaba al día: no hubo generación) escribe <salida
 las llamadas, la página) y planea un lote: los «delete» de cierres y meta/estado como «update» (sin if_version: solo esta
 corrida escribe esos campos). Las huellas de la raíz y de los proyectos no se tocan.
 
-Con --guardada no planea nada: imprime dos líneas. La primera, la huella de la raíz que guardó la última puesta al día
+Con --guardada no planea nada: imprime tres líneas. La primera, la huella de la raíz que guardó la última puesta al día
 si el tablero sigue valiendo tal cual (misma versión del plugin, misma tarea, mismo «sin horario»), o «-» si hay que
 regenerar. La segunda, las huellas de cada proyecto que guardó (separadas por comas, para --sin-cambios del inventario)
-si los documentos de la base son de esta misma versión del plugin, o «-» si no hay ninguna que valga.
+si los documentos de la base son de esta misma versión del plugin, o «-» si no hay ninguna que valga. La tercera, las
+huellas del taller de cada proyecto (pid:huella, separadas por comas, para --taller-igual del inventario), o «-».
 
 <volcado-de-la-base> es la carpeta donde ArtifactData dejó, con out_dir, lo que hay hoy en la base
 (<volcado>/areas/*.json, <volcado>/proyectos/*.json, <volcado>/meta/estado.json).
@@ -58,6 +59,9 @@ if "--guardada" in sys.argv:
     # los documentos de la base se pueden reutilizar si los hizo esta misma versión; la tarea no entra en un proyecto
     hs = d.get("huellas") if d.get("version_tablero") == _a("--version") else None
     print(",".join(hs) if isinstance(hs, list) and hs else "-")
+    # tercera línea: las huellas del taller de cada proyecto, para --taller-igual del inventario (mismo criterio de versión)
+    ht = d.get("huellas_taller") if d.get("version_tablero") == _a("--version") else None
+    print(",".join(f"{k}:{v}" for k, v in sorted(ht.items())) if isinstance(ht, dict) and ht else "-")
     sys.exit(0)
 
 import datetime
@@ -186,6 +190,14 @@ if _campos:
 _cand = _json(SALIDA / "meta" / "enfoque-candidatos.json") or {}
 _base_meta = _datos(_json(VOLCADO / "meta" / "estado.json") or {})
 enfoque_cambio = bool(_cand.get("huella")) and _cand.get("huella") != _base_meta.get("huella_candidatos")
+if enfoque_cambio:
+    # la huella nueva la escribe el paso 6 en meta/estado junto al «set» de enfoque/actual, no esta subida: si el paso 6
+    # no llega a correr, la siguiente corrida vuelve a ver el cambio y renueva «Por dónde empezar»
+    _meta_d["huella_candidatos"] = _base_meta.get("huella_candidatos")
+    if _meta_d["huella_candidatos"] is None:
+        _meta_d.pop("huella_candidatos", None)
+    _meta_p.write_text(json.dumps(_meta_d, ensure_ascii=False, indent=1), encoding="utf-8")
+    (SALIDA / "meta" / "estado-enfoque.json").write_text(json.dumps({"huella_candidatos": _cand.get("huella")}, ensure_ascii=False), encoding="utf-8")
 
 indice = json.loads((SALIDA / "indice.json").read_text(encoding="utf-8"))
 escrituras, sin_cambios, salen, invalidos, grandes = [], 0, set(), [], []
@@ -254,6 +266,7 @@ if actual:
     lotes.append(actual)
 
 print(json.dumps({"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar), "cierres_borrados": len(_borrar_cierres),
-                  "enfoque_cambio": enfoque_cambio, "duracion_min": _campos.get("duracion_min"),
+                  "enfoque_cambio": enfoque_cambio, "enfoque_meta": str(SALIDA / "meta" / "estado-enfoque.json") if enfoque_cambio else None,
+                  "duracion_min": _campos.get("duracion_min"),
                   "propuestas": {"nuevas": sum(1 for e in propuestas if e["op"] == "set"), "retiradas": sum(1 for e in propuestas if e["op"] == "delete")},
                   "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}, ensure_ascii=False, indent=1))

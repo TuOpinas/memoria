@@ -114,7 +114,7 @@ Ante la duda de si algo merece quedar, se pregunta; no se guarda por si acaso.
 
 **Un archivo vivo se reescribe** y siempre refleja el presente. Nadie necesita leer su historia para entenderlo.
 
-**Un registro solo crece.** Las entradas nuevas van arriba y las anteriores no se editan jamás, ni para corregir. Si una decisión cambia, se añade una entrada nueva que dice que reemplaza a la anterior.
+**Un registro solo crece.** Las entradas nuevas van arriba y las anteriores no se editan jamás, ni para corregir. Si una decisión cambia, se añade una entrada nueva con la línea `Reemplaza:` que apunta a la anterior.
 
 Un registro nunca vive dentro de un archivo vivo, porque la primera reescritura lo borra.
 
@@ -132,7 +132,7 @@ Descartamos: …
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
 
-Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`, y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
+Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`; una que sustituye a otra anterior añade `Reemplaza: <identificador de la sustituida> · <su título>` (la anterior no se edita: sigue en el registro, y el tablero encadena las dos en la trayectoria del proyecto); y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
 
 **Identificador de una entrada.** Cada entrada de `decisiones.md`, decisión o cuestionamiento, se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua; los cuestionamientos cuentan en la misma serie. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Una entrada sin fecha válida en el encabezado no tiene identificador y no se puede citar. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
 

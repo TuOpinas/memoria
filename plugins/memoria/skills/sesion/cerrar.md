@@ -34,6 +34,8 @@ Descartamos: tope acumulado mensual por proveedor, porque el ERP no expone el ac
 Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a todas) · finanzas/cierre-mensual (menos órdenes que conciliar)
 ```
 
+Si la decisión sustituye a una anterior de este proyecto (cambia de criterio, de precio, de fecha), lleva además `Reemplaza: <identificador de la anterior> · <su título>`; se pregunta en el mismo mensaje que enseña la decisión cuando el extracto de la sesión lo sugiere («antes…», «ya no…», «en vez de…»). La anterior no se toca.
+
 **Responder un cuestionamiento.** Si al abrir se avisó de un cuestionamiento abierto a este proyecto y lo respondió en la sesión el dueño, o quien colabora si la decisión cuestionada es suya (lo dicen CUENTA EN EL PROYECTO y el `Decidió` de la decisión), la respuesta es una decisión más de esta lista, aunque solo mantenga lo que ya estaba: «lo mantengo» cambia algo, porque cierra una pregunta que alguien tenía abierta. La entrada lleva `Responde a: <identificador del cuestionamiento>` (el que se citó al abrir), dice en el título si mantiene o reemplaza lo cuestionado, y en `Por qué` la razón que dio el dueño. Se confirma como cualquier decisión y se dice a quién avisar: a quien lo planteó. Además, Claude se lo enseñará a esa persona la próxima vez que abra sesión en su proyecto.
 
 **Plantear un cuestionamiento.** Si la persona quiere cuestionar una decisión de otro proyecto o una premisa, se escribe en el `decisiones.md` del proyecto activo, con el formato de `escribir.md`, sección 4 (`Planteó`, `Por qué`, `Cuestiona a`), después de enseñárselo y con su confirmación, como una decisión. Se le dice a quién avisar: al dueño de lo cuestionado.

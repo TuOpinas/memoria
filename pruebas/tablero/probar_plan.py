@@ -59,6 +59,7 @@ try:
     ok(rc == 0 and ult[-1]["collection"] == "meta" and [e["doc_id"] for e in ult if e["collection"] == "cierres"] == ["c-futura", "c-igual", "c-vieja"], f"los delete de cierres van justo antes de meta/estado, en el último lote ({err[-200:]})")
     ok(meta.get("llamadas") == 14 and meta.get("pagina_actualizada") == {"version": "1.21.0"} and 6.5 <= (meta.get("duracion_min") or 0) <= 8 and meta.get("sincronizado") == sinc, "meta/estado del generador gana las llamadas, la duración y la página, y conserva el sincronizado que estampó")
     ok(res.get("enfoque_cambio") is True and res.get("cierres_borrados") == 3, "dice que el enfoque cambió cuando la huella de los candidatos no es la de la base")
+    ok(meta.get("huella_candidatos") == "cand-vieja" and json.loads(pathlib.Path(res["enfoque_meta"]).read_text())["huella_candidatos"] == "cand-nueva", "la huella nueva no sube con meta/estado: la deja aparte para que el paso 6 la escriba junto al enfoque")
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-nueva"}, "version": 4}))
     rc, out, _ = corre(PLAN, sal, base)
     ok(json.loads(out).get("enfoque_cambio") is False and json.loads(out).get("cierres_borrados") == 0, "con la misma huella no hay que renovar el enfoque; sin --cierres no borra nada")

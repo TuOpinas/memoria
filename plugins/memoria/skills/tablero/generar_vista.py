@@ -147,6 +147,10 @@ VERSION_PLUGIN = _arg("--version")
 LINEAS = "--lineas" in sys.argv
 SI_CAMBIA = _arg("--si-cambia")
 SIN_CAMBIOS = {h for h in (_arg("--sin-cambios") or "").split(",") if h and h != "-"}
+# --taller-igual pid:huella,…: las huellas del taller de cada proyecto que guardó la última puesta al día (meta/estado,
+# «huellas_taller»). Un proyecto que cambió pero cuyo taller no, no vuelve a mandar sus cabeceras por la conversación:
+# el inventario lo apunta en «taller_reusar» y la generación toma sus piezas del detalle de la base (--previos).
+TALLER_IGUAL = dict(x.split(":", 1) for x in (_arg("--taller-igual") or "").split(",") if ":" in x)
 # --previos <volcado de la base>: de donde la generación toma los documentos que el inventario marca en «reusar»
 PREVIOS = pathlib.Path(_arg("--previos")) if _arg("--previos") else None
 # --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al dueño de otra área,
@@ -551,6 +555,12 @@ def taller_de(carpeta):
     if SIN_FECHAS:   # sin consola la copia no trae el taller (espejo.py nunca lo pide): el inventario no existe
         return []
     if INV is not None:
+        if rel(carpeta) in (INV.get("taller_reusar") or []):
+            det_ = _de_la_base("detalle", rel(carpeta).replace("/", "--")) if PREVIOS else None
+            if not isinstance(det_, dict):
+                sys.stderr.write(f"A la base le falta el detalle de {rel(carpeta)}, que el inventario pidió reutilizar para su taller: vuelve al inventario sin --taller-igual.\n")
+                sys.exit(5)
+            return [{k: v for k, v in pz.items() if k != "tipo"} for pz in ((det_.get("que_hay") or {}).get("piezas") or []) if pz.get("tipo") == "taller"]
         return INV.get("taller", {}).get(rel(carpeta), [])
     d = carpeta / "taller"
     out = []
@@ -850,7 +860,7 @@ if INVENTARIO:
     inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
     _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
-    huellas, reusar, por_proyecto = {}, [], {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
+    huellas, reusar, por_proyecto, huellas_taller = {}, [], {}, {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
     def _si_legible(p, lista=None):
         if leer(p) is not None:
             (leer_ if lista is None else lista).append(rel(p)); return True
@@ -920,7 +930,12 @@ if INVENTARIO:
             if fe:
                 inv["entregables"][rel(pc)] = fe
             if tal:
-                inv.setdefault("taller", {})[rel(pc)] = tal
+                h_tal = hashlib.sha1(json.dumps(tal, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
+                huellas_taller[pid] = h_tal
+                if TALLER_IGUAL.get(pid) == h_tal:
+                    inv.setdefault("taller_reusar", []).append(rel(pc))     # el taller no cambió: sus piezas salen de la base
+                else:
+                    inv.setdefault("taller", {})[rel(pc)] = tal
             if sub_:
                 inv.setdefault("entregables_sub", {})[rel(pc)] = sub_
     fuera_ = fuera_de_la_memoria()
@@ -948,6 +963,8 @@ if INVENTARIO:
     inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
     inv["archivos_leer"] = len(leer_)
     inv["huellas"] = huellas
+    if huellas_taller:
+        inv["huellas_taller"] = huellas_taller
     if reusar:
         inv["reusar"] = reusar
     inv["sello"] = sello(inv)
@@ -1253,6 +1270,8 @@ if INV is not None and INV.get("huellas"):
     _gr = {pid for pid, d_ in docs["proyectos"].items()
            if len(json.dumps(d_, ensure_ascii=False, indent=1).encode("utf-8")) > LIMITE_DOC}
     docs["meta"]["estado"]["huellas"] = sorted({h for k, h in INV["huellas"].items() if k not in _gr})
+if INV is not None and INV.get("huellas_taller"):
+    docs["meta"]["estado"]["huellas_taller"] = {k: h for k, h in INV["huellas_taller"].items() if k in docs["proyectos"]}
 if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 if COLA_AJENA is not None:
@@ -1297,7 +1316,7 @@ for pid, pd in docs["proyectos"].items():
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
 # suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
 def huella(data):
-    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "huellas", "cola_retenida", "cola_ajena")}
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "huellas", "huellas_taller", "cola_retenida", "cola_ajena")}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():

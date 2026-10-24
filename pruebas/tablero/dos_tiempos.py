@@ -31,7 +31,8 @@ def docs(carpeta):
         if p.name == "indice.json":
             continue
         d = json.loads(p.read_text(encoding="utf-8"))
-        d.pop("sincronizado", None); d.pop("generado", None); d.pop("huella_raiz", None); d.pop("huellas", None)
+        for k in ("sincronizado", "generado", "huella_raiz", "huellas", "huellas_taller"):   # lo que solo el camino en dos tiempos escribe
+            d.pop(k, None)
         out[p.relative_to(carpeta).as_posix()] = d
     return out
 
@@ -113,7 +114,7 @@ ok(_guard("--version", "9.9.9", "--tarea", "trig_x", "--manual") == "h1", "huell
 ok(_guard("--version", "9.9.10", "--tarea", "trig_x", "--manual") == "-", "huella guardada: con otra versión del plugin hay que regenerar")
 ok(_guard("--version", "9.9.9", "--tarea", "trig_x") == "-", "huella guardada: si la tarea pasó a tener horario, hay que regenerar")
 ok(_guard("--version", "9.9.9") == "-", "huella guardada: sin tarea, hay que regenerar")
-ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.split() == ["-", "-"], "huella guardada: con la base vacía (al montar), hay que regenerar")
+ok(subprocess.run([sys.executable, PLAN, "--guardada", TRAB / "no-existe", "--version", "9.9.9"], capture_output=True, text=True).stdout.split() == ["-", "-", "-"], "huella guardada: con la base vacía (al montar), hay que regenerar")
 # la cola retenida llega a meta/estado
 (TRAB / "ret.json").write_text('["c9", "c3"]', encoding="utf-8")
 (TRAB / "aj.json").write_text('["c9"]', encoding="utf-8")
@@ -174,6 +175,22 @@ for modo in ("completo", "publico"):
     a, b = docs(TRAB / f"inc2-directo-{modo}"), docs(TRAB / f"inc2-{modo}")
     dif = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
     ok(r2.returncode == 0 and not dif, f"{modo}: con un proyecto tocado, el resultado es el mismo que generar en la computadora" + (f" (difieren: {', '.join(dif[:4])}{r2.stderr[-200:]})" if dif or r2.returncode else ""))
+    # el taller de un proyecto tocado cuyo taller no cambió no vuelve a pasar por la conversación: --taller-igual
+    ht = json.loads((TRAB / f"inc0-{modo}" / "meta" / "estado.json").read_text(encoding="utf-8")).get("huellas_taller") or {}
+    ses_c = R3 / "ventas" / "cuentas" / "sesiones.md"
+    ses_c.write_text(ses_c.read_text(encoding="utf-8") + "\n## 2026-08-03 · Otra sesión más\nTrabajamos en: prueba.\n", encoding="utf-8")
+    s2b = _inv("--sin-cambios", ",".join(hs), "--taller-igual", ",".join(f"{k}:{v}" for k, v in ht.items()))
+    ok("ventas--cuentas" in ht and "ventas/cuentas" in (s2b["inventario"].get("taller_reusar") or []) and "ventas/cuentas" not in (s2b["inventario"].get("taller") or {}), f"{modo}: con la huella del taller guardada, el inventario no manda sus cabeceras y lo apunta en taller_reusar")
+    _volcar(TRAB / f"inc2-{modo}", TRAB / f"base-inc2-{modo}", envolver=(modo == "publico"))
+    r2b = _gen(TRAB / f"inc2b-{modo}", s2b, TRAB / f"base-inc2-{modo}")
+    subprocess.run([sys.executable, GEN, R3, TRAB / f"inc2b-directo-{modo}", "--modo", modo, "--version", "prueba"], capture_output=True, text=True)
+    a, b = docs(TRAB / f"inc2b-directo-{modo}"), docs(TRAB / f"inc2b-{modo}")
+    dif = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+    ok(r2b.returncode == 0 and not dif, f"{modo}: con el taller reutilizado de la base, el resultado es el mismo que generar en la computadora" + (f" (difieren: {', '.join(dif[:4])}{r2b.stderr[-200:]})" if dif or r2b.returncode else ""))
+    (R3 / "ventas" / "cuentas" / "taller" / "nota-nueva.md").write_text("---\nestado: borrador\nactualizado: 2026-09-01\n---\n# Nueva\n\nx\n", encoding="utf-8")
+    s2c = _inv("--sin-cambios", ",".join(hs), "--taller-igual", ",".join(f"{k}:{v}" for k, v in ht.items()))
+    ok("ventas/cuentas" in (s2c["inventario"].get("taller") or {}) and "ventas/cuentas" not in (s2c["inventario"].get("taller_reusar") or []), f"{modo}: si el taller cambió, sus cabeceras vuelven a viajar")
+    (R3 / "ventas" / "cuentas" / "taller" / "nota-nueva.md").unlink()
     # si la base no tiene lo que se pide reutilizar, la generación lo dice y pide el inventario entero
     falta_ = TRAB / f"base-inc-{modo}" / "proyectos" / f"{s2['inventario']['reusar'][0]}.json"; falta_.unlink()
     r3 = _gen(TRAB / f"inc3-{modo}", s2, TRAB / f"base-inc-{modo}")
