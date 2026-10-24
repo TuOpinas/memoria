@@ -320,10 +320,12 @@ if not areas:
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
 # «Contexto común (`guia.md` y `base/`): Nombre (correo).»); sin correo, la cuenta del responsable es la de las áreas
 # de las que es responsable
-resp_contexto = ""
+resp_contexto, administra_txt = "", ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().lstrip("-* ").startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
+    if l.strip().lower().lstrip("-* ").startswith("administra la carpeta"):
+        administra_txt = l.split(":", 1)[-1].strip().rstrip(".").strip()
 # la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
 # como antes, es la de las áreas de las que esa persona es responsable
 cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
@@ -356,6 +358,11 @@ if CUENTA:
     donde_ = ", ".join([f"{s} (responsable)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
+    # el administrador principal es una sola persona (1.22.2): se le dice al responsable de contexto si guia.md nombra a dos
+    _nom = lambda t: re.sub(r"\s*\([^)]*\)", "", (t or "").split(",")[0]).strip().lower()
+    if es_resp and administra_txt and _nom(administra_txt) != _nom(resp_contexto) and not (set(CORREO.findall(administra_txt.lower())) & cuenta_resp):
+        print(f"(aviso para decirlo: guia.md nombra a dos personas, «{administra_txt}» administra la carpeta y «{resp_contexto}» responde por el contexto; "
+              "son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».)")
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
     # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
     for a in areas:

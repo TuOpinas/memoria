@@ -160,5 +160,20 @@ ok("personas/ está declarada restringida en guia.md, pero en Drive no tiene acc
 d = bien(); d["areas"]["ventas"]["limitada"] = True; f.write_text(json.dumps(d))
 o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout
 ok("pon «Restringida» en su columna «Acceso»" in o22, "y al revés, se le dice que la marque en «Acceso»")
+print("El administrador principal (1.22.2)")
+import shutil as _sh2
+def corre_en(raiz, drive):
+    f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(drive))
+    r = subprocess.run([sys.executable, str(P), str(raiz), "--drive", str(f)], capture_output=True, text=True)
+    return r.stdout + r.stderr
+RD = pathlib.Path(tempfile.mkdtemp()) / "raiz"; _sh2.copytree(R, RD)
+(RD / "guia.md").write_text((RD / "guia.md").read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Beto Prueba"), encoding="utf-8")
+ok("son personas distintas en guia.md" in corre_en(RD, bien()), "quien administra y quien responde por el contexto, personas distintas: se dice")
+ok("son personas distintas" not in corre(bien())[1], "y si son la misma, no")
+d = bien(); d["areas"]["personas"]["permisos"] = [u("beto@ejemplo.test", "fileOrganizer")]
+ok("ana@ejemplo.test administra la carpeta y no lee el área restringida personas/" in corre(d)[1], "quien administra y no lee un área restringida")
+d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "writer"), u("zoe@ejemplo.test", "owner")] + BASE[1:]
+ok("en Drive no es su propietario" in corre(d)[1], "en «Mi unidad», quien administra tiene que ser el propietario")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

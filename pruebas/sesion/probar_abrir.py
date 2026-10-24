@@ -214,6 +214,13 @@ _cod = (
     "print('LEIDOS', n[0])\n")
 o = subprocess.run([sys.executable, "-c", _cod, str(ABRIR), str(RM)], capture_output=True, text=True).stdout
 ok("Veredicto: AL DIA" in o and "LEIDOS 0" in o, "AL DIA sin abrir ningún proyecto.md, también en un área migrada sin Estatus (archivo/)" + ("" if "LEIDOS 0" in o else f" ({o.splitlines()[-1:]})"))
+print("El administrador principal es una sola persona (1.22.2)")
+RX = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(AQUI.parent / "tablero" / "raiz", RX)
+(RX / "guia.md").write_text((RX / "guia.md").read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Beto Prueba"), encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(RX), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("guia.md nombra a dos personas" in o, "si guia.md nombra a otra persona para administrar, se le dice al responsable de contexto")
+o = subprocess.run([sys.executable, str(ABRIR), str(AQUI.parent / "tablero" / "raiz"), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("nombra a dos personas" not in o, "y si es la misma, no")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

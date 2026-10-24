@@ -318,11 +318,19 @@ def comparar(raiz, drive):
             else:
                 a_decidir += 1
                 hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
+    # el administrador principal (1.22.2): quien administra la carpeta, responde por el contexto y es su dueño en Drive es
+    # una sola persona, y lee todo, también lo restringido
+    nom_ = lambda t: re.sub(r"\s*\([^)]*\)", "", (t or "").split(",")[0]).strip().rstrip(".").strip().lower()
+    if (admins and ctxc and not admins & ctxc) or (not (admins and ctxc) and nom_(adm) and nom_(ctx) and nom_(adm) != nom_(ctx)):
+        hall.append(f"Quien administra la carpeta («{adm.strip() or 'no consta'}») y quien responde por el contexto («{ctx.strip() or 'no consta'}») son personas distintas en guia.md: "
+                    "son una sola persona, que además es la dueña de la carpeta en Drive y lee todo. Corrige «Quién responde por qué».")
     for e in sorted(admins):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")
         elif rr.get(e) and not mi_unidad and rr[e] != "organizer":
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en la unidad es «{NOM.get(rr[e], rr[e])}»: dale «Administrador».")
+        elif rr.get(e) and mi_unidad and rr[e] != "owner":
+            hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en Drive no es su propietario («{NOM.get(rr[e], rr[e])}»): la carpeta tiene que ser suya; transfiere la propiedad desde la web.")
     declaradas = set()
     for a in areas:
         declaradas |= a["duenos"] | a["colaboran"]
@@ -385,6 +393,9 @@ def comparar(raiz, drive):
         elif lim and not a["restringida"]:
             hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: " + ("pon «Restringida» en su columna «Acceso»" if a.get("acceso") else "escribe «Restringida: …» en su columna «Quién la lee»") + ", o quita el acceso limitado.")
         elif lim:
+            for e in sorted(admins):
+                if ar and e not in ar:
+                    hall.append(f"{e} administra la carpeta y no lee el área restringida {a['slug']}/: quien administra lo lee todo. Dale acceso desde la web.")
             fuera = sorted(e for e in ar if e not in a["duenos"] | a["colaboran"] | a["leen"] and not admin(e, ar[e]))
             if fuera:
                 notas.append(f"El área restringida {a['slug']}/ la leen además {', '.join(fuera)}; guia.md dice «{a['lectores']}». Compruébalo.")

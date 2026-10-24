@@ -60,7 +60,7 @@ Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está 
 3. ¿Qué sistemas usáis a diario? Nombre y para qué, aunque sea una lista rápida
 4. ¿Hay ya una primera área con la que empezar, y de quién es?
 
-Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el responsable de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
+Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el responsable de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción; y es la misma persona que responde por el contexto y la dueña de la carpeta en Drive (contrato, sección 1, «Permisos en la carpeta compartida»). Si contestan dos nombres distintos, se dice que es una sola persona y se pregunta cuál. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
 
 ## Qué escribo y dónde
 
@@ -528,7 +528,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 >
 > 1. ¿El nombre es Acme, o tiene otro nombre completo?
 > 2. ¿Quién mantiene el contexto común? Por defecto, tú
-> 3. ¿Quién administra la carpeta compartida? Tiene que ser el responsable de la organización o alguien de su total confianza: puede quitar cualquier restricción
+> 3. ¿Quién administra la carpeta compartida? Tiene que ser el responsable de la organización o alguien de su total confianza: puede quitar cualquier restricción, y es quien lleva el contexto y la dueña de la carpeta en Drive
 > 4. ¿Qué sistemas usan a diario?
 > 5. ¿Hay una primera área con la que empezar, y de quién es?
 
