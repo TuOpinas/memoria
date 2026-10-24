@@ -123,10 +123,10 @@ f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
 o4 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
 ok("ana@ejemplo.test" not in o4 and "No se sabe la cuenta de quien administra" not in o4, "«En Drive:» traduce la cuenta de Claude a la de Drive: ni «sin acceso» ni administrador desconocido")
 ok("Para cambiar" not in o4, f"con la cuenta de Drive declarada y el dueño «, de forma provisional», nada que cambiar ({[l for l in o4.split(chr(10)) if l.startswith('- ')][:3]})")
-ok("gabi@empresa.test escribe en operacion" in o4 and "el área no declara ninguna cuenta" in o4 and "si es su dueño Gabi Prueba" in o4, "quien escribe en un área sin cuenta declarada va a «Para comprobar», con el dueño por su nombre")
+ok("gabi@empresa.test escribe en operacion" in o4 and "el área no declara ninguna cuenta" in o4 and "si es su responsable Gabi Prueba" in o4, "quien escribe en un área sin cuenta declarada va a «Para comprobar», con el dueño por su nombre")
 d["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "reader")
 f.write_text(json.dumps(d)); o5 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
-ok("ana@empresa.test (dueño en ventas) no puede escribir en su área (tiene «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
+ok("ana@empresa.test (responsable en ventas) no puede escribir en su área (tiene «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
 # «En Drive:» con « y », al revés, mal escrita; y la cuenta de Claude que también está en Drive
 def con_linea(linea, drive):
     R5 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R4, R5)
@@ -143,5 +143,23 @@ ok("no da dos correos" in o8 and "compartir" not in o8.split("=== ACCIONES")[1],
 d3 = json.loads(json.dumps(d2)); d3["raiz"]["permisos"].append(u("ana@ejemplo.test", "organizer"))
 o9 = con_linea("En Drive: ana@ejemplo.test es ana@empresa.test", d3)
 ok("ana@ejemplo.test tiene" not in o9 and "Para cambiar" not in o9, "la cuenta de Claude que también está en Drive es la misma persona, no alguien sin declarar")
+print("La guia.md de la 1.22: «Acceso» y «Responsable»")
+BASE[:] = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "reader"), u("eva@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader")]   # las pruebas de arriba la tocan
+import shutil as _sh
+R22 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; _sh.copytree(R, R22)
+g = R22 / "guia.md"; t = g.read_text(encoding="utf-8")
+t = (t.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|")
+      .replace("| Todo el equipo |\n", "| Todo el equipo | Abierta |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo | Abierta |")
+      .replace("| Restringida: dirección |", "| Beto Prueba | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana Prueba y Beto Prueba | Restringida |"))
+g.write_text(t, encoding="utf-8")
+f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(bien()))
+o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("Todo cuadra" in o22 and "Para cambiar" not in o22, "con «Acceso», los mismos permisos cuadran igual")
+d = bien(); d["areas"]["personas"]["limitada"] = False; f.write_text(json.dumps(d))
+o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("personas/ está declarada restringida en guia.md, pero en Drive no tiene acceso limitado" in o22, "un área «Restringida» en «Acceso» sin acceso limitado en Drive se avisa")
+d = bien(); d["areas"]["ventas"]["limitada"] = True; f.write_text(json.dumps(d))
+o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("pon «Restringida» en su columna «Acceso»" in o22, "y al revés, se le dice que la marque en «Acceso»")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

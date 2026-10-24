@@ -74,24 +74,41 @@ def restringida_celda(celda):
     return bool(re.search(r"\brestringidas?\b", c, re.I)) and not re.search(r"\b(?:nada|no|nunca|sin|antes)\s+(?:[^\s]+\s+)?restringid", c, re.I)
 
 
+def columnas_areas(cab):
+    """Dónde está cada columna de la tabla de áreas, por su encabezado (como abrir.py): «Responsable» o «Dueño»,
+    «Cuenta», «Quién la lee» y, desde la 1.22, «Acceso»."""
+    n = [re.sub(r"[*_`]", "", x).strip().lower() for x in cab]
+    def pos(*nombres, defecto=None):
+        return next((i for i, x in enumerate(n) if x in nombres), defecto)
+    return {"responsable": pos("responsable", "dueño", "dueno", defecto=2), "cuenta": pos("cuenta", defecto=3),
+            "lectores": pos("quién la lee", "quien la lee", defecto=4), "acceso": pos("acceso")}
+
+
 def solo_nombre(d):
     return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
 
 
 def raiz_declarada(raiz):
     guia = leer(raiz / "guia.md") or ""
-    areas, filas, cab = [], seccion(guia, "Áreas").split("\n"), False
+    areas, filas, col = [], seccion(guia, "Áreas").split("\n"), None
     for l in filas:
         if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
             continue
-        if not cab:
-            cab = True; continue
         c = [x.strip() for x in l.strip().strip("|").split("|")]
-        if len(c) >= 5:
-            de, co, aviso = cuentas(c[3])
-            areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": c[0].strip("`").rstrip("/"), "dueno": solo_nombre(c[2]),
-                          "duenos": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4],
-                          "aviso": aviso, "en_celda": set(CORREO.findall((c[3] or "").lower()))})
+        if col is None:
+            col = columnas_areas(c); continue
+        if len(c) > max(v for v in col.values() if v is not None):
+            de, co, aviso = cuentas(c[col["cuenta"]])
+            lect = c[col["lectores"]]
+            if col["acceso"] is not None:
+                # 1.22: «Acceso» dice si está restringida y «Quién la lee», a quiénes
+                restr = bool(re.match(r"^[\W_]*restringid[oa]s?\b", c[col["acceso"]], re.I))
+                lect = ("Restringida: " + lect) if restr else lect
+            else:
+                restr = restringida_celda(lect)
+            areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": c[0].strip("`").rstrip("/"), "dueno": solo_nombre(c[col["responsable"]]),
+                          "duenos": de, "colaboran": co, "restringida": restr, "lectores": lect, "acceso": col["acceso"] is not None,
+                          "aviso": aviso, "en_celda": set(CORREO.findall((c[col["cuenta"]] or "").lower()))})
     quien = seccion(guia, "Quién responde por qué")
     ctx, adm, en_drive = "", "", ""
     for l in quien.split("\n"):
@@ -175,9 +192,9 @@ def raiz_declarada(raiz):
             vistos.add(d.name)
             quien = seccion(pm or "", "Quién participa")
             col = colaboran_en(quien)
-            md = re.search(r"^\s*[-*]?\s*\**\s*due[ñn][oa]\s*\**\s*:\s*(.+)$", quien, re.I | re.M)
+            md = re.search(r"^\s*[-*]?\s*\**\s*(?:due[ñn][oa]|responsable)\s*\**\s*:\s*(.+)$", quien, re.I | re.M)
             if not md:
-                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*due[ñn][oa]\s+([^.;,]+)", lineas.get(d.name, ""), re.I)
+                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*(?:due[ñn][oa]|responsable)\s+([^.;,]+)", lineas.get(d.name, ""), re.I)
             dueno, dueno_sin = nombres_de(md.group(1)) if md else (set(), [])
             if pm is None and d.name in lineas:
                 no_mirados.append((f"{a['slug']}/{d.name}/ (sin proyecto.md legible aquí)", True))
@@ -189,7 +206,7 @@ def raiz_declarada(raiz):
                 continue
             if re.match(r"^[\W_]*restringid[oa]\b", linea, re.I):
                 # restringido para esta cuenta: su acceso limitado se mira en Drive igual; quién colabora, no
-                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*due[ñn][oa]\s+([^.;,]+)", linea, re.I)
+                md = re.match(r"^[\W_]*restringid[oa]\s*:\s*(?:due[ñn][oa]|responsable)\s+([^.;,]+)", linea, re.I)
                 dueno, dueno_sin = nombres_de(md.group(1)) if md else (set(), [])
                 proyectos.append({"id": f"{a['slug']}/{slug}", "area": a["slug"], "colaboran": set(), "dueno": dueno, "dueno_sin": dueno_sin,
                                   "restringido": True, "tiene_restringido": False})
@@ -300,7 +317,7 @@ def comparar(raiz, drive):
                 notas.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta y aparece en una celda Cuenta que no se deja leer: corrige la celda antes de tocar su rol.")
             else:
                 a_decidir += 1
-                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara dueño ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
+                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
     for e in sorted(admins):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")
@@ -342,7 +359,7 @@ def comparar(raiz, drive):
         abiertos_en(f"El área {a['slug']}/", aa, ag, hall, notas)
         for e in sorted(a["duenos"] | a["colaboran"]):
             rol = ar.get(e)
-            papel = "dueño" if e in a["duenos"] else "colabora"
+            papel = "responsable" if e in a["duenos"] else "colabora"
             if rol in ESCRIBE_BIEN:
                 continue
             if rol == "writer" and not mi_unidad:
@@ -354,10 +371,10 @@ def comparar(raiz, drive):
                 if a["aviso"] and e in a["en_celda"]:
                     notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y aparece en su celda Cuenta, que no se deja leer: corrige la celda antes de tocar su rol.")
                 elif a["aviso"] and not a["en_celda"]:
-                    notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y el área no declara ninguna cuenta ({a['aviso']}): si es su dueño{(' ' + a['dueno']) if a['dueno'] else ''} o colabora, nada que cambiar; ponlo en la celda Cuenta de guia.md.")
+                    notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y el área no declara ninguna cuenta ({a['aviso']}): si es su responsable{(' ' + a['dueno']) if a['dueno'] else ''} o colabora, nada que cambiar; ponlo en la celda Cuenta de guia.md.")
                 else:
                     a_decidir += 1
-                    hall.append(f"{e} puede escribir en {a['slug']} («{NOM.get(rol, rol)}») y guia.md no lo declara dueño ni colaborador de esa área. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md; si no, cámbiale el rol a «Lector» ahí.")
+                    hall.append(f"{e} puede escribir en {a['slug']} («{NOM.get(rol, rol)}») y guia.md no lo declara responsable ni colaborador de esa área. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md; si no, cámbiale el rol a «Lector» ahí.")
         lim = bool(info.get("limitada"))
         if a["restringida"] and not lim:
             conservan = a["duenos"] | a["colaboran"] | a["leen"] | set(c for p in proyectos if p["area"] == a["slug"] for c in p["colaboran"] | p["dueno"])
@@ -366,7 +383,7 @@ def comparar(raiz, drive):
             if acc:
                 acciones.append(acc)
         elif lim and not a["restringida"]:
-            hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: escribe «Restringida: …» en su columna «Quién la lee», o quita el acceso limitado.")
+            hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: " + ("pon «Restringida» en su columna «Acceso»" if a.get("acceso") else "escribe «Restringida: …» en su columna «Quién la lee»") + ", o quita el acceso limitado.")
         elif lim:
             fuera = sorted(e for e in ar if e not in a["duenos"] | a["colaboran"] | a["leen"] and not admin(e, ar[e]))
             if fuera:
