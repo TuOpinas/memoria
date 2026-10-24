@@ -150,7 +150,9 @@ for modo in ("completo", "publico"):
                 p_.write_text(json.dumps({"data": json.loads(p_.read_text(encoding="utf-8")), "version": 3}), encoding="utf-8")
     s0 = _inv(); _gen(TRAB / f"inc0-{modo}", s0)
     _volcar(TRAB / f"inc0-{modo}", TRAB / f"base-inc-{modo}", envolver=(modo == "publico"))
-    hs = json.loads((TRAB / f"inc0-{modo}" / "meta" / "estado.json").read_text(encoding="utf-8")).get("huellas") or []
+    _est0 = json.loads((TRAB / f"inc0-{modo}" / "meta" / "estado.json").read_text(encoding="utf-8"))
+    hs = _est0.get("huellas") or []
+    ok(s0["inventario"].get("instante") and _est0.get("sincronizado") == s0["inventario"]["instante"], f"{modo}: «sincronizado» es el instante del inventario, no la hora de generar")
     ok(len(hs) >= 2, f"{modo}: la generación guarda en meta/estado una huella por proyecto ({len(hs)})")
     s1 = _inv("--sin-cambios", ",".join(hs))
     ok(not any(r_.count("/") >= 2 for r_ in s1["leer"]), f"{modo}: sin cambios, el inventario solo pide guia.md, premisas y los area.md ({len(s1['leer'])} de {len(s0['leer'])})")

@@ -648,7 +648,7 @@ def entregables_en_subcarpetas(carpeta):
         return 0
 
 
-def que_hay(pdoc, taller, dec):
+def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     """La capa calculada de «Qué hay» (decisión 2026-10-23): de cada pieza, cuántas decisiones del proyecto son posteriores
     a su última actualización, qué pasos de «Siguientes pasos» la nombran (lo que la bloquea), si el taller la cita algún
     entregable; y la trayectoria: las cadenas de decisiones que se reemplazan y de entregables reemplazados."""
@@ -665,13 +665,14 @@ def que_hay(pdoc, taller, dec):
             desp = [f for f in fechas_dec if f > act]
             if desp:
                 pz["decisiones_despues"] = len(desp); pz["ultima_decision_despues"] = desp[0]
-        # los pasos que la nombran: por el nombre del archivo o por dos palabras significativas del título
-        claves = {pz["nombre"].lower()}
+        # los pasos que la nombran (1.22.1): por el nombre del archivo como palabra entera (con extensión, o compuesto con
+        # guiones, o entre comillas o backticks: «plan» suelto no nombra plan.md), o por tres palabras significativas del título
+        # (las dos, si el título solo tiene dos)
+        nombra = nombra_pieza(pz)
         sig = PALABRAS_SIG(pz.get("titulo") or "")
         bloq = []
         for t_ in pasos:
-            tl = t_.lower()
-            if any(k in tl for k in claves) or (len(sig) >= 2 and len(sig & PALABRAS_SIG(t_)) >= 2):
+            if nombra(t_) or (len(sig) >= 2 and len(sig & PALABRAS_SIG(t_)) >= min(3, len(sig))):
                 bloq.append(t_[:160])
         if bloq:
             pz["pasos"] = bloq[:3]
@@ -694,13 +695,26 @@ def que_hay(pdoc, taller, dec):
                 cur = (reemplaza.get(cur) or [None])[0]
             nodos.reverse()
             cadenas.append({"de": "decisiones", "pasos": nodos})
-    # trayectoria por entregables: reemplazado_por apunta al sustituto, por nombre de archivo
+    # trayectoria por entregables: reemplazado_por apunta al sustituto por su ruta (1.22.1): relativa a la raíz, al
+    # proyecto («entregables/x.md», «taller/x.md») o, si no hay dos piezas con ese nombre, solo el nombre; solo dentro
+    # del mismo proyecto. Las que no resuelven se cuentan en el resumen.
     por_arch = {pz["archivo"]: pz for pz in piezas}
-    sucesor = {}
+    por_ruta = {("entregables/" if pz["tipo"] == "entregable" else "taller/") + pz["archivo"]: pz["archivo"] for pz in piezas}
+    nombres_ = {}
     for pz in piezas:
-        rp = (pz.get("reemplazado_por") or "").split("/")[-1]
-        if rp in por_arch and rp != pz["archivo"]:
-            sucesor[pz["archivo"]] = rp
+        nombres_.setdefault(pz["archivo"].split("/")[-1], []).append(pz["archivo"])
+    sucesor, sin_resolver = {}, 0
+    for pz in piezas:
+        rp = re.sub(r"^\./", "", (pz.get("reemplazado_por") or "").strip().strip("`"))
+        if not rp:
+            continue
+        if ruta_proyecto and rp.startswith(ruta_proyecto.rstrip("/") + "/"):
+            rp = rp[len(ruta_proyecto.rstrip("/")) + 1:]
+        destino = por_ruta.get(rp) or (nombres_[rp][0] if "/" not in rp and len(nombres_.get(rp, [])) == 1 else None)
+        if destino and destino != pz["archivo"]:
+            sucesor[pz["archivo"]] = destino
+        else:
+            sin_resolver += 1
     con_sucesor = set(sucesor.values())
     for a0 in sorted(sucesor):
         if a0 in con_sucesor:
@@ -722,6 +736,8 @@ def que_hay(pdoc, taller, dec):
                "desfasadas": sum(1 for pz in piezas if pz.get("decisiones_despues")),
                "bloqueadas": sum(1 for pz in piezas if pz.get("pasos")),
                "cadenas": len(cadenas)}
+    if sin_resolver:
+        resumen["reemplazos_sin_resolver"] = sin_resolver   # un reemplazado_por que no apunta a ninguna pieza de este proyecto
     if pdoc.get("_sub"):
         resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # se listan en la siguiente versión; mientras, se cuentan
     if cadenas:
@@ -733,6 +749,17 @@ def que_hay(pdoc, taller, dec):
 
 # ---------- clasificación de pasos ----------
 STOP = set("de la el los las un una y o en a al del para por con sin que se su sus lo le les es son como más ya no si este esta esto ese esa eso hay hasta desde sobre entre cuando donde cada muy también antes después tras ante aún sólo solo mismo misma otra otro otros otras todo toda todos todas ser estar tener hacer poner".split())
+def nombra_pieza(pz):
+    """Una función texto → si el texto nombra la pieza: su archivo con extensión, su nombre si es compuesto («kit-cuentas»),
+    o su nombre suelto entre comillas o backticks, siempre como palabra entera."""
+    stem = re.escape(pz["nombre"].lower()); arch = re.escape(pz["archivo"].split("/")[-1].lower())
+    pats = [r"(?<![\w/.-])" + arch + r"(?![\w-])", r"[`«\"']" + stem + r"(?:\.\w+)?[`»\"']"]
+    if "-" in pz["nombre"] or "_" in pz["nombre"]:
+        pats.append(r"(?<![\w-])" + stem + r"(?![\w-])")
+    rx = re.compile("|".join(pats), re.I)
+    return lambda t: bool(rx.search(t or ""))
+
+
 PALABRAS_SIG = lambda t: {w for w in re.findall(r"[a-záéíóúñ]{4,}", t.lower()) if w not in STOP}
 
 def naturaleza(texto):
@@ -896,7 +923,10 @@ def sello(inv):
 # ---------- primer tiempo: el inventario, en la computadora ----------
 if INVENTARIO:
     leer_ = []
-    inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
+    # «instante»: cuándo se miró la carpeta, en la zona de la organización. La generación lo estampa como «sincronizado»,
+    # y no la hora en que genera: un cierre que llegue entre el inventario y la generación no sale en esta página, así que
+    # su marca no puede quedar por detrás de «sincronizado» (1.22.1, hallazgo 30 de la revisión de la 1.21)
+    inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "instante": datetime.datetime.now(TZ).isoformat(timespec="minutes"), "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
     _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
     huellas, reusar, por_proyecto, huellas_taller = {}, [], {}, {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
@@ -1234,7 +1264,7 @@ for a in areas_guia:
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
         pdoc["_sub"] = entregables_en_subcarpetas(pc)
-        pdoc["que_hay"], pdoc["_que_hay_detalle"] = que_hay(pdoc, taller_de(pc), dec)
+        pdoc["que_hay"], pdoc["_que_hay_detalle"] = que_hay(pdoc, taller_de(pc), dec, rel(pc))
         pdoc.pop("_sub", None)
         docs["proyectos"][pid] = pdoc
     docs["areas"][a["slug"]] = area_doc
@@ -1301,7 +1331,7 @@ enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candida
 fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
 docs["meta"]["estado"] = {
-    "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"), "zona": str(TZ),
+    "organizacion": org, "snapshot": HOY, "sincronizado": (INV or {}).get("instante") or datetime.datetime.now(TZ).isoformat(timespec="minutes"), "zona": str(TZ),
     "huella_candidatos": _huella_cand,     # la de «Por dónde empezar» que esta corrida ofreció: si no cambia, no se renueva
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,

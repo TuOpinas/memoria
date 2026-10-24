@@ -56,6 +56,10 @@ LIMITE_LINEAS = 1500
 MAX_AFIRMA = 6
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
+# la cola no crece sin tope (1.22.1, hallazgo 31 de la revisión de la 1.21): como mucho tantas propuestas pendientes por
+# proyecto, y una pendiente que nadie resolvió en tantos días se retira y queda juzgada, para que no vuelva igual
+MAX_PENDIENTES = 8
+CADUCIDAD_DIAS = 60
 NIEGA = re.compile(r"\b(no|falta|faltan|pendiente|pendientes|sin|todav[ií]a|a[úu]n|hasta que|queda|quedan|sigue|siguen)\b", re.I)
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
 
@@ -351,20 +355,40 @@ def sumar_juicio(salida, juicio, cola):
     if isinstance(juicio, list):
         juicio = {"decisiones": juicio}
     # todo lo que se puso delante del modelo queda juzgado, haya hallazgo o no: no se vuelve a pedir (plan_subida lo lleva a meta/estado)
-    bar["juzgado"] = {"ids": sorted({id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"]) for j in bar.get("para_juicio", [])}
+    previo = bar.get("juzgado") or {}      # las caducadas que el barrido ya dejó juzgadas se conservan
+    bar["juzgado"] = {"ids": sorted(set(previo.get("ids") or [])
+                                    | {id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"]) for j in bar.get("para_juicio", [])}
                                     | {id_juicio("afirma", j["proyecto"], "afirma|" + j["ruta"]) for j in bar.get("para_afirma", [])}),
-                      "contraste": sorted(id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", []))}
+                      "contraste": sorted(set(previo.get("contraste") or []) | {id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", [])})}
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
     ya = {d["id"] for d in cargar_cola(cola) if d["data"].get("tipo") == "propuesta"} | {x["id"] for x in bar["anadir"]}
     ahora = ahora_en(salida)
     nuevas = {"decisiones": 0, "afirma": 0, "candidatos": 0, "contradicciones": 0}
+    quitadas = {b["id"] for b in bar.get("borrar", [])}
+    pendientes = {}
+    for d in cargar_cola(cola):
+        if d["data"].get("tipo") == "propuesta" and d["data"].get("estado") != "descartada" and d["id"] not in quitadas:
+            pendientes[d["data"].get("proyecto")] = pendientes.get(d["data"].get("proyecto"), 0) + 1
+    for x in bar["anadir"]:
+        try:
+            pr = json.loads((salida / x["archivo"]).read_text(encoding="utf-8")).get("proyecto")
+        except (OSError, ValueError):
+            continue
+        pendientes[pr] = pendientes.get(pr, 0) + 1
+
+    sin_hueco = set()
 
     def guardar(pid, data):
+        if pendientes.get(data["proyecto"], 0) >= MAX_PENDIENTES:
+            sin_hueco.add(pid)      # el proyecto ya tiene bastantes pendientes: no entra, y se volverá a pedir más adelante
+            return False
+        pendientes[data["proyecto"]] = pendientes.get(data["proyecto"], 0) + 1
         (salida / "cambios").mkdir(parents=True, exist_ok=True)
         (salida / "cambios" / f"{pid}.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         bar["anadir"].append({"id": pid, "archivo": f"cambios/{pid}.json"}); ya.add(pid)
+        return True
 
     for j in juicio.get("decisiones", []) if isinstance(juicio.get("decisiones"), list) else []:
         if not isinstance(j, dict) or (j.get("proyecto"), j.get("fecha")) not in pedido:
@@ -373,11 +397,12 @@ def sumar_juicio(salida, juicio, cola):
         pid = id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"])
         if not dec or pid in ya:
             continue
-        guardar(pid, {"tipo": "propuesta", "clase": "decision-sin-registrar", "proyecto": j["proyecto"],
+        ok_ = guardar(pid, {"tipo": "propuesta", "clase": "decision-sin-registrar", "proyecto": j["proyecto"],
                       "texto": una_linea(f"Registrar en decisiones.md lo que la sesión del {j['fecha']} cuenta como decidido: {dec}"),
                       "por_que": "sesiones.md la narra y decisiones.md no tiene entrada de esa fecha", "origen": "barrido",
                       "estado": "pendiente", "creado": ahora})
-        nuevas["decisiones"] += 1
+        if ok_:
+            nuevas["decisiones"] += 1
     for j in juicio.get("afirma", []) if isinstance(juicio.get("afirma"), list) else []:
         if not isinstance(j, dict) or j.get("ruta") not in pedido_afirma:
             continue
@@ -388,11 +413,12 @@ def sumar_juicio(salida, juicio, cola):
         pid = id_juicio("afirma", proy, "afirma|" + j["ruta"])
         if not linea or pid in ya:
             continue
-        guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea,
+        ok_ = guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea,
                       "texto": una_linea(f"Añadir a la cabecera de {j['ruta']}: aportacion: «{linea}»"),
                       "por_que": "el inventario del tablero necesita saber qué sostiene cada pieza", "origen": "barrido",
                       "estado": "pendiente", "creado": ahora})
-        nuevas["afirma"] += 1
+        if ok_:
+            nuevas["afirma"] += 1
     for clase, clave, campo_txt, cabeza, por_que in (
             ("candidato-entregable", "candidatos", "entregable", "Candidato a entregable", "varias piezas del taller sostienen lo mismo y ningún entregable lo recoge"),
             ("contradiccion", "contradicciones", "texto", "Contradicción", "dos piezas del proyecto sostienen cosas que no pueden ser ciertas a la vez")):
@@ -407,12 +433,14 @@ def sumar_juicio(salida, juicio, cola):
             if not linea or pid in ya:
                 continue
             cortas = ", ".join(r.split("/", 2)[-1] for r in rutas)
-            guardar(pid, {"tipo": "propuesta", "clase": clase, "proyecto": j["proyecto"], "rutas": rutas,
+            ok_ = guardar(pid, {"tipo": "propuesta", "clase": clase, "proyecto": j["proyecto"], "rutas": rutas,
                           "texto": una_linea(f"{cabeza}: {linea} (de {cortas})"), "por_que": por_que, "origen": "barrido",
                           "estado": "pendiente", "creado": ahora})
-            nuevas[clave] += 1
+            if ok_:
+                nuevas[clave] += 1
+    bar["juzgado"]["ids"] = [i for i in bar["juzgado"]["ids"] if i not in sin_hueco]
     (salida / "barrido.json").write_text(json.dumps(bar, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"],
+    print(json.dumps({"sin_hueco": len(sin_hueco), "propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"],
                       "propuestas_candidatos": nuevas["candidatos"], "propuestas_contradicciones": nuevas["contradicciones"]}, ensure_ascii=False))
 
 
@@ -449,21 +477,35 @@ def main():
                                                               (opt("--cuenta") or "").strip().lower() or None, juzgado_de(opt("--base")))
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = ahora_en(salida)
+    juz = juzgado_de(opt("--base"))
+    # caducan las pendientes que nadie resolvió en CADUCIDAD_DIAS: se retiran y quedan juzgadas, así no vuelven iguales;
+    # si lo que observan cambia, su id cambia y vuelven como nuevas
+    lim = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=CADUCIDAD_DIAS)).isoformat()
+    caducadas = {d["id"] for d in existentes if d["data"].get("estado") != "descartada" and fecha_ok(str(d["data"].get("creado") or "")[:10])
+                 and str(d["data"]["creado"])[:10] < lim}
+    pendientes = {}
+    for d in existentes:
+        if d["data"].get("estado") != "descartada" and d["id"] not in caducadas and (d["data"].get("proyecto") not in vistos or d["id"] in nuevos_ids):
+            pendientes[d["data"].get("proyecto")] = pendientes.get(d["data"].get("proyecto"), 0) + 1
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
-    anadir = []
+    anadir, sin_hueco = [], 0
     for p in props:
-        if p["id"] in ya:
-            continue            # ya está (pendiente o descartada): no se vuelve a proponer
+        if p["id"] in ya or p["id"] in juz["ids"]:
+            continue            # ya está (pendiente o descartada), o caducó sin que nadie la resolviera: no se vuelve a proponer
+        if pendientes.get(p["data"]["proyecto"], 0) >= MAX_PENDIENTES:
+            sin_hueco += 1; continue      # el proyecto ya tiene bastantes pendientes: entra cuando se resuelvan
+        pendientes[p["data"]["proyecto"]] = pendientes.get(p["data"]["proyecto"], 0) + 1
         p["data"]["creado"] = ahora
         (salida / "cambios" / f"{p['id']}.json").write_text(json.dumps(p["data"], ensure_ascii=False), encoding="utf-8")
         anadir.append({"id": p["id"], "archivo": f"cambios/{p['id']}.json"})
     borrar = []
     for d in existentes:
-        if d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
+        if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(
-        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "proyectos": vistos}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "para_juicio": len(juicio),
+        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "proyectos": vistos,
+         "juzgado": {"ids": sorted(caducadas), "contraste": []}}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "caducadas": len(caducadas), "sin_hueco": sin_hueco, "para_juicio": len(juicio),
                       "para_afirma": len(afirma), "para_contraste": len(contraste), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
 
 

@@ -265,6 +265,30 @@ try:
     ok(dels == [{"op": "delete", "collection": "cambios", "doc_id": idv, "if_version": 7}], "la que ya no vale va como «delete» con la versión leída")
     ok(ops[-1]["collection"] == "meta" and ops[-1]["doc_id"] == "estado", "meta/estado sigue yendo la última")
     ok(plan["propuestas"] == {"nuevas": len(docs) - 1, "retiradas": 1}, "el plan cuenta las propuestas")
+
+    print("la cola con tope y caducidad (1.22.1)")
+    rz = tmp / "raiz-tope"
+    # un proyecto con nueve pasos que la sesión da por hechos: nueve propuestas posibles, entran ocho
+    pasos9 = [f"Revisar el contrato con {n} esta semana" for n in ("Acmetec", "Bodegas", "Cartones", "Dulceria", "Empaques", "Farmacos", "Grafica", "Herrajes", "Imprenta")]
+    proyecto(rz, "ventas", "lleno", "2026-10-20", pasos9, sesion("2026-10-20", "contratos", ". ".join(f"Se revisó el contrato con {n} esta semana" for n in ("Acmetec", "Bodegas", "Cartones", "Dulceria", "Empaques", "Farmacos", "Grafica", "Herrajes", "Imprenta")) + "."))
+    st = tmp / "st"; st.mkdir()
+    bt, dt = correr(rz, st)
+    ok(len(dt) == 8, f"como mucho ocho pendientes por proyecto ({len(dt)})")
+    # la cola trae una pendiente de hace 70 días y otra descartada igual de vieja
+    colt = tmp / "colat"; colt.mkdir()
+    vieja = next(iter(dt)); dv = dict(dt[vieja], creado="2026-08-10T10:00-06:00")
+    escribir(colt / f"{vieja}.json", json.dumps({"id": vieja, "data": dv, "version": 3}))
+    escribir(colt / "prop-x-descartada.json", json.dumps({"id": "prop-x-descartada", "data": {"tipo": "propuesta", "clase": "rotacion", "proyecto": "ventas--lleno", "estado": "descartada", "creado": "2026-08-01T10:00-06:00"}, "version": 1}))
+    st2 = tmp / "st2"; st2.mkdir()
+    bt2, dt2 = correr(rz, st2, colt)
+    ok(vieja in {x["id"] for x in bt2["borrar"]} and "prop-x-descartada" not in bt2["juzgado"]["ids"], "la pendiente de hace más de 60 días se retira; una descartada no caduca")
+    ok(vieja in bt2["juzgado"]["ids"] and vieja not in dt2, "y queda juzgada: no vuelve igual en la misma corrida")
+    vol = tmp / "volt"; (vol / "meta").mkdir(parents=True)
+    escribir(vol / "meta/estado.json", json.dumps({"juzgado": bt2["juzgado"]}))
+    st3 = tmp / "st3"; st3.mkdir()
+    r = subprocess.run([sys.executable, str(BARRIDO), str(rz), str(st3), "--hoy", "2026-10-23", "--base", str(vol)], capture_output=True, text=True)
+    d3 = {q.stem for q in (st3 / "cambios").glob("*.json")}
+    ok(r.returncode == 0 and vieja not in d3 and len(d3) == 8, f"ni en la siguiente, y su hueco lo ocupa la novena ({len(d3)})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
