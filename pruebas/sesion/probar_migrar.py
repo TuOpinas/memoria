@@ -44,6 +44,10 @@ def func(ruta):
     return src[i:j]
 ok(func(MIG) == func(ABRIR), "marcas_anteriores y ARCHIVOS_ANTERIORES iguales en los dos scripts")
 
+print("abrir.py: al responsable de contexto le ofrece también las áreas de otros responsables")
+o = subprocess.run([sys.executable, str(ABRIR), str(raiz_nueva()), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok("Veredicto: ANTERIOR en ventas, operacion, archivo, personas (de Beto Prueba), guia.md · se pregunta antes de responder" in o, "las suyas, las de Beto que su carpeta deja leer (legal no está) y guia.md, y que se pregunta antes de responder")
+
 print("migrar_estructura.py: --plan no escribe nada")
 R = raiz_nueva(); antes = huellas(R)
 c, s = corre(R, "--cuenta", "ana@ejemplo.test", "--plan")
@@ -53,8 +57,11 @@ print("migrar_estructura.py: la migración de la cuenta de Ana")
 dec_antes = {k: v for k, v in huellas(R).items() if k.endswith("decisiones.md") or k.startswith("base/") or k.startswith("personas/")}
 ses_antes = (R / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
 c, s = corre(R, "--cuenta", "ana@ejemplo.test", "--nombre", "Ana Prueba", "--plugin", "1.22.0")
-ok(c == 0 and s["guia"] and set(s["areas"]) == {"ventas", "operacion", "futura", "archivo"} and set(s["pendientes"]) == {"personas", "legal"}, "solo sus áreas, y guia.md porque responde por el contexto; las de Beto quedan pendientes")
-ok({k: v for k, v in huellas(R).items() if k in dec_antes} == dec_antes, "no toca decisiones.md, base/ ni las áreas de otra cuenta")
+ok(c == 0 and s["guia"] and set(s["areas"]) == {"ventas", "operacion", "futura", "archivo", "personas", "legal"} and set(s["ajenas"]) == {"personas", "legal"} and not s["pendientes"], "sus áreas, guia.md y, porque responde por el contexto, también las de Beto")
+ok({k: v for k, v in huellas(R).items() if k in dec_antes and not k.startswith("personas/")} == {k: v for k, v in dec_antes.items() if not k.startswith("personas/")}
+   and all(v == huellas(R).get(k) for k, v in dec_antes.items() if k.endswith("decisiones.md")), "no toca decisiones.md ni base/")
+sp = (R / "personas/nomina/sesiones.md").read_text(encoding="utf-8").split("\n## ")[1]
+ok("## Panorama" not in (R / "personas/area.md").read_text(encoding="utf-8") and "Sesión de: Ana Prueba, responsable de contexto, por Beto Prueba · plugin 1.22.0" in sp, "el área de Beto queda migrada, y su bitácora dice que la migró Ana por él")
 g = (R / "guia.md").read_text(encoding="utf-8")
 ok("| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |" in g and "| Restringida: dirección | Restringida |" in g and "| Todo el equipo | Abierta |" in g, "guia.md: Responsable y Acceso; «Quién la lee» se queda como estaba, para los plugins 1.21")
 a = (R / "ventas/area.md").read_text(encoding="utf-8")
@@ -85,7 +92,9 @@ ok(c == 0 and not s2["archivos"] and not s2["entradas"] and huellas(R) == antes,
 o = subprocess.run([sys.executable, str(ABRIR), str(R), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
 ok("Veredicto: AL DIA" in o, "abrir.py la da por al día para Ana")
 o = subprocess.run([sys.executable, str(ABRIR), str(R), "--cuenta", "beto@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
-ok("Veredicto: ANTERIOR en personas" in o, "y a Beto le ofrece migrar su área")
+ok("Veredicto: AL DIA" in o, "y a Beto ya no le ofrece nada: su área la migró el responsable de contexto")
+o = subprocess.run([sys.executable, str(ABRIR), str(raiz_nueva()), "--cuenta", "beto@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok("Veredicto: ANTERIOR en personas ·" in o, "en una raíz sin migrar, a Beto le ofrece solo su área")
 
 print("migrar_estructura.py: nada se pierde cuando conviven el nombre viejo y el nuevo")
 R5 = raiz_nueva()
@@ -114,7 +123,9 @@ c, s7 = corre(R7, "--cuenta", "ana@ejemplo.test")
 p7 = (R7 / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
 ok("## Estado actual" in p7 and "Responsable: Ana Prueba" in p7 and "Entra: Cliente Uno" in p7 and any("ya existía" in x["motivo"] for x in s7["conflictos"]) and (R7 / "ventas/cuentas/taller/estado-anterior.md").read_text(encoding="utf-8") == "ya estaba\n", "con un estado-anterior.md que ya existía, el resto se migra y «Estado actual» se queda")
 o7 = subprocess.run([sys.executable, str(ABRIR), str(R7), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
-ok("Veredicto: ANTERIOR en ventas" in o7, "y la apertura lo sigue ofreciendo, porque queda «Estado actual»")
+ok("Veredicto: AL DIA" in o7, "la apertura mínima no baja a los proyectos de un área migrada, y no vuelve a ofrecer")
+o7 = subprocess.run([sys.executable, str(ABRIR), str(R7), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("Estructura a medias: este proyecto conserva «Estado actual»" in o7.split("=== AVISOS")[1], "y al abrir ese proyecto lo avisa, porque queda «Estado actual»")
 
 print("migrar_estructura.py: plantillas, comillas y una segunda tabla")
 R8 = raiz_nueva()
@@ -164,7 +175,7 @@ def esp(*a):
     return r.returncode, r.stdout, r.stderr
 C = pathlib.Path(tempfile.mkdtemp()) / "uploads" / "raiz"
 listado = pathlib.Path(tempfile.mkdtemp()) / "listado.txt"
-mias = ("ventas", "operacion", "futura", "archivo")
+mias = ("ventas", "operacion", "futura", "archivo", "personas", "legal")   # el responsable de contexto migra también las de Beto
 listado.write_text("\n".join(p.relative_to(RD).as_posix() for a_ in mias if (RD / a_).is_dir() for p in sorted((RD / a_).rglob("*")) if p.is_file()), encoding="utf-8")
 pedidas, rondas = [], 0
 def trae(rs):

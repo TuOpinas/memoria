@@ -358,6 +358,12 @@ if CUENTA:
                   f"Se escribe «correo del responsable · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
 
 
+def solo_nombre(d):
+    """El dueño sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
+    «Dirección (Ana, Beto)» se queda. Como el tablero."""
+    return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
+
+
 # ---------- la estructura de la 1.22 ----------
 # La misma función en migrar_estructura.py, que renombra justo lo que esta detecta; probar_migrar.py comprueba que coinciden.
 def marcas_anteriores(texto, tipo):
@@ -377,10 +383,16 @@ ARCHIVOS_ANTERIORES = ("fuentes/enlaces.md", "restringido/enlaces.md")
 
 
 def area_anterior(slug):
-    """Cierto si el área (su area.md, o algún proyecto con proyecto.md dentro) tiene todavía la estructura de la 1.21."""
+    """Cierto si el área (su area.md, o algún proyecto con proyecto.md dentro) tiene todavía la estructura de la 1.21.
+    Un area.md con «## Estatus» y «Responsable:» en «Quién participa», sin ninguna marca vieja, se da por migrada sin
+    bajar a sus proyectos: la migración pasa el área entera de una vez, y así la apertura no lee todos los proyecto.md
+    de una raíz ya migrada (1.22.1). Con «Estatus» solo no basta: un cierre 1.22 lo escribe también en un área sin migrar."""
     t = leer(RAIZ / slug / "area.md")
-    if t and marcas_anteriores(cabecera(t)[1], "area"):
+    cuerpo = cabecera(t)[1] if t else ""
+    if t and marcas_anteriores(cuerpo, "area"):
         return True
+    if t and re.search(r"^## Estatus\s*$", cuerpo, re.M) and re.search(r"^\s*[-*]?\s*\**\s*Responsable\s*\**\s*:", seccion(cuerpo, "Quién participa"), re.M):
+        return False
     try:
         proyectos = sorted(d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
     except OSError:
@@ -395,10 +407,14 @@ titulo("ESTRUCTURA")
 if not CUENTA:
     print("Veredicto: SIN CUENTA")
 else:
+    # el responsable de contexto migra también las áreas de otros responsables (1.22.1), las que su carpeta deja leer
     propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
+    ajenas_viejas = [f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})" for a in areas
+                     if es_resp and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir() and area_anterior(a["slug"])]
     guia_vieja = es_resp and guia_anterior
-    if propias_viejas or guia_vieja:
-        print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + (["guia.md"] if guia_vieja else [])))
+    if propias_viejas or ajenas_viejas or guia_vieja:
+        print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))
+              + " · se pregunta antes de responder, con la herramienta de preguntas (migracion.md, «La pregunta»)")
     else:
         print("Veredicto: AL DIA")
 
@@ -442,12 +458,6 @@ def indice_proyectos(texto_area):
 
 def declarado(linea):
     return bool(re.match(r"^- `[^`]+`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", linea, re.I))
-
-
-def solo_nombre(d):
-    """El dueño sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
-    «Dirección (Ana, Beto)» se queda. Como el tablero."""
-    return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
 
 
 def lectores_de(celda):
@@ -591,6 +601,12 @@ cerrado = any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cab
 
 titulo("ENTREGABLES (cabeceras)")
 avisos = []
+# un proyecto que la migración dejó a medias (un conflicto) en un área ya migrada: la apertura mínima no baja a los
+# proyectos de un área migrada, así que se dice aquí, al abrirlo
+_marcas = marcas_anteriores(cabecera(tp)[1], "proyecto") + [f for f in ARCHIVOS_ANTERIORES if (pc / f).is_file()]
+if _marcas and not area_anterior(area_activa):
+    avisos.append(f"Estructura a medias: este proyecto conserva {', '.join('«' + m + '»' for m in _marcas)} de antes de la 1.22 aunque su área ya "
+                  f"está migrada (la migración lo dejó por un conflicto). Se resuelve en esta sesión: lo que siga valiendo de lo viejo, a su sección nueva.")
 ents = []
 d = pc / "entregables"
 try:

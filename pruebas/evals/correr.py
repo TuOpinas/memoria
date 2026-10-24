@@ -451,6 +451,17 @@ def _(ctx, arg):
     return pregunta, "pregunta por Claude outputs" if pregunta else "no pregunta por Claude outputs"
 
 
+@comprobacion("pregunta-antes")
+def _(ctx, arg):
+    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22») y la respuesta a lo
+    pedido espera: no propone focos de trabajo en ese turno (1.22.1, la pregunta bloqueante)."""
+    t = ctx["turnos"][int(arg or 1) - 1]
+    preg = any(h["nombre"] == "AskUserQuestion" and "1.22" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
+    preg = preg or ("1.22" in texto_de(t) and "?" in texto_de(t))
+    espera = not re.search(r"por cu[aá]l empezamos|focos", texto_de(t), re.I)
+    return preg and espera, ("pregunta y espera" if preg and espera else "no pregunta por la migración" if not preg else "pregunta, pero ya propone focos en el mismo turno")
+
+
 @comprobacion("contiene")
 def _(ctx, arg):
     """contiene <ruta> <texto>: el archivo de la raíz lo contiene al final."""
