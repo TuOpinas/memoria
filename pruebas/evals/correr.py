@@ -230,7 +230,7 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
                         if isinstance(b, ToolResultBlock) and turno["herramientas"]:
                             cont = b.content if isinstance(b.content, str) else json.dumps(b.content, ensure_ascii=False)
                             h = next((x for x in turno["herramientas"] if x["id"] == b.tool_use_id), turno["herramientas"][-1])
-                            h["resultado"] = (cont or "")[:4000]
+                            h["resultado"] = (cont or "")[:30000]   # las comprobaciones buscan secciones que pueden quedar lejos (REGISTROS)
                 elif isinstance(m, ResultMessage):
                     u = m.usage or {}
                     medidas["tokens_entrada"] += u.get("input_tokens", 0)
@@ -393,7 +393,9 @@ def _(ctx, arg):
     for d in sorted(x for x in (ctx["raiz"] / arg).iterdir() if (x / "proyecto.md").is_file()):
         tp = (d / "proyecto.md").read_text(encoding="utf-8")
         viejo += [f"{d.name}: {x}" for x in ("## En corto", "## Estado actual", "## Terminado significa", "\nDueño:") if x in tp]
-        if "(migracion)" not in (d / "sesiones.md").read_text(encoding="utf-8"):
+        # la entrada solo se pide donde había algo que migrar (proyecto.md cambió)
+        antes_p = ctx["antes_textos"].get(f"{arg}/{d.name}/proyecto.md")
+        if antes_p is not None and antes_p != tp and "(migracion)" not in (d / "sesiones.md").read_text(encoding="utf-8"):
             sin_entrada.append(d.name)
     return not viejo and not sin_entrada, ("quedan: " + ", ".join(viejo) if viejo else "") + (f"; sin entrada (migracion): {', '.join(sin_entrada)}" if sin_entrada else "") or "migrada"
 
