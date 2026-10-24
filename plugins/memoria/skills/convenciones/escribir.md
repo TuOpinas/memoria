@@ -4,13 +4,10 @@ Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en u
 
 ## 2. Estructura de `area.md`
 
-Fija, porque varias skills leen y escriben en ella. Responde las mismas preguntas que el proyecto y en el mismo orden: qué es, cómo va, qué contiene, quién.
+Fija, porque varias skills leen y escriben en ella. Responde las mismas preguntas que el proyecto y en el mismo orden: cómo va, qué es, qué contiene, quién. El orden de las secciones es este en los dos niveles; una sección que falta se crea en su sitio.
 
 ```markdown
 # [Nombre del área]
-
-## Qué es
-[Dos o tres líneas]
 
 ## Estatus
 AAAA-MM-DD · **[Cómo está el área, en una frase.]**
@@ -19,6 +16,9 @@ AAAA-MM-DD · **[Cómo está el área, en una frase.]**
 - **Falta decidir:** [qué, y quién lo decide]
 - **Preocupa:** [lo que puede salir mal]
 - `nombre-del-proyecto/`: [cómo va, en una frase]
+
+## Qué es
+[Dos o tres líneas]
 
 ## Proyectos
 - `nombre-del-proyecto/` — qué es
@@ -58,13 +58,15 @@ AAAA-MM-DD · **[Lo último que se completó, y lo que sigue y cuándo.]**
 Entra: [lo que entra]
 No entra: [lo que queda fuera]
 
+## Siguientes pasos
+- [Lista corta]
+
 ## Quién participa
 Responsable: [nombre] ([área])
 Colabora: [nombre (correo)], solo si alguien colabora en este proyecto sin colaborar en el área
-
-## Siguientes pasos
-- [Lista corta]
 ```
+
+Las secciones van en este orden, el mismo patrón que el área (sección 2): cómo va, qué es, qué contiene, quién.
 
 `Estatus` y `Siguientes pasos` son las dos únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del responsable.
 
@@ -121,8 +123,11 @@ Un registro nunca vive dentro de un archivo vivo, porque la primera reescritura 
 Decidió: Nombre Apellido
 Por qué: … (puede ser más de un párrafo)
 Descartado: …
+Reemplaza: area/proyecto#AAAA-MM-DD · su título
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
+
+Las líneas van en este orden y solo están las que tienen algo que decir: `Descartado`, `Reemplaza` (o `Responde a`) y `Afecta a` son opcionales. `Afecta a` va siempre la última, porque es la que avisa a otros proyectos.
 
 Las entradas anteriores a la 1.22 dicen `Descartamos:`; se quedan así, y los scripts leen las dos formas.
 

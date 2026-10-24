@@ -184,7 +184,7 @@ Fija, porque varias skills leen y escriben en ella. Está en `escribir.md`, junt
 
 | Archivo | Tipo | Qué contiene |
 |---|---|---|
-| `proyecto.md` | Vivo | Estatus, objetivo, alcance, quién participa, siguientes pasos |
+| `proyecto.md` | Vivo | Estatus, objetivo, alcance, siguientes pasos, quién participa |
 | `decisiones.md` | Registro | Qué se decidió, cuándo, por qué, qué se descartó y a qué afecta |
 | `sesiones.md` | Registro | En qué se trabajó cada día y qué se avanzó |
 | `entregables/` | Vivo | El producto del proyecto, en cualquier estado |

@@ -87,7 +87,7 @@ av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8"); import re as _re
 (Rv2 / "ventas/area.md").write_text(_re.sub(r"## Panorama\n.*?(?=^## )", "", av2, flags=_re.S | _re.M), encoding="utf-8")
 c, sv = corre(Rv2, {"estatus_area": "NUEVO-ESTATUS"}, "--cuenta", "ana@ejemplo.test")
 av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8")
-ok(c == 0 and av2.index("## Estatus") < av2.index("## Proyectos"), "en un área sin Panorama, el Estatus se crea antes de Proyectos")
+ok(c == 0 and av2.index("## Estatus") < av2.index("## Qué es") < av2.index("## Proyectos"), "en un área sin Panorama, el Estatus se crea debajo del título")
 pb = Rv2 / "ventas/cuentas/entregables/propuesta-base.md"
 pb.write_text(pb.read_text(encoding="utf-8").replace("estado: vigente\n", 'estado: vigente\naportacion: "Toda propuesta parte de esta estructura."\n', 1), encoding="utf-8")
 c, sv = corre(Rv2, {"area": {"linea": "- `cuentas/` — x", "entregables": [{"archivo": "propuesta-base.md"}, {"archivo": "no-existe.md"}]}}, "--cuenta", "ana@ejemplo.test")

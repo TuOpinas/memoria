@@ -23,7 +23,7 @@ cambios.json, todo opcional:
 
 Los nombres de la 1.21 se aceptan en la entrada y se escriben con los nuevos (1.22): «en_corto» vale como «estatus» y
 «panorama» como «estatus_area»; el bloque Estatus sustituye en su sitio a un «En corto» o un «Panorama» que haya, y en
-un área sin ninguno de los dos se crea antes de «Proyectos». Una entrada nueva con «Trabajamos en:», «Pendiente:» o
+un área sin ninguno de los dos se crea debajo del título, como en el proyecto. Una entrada nueva con «Trabajamos en:», «Pendiente:» o
 «Descartamos:» se rechaza: los registros viejos se quedan como están, pero lo nuevo se escribe con «Tema:» y «Descartado:».
 Un entregable dado como {"archivo": "x.md"} se escribe en area.md como «  - x — <su aportacion> · actualizado <su fecha>»,
 leídas de su cabecera en entregables/ (o «afirma», si la cabecera aún no se migró); sin ninguna de las dos, va en «sin_match».
@@ -528,7 +528,7 @@ def main(argv):
                 if not ok:
                     sm.append({"ruta": c.rel(pa), "de": "(bloque Proyectos)", "veces": 0, "motivo": "area.md no tiene bloque «## Proyectos»: la línea no se escribió"})
             if est_area:
-                t = con_bloque(t, "Estatus", est_area, antes_de="Proyectos", alias=("Panorama",))
+                t = con_bloque(t, "Estatus", est_area, alias=("Panorama",))   # sin Estatus ni Panorama, debajo del título
             return t, t != t0
         c.cambiar(pa, f_area)
     # otros archivos del área, por reemplazos exactos
