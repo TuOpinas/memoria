@@ -78,6 +78,8 @@ ok("Cuestiona a: la premisa P3" in o and "premisa P2" not in o.split("=== AVISOS
 ok("Borrador viejo: entregables/borrador-viejo.md" in o, "avisa del borrador de más de 30 días")
 ok("Puede estar desfasado: entregables/kit-cuentas.md" in o, "avisa del entregable con una base más nueva que él")
 ok("Trabajo sin sesión" in o and "kit-cuentas.md" in o, "avisa del trabajo sin sesión")
+import re as _re
+ok(bool(_re.search(r"Qué y cuándo: .*kit-cuentas\.md \(20\d\d-\d\d-\d\d \d\d:\d\d\)", o)) and "Quién lo cambió no consta" in o, "dice qué archivo cambió, con fecha y hora, y que quién no consta")
 c, o2 = abrir("ventas/cuentas", "--cuenta", "beto@ejemplo.test")
 ok("premisa P3" not in o2.split("=== AVISOS")[1], "a otra cuenta no se le avisa de los cuestionamientos a premisas")
 ok("=== CUENTA EN EL PROYECTO\nana@ejemplo.test: dueño del área" in o and "=== REGISTROS" in o and "sesiones.md: 20" in o, "dice el papel de la cuenta en el proyecto y la hora de cada registro")

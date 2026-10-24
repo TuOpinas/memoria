@@ -98,11 +98,23 @@ Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuest
 
 Los lee alguien con poco tiempo que no va a abrir nada más. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir estas dos secciones basta con este párrafo.
 
+### Qué guarda el cierre y qué no
+
+**Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `En corto`, `Estado actual` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
+
+**Nunca**:
+- Un **valor vivo**: lo que cambia sin que nadie edite la memoria (un saldo, un precio de lista, cuántos registros hay en un sistema, el estado de un ticket). Se consulta en su fuente cuando hace falta; una cifra que sí se guarda lleva fecha y fuente (prohibición 13).
+- Lo que **se puede consultar en una fuente**: se cita dónde está, no se copia.
+- **Credenciales**, ni datos personales que el trabajo no necesita.
+- Lo que la propia sesión **probó y desechó sin llegar a decisión**: un intento, un borrador tirado, un error corregido en la misma conversación. Lo que se descartó al decidir sí va, en `Descartamos`.
+
+Ante la duda de si algo merece quedar, se pregunta; no se guarda por si acaso.
+
 ## 4. Vivo o registro, nunca las dos cosas
 
 **Un archivo vivo se reescribe** y siempre refleja el presente. Nadie necesita leer su historia para entenderlo.
 
-**Un registro solo crece.** Las entradas nuevas van arriba y las anteriores no se editan jamás, ni para corregir. Si una decisión cambia, se añade una entrada nueva que dice que reemplaza a la anterior.
+**Un registro solo crece.** Las entradas nuevas van arriba y las anteriores no se editan jamás, ni para corregir. Si una decisión cambia, se añade una entrada nueva con la línea `Reemplaza:` que apunta a la anterior.
 
 Un registro nunca vive dentro de un archivo vivo, porque la primera reescritura lo borra.
 
@@ -120,7 +132,7 @@ Descartamos: …
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
 
-Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`, y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
+Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`; una que sustituye a otra anterior añade `Reemplaza: <identificador de la sustituida> · <su título>` (la anterior no se edita: sigue en el registro, y el tablero encadena las dos en la trayectoria del proyecto); y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
 
 **Identificador de una entrada.** Cada entrada de `decisiones.md`, decisión o cuestionamiento, se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua; los cuestionamientos cuentan en la misma serie. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Una entrada sin fecha válida en el encabezado no tiene identificador y no se puede citar. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
 
@@ -171,6 +183,7 @@ Todo `.md` empieza con una cabecera de estas claves y ninguna más, con dos exce
 ---
 estado: vigente
 actualizado: 2026-08-29
+afirma: "El tope de 5.000 MXN deja fuera las compras recurrentes."
 basado_en:
   - base/contexto.md
   - compras/automatizacion-ordenes/fuentes/entrevista-ana.md
@@ -179,12 +192,12 @@ basado_en:
 
 Inmediatamente después va el título en `#`, para que quien abra el archivo sin renderizador vea de qué trata en la primera línea legible.
 
-| Archivo | `estado` | `actualizado` | `basado_en` |
-|---|---|---|---|
-| Entregables | sí | sí | sí, obligatoria |
-| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo |
-| `proyecto.md`, `base/` | sí | sí | no |
-| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no |
+| Archivo | `estado` | `actualizado` | `basado_en` | `afirma` |
+|---|---|---|---|---|
+| Entregables | sí | sí | sí, obligatoria | sí, obligatoria al crearlos |
+| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo | opcional |
+| `proyecto.md`, `base/` | sí | sí | no | no |
+| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no | no |
 
 `area.md` y los registros llevan `vigente` desde que se crean y no lo cambian: son índice y registro, no algo que se publique. Lo que pasa de `borrador` a `vigente` es lo demás.
 
@@ -199,6 +212,8 @@ El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y
 **actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real, en la zona horaria de la organización (sección 4).
 
 **basado_en**: rutas relativas a la raíz de todo lo que se usó para escribir el archivo. Es lo que permite detectar que un entregable quedó desactualizado cuando cambia algo aguas arriba. Es obligatoria en los entregables y la escribe la skill, no la persona. Para material adoptado sin trazabilidad se permite la lista vacía `[]`, y `revisar` la pide completa antes de publicar. Los registros, las fuentes y los archivos de `base/` no llevan esta clave.
+
+**afirma**: una línea que dice qué sostiene la pieza, no de qué trata: «El tope de 5.000 MXN deja fuera las compras recurrentes», no «Análisis de compras». Es lo que deja ver, sin abrir el documento, qué hay en un proyecto y si sigue valiendo. Una sola línea de hasta unos 200 caracteres, sin saltos, entre comillas si lleva dos puntos. La escribe la skill, como `basado_en`: es obligatoria en lo que crea `entregable` desde la 1.21 y opcional en lo que ya existe y en `taller/`; el barrido del tablero propone una línea para cada archivo que no la tiene y su dueño acepta las que valen. La leen todos los que leen el área, en el tablero, aunque el cuerpo del taller sea privado, así que lleva la regla de `En corto`: nada de `restringido/` ni datos personales. Añadir o cambiar `afirma` sin tocar el contenido no mueve `actualizado`: esa fecha es la del último cambio de contenido, y moverla escondería lo que quedó viejo frente a una decisión o frente a su base. Los registros, `area.md`, `proyecto.md`, `base/` y `fuentes/` no la llevan.
 
 No hay clave de dueño. El dueño vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
 
@@ -217,7 +232,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
 4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de un área de la que la cuenta no es dueña ni colabora. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
 5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos donde la cuenta es dueña o colabora: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en los de otra cuenta. `Panorama` y `Prioridades ahora` son solo del dueño del área.
-6. No leer `taller/`, `fuentes/`, lo restringido de otra área, ni el cuerpo de su `sesiones.md`: de la bitácora ajena solo la fecha, el título y «Trabajamos en» de cada entrada (sección 7). Son taller privado y no responden a nadie de fuera.
+6. No leer el cuerpo de `taller/`, `fuentes/`, lo restringido de otra área, ni el cuerpo de su `sesiones.md`: de la bitácora ajena solo la fecha, el título y «Trabajamos en» de cada entrada; del taller ajeno solo la cabecera y el título de cada archivo, su inventario (sección 7). Son taller privado y no responden a nadie de fuera.
 7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
 9. No guardar fuera de `fuentes/` material que llegó de fuera del equipo del proyecto, aunque venga terminado y listo para usarse.
@@ -234,3 +249,4 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 20. No dejar en `entregables/` lo que no puede salir del proyecto. Si no se lo puedo dar a nadie de fuera, va a `taller/`.
 21. No abrir un `decisiones.md` ni un `sesiones.md` dentro de `taller/`. Los registros del proyecto son los de su raíz.
 22. No dejar dentro de la raíz un script, una salida ni un archivo temporal, ni trabajar en `/tmp` de la consola de la computadora, que comparten todas las conversaciones: lo de paso va en `$HOME` de la consola, que es de esta conversación, fuera de `mnt/` (lo que hay ahí son carpetas de la persona, y `mnt/outputs` puede ser «Claude outputs» de la raíz), o en el contenedor, y nunca se corre un archivo que no escribió esta conversación.
+23. No guardar en la carpeta un `.html` sin `<meta charset="utf-8">` en su `<head>`. Abierto desde la carpeta, el navegador no tiene quien le diga la codificación y los acentos salen rotos («Ã©»); publicado como artefacto se ve bien, y por eso el fallo pasa inadvertido hasta que alguien abre el archivo.

@@ -105,7 +105,7 @@ def sin_palabra_restringido(linea):
     """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
     return re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()
 # --veredicto-metodo "<primera línea del metodo.md del plugin>": compara versión y huella con el metodo.md de la raíz,
-# en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 0 de tarea.md: la
+# en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 1b de tarea.md: la
 # comparación la hace el script, no quien lo lee. Mismo criterio que abrir.py de la skill sesion.
 _plugin_linea = _arg("--veredicto-metodo")
 if _plugin_linea is not None:
@@ -147,6 +147,10 @@ VERSION_PLUGIN = _arg("--version")
 LINEAS = "--lineas" in sys.argv
 SI_CAMBIA = _arg("--si-cambia")
 SIN_CAMBIOS = {h for h in (_arg("--sin-cambios") or "").split(",") if h and h != "-"}
+# --taller-igual pid:huella,…: las huellas del taller de cada proyecto que guardó la última puesta al día (meta/estado,
+# «huellas_taller»). Un proyecto que cambió pero cuyo taller no, no vuelve a mandar sus cabeceras por la conversación:
+# el inventario lo apunta en «taller_reusar» y la generación toma sus piezas del detalle de la base (--previos).
+TALLER_IGUAL = dict(x.split(":", 1) for x in (_arg("--taller-igual") or "").split(",") if ":" in x)
 # --previos <volcado de la base>: de donde la generación toma los documentos que el inventario marca en «reusar»
 PREVIOS = pathlib.Path(_arg("--previos")) if _arg("--previos") else None
 # --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al dueño de otra área,
@@ -331,7 +335,7 @@ def parse_decisiones(texto):
             fecha, titulo = mm.group(1), mm.group(2).strip()
         else:
             fecha, titulo = (fechas_en(cab) or [""])[0], cab.strip()
-        campos = {"decidio": "", "porque": "", "descartamos": "", "afecta": "", "planteo": "", "cuestiona": "", "responde": ""}
+        campos = {"decidio": "", "porque": "", "descartamos": "", "afecta": "", "planteo": "", "cuestiona": "", "responde": "", "reemplaza": ""}
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
@@ -350,6 +354,8 @@ def parse_decisiones(texto):
                 actual = "cuestiona"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("responde a:"):
                 actual = "responde"; campos[actual] = s.split(":", 1)[1].strip()
+            elif low.startswith("reemplaza:") or low.startswith("reemplaza a:"):
+                actual = "reemplaza"; campos[actual] = s.split(":", 1)[1].strip()
             elif actual and s:
                 campos[actual] += "\n" + s
         d_ = {"fecha": fecha, "titulo": titulo, **campos}
@@ -360,7 +366,7 @@ def parse_decisiones(texto):
             d_["tipo"] = "cuestionamiento"
             t_ = re.sub(r"^cuestionamiento\s*:\s*", "", titulo, flags=re.I) or titulo
             d_["titulo"] = t_[:1].upper() + t_[1:]
-        for k in ("planteo", "cuestiona", "responde"):
+        for k in ("planteo", "cuestiona", "responde", "reemplaza"):
             if not d_[k]: del d_[k]
         out.append(d_)
     # identificador: la fecha y, si ese día hay más de una entrada, -2, -3… contando desde la de más abajo (la más antigua)
@@ -393,6 +399,7 @@ def parse_sesiones(texto):
         fecha = (fechas_en(cab) or [""])[0]
         titulo = cab.strip()
         campos = {"trabajamos": "", "avances": "", "pendiente": ""}
+        quien = ""
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
@@ -404,10 +411,12 @@ def parse_sesiones(texto):
             elif low.startswith("pendiente:"):
                 actual = "pendiente"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("sesión de:") or low.startswith("sesion de:"):
-                actual = None   # quién y con qué plugin: cuerpo del área, que la página no usa; no viaja a la base
+                actual = None
+                # quién cerró, sin la versión del plugin: «Sesión de: Nombre Apellido · plugin 1.16.0» → «Nombre Apellido»
+                quien = re.split(r"\s+[·\-–—]\s+|\s*\(", s.split(":", 1)[1].strip(), maxsplit=1)[0].strip()[:80]
             elif actual and s:
                 campos[actual] += "\n" + s
-        out.append({"fecha": fecha, "titulo": titulo, **campos})
+        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {})})
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
 
@@ -443,6 +452,16 @@ def fecha_de(p):
         return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date().isoformat()
     except OSError:
         return None
+
+def momento(p):
+    """Fecha y hora de modificación de p («AAAA-MM-DD», «HH:MM») en la zona de la organización, o (None, None)."""
+    if SIN_FECHAS:
+        return None, None
+    try:
+        t = datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ)
+        return t.date().isoformat(), t.strftime("%H:%M")
+    except OSError:
+        return None, None
 
 def marca(p):
     """Lo que dice si p cambió: su fecha de modificación en la computadora; en una copia (sin fechas), su contenido."""
@@ -513,6 +532,8 @@ def entregables_de(carpeta, indice):
                 ent["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
                     ent["reemplazado_por"] = fm["reemplazado_por"]
+                if isinstance(fm.get("afirma"), str) and fm["afirma"].strip():
+                    ent["afirma"] = fm["afirma"].strip()[:240]
         ref = indice.get(stem) or (indice.get(stem[:-3]) if stem.endswith("-en") else None)
         if ref:
             ent["descripcion"] = ref["descripcion"]
@@ -525,6 +546,150 @@ def entregables_de(carpeta, indice):
                 ent["fecha_de_archivo"] = True
         out.append(ent)
     return out
+
+
+def taller_de(carpeta):
+    """El inventario del taller de un proyecto: de cada archivo de `taller/` (primer nivel), lo que dice su cabecera y nada
+    del cuerpo (estado, actualizado, afirma, basado_en, reemplazado_por, el título). El cuerpo es taller privado del área;
+    su inventario se enseña a quien lee el área (decisión 2026-10-23). Con inventario, viene ya sacado de la computadora."""
+    if SIN_FECHAS:   # sin consola la copia no trae el taller (espejo.py nunca lo pide): el inventario no existe
+        return []
+    if INV is not None:
+        if rel(carpeta) in (INV.get("taller_reusar") or []):
+            det_ = _de_la_base("detalle", rel(carpeta).replace("/", "--")) if PREVIOS else None
+            if not isinstance(det_, dict):
+                sys.stderr.write(f"A la base le falta el detalle de {rel(carpeta)}, que el inventario pidió reutilizar para su taller: vuelve al inventario sin --taller-igual.\n")
+                sys.exit(5)
+            return [{k: v for k, v in pz.items() if k != "tipo"} for pz in ((det_.get("que_hay") or {}).get("piezas") or []) if pz.get("tipo") == "taller"]
+        return INV.get("taller", {}).get(rel(carpeta), [])
+    d = carpeta / "taller"
+    out = []
+    try:
+        nombres = sorted(os.listdir(d)) if d.exists() else []
+        # un nivel de agrupación, como permite el contrato (sección 3): «sub/nota.md»
+        for sub in [x for x in nombres if (d / x).is_dir() and not x.startswith(".") and x != "restringido"]:
+            nombres += [f"{sub}/{x}" for x in sorted(os.listdir(d / sub)) if not x.startswith(".") and (d / sub / x).is_file()]
+    except OSError:
+        return out
+    for n in nombres:
+        p = d / n
+        if n.startswith(".") or p.is_dir():
+            continue
+        pz = {"archivo": n, "nombre": pathlib.Path(n).stem, "estado": None, "actualizado": None, "formato": pathlib.Path(n).suffix.lstrip(".")}
+        if n.endswith(".md"):
+            t = leer(p)
+            if t is not None:
+                fm, cuerpo_ = frontmatter(t)
+                pz["titulo"] = titulo_h1(cuerpo_) or None
+                pz["estado"] = fm.get("estado")
+                pz["actualizado"] = fm.get("actualizado")
+                if fm.get("reemplazado_por"):
+                    pz["reemplazado_por"] = fm["reemplazado_por"]
+                if isinstance(fm.get("afirma"), str) and fm["afirma"].strip():
+                    pz["afirma"] = fm["afirma"].strip()[:240]
+        if not pz["actualizado"]:
+            f = fecha_de(p)
+            if f:
+                pz["actualizado"] = f; pz["fecha_de_archivo"] = True
+        out.append(pz)
+    return out
+
+
+def entregables_en_subcarpetas(carpeta):
+    """Cuántos archivos hay en subcarpetas de entregables/: el inventario no los trae todavía, y se dice en vez de callarlo."""
+    if SIN_FECHAS:   # sin consola la copia no trae subcarpetas: no hay nada que contar
+        return 0
+    if INV is not None:
+        return INV.get("entregables_sub", {}).get(rel(carpeta), 0)
+    d = carpeta / "entregables"
+    try:
+        return sum(1 for sub in os.listdir(d) if (d / sub).is_dir() and not sub.startswith(".") and sub != "restringido"
+                   for x in os.listdir(d / sub) if not x.startswith(".") and (d / sub / x).is_file()) if d.exists() else 0
+    except OSError:
+        return 0
+
+
+def que_hay(pdoc, taller, dec):
+    """La capa calculada de «Qué hay» (decisión 2026-10-23): de cada pieza, cuántas decisiones del proyecto son posteriores
+    a su última actualización, qué pasos de «Siguientes pasos» la nombran (lo que la bloquea), si el taller la cita algún
+    entregable; y la trayectoria: las cadenas de decisiones que se reemplazan y de entregables reemplazados."""
+    piezas = [dict(e, tipo="entregable") for e in pdoc.get("entregables", [])] + [dict(t, tipo="taller") for t in taller]
+    fechas_dec = sorted((d_["fecha"] for d_ in dec if fecha_valida(d_["fecha"]) and d_.get("tipo") != "cuestionamiento"), reverse=True)
+    pasos = [p_["texto"] for p_ in pdoc.get("pasos", []) if p_.get("naturaleza")]
+    citas = set()
+    for e in pdoc.get("entregables", []):
+        for b in e.get("basado_en") or []:
+            citas.add(b.split("/")[-1])
+    for pz in piezas:
+        act = pz.get("actualizado")
+        if act and fecha_valida(act) and pz.get("estado") in ("vigente", "borrador"):
+            desp = [f for f in fechas_dec if f > act]
+            if desp:
+                pz["decisiones_despues"] = len(desp); pz["ultima_decision_despues"] = desp[0]
+        # los pasos que la nombran: por el nombre del archivo o por dos palabras significativas del título
+        claves = {pz["nombre"].lower()}
+        sig = PALABRAS_SIG(pz.get("titulo") or "")
+        bloq = []
+        for t_ in pasos:
+            tl = t_.lower()
+            if any(k in tl for k in claves) or (len(sig) >= 2 and len(sig & PALABRAS_SIG(t_)) >= 2):
+                bloq.append(t_[:160])
+        if bloq:
+            pz["pasos"] = bloq[:3]
+        if pz["tipo"] == "taller":
+            pz["citada"] = pz["archivo"] in citas
+    # trayectoria por decisiones: «Reemplaza: AAAA-MM-DD · …» encadena la nueva con la vieja
+    por_id = {d_["id"]: d_ for d_ in dec if d_.get("id")}
+    reemplaza, reemplazada = {}, set()
+    for d_ in dec:
+        for fid in re.findall(r"20\d\d-\d\d-\d\d(?:-\d+)?", d_.get("reemplaza") or ""):
+            if fid in por_id and fid != d_.get("id"):
+                reemplaza.setdefault(d_["id"], []).append(fid); reemplazada.add(fid)
+    cadenas = []
+    for d_ in dec:
+        if d_.get("id") in reemplaza and d_["id"] not in reemplazada:
+            nodos, cur, vistos = [], d_["id"], set()
+            while cur and cur not in vistos and len(nodos) < 6:
+                vistos.add(cur); x = por_id[cur]
+                nodos.append({"fecha": x["fecha"], "titulo": x["titulo"][:140]})
+                cur = (reemplaza.get(cur) or [None])[0]
+            nodos.reverse()
+            cadenas.append({"de": "decisiones", "pasos": nodos})
+    # trayectoria por entregables: reemplazado_por apunta al sustituto, por nombre de archivo
+    por_arch = {pz["archivo"]: pz for pz in piezas}
+    sucesor = {}
+    for pz in piezas:
+        rp = (pz.get("reemplazado_por") or "").split("/")[-1]
+        if rp in por_arch and rp != pz["archivo"]:
+            sucesor[pz["archivo"]] = rp
+    con_sucesor = set(sucesor.values())
+    for a0 in sorted(sucesor):
+        if a0 in con_sucesor:
+            continue
+        nodos, cur, vistos = [], a0, set()
+        while cur and cur not in vistos and len(nodos) < 6:
+            vistos.add(cur); x = por_arch[cur]
+            nodos.append({"fecha": x.get("actualizado"), "titulo": (x.get("titulo") or x["nombre"])[:140]})
+            cur = sucesor.get(cur)
+        cadenas.append({"de": "taller" if x["tipo"] == "taller" else "entregables", "pasos": nodos})   # x: el último nodo recorrido
+    cadenas.sort(key=lambda c: (c["pasos"][-1].get("fecha") or ""), reverse=True)
+    def cuenta(lista):
+        c = {"borrador": 0, "vigente": 0, "reemplazado": 0, "otros": 0}
+        for x in lista:
+            c[x.get("estado") if x.get("estado") in c else "otros"] += 1
+        return c
+    resumen = {"taller": cuenta(taller), "entregables": cuenta(pdoc.get("entregables", [])), "decisiones": len(fechas_dec),
+               "sin_afirma": sum(1 for pz in piezas if pz.get("estado") != "reemplazado" and pz["archivo"].endswith(".md") and not pz.get("afirma")),
+               "desfasadas": sum(1 for pz in piezas if pz.get("decisiones_despues")),
+               "bloqueadas": sum(1 for pz in piezas if pz.get("pasos")),
+               "cadenas": len(cadenas)}
+    if pdoc.get("_sub"):
+        resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # se listan en la siguiente versión; mientras, se cuentan
+    if cadenas:
+        resumen["ultimo_giro"] = cadenas[0]["pasos"][-1]
+    if SIN_FECHAS:
+        resumen["taller"] = None   # sin consola no se inventaría el taller; la página lo dice
+    return resumen, {"piezas": piezas, "trayectoria": cadenas[:8]}
 
 
 # ---------- clasificación de pasos ----------
@@ -606,25 +771,30 @@ def sin_sesion_de(pc, ses, cerrado):
     ultima_entrada = ses[0]["fecha"] if ses and fecha_valida(ses[0]["fecha"]) else None
     if not ultima_entrada or cerrado:
         return None
-    donde, ultimo = {}, None
+    donde, ultimo, lista = {}, None, []
     objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
     for nombre, d in objetivos:
         for raiz_, dirs, files in os.walk(d) if d.exists() else []:
-            dirs[:] = [x for x in dirs if not x.startswith(".")]
+            dirs[:] = [x for x in dirs if not x.startswith(".") and x != "restringido"]
             for f in files:
                 if f.startswith("."):
                     continue
-                fm_ = fecha_de(os.path.join(raiz_, f))
+                fm_, hora_ = momento(os.path.join(raiz_, f))
                 if not fm_:
                     continue
                 if fm_ > ultima_entrada:
                     donde[nombre] = donde.get(nombre, 0) + 1
                     ultimo = max(ultimo or fm_, fm_)
-    fd = fecha_de(pc / "decisiones.md")
+                    # qué archivo y cuándo; el nombre del taller es inventario público (contrato, sección 7); el de fuentes/ no sale
+                    lista.append({"archivo": pathlib.Path(raiz_, f).relative_to(pc).as_posix() if nombre != "fuentes" else "fuentes/…",
+                                  "fecha": fm_, "hora": hora_})
+    fd, hd = momento(pc / "decisiones.md")
     if fd and fd > ultima_entrada:
-        donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
+        donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd); lista.append({"archivo": "decisiones.md", "fecha": fd, "hora": hd})
     if donde:
-        return {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
+        # quién hizo cada cambio no consta: la carpeta no lo guarda y Drive no se lo da al plugin. Se dice qué y cuándo.
+        lista.sort(key=lambda x: (x["fecha"], x["hora"] or ""), reverse=True)
+        return {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values()), "lista": lista[:12]}
     return None
 
 def motivo_de(p):
@@ -690,7 +860,7 @@ if INVENTARIO:
     inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
     _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
-    huellas, reusar, por_proyecto = {}, [], {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
+    huellas, reusar, por_proyecto, huellas_taller = {}, [], {}, {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}
     def _si_legible(p, lista=None):
         if leer(p) is not None:
             (leer_ if lista is None else lista).append(rel(p)); return True
@@ -731,6 +901,8 @@ if INVENTARIO:
             except OSError:
                 pass
             fe = fechas_de_entregables(pc)
+            tal = taller_de(pc)
+            sub_ = entregables_en_subcarpetas(pc)
             # La huella del proyecto: todo lo que entra en su documento antes de cruzarlo con los demás. Sus archivos (tamaño y
             # fecha), lo que el área dice de él (su fila de guia.md, su línea del índice, las prioridades), sus fechas de entregables,
             # su trabajo sin sesión, el modo y este script. Del día solo cuenta lo que lo usa: qué sesiones caen en los últimos
@@ -743,9 +915,9 @@ if INVENTARIO:
             sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
             h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
                                  [(r_, os.path.getsize(RAIZ / r_), marca(RAIZ / r_)) for r_ in suyos],
-                                 sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_)
+                                 sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_, tal, sub_)
             pid = f"{a['slug']}--{slug}"
-            por_proyecto[rel(pc)] = (suyos, fe, ss_)
+            por_proyecto[rel(pc)] = (suyos, fe, ss_, tal, sub_)
             # un id que la base no admite (espacios, acentos) nunca llega a ella: no se puede reutilizar
             if ID_VALIDO.match(pid):
                 huellas[pid] = h
@@ -757,6 +929,15 @@ if INVENTARIO:
                 inv["sin_sesion"][rel(pc)] = ss_
             if fe:
                 inv["entregables"][rel(pc)] = fe
+            if tal:
+                h_tal = hashlib.sha1(json.dumps(tal, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
+                huellas_taller[pid] = h_tal
+                if TALLER_IGUAL.get(pid) == h_tal:
+                    inv.setdefault("taller_reusar", []).append(rel(pc))     # el taller no cambió: sus piezas salen de la base
+                else:
+                    inv.setdefault("taller", {})[rel(pc)] = tal
+            if sub_:
+                inv.setdefault("entregables_sub", {})[rel(pc)] = sub_
     fuera_ = fuera_de_la_memoria()
     h_fuera = "f" + _huella_proyecto(_script, MODO, fuera_)[1:]
     huellas["meta/fuera"] = h_fuera
@@ -768,11 +949,13 @@ if INVENTARIO:
     # más lo que el inventario sabe de lo demás (fechas de entregables, trabajo sin sesión, «Claude outputs»), el día y este mismo script.
     # Si coincide con la que guardó la última sincronización, el tablero ya está al día y la puesta al día no tiene que regenerarlo.
     # Se calcula sobre la raíz entera, también con los proyectos que se reutilizan.
-    todos = list(dict.fromkeys(leer_ + [r_ for suyos, _, _ in por_proyecto.values() for r_ in suyos]))
+    todos = list(dict.fromkeys(leer_ + [r_ for suyos, _, _, _, _ in por_proyecto.values() for r_ in suyos]))
     _mt = sorted(f"{unicodedata.normalize('NFC', r)}\t{os.path.getsize(RAIZ / r)}\t{marca(RAIZ / r)}" for r in todos)
     _resto = {k: inv[k] for k in ("modo", "version_metodo", "motivos", "proyectos")}
-    _resto["entregables"] = {p_: fe for p_, (_, fe, _) in por_proyecto.items() if fe}
-    _resto["sin_sesion"] = {p_: ss for p_, (_, _, ss) in por_proyecto.items() if ss}
+    _resto["entregables"] = {p_: fe for p_, (_, fe, _, _, _) in por_proyecto.items() if fe}
+    _resto["sin_sesion"] = {p_: ss for p_, (_, _, ss, _, _) in por_proyecto.items() if ss}
+    _resto["taller"] = {p_: t_ for p_, (_, _, _, t_, _) in por_proyecto.items() if t_}
+    _resto["entregables_sub"] = {p_: n_ for p_, (_, _, _, _, n_) in por_proyecto.items() if n_}
     _resto["fuera"] = fuera_
     inv["huella_raiz"] = hashlib.sha1(json.dumps([HOY, _script, _mt, _resto],
                                                  ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
@@ -780,11 +963,16 @@ if INVENTARIO:
     inv["huella_leer"] = huella_copia({r: os.path.getsize(RAIZ / r) for r in leer_})
     inv["archivos_leer"] = len(leer_)
     inv["huellas"] = huellas
+    if huellas_taller:
+        inv["huellas_taller"] = huellas_taller
     if reusar:
         inv["reusar"] = reusar
     inv["sello"] = sello(inv)
     if SI_CAMBIA and SI_CAMBIA == inv["huella_raiz"]:
+        # al día: la segunda línea es el instante de esta comprobación en la zona de la organización, que la puesta al día
+        # deja como «sincronizado» (plan_subida.py --cierre); así ningún modelo escribe una hora
         print("AL DIA")
+        print(datetime.datetime.now(TZ).isoformat(timespec="minutes"))
         sys.exit(0)
     if LINEAS:
         print(json.dumps(inv, ensure_ascii=False, separators=(",", ":")))
@@ -828,7 +1016,7 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
         if not isinstance(d_, dict) or d_.get("id") != pid:
             faltan.append(pid); continue
         # lo que se partió al detalle (1.19) vuelve a su sitio, para partirlo abajo igual que un proyecto rehecho
-        if any(d_.get(k) for k in ("sesiones_aparte", "estado_aparte")) or any(x.get("texto_aparte") for x in d_.get("decisiones") or []):
+        if any(d_.get(k) for k in ("sesiones_aparte", "estado_aparte", "que_hay_aparte")) or any(x.get("texto_aparte") for x in d_.get("decisiones") or []):
             det_ = _de_la_base("detalle", pid)
             if not isinstance(det_, dict):
                 faltan.append(f"detalle/{pid}"); continue
@@ -840,6 +1028,8 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
                 d_["sesiones"] = (d_.get("sesiones") or []) + (det_.get("sesiones") or [])
             if d_.pop("estado_aparte", None):
                 d_["estado_actual"] = det_.get("estado_actual") or ""
+            if d_.pop("que_hay_aparte", None):
+                d_["_que_hay_detalle"] = det_.get("que_hay") or {"piezas": [], "trayectoria": []}
         # fuera lo que sale de cruzarlo con los demás proyectos, que se vuelve a calcular abajo
         for k in ("huella", "cuestionamientos_abiertos"):
             d_.pop(k, None)
@@ -991,6 +1181,9 @@ for a in areas_guia:
             pdoc["sin_sesion"] = ss_
         pdoc["entregables"] = entregables_de(pc, ref["entregables"])
         pdoc["entregables_vigentes"] = sum(1 for e in pdoc["entregables"] if e["estado"] == "vigente")
+        pdoc["_sub"] = entregables_en_subcarpetas(pc)
+        pdoc["que_hay"], pdoc["_que_hay_detalle"] = que_hay(pdoc, taller_de(pc), dec)
+        pdoc.pop("_sub", None)
         docs["proyectos"][pid] = pdoc
     docs["areas"][a["slug"]] = area_doc
 
@@ -1056,7 +1249,8 @@ enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candida
 fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
 docs["meta"]["estado"] = {
-    "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
+    "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"), "zona": str(TZ),
+    "huella_candidatos": _huella_cand,     # la de «Por dónde empezar» que esta corrida ofreció: si no cambia, no se renueva
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
@@ -1076,6 +1270,8 @@ if INV is not None and INV.get("huellas"):
     _gr = {pid for pid, d_ in docs["proyectos"].items()
            if len(json.dumps(d_, ensure_ascii=False, indent=1).encode("utf-8")) > LIMITE_DOC}
     docs["meta"]["estado"]["huellas"] = sorted({h for k, h in INV["huellas"].items() if k not in _gr})
+if INV is not None and INV.get("huellas_taller"):
+    docs["meta"]["estado"]["huellas_taller"] = {k: h for k, h in INV["huellas_taller"].items() if k in docs["proyectos"]}
 if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 if COLA_AJENA is not None:
@@ -1110,6 +1306,9 @@ for pid, pd in docs["proyectos"].items():
     ea = (pd.get("estado_actual") or "").strip()
     if pd.get("en_corto") and len(ea) > len((pd.get("estado_resumen") or "").strip()) + 20:
         det["estado_actual"] = pd.pop("estado_actual"); pd["estado_aparte"] = True
+    qh = pd.pop("_que_hay_detalle", None)
+    if qh and (qh["piezas"] or qh["trayectoria"]):
+        det["que_hay"] = qh; pd["que_hay_aparte"] = True
     if det:
         docs["detalle"][pid] = det
 
@@ -1117,7 +1316,7 @@ for pid, pd in docs["proyectos"].items():
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
 # suba solo los que cambiaron; indice.json lista cada archivo con su huella y su tamaño.
 def huella(data):
-    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "huellas", "cola_retenida", "cola_ajena")}
+    sin = {k: v for k, v in data.items() if k not in ("sincronizado", "huella", "huella_raiz", "huellas", "huellas_taller", "cola_retenida", "cola_ajena")}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 indice_archivos = []
 for col, items in docs.items():

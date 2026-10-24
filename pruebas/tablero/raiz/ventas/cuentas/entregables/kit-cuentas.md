@@ -5,6 +5,7 @@ basado_en:
   - ventas/cuentas/entregables/propuesta-base.md
   - ventas/cuentas/decisiones.md
   - ventas/cuentas/fuentes/notas-cliente.md
+  - ventas/cuentas/taller/nota-precios.md
 ---
 
 # Kit para preparar una cuenta

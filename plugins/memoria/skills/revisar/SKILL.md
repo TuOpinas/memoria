@@ -45,7 +45,7 @@ Los hallazgos separados en dos grupos, nunca mezclados:
 
 **Bloqueantes**, que impiden publicar: contradicciones con decisiones, afirmaciones sin fuente, cifras sin fecha ni fuente, `basado_en` vacía, huecos abiertos, fuentes desfasadas.
 
-**Mejoras**, que no impiden nada: estilo, estructura, extensión.
+**Mejoras**, que no impiden nada: estilo, estructura, extensión, y un `afirma` ausente o que ya no dice lo que el documento sostiene (se propone la línea; añadirla o cambiarla no mueve `actualizado`).
 
 Cada hallazgo con el pasaje concreto y la reescritura propuesta. El documento no se reescribe entero en silencio.
 

@@ -406,6 +406,18 @@ def _(ctx, arg):
     return texto in t, f"«{texto[:60]}» {'está' if texto in t else 'no está'} en {r}"
 
 
+@comprobacion("no-contiene")
+def _(ctx, arg):
+    """no-contiene <texto>: ningún .md que cambió en la raíz lo contiene (lo que el cierre nunca guarda)."""
+    c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
+    dentro = []
+    for x in c:
+        p = ctx["raiz"] / x
+        if p.is_file() and p.suffix == ".md" and arg.lower() in p.read_text(encoding="utf-8", errors="replace").lower():
+            dentro.append(x)
+    return not dentro, f"«{arg}» está en: " + ", ".join(dentro) if dentro else f"«{arg}» no quedó en lo escrito"
+
+
 @comprobacion("cambia")
 def _(ctx, arg):
     """cambia <ruta>: el archivo cambió."""
@@ -468,6 +480,32 @@ def _(ctx, arg):
 def _(ctx, arg):
     n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg))
     return n == 0, f"{arg}: {n} llamadas"
+
+
+@comprobacion("palabras-maximo")
+def _(ctx, arg):
+    """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
+    recuadro «Memoria activa». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
+    pueda borrar») y la skill estilo; el tope lo fija cada escenario según lo que pregunta."""
+    n, _, t = arg.partition("@")
+    turnos = [ctx["turnos"][int(t) - 1]] if t else ctx["turnos"]
+    peor = 0
+    for x in turnos:
+        cuerpo = "\n".join(l for l in texto_de(x).split("\n") if not l.startswith("|"))
+        peor = max(peor, len(cuerpo.split()))
+    return peor <= int(n), f"{peor} palabras (tope {n})"
+
+
+@comprobacion("sin-ingles")
+def _(ctx, arg):
+    """sin-ingles: lo que la persona lee de cada turno (el último bloque de texto, después de la última llamada) no
+    empieza en inglés. Las notas que el modelo suelta entre llamadas no cuentan: la app no las enseña tal cual."""
+    for i, x in enumerate(ctx["turnos"], 1):
+        ultimo = x["respuestas"][-1] if x["respuestas"] else ""
+        primera = next((l for l in ultimo.split("\n") if l.strip()), "")
+        if re.search(r"\b(the|this|is|it's|so|open|let me|I'll|session)\b", primera, re.I) and not re.search(r"[áéíóúñ¿¡]", primera):
+            return False, f"el turno {i} empieza en inglés: «{primera[:80]}»"
+    return True, "ninguna respuesta empieza en inglés"
 
 
 @comprobacion("llamadas-maximo")

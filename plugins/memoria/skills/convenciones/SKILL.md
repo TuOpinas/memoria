@@ -7,7 +7,7 @@ description: Contrato base del metodo de trabajo: estructura de carpetas, cabece
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Panorama` basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.20**
+Versión del método: **1.21**
 
 ## 1. Las tres capas de propiedad
 
@@ -233,7 +233,7 @@ Un archivo vivo se reescribe y refleja el presente; un registro solo crece, con 
 
 ## 5. Cabecera
 
-Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`), `actualizado` y `basado_en`, salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
+Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`), `actualizado` y `basado_en` (y, en entregables y taller, `afirma`: una línea con lo que la pieza sostiene), salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
 
 ## 6. Nombres
 
@@ -254,6 +254,8 @@ La superficie pública de un proyecto son `entregables/` y `decisiones.md`. Es l
 **Un proyecto es público** cuando su área no dice «Restringida» en la columna «Quién la lee» de `guia.md`, su línea del bloque `Proyectos` de su `area.md` no empieza por «restringido» y esa línea existe. Fuera de su área, de un proyecto que no es público no sale más que su nombre y su dueño. El tablero no aplica este criterio: es de una persona, no se comparte y muestra todo lo que lee su cuenta (desde la 1.18 no hay tablero público).
 
 El cuerpo de `sesiones.md`, `taller/`, `fuentes/` y todo lo que está restringido son taller privado. Nadie de fuera del área los lee ni los cita en `basado_en`. Un entregable sí cita el taller de su propio proyecto, que es de donde salió.
+
+Del `taller/` también hay una parte pública: **su inventario**, que es la cabecera de cada archivo (`estado`, `actualizado`, `afirma`, `basado_en`, `reemplazado_por`) y su título. Dice qué hay, en qué estado y qué sostiene cada pieza, sin contar cómo se llegó, y es lo que el tablero enseña en «Qué hay» a quien lee el área (decisión 2026-10-23). El cuerpo sigue siendo privado: nadie de fuera del área lo lee, lo cita ni lo copia. Por eso la línea `afirma` de un archivo del taller, como su título, no lleva nada restringido ni personal.
 
 De `sesiones.md` hay una parte pública: la cabecera de cada entrada, que es la fecha, el título y la línea «Trabajamos en». Dice qué está moviendo el proyecto sin contar cómo, y es lo que otra área, `consulta` y el director pueden leer de una bitácora ajena. «Avances» y «Pendiente» son el cuerpo y siguen siendo taller privado. Lo que otra área necesita saber de un proyecto está pensado para leerse sin la bitácora: su «En corto», su «Estado actual», sus decisiones y sus entregables vigentes, y el `Panorama` de su área.
 

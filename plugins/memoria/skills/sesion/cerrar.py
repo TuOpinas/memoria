@@ -28,7 +28,7 @@ restringido/). Con --cuenta, el Panorama lo escribe solo el dueño del área (la
 proyecto en area.md, el dueño o quien colabora en el área; lo que no toca va en «rechazados». Cada entrada de registro va
 arriba del todo, debajo del título; una igual que ya esté no se repite. Un reemplazo cuyo texto viejo no aparece
 exactamente una vez, cruza un encabezado «## » o pasa de doce líneas no se aplica y vuelve en «sin_match». Un archivo que
-encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (en la
+encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (salvo cuando lo único que cambia es la cabecera, como añadir `afirma`) (en la
 zona horaria de guia.md) en cada archivo escrito; los finales de línea se conservan como estaban.
 
 Imprime siempre un JSON: «escritos», «sin_match», «rechazados», «fallidos» (un archivo que no se pudo leer o escribir, con
@@ -189,6 +189,12 @@ def cabecera_hoy(t, hoy):
     return f"---\n{cab}\n---\n" + t[m.end():]
 
 
+def solo_cabecera(antes, despues):
+    """Cierto si lo único que cambió entre los dos textos está dentro de la cabecera (entre los dos «---» iniciales)."""
+    m1, m2 = re.match(r"^---\n.*?\n---\n", antes, re.S), re.match(r"^---\n.*?\n---\n", despues, re.S)
+    return bool(m1 and m2) and antes[m1.end():] == despues[m2.end():] and antes != despues
+
+
 def con_entrada_arriba(t, entrada):
     """Una entrada nueva de registro, debajo del título y encima de las demás; si ya está, nada."""
     entrada = entrada.strip() + "\n"
@@ -305,7 +311,10 @@ class Cierre:
                     if not hubo or nuevo == t:
                         self.salida["sin_match"] += sin_match
                         return False
-                    nuevo = cabecera_hoy(nuevo, self.hoy)
+                    # un cambio que se queda dentro de la cabecera (añadir o corregir `afirma`, por ejemplo) no mueve
+                    # `actualizado`: la fecha dice cuándo cambió lo que el documento sostiene, no su cabecera (escribir.md, sección 5)
+                    if not solo_cabecera(t, nuevo):
+                        nuevo = cabecera_hoy(nuevo, self.hoy)
                     if len(nuevo) < len(t) / 2 and rel not in self.forzar:
                         self.salida["rechazados"].append({"ruta": rel, "motivo": f"encogería de {len(t)} a {len(nuevo)} caracteres; si es a propósito, --forzar {rel}"})
                         return False

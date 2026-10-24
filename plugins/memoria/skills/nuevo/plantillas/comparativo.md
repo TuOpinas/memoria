@@ -1,6 +1,7 @@
 ---
 estado: borrador
 actualizado: AAAA-MM-DD
+afirma: "[Lo que este documento sostiene, en una frase]"
 basado_en: []
 ---
 

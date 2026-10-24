@@ -3,7 +3,7 @@
 Uso: comprobar.py <salida> <salida-con-modo-viejo> <salida-de-un-tablero-que-era-público>. Sale con 1 si algo falla.
 Desde la 1.18 hay un solo modo: todo lo que la cuenta lee. Las tareas montadas antes pasan --modo publico o completo,
 y tiene que salir lo mismo."""
-import json, glob, os, sys
+import json, subprocess, glob, os, sys
 
 def cargar(d):
     D = {}
@@ -107,6 +107,27 @@ print("Trabajo sin sesión")
 ss = com["proyectos"]["ventas--cuentas"].get("sin_sesion")
 ok(bool(ss) and ss.get("donde") == {"entregables": 1}, "un entregable tocado después de la última sesión se avisa, y solo ese")
 ok(not com["proyectos"]["operacion--soporte"].get("sin_sesion"), "un proyecto sin cambios desde su última sesión no se avisa")
+ok(bool(ss) and [x["archivo"] for x in ss.get("lista", [])] == ["entregables/kit-cuentas.md"] and all(ss["lista"][0].get(k) for k in ("fecha", "hora")), "dice qué archivo cambió y cuándo, con fecha y hora")
+ok(all(not x["archivo"].startswith("fuentes/") or x["archivo"] == "fuentes/…" for x in ss.get("lista", [])), "de fuentes/ nunca sale el nombre del archivo; del taller sí, que es inventario público")
+ok(com["proyectos"]["ventas--cuentas"]["sesiones"][0].get("quien") == "Ana López", "quién cerró cada sesión viaja sin la versión del plugin")
+
+print("Qué hay: inventario del taller, piezas y trayectoria")
+qh = com["proyectos"]["ventas--cuentas"].get("que_hay") or {}
+ok(qh.get("taller") == {"borrador": 2, "vigente": 0, "reemplazado": 1, "otros": 1} and qh.get("decisiones") == 4, "el resumen cuenta las piezas del taller por estado y las decisiones")
+ok(qh.get("cadenas") == 2 and (qh.get("ultimo_giro") or {}).get("fecha") == "2026-09-26", "cuenta las cadenas de reemplazo y da el último giro")
+ok(com["proyectos"]["ventas--cuentas"].get("que_hay_aparte") is True, "las piezas y la trayectoria van al detalle")
+detq = json.load(open(os.path.join(sys.argv[1], "detalle", "ventas--cuentas.json"), encoding="utf-8")).get("que_hay") or {}
+pz = {x["archivo"]: x for x in detq.get("piezas", [])}
+ok(pz.get("nota-precios.md", {}).get("tipo") == "taller" and pz["nota-precios.md"].get("afirma", "").startswith("El precio de la fase 2") and pz["nota-precios.md"].get("citada") is True, "del taller viaja la cabecera: estado, afirma y si un entregable la cita")
+ok(pz.get("nota-precios.md", {}).get("pasos") == ["Decidir el precio de la fase 2 de Cliente Uno."] and "dias" not in pz["nota-precios.md"], "la pieza sabe qué paso la nombra; los días en borrador los calcula la página, no viajan")
+ok(pz.get("kit-cuentas.md", {}).get("decisiones_despues") == 4 and pz["kit-cuentas.md"].get("ultima_decision_despues") == "2026-09-26", "cuenta las decisiones posteriores a la última actualización de la pieza")
+ok(pz.get("boceto.xlsx", {}).get("formato") == "xlsx" and "afirma" not in pz["boceto.xlsx"], "lo que no es .md entra con su nombre y su fecha, sin cabecera")
+ok(pz.get("borradores/nota-sub.md", {}).get("estado") == "borrador" and qh["taller"]["borrador"] == 2, "una pieza en una subcarpeta del taller entra con su ruta «sub/nota.md»")
+ok(qh.get("entregables_en_subcarpetas") == 1, "los archivos en subcarpetas de entregables se cuentan aunque no se listen")
+tr = detq.get("trayectoria", [])
+ok([c["de"] for c in tr] == ["decisiones", "taller"] and [n["fecha"] for n in tr[0]["pasos"]] == ["2026-09-20", "2026-09-26"] and [n["titulo"] for n in tr[1]["pasos"]] == ["Primer cálculo del precio", "Precio de la fase 2"], "la trayectoria sale de «Reemplaza:» y de reemplazado_por, de vieja a nueva")
+fuga = subprocess.run(["grep", "-rl", "TALLER-PRIVADO", sys.argv[1]], capture_output=True, text=True).stdout
+ok(not fuga, "el cuerpo del taller no sale en ningún documento")
 
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Aplica a la raíz los cambios mecánicos de la cola de la Vista y reporta el resto.
 
-La cola ("cambios" en la base de la página) trae cinco tipos:
+La cola ("cambios" en la base de la página) trae seis tipos:
 - fecha: cambio de fecha de un paso de «Siguientes pasos». Se aplica aquí, en la línea del paso.
 - hecho: un paso marcado como hecho, con nota opcional. NO se aplica: cerrarlo bien pide
   quitar el paso, contar qué pasó en sesiones.md y a veces una decisión. Se reporta.
@@ -10,6 +10,9 @@ La cola ("cambios" en la base de la página) trae cinco tipos:
   la sesión del dueño del área. Se reporta.
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
+- propuesta: algo que el barrido de la puesta al día (`barrido.py`) vio que una sesión olvidó. NO se aplica nunca aquí:
+  la memoria propone y solo su dueño decide, en una sesión. Se reporta aparte, en "propuestas", como lo que se queda
+  en la cola a propósito. Una que no cumple la forma (id de proyecto, línea única) va a "rechazados" y se borra.
 
 Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> --cuenta <correo> [--dry-run]
 Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo, como dueño o tras
@@ -215,11 +218,20 @@ def aplicar_fecha(c):
             fh.write(texto_nuevo)
     return "aplicados", f"{linea.strip()}  →  {nueva.strip()}"
 
-rep = {"aplicados": [], "sin_match": [], "rechazados": [], "errores": [], "para_sesion": [], "para_su_dueno": [],
+rep = {"aplicados": [], "sin_match": [], "rechazados": [], "errores": [], "para_sesion": [], "para_su_dueno": [], "propuestas": [],
        "cuenta": CUENTA, "mis_areas": sorted(MIAS), "colabora": sorted(COLABORA), "dry_run": DRY}
 for c in cargar():
     t = c.get("tipo")
     area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
+    if t == "propuesta":
+        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún dueño; se cuentan aparte
+        if not partes(c)[0] or not texto_de_una_linea(c.get("texto")) or \
+           any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")) or \
+           (c.get("rutas") is not None and not (isinstance(c["rutas"], list) and c["rutas"] and all(texto_de_una_linea(r) for r in c["rutas"]))):
+            rep["rechazados"].append({"id": c["id"], "detalle": "propuesta sin proyecto «area--slug», sin texto, o con saltos de línea"})
+            continue
+        rep["propuestas"].append(c["id"])
+        continue
     if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and c.get("proyecto") and not partes(c)[0]:
         rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
         continue

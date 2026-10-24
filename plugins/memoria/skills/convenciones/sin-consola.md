@@ -46,7 +46,7 @@ Las herramientas de la computadora no mueven, no borran y no crean carpetas vac�
 
 ## Lo que el tablero no tiene sin consola
 
-Sin fechas de archivo, el tablero de una persona sin consola no avisa del trabajo sin sesión (lo da la sesión al abrir el proyecto), no da fecha a un entregable que no la lleva en su cabecera (los que no son .md salen sin fecha) y no cuenta lo que hay en «Claude outputs». Lo demás es igual.
+Sin fechas de archivo, el tablero de una persona sin consola no inventaría el `taller/` en «Qué hay» (la copia nunca lo trae), no avisa del trabajo sin sesión (lo da la sesión al abrir el proyecto), no da fecha a un entregable que no la lleva en su cabecera (los que no son .md salen sin fecha) y no cuenta lo que hay en «Claude outputs». Lo demás es igual.
 
 ## La marca en la bitácora
 

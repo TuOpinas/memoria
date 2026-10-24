@@ -33,8 +33,19 @@ REGISTROS solo da el tamaño.
 import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+RAIZ_RESUELTA = False
+if RAIZ is not None and not (RAIZ / "guia.md").is_file():
+    # la ruta que da get_device_info (/Users/…/Carpeta) no existe en esta consola, donde la carpeta cuelga de $HOME/mnt con
+    # su último tramo como nombre: se resuelve aquí para que un error de ruta no cueste dos llamadas más
+    _mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    _raices = [d for d in (sorted(_mnt.glob("*")) if _mnt.is_dir() else []) if (d / "guia.md").is_file() and (d / "metodo.md").is_file()]
+    _cand = [d for d in _raices if d.name == RAIZ.name or d.name.endswith("--" + RAIZ.name)] or (_raices if len(_raices) == 1 else [])
+    if _cand:
+        sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]; RAIZ_RESUELTA = True
+    elif len(_raices) > 1:
+        sys.exit("Esa ruta no existe en esta consola y hay varias raíces bajo $HOME/mnt: " + ", ".join(d.name for d in _raices) + ". Pasa la de $HOME/mnt/<nombre>.")
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
-    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md)")
+    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md: en esta consola, la de $HOME/mnt/ cuyo nombre es el último tramo de la ruta que da get_device_info)")
 args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
@@ -144,6 +155,14 @@ def recientes(texto, n):
 
 
 
+def hora_de(p):
+    """«HH:MM» de la modificación de p en la zona de la organización, o «»."""
+    try:
+        return "" if SIN_FECHAS else datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).strftime("%H:%M")
+    except OSError:
+        return ""
+
+
 def mtime(p):
     if SIN_FECHAS:   # en la copia, la fecha de archivo es la de la copia: no dice nada
         return None
@@ -204,6 +223,8 @@ except OSError:
 guia = leer(RAIZ / "guia.md") or ""
 print("=== METODO (primera línea)")
 print(linea_metodo)
+if RAIZ_RESUELTA:   # se pasó la ruta de la computadora: se dice cuál es la de la consola, que es la que vale para leer y escribir
+    print(f"RAIZ: {RAIZ} · la carpeta en esta consola; todo lo que se lea o escriba aquí va con esta ruta, nunca con la de get_device_info")
 print(f"HOY: {HOY.isoformat()} · zona {getattr(TZ, 'key', TZ)} · la fecha de todo lo que se escribe hoy en la carpeta; no la del reloj de la consola ni del contenedor, que van en UTC")
 
 def version_huella(linea):
@@ -544,10 +565,10 @@ if SIN_FECHAS and ultima_ses and not cerrado:
                   f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
 if not SIN_FECHAS and ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
-    donde = {}
+    donde, lista = {}, []
     md = mtime(pc / "decisiones.md")
     if md and md > lim:
-        donde["decisiones"] = 1
+        donde["decisiones"] = 1; lista.append((md.isoformat(), hora_de(pc / "decisiones.md"), "decisiones.md"))
     for sub in ("entregables", "taller", "fuentes"):
         for r_, ds, fs in os.walk(pc / sub):
             ds[:] = [x for x in ds if not x.startswith(".") and x != "restringido"]
@@ -555,9 +576,14 @@ if not SIN_FECHAS and ultima_ses and not cerrado:
                 m_ = mtime(os.path.join(r_, f))
                 if not f.startswith(".") and m_ and m_ > lim:
                     donde[sub] = donde.get(sub, 0) + 1
+                    lista.append((m_.isoformat(), hora_de(os.path.join(r_, f)), pathlib.Path(r_, f).relative_to(pc).as_posix()))
     if donde:
+        # qué archivo y cuándo; quién lo cambió no consta (la carpeta no lo guarda y Drive no se lo da al plugin), así que se pregunta
+        lista.sort(reverse=True)
         avisos.append("Trabajo sin sesión por fecha de archivo, después del " + ultima_ses + ": "
-                      + ", ".join(f"{k} {v}" for k, v in donde.items()) + " (se pregunta qué pasó y se propone registrarlo).")
+                      + ", ".join(f"{k} {v}" for k, v in donde.items()) + ". Qué y cuándo: "
+                      + "; ".join(f"{a} ({f} {h})".replace(" )", ")") for f, h, a in lista[:12]) + (" …" if len(lista) > 12 else "")
+                      + ". Quién lo cambió no consta: se pregunta qué pasó y se propone registrarlo.")
 
 # ---------- el barrido: Afecta a / Cuestiona a / Responde a en toda la raíz ----------
 def proyectos_legibles():
