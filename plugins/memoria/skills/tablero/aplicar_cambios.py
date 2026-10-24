@@ -237,7 +237,7 @@ for c in cargar():
         continue
     if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and not puede(t, c, area):
         rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
-                                     "detalle": "falta --cuenta" if not CUENTA else (f"las prioridades de {area} son de su dueño" if t == "prioridad" and area in COLABORA else f"el área {area or '?'} no es de {CUENTA}")})
+                                     "detalle": "falta --cuenta" if not CUENTA else (f"las prioridades de {area} son de su responsable" if t == "prioridad" and area in COLABORA else f"el área {area or '?'} no es de {CUENTA}")})
         continue
     if t == "fecha":
         try:

@@ -193,7 +193,7 @@ def fecha_valida(f):
 
 def es_sesion_de_tarea(titulo):
     # las tareas programadas dejan su línea en sesiones.md marcada así; no son sesiones de trabajo
-    return bool(re.search(r"\((tarea|tablero)\)", titulo or "", re.I))
+    return bool(re.search(r"\((tarea|tablero|migracion)\)", titulo or "", re.I))
 
 def frontmatter(texto):
     m = re.match(r"^---\n(.*?)\n---\n?", texto, re.S)
@@ -1175,6 +1175,10 @@ for a in areas_guia:
             "siguientes_pasos": lineas_no_vacias(seccion(cuerpo, "Siguientes pasos")),
         })
         pdoc["estado_resumen"] = primer_parrafo(pdoc["estado_actual"])
+        if not pdoc["estado_resumen"] and pdoc.get("en_corto"):
+            # 1.22: sin Estado actual, la línea de estado es la frase del Estatus (la que lee projStatus: «en pausa», «Arrancando»)
+            _l0 = pdoc["en_corto"].strip().split("\n")[0]
+            pdoc["estado_resumen"] = re.sub(r"^\*\*|\*\*(?=\.?$)", "", re.sub(r"^20\d\d-\d\d-\d\d\s*[·:—-]\s*", "", _l0).strip())
         pdoc["cerrado"] = es_cerrado(cuerpo)
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]

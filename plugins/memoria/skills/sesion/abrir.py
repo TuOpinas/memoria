@@ -575,7 +575,7 @@ print("\n\n".join(e["texto"] for e in ses) or "(ninguna)")
 ultima_ses = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True) if fecha_ok(e["fecha"])), None)
 # para los avisos de otras áreas cuenta la última sesión de trabajo: las entradas «(tarea)» o «(tablero)» no son sesiones
 ultima_real = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True)
-                    if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero)\)", e["cab"], re.I)), None)
+                    if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero|migracion)\)", e["cab"], re.I)), None)
 # «Proyecto terminado el …» abre el Estatus desde la 1.22; hasta la 1.21, Estado actual o En corto
 cerrado = any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cabecera(tp)[1], n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
 
