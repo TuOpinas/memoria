@@ -320,12 +320,10 @@ if not areas:
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
 # «Contexto común (`guia.md` y `base/`): Nombre (correo).»); sin correo, la cuenta del responsable es la de las áreas
 # de las que es responsable
-resp_contexto, administra_nombre = "", None
+resp_contexto = ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().lstrip("-* ").startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
-    if l.strip().lower().lstrip("-* ").startswith("administra la carpeta"):
-        administra_nombre = re.sub(r"\s*\([^)]*\)", "", l.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
 # la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
 # como antes, es la de las áreas de las que esa persona es responsable
 cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
@@ -418,12 +416,9 @@ if not CUENTA:
 else:
     # el responsable de contexto migra también las áreas de otros responsables (1.22.1), las que su carpeta deja leer
     propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
-    # la misma regla que migrar_estructura.py: con carpeta, no restringida a otros, y solo si quien responde por el
-    # contexto administra la carpeta (sin la línea, se da por hecho)
-    _administra = administra_nombre is None or (bool(resp_contexto) and administra_nombre == resp_contexto.lower())
+    # la misma regla que migrar_estructura.py: todas las áreas con carpeta, restringidas incluidas
     ajenas_viejas = [f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})" for a in areas
-                     if es_resp and _administra and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir()
-                     and not (a["restringida"] and CUENTA not in a["colaboran"]) and area_anterior(a["slug"])]
+                     if es_resp and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir() and area_anterior(a["slug"])]
     guia_vieja = es_resp and guia_anterior
     if propias_viejas or ajenas_viejas or guia_vieja:
         print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))

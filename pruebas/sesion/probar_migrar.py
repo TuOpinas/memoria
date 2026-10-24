@@ -115,17 +115,13 @@ a5 = am.read_text(encoding="utf-8"); p5 = pm.read_text(encoding="utf-8")
 ok(c == 0 and "## Prioridades ahora" not in a5 and "  - Ordenar los precios antes del cierre del trimestre." in a5 and "ESTATUS-NUEVO" in a5, "las prioridades que faltaban entran en «Siguiente» del Estatus que ya había")
 ok("## En corto" not in p5 and "CORTO-DE-CARLA" in p5 and "PREOCUPA-CARLA" in p5 and "ESTATUS-VIEJO" not in p5 and "ESTATUS-VIEJO" in (R5 / "ventas/precios/taller/estado-anterior.md").read_text(encoding="utf-8"), "de dos bloques se queda el más reciente, con sus viñetas, y el otro va al taller")
 
-print("migrar_estructura.py: las áreas ajenas que el responsable de contexto no migra")
+print("migrar_estructura.py: el responsable de contexto migra también las restringidas de otros")
 RR = raiz_nueva(personas_abierta=False)
-c, sr = corre(RR, "--cuenta", "ana@ejemplo.test", "--plan")
-ok(not sr["ajenas"] and {"area": "personas", "motivo": "restringida: la migra su responsable"} in sr["pendientes"], "un área restringida en la que no colabora espera a su responsable")
+c, sr = corre(RR, "--cuenta", "ana@ejemplo.test")
 o = subprocess.run([sys.executable, str(ABRIR), str(RR), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
-ok("personas" not in [l for l in o.split("\n") if l.startswith("Veredicto: ANTERIOR")][0], "y abrir.py no se la ofrece")
-RA = raiz_nueva(); g_ = RA / "guia.md"; g_.write_text(g_.read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Beto Prueba"), encoding="utf-8")
-c, sa = corre(RA, "--cuenta", "ana@ejemplo.test", "--plan")
-o = subprocess.run([sys.executable, str(ABRIR), str(RA), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
-ok(not sa["ajenas"] and any(x["area"] == "personas" and "administra" in x["motivo"] for x in sa["pendientes"]) and "personas" not in o.split("=== ESTRUCTURA")[1].split("\n")[1],
-   "si quien responde por el contexto no administra la carpeta, las ajenas esperan a su responsable (y abrir.py coincide)")
+ok(c == 0 and sr["ajenas"] == ["personas"] and "## Panorama" not in (RR / "personas/area.md").read_text(encoding="utf-8")
+   and "por Beto Prueba" in (RR / "personas/nomina/sesiones.md").read_text(encoding="utf-8"), "personas, restringida, también queda migrada, y su bitácora dice por quién")
+ok("Veredicto: AL DIA" in o, "y la raíz queda al día entera")
 RP = raiz_nueva(); g_ = RP / "guia.md"; g_.write_text(g_.read_text(encoding="utf-8").replace("| Ana Prueba | ana@ejemplo.test |", "| Ana Prueba (lleva varias) | ana@ejemplo.test |", 1), encoding="utf-8")
 c, sp_ = corre(RP, "--cuenta", "ana@ejemplo.test", "--plan")
 o = subprocess.run([sys.executable, str(ABRIR), str(RP), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout

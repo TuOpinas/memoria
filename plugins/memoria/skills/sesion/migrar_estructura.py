@@ -5,11 +5,10 @@ Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--
 
 Lo ofrece la apertura cuando abrir.py dice «ESTRUCTURA: ANTERIOR»; con el sí de la persona se corre una vez, sin --plan.
 Con --plan no escribe nada y dice qué haría. Toca las áreas de las que la cuenta es responsable (la celda Cuenta de
-guia.md, antes de «colabora:»); si es la del responsable de contexto, además guia.md y las áreas de otros responsables
-(desde la 1.22.1, para que una raíz no quede a medias por un responsable que no abre sesión), con la entrada de la
-bitácora de esos proyectos diciendo por quién; salvo un área sin carpeta, una restringida en la que no colabora, o todas
-si quien responde por el contexto no es quien administra la carpeta («Administra la carpeta» en guia.md): Drive no le
-dejaría escribir ahí. Lo que no migra va a «pendientes» con su motivo. Cualquier otra cuenta deja las
+guia.md, antes de «colabora:»); si es la del responsable de contexto, además guia.md y todas las demás áreas con carpeta,
+restringidas incluidas (desde la 1.22.1: es quien administra la carpeta y su dueño en Drive, y así una raíz no queda a
+medias por un responsable que no abre sesión), con la entrada de la bitácora de esos proyectos diciendo por quién. Lo
+que no migra (un área sin carpeta) va a «pendientes» con su motivo. Cualquier otra cuenta deja las
 áreas ajenas para su responsable, y una raíz mezclada funciona porque scripts y skills leen los dos nombres durante la 1.22.
 Sin consola (la carpeta no está montada en la computadora) se corre en el contenedor sobre la copia que arma «espejo.py
 migracion», con --sin-consola (la entrada de la bitácora lleva la marca), y lo que cambia se devuelve con espejo.py;
@@ -629,31 +628,20 @@ def main(argv):
                      else restringida_celda(c[lee_] if lee_ < len(c) else ""))
             areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": re.sub(r"\s*\([^)]*\)", "", c[col["resp"]]).strip(),
                           "responsables": cuentas(c[col["cuenta"]])[0], "colaboran": cuentas(c[col["cuenta"]])[1], "restringida": restr})
-    ctx, admin = "", None
+    ctx = ""
     for l in (re.search(r"^##\s+Quién responde por qué\s*\n(.*?)(?=^##\s|\Z)", guia, re.M | re.S) or [None, ""])[1].split("\n"):
         if l.strip().lower().lstrip("-* ").startswith("contexto común"):
             ctx = l
-        if l.strip().lower().lstrip("-* ").startswith("administra la carpeta"):
-            admin = re.sub(r"\s*\([^)]*\)", "", l.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
     # como abrir.py: la cuenta entre paréntesis en «Contexto común»; sin ella, la de las áreas cuyo responsable se llama igual
     cuenta_ctx = set(CORREO.findall(ctx.lower()))
     nombre_ctx = re.sub(r"\s*\([^)]*\)", "", ctx.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
     es_resp = cuenta in cuenta_ctx or (not cuenta_ctx and bool(nombre_ctx) and any(cuenta in a["responsables"] and a["nombre"].lower() == nombre_ctx for a in areas))
     propias = [a for a in areas if cuenta in a["responsables"]]
     nombre = op("--nombre") or (propias[0]["nombre"] if propias else cuenta)
-    # el responsable de contexto migra también las áreas de otros responsables (1.22.1), con la misma regla que abrir.py
-    # (ajena_migrable): su carpeta existe, no está restringida a otros, y quien responde por el contexto administra la
-    # carpeta (sin línea «Administra la carpeta», se da por hecho); si no, Drive no le deja escribir ahí
-    nombre_resp = re.sub(r"\s*\([^)]*\)", "", ctx.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
-    administra = admin is None or (bool(nombre_resp) and admin == nombre_resp)
+    # el responsable de contexto migra todas las áreas con carpeta, también las de otros responsables y las restringidas
+    # (1.22.1): es quien administra la carpeta y su dueño en Drive, y lo peor que puede pasar es que algo se quede sin migrar
     def motivo_ajena(a):
-        if not (raiz / a["slug"]).is_dir():
-            return "sin carpeta en esta computadora"
-        if a["restringida"] and cuenta not in a["colaboran"]:
-            return "restringida: la migra su responsable"
-        if not administra:
-            return "quien responde por el contexto no administra la carpeta: la migra su responsable"
-        return None
+        return "sin carpeta en esta computadora" if not (raiz / a["slug"]).is_dir() else None
     mias = [a for a in areas if (cuenta in a["responsables"] and (raiz / a["slug"]).is_dir()) or (es_resp and cuenta not in a["responsables"] and not motivo_ajena(a))]
     salida = {"plan": plan, "hoy": hoy, "conflictos": [], "fallidos": [], "entradas": [], "resumen": {},
               "areas": [a["slug"] for a in mias], "ajenas": [a["slug"] for a in mias if cuenta not in a["responsables"]],
