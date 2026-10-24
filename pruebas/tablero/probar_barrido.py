@@ -59,6 +59,16 @@ try:
     ok("ventas--cerrado" not in por("estado-desfasado"), "un proyecto terminado no se propone")
     ok(por("paso-hecho") == ["ventas--hecho"] and len([d for d in docs.values() if d["clase"] == "paso-hecho"]) == 1, "paso hecho: solo el paso que la sesión cuenta, no el otro ni los de otros proyectos")
     ok(por("rotacion") == ["ventas--anios"], "rotación: un registro que mezcla años")
+    # una frase que comparte las palabras del paso pero lo niega no lo da por hecho; fechar el paso no cambia el id
+    proyecto(raiz, "ventas", "niega", "2026-10-20", ["Mandar la encuesta de satisfacción al equipo"], sesion("2026-10-20", "la encuesta", "Revisamos el borrador de la encuesta de satisfacción con el equipo; falta mandarla."))
+    b2, docs2 = correr(raiz, tmp / "s1b")
+    ok("ventas--niega" not in [d["proyecto"] for d in docs2.values() if d["clase"] == "paso-hecho"], "«falta mandarla» no da el paso por hecho")
+    id_antes = next(i for i, d in docs2.items() if d["clase"] == "paso-hecho" and d["proyecto"] == "ventas--hecho")
+    tp_ = raiz / "ventas/hecho/proyecto.md"; tx_ = tp_.read_text(encoding="utf-8")
+    tp_.write_text(tx_.replace("- Mandar la propuesta de una página a Cliente Uno", "- 2026-11-05: Mandar la propuesta de una página a Cliente Uno"), encoding="utf-8")
+    b3, docs3 = correr(raiz, tmp / "s1c")
+    ok(id_antes in docs3, "el mismo paso con fecha delante da el mismo id: fecharlo desde el tablero no resucita una propuesta descartada")
+    tp_.write_text(tx_, encoding="utf-8"); shutil.rmtree(raiz / "ventas/niega")
     ok([j["proyecto"] for j in b["para_juicio"]] == ["ventas--decidimos"], "una decisión contada en una sesión y no registrada va a juicio del modelo, no a la cola")
     ok(all(d["tipo"] == "propuesta" and d["origen"] == "barrido" and d["estado"] == "pendiente" for d in docs.values()), "todo documento es de tipo «propuesta», de origen barrido, pendiente")
     ok(all("\n" not in d["texto"] and "\n" not in d["por_que"] and len(d["texto"]) <= 300 for d in docs.values()), "los textos van en una sola línea y cortos")
@@ -182,6 +192,22 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s4), "--cola", str(cola4), "--hoy", "2026-10-23"], capture_output=True, text=True)
     ok(sorted(x["id"] for x in json.loads((s4 / "barrido.json").read_text())["borrar"]) == sorted(nuevas), "si una de las piezas desaparece, se retiran")
 
+    print("sin inventario del taller, lo que nombra el taller no se toca; creado va en la zona de la organización")
+    sn = tmp / "sn"; sn.mkdir()      # sin detalle: como una puesta al día sin consola
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sn), "--cola", str(cola4), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    ok(json.loads((sn / "barrido.json").read_text())["borrar"] == [], "sin piezas del taller en el detalle, el candidato y la contradicción del taller se quedan en la cola")
+    (sn / "meta").mkdir(); escribir(sn / "meta/estado.json", json.dumps({"snapshot": "2026-10-23", "zona": "America/Mexico_City"}))
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sn), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    creados = [json.loads(p.read_text())["creado"] for p in (sn / "cambios").glob("*.json")]
+    ok(creados and all(c.endswith(("-06:00", "-05:00")) for c in creados), f"creado lleva la zona de la organización, no la del contenedor ({creados[:1]})")
+    # una decisión registrada al día siguiente de la sesión cuenta como registrada; un proyecto terminado no pide afirma
+    proyecto(raiz, "ventas", "medianoche", "2026-10-22", ["Esperar"], sesion("2026-10-21", "el precio", "Decidimos cobrar en dos pagos."), decisiones="## 2026-10-22 · Dos pagos\nDecidió: Ana\nPor qué: x\n")
+    escribir(raiz / "ventas/cerrado/entregables/viejo.md", "---\nestado: vigente\nactualizado: 2026-08-01\n---\n# Viejo\n\nCuerpo.\n")
+    b4, _ = correr(raiz, tmp / "s4m")
+    ok("ventas--medianoche" not in [j["proyecto"] for j in b4["para_juicio"]], "una decisión registrada al día siguiente de la sesión no va a juicio")
+    ok(not any(x["ruta"].startswith("ventas/cerrado/") for x in b4["para_afirma"]), "un proyecto terminado no pide afirma")
+    shutil.rmtree(raiz / "ventas/medianoche"); (raiz / "ventas/cerrado/entregables/viejo.md").unlink()
+
     print("lo juzgado no se vuelve a pedir")
     sj2 = tmp / "sj2"; shutil.copytree(sc / "detalle", sj2 / "detalle")
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sj2), "--hoy", "2026-10-23"], capture_output=True, text=True)
@@ -219,7 +245,7 @@ try:
     ok({x["id"] for x in rep["rechazados"]} == {"mala", "multi"}, "una propuesta con id de proyecto malo o con saltos de línea se rechaza")
     r2 = subprocess.run([sys.executable, str(APLICAR), str(raiz), str(tmp / "q.json"), "--cuenta", "otra@ejemplo.test", "--dry-run"], capture_output=True, text=True)
     rep2 = json.loads(r2.stdout)
-    ok(len(rep2["para_su_dueno"]) >= len(docs) and all(x["id"].startswith("prop-") for x in rep2["para_su_dueno"] if x["id"] not in ("mala", "multi")) and not rep2.get("propuestas"), "la cuenta de otra área no las toca: esperan a su dueño")
+    ok(not rep2["para_su_dueno"] and set(rep2["propuestas"]) == {i for i in docs if i not in ("mala", "multi")}, "con la cuenta de otra área tampoco se aplican ni esperan a nadie: se cuentan aparte, como propuestas")
 
     print("plan_subida.py sube las propuestas")
     PLAN = TABLERO / "plan_subida.py"

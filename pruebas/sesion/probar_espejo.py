@@ -64,6 +64,8 @@ for r in out3.split():
     shutil.copy(R / r, C / r)
 # las cabeceras de entregables del proyecto activo se traen desde su listado
 for f in (R / ACTIVO / "entregables").iterdir():
+    if not f.is_file():
+        continue      # una subcarpeta de entregables no se trae sin consola (el tablero la cuenta, no la lista)
     (C / ACTIVO / "entregables").mkdir(parents=True, exist_ok=True)
     shutil.copy(f, C / ACTIVO / "entregables" / f.name)
 
@@ -135,7 +137,7 @@ for d, ds, fs in os.walk(R):
         if f.endswith(".md"):
             (TC / r).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(R / r, TC / r)
-        elif "entregables" in partes[:-1]:
+        elif partes[-2] == "entregables":      # los de primer nivel; una subcarpeta de entregables no se lista sin consola
             marcas.append(r)
 (tmp / "marcas.txt").write_text("\n".join(marcas), encoding="utf-8")
 corre(ESPEJO, "marcadores", TC, tmp / "marcas.txt")

@@ -56,6 +56,7 @@ LIMITE_LINEAS = 1500
 MAX_AFIRMA = 6
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
+NIEGA = re.compile(r"\b(no|falta|faltan|pendiente|pendientes|sin|todav[ií]a|a[úu]n|hasta que|queda|quedan|sigue|siguen)\b", re.I)
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
 
 
@@ -190,6 +191,21 @@ def proyectos_de(copia, cuenta=None):
             yield area.name, proy
 
 
+def zona_de(salida):
+    """La zona horaria que el generador dejó en <salida>/meta/estado.json, o la de México; `creado` se estampa con ella."""
+    try:
+        from zoneinfo import ZoneInfo
+        m = json.loads((pathlib.Path(salida) / "meta" / "estado.json").read_text(encoding="utf-8"))
+        m = m.get("data", m) if isinstance(m, dict) and "data" in m else m
+        return ZoneInfo((m or {}).get("zona") or "America/Mexico_City")
+    except Exception:
+        return datetime.timezone(datetime.timedelta(hours=-6))
+
+
+def ahora_en(salida):
+    return datetime.datetime.now(zona_de(salida)).isoformat(timespec="minutes")
+
+
 def juzgado_de(base):
     """Lo que el modelo ya juzgó sin hallazgo, guardado en meta/estado por plan_subida.py: {"ids": [...], "contraste": [...]}."""
     try:
@@ -241,17 +257,24 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                 prop("estado-desfasado", f"{act}>{ultima}",
                      f"Poner al día «Estado actual» y «Siguientes pasos»: son de {act} y la última sesión es de {ultima}.",
                      "proyecto.md es más viejo que la última entrada de sesiones.md")
-        # pasos que el registro da por hechos
+        # pasos que el registro da por hechos: las palabras del paso están en una frase de Avances que no lo niega.
+        # Se mira frase por frase, porque «revisamos la encuesta; falta mandarla» comparte las palabras del paso y dice lo contrario.
         if reales and not cerrado:
             for e in reales[:2]:
-                av = campo(e[2], "Avances")
-                pav = palabras(av)
-                if not pav:
+                frases = [f for f in re.split(r"[.;\n]+", campo(e[2], "Avances")) if f.strip()]
+                if not frases:
                     continue
                 for paso in pasos_de(tp):
                     pp = palabras(re.sub(r"\b20\d\d-\d\d-\d\d\b", " ", paso))
-                    if len(pp) >= 3 and len(pp & pav) >= 0.7 * len(pp):
-                        prop("paso-hecho", f"{paso}|{e[0]}",
+                    if len(pp) < 3:
+                        continue
+                    # la frase que coincide no lo niega, y la siguiente tampoco lo niega hablando de lo mismo («…; falta mandarla»)
+                    hecho = any(len(pp & palabras(f)) >= 0.7 * len(pp) and not NIEGA.search(f)
+                                and not (i + 1 < len(frases) and NIEGA.search(frases[i + 1]) and pp & palabras(frases[i + 1]))
+                                for i, f in enumerate(frases))
+                    if hecho:
+                        # el id sale de las raíces del paso, no de su texto: fecharlo o retocarlo no lo convierte en otra observación
+                        prop("paso-hecho", "|".join(sorted(pp)) + f"|{e[0]}",
                              f"Quitar de «Siguientes pasos»: «{una_linea(paso, 140)}». La sesión del {e[0]} parece darlo por hecho.",
                              f"sesiones.md ({e[0]}) lo cuenta en Avances")
         # rotación
@@ -264,16 +287,19 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         # decisiones que se cuentan en una sesión y no están registradas
         fechas_dec = {e[0] for e in entradas(dec_t)}
         limite = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=14)).isoformat()
+        # registrada el mismo día o el siguiente: el cierre acepta hoy o ayer, y una sesión que cruza la medianoche fecha la
+        # bitácora un día y la decisión el otro
+        registrada = lambda f: f in fechas_dec or (fecha_ok(f) and (datetime.date.fromisoformat(f) + datetime.timedelta(days=1)).isoformat() in fechas_dec)
         for e in reales:
-            if e[0] not in fechas_dec and DECIDIO.search(" ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))):
+            if not registrada(e[0]) and DECIDIO.search(" ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))):
                 validas.add(id_juicio("decision-sin-registrar", pid, "decision|" + e[0]))      # sigue siendo cierta mientras no se registre
         for e in reales[:3]:
-            if e[0] >= limite and e[0] not in fechas_dec:
+            if e[0] >= limite and not registrada(e[0]):
                 texto = " ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))
                 if DECIDIO.search(texto) and not visto(id_juicio("decision-sin-registrar", pid, "decision|" + e[0])):
                     juicio.append({"proyecto": pid, "fecha": e[0], "extracto": una_linea(texto, 600)})
-        # entregables que no dicen qué sostienen
-        for f in sorted((proy / "entregables").glob("*.md")) if (proy / "entregables").is_dir() else []:
+        # entregables que no dicen qué sostienen (en un proyecto terminado ya no se pide: nadie lo va a abrir)
+        for f in sorted((proy / "entregables").glob("*.md")) if (proy / "entregables").is_dir() and not cerrado else []:
             ft = leer(f)
             cab = cabecera(ft)
             if cab.get("estado") == "reemplazado" or cab.get("afirma", "").strip():
@@ -285,8 +311,13 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                 titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
                 arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
                 afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente"})
-        # el taller: sus cabeceras las dejó el generador en el detalle; el cuerpo no está en la copia y se lee en la computadora
+        # el taller: sus cabeceras las dejó el generador en el detalle; su cuerpo no está en la copia ni se lee nunca
         piezas = piezas_de(salida, pid) if salida else []
+        if not any(pz.get("tipo") == "taller" for pz in piezas):
+            # sin inventario del taller (sin consola, o un detalle que no lo trae), lo que nombra «/taller/» ni se juzga ni se retira
+            for d in en_cola(pid):
+                if "/taller/" in json.dumps(d["data"].get("rutas") or d["data"].get("ruta") or ""):
+                    validas.add(d["id"])
         rutas = set()
         con_afirma = []
         for pz in piezas:
@@ -327,7 +358,7 @@ def sumar_juicio(salida, juicio, cola):
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
     ya = {d["id"] for d in cargar_cola(cola) if d["data"].get("tipo") == "propuesta"} | {x["id"] for x in bar["anadir"]}
-    ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
+    ahora = ahora_en(salida)
     nuevas = {"decisiones": 0, "afirma": 0, "candidatos": 0, "contradicciones": 0}
 
     def guardar(pid, data):
@@ -417,7 +448,7 @@ def main():
     props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []),
                                                               (opt("--cuenta") or "").strip().lower() or None, juzgado_de(opt("--base")))
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
-    ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
+    ahora = ahora_en(salida)
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
     anadir = []
     for p in props:

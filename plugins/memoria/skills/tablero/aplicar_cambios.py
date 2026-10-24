@@ -223,10 +223,19 @@ rep = {"aplicados": [], "sin_match": [], "rechazados": [], "errores": [], "para_
 for c in cargar():
     t = c.get("tipo")
     area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
-    if t in ("fecha", "hecho", "nota", "corregir", "prioridad", "propuesta") and c.get("proyecto") and not partes(c)[0]:
+    if t == "propuesta":
+        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún dueño; se cuentan aparte
+        if not partes(c)[0] or not texto_de_una_linea(c.get("texto")) or \
+           any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")) or \
+           (c.get("rutas") is not None and not (isinstance(c["rutas"], list) and c["rutas"] and all(texto_de_una_linea(r) for r in c["rutas"]))):
+            rep["rechazados"].append({"id": c["id"], "detalle": "propuesta sin proyecto «area--slug», sin texto, o con saltos de línea"})
+            continue
+        rep["propuestas"].append(c["id"])
+        continue
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and c.get("proyecto") and not partes(c)[0]:
         rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
         continue
-    if t in ("fecha", "hecho", "nota", "corregir", "prioridad", "propuesta") and not puede(t, c, area):
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and not puede(t, c, area):
         rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
                                      "detalle": "falta --cuenta" if not CUENTA else (f"las prioridades de {area} son de su dueño" if t == "prioridad" and area in COLABORA else f"el área {area or '?'} no es de {CUENTA}")})
         continue
@@ -241,13 +250,6 @@ for c in cargar():
             rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta o texto con saltos de línea"})
             continue
         rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")})
-    elif t == "propuesta":
-        if not partes(c)[0] or any(not texto_de_una_linea(c.get(k)) for k in ("texto",)) or \
-           any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")) or \
-           (c.get("rutas") is not None and not (isinstance(c["rutas"], list) and c["rutas"] and all(texto_de_una_linea(r) for r in c["rutas"]))):
-            rep["rechazados"].append({"id": c["id"], "detalle": "propuesta sin proyecto «area--slug», sin texto, o con saltos de línea"})
-            continue
-        rep["propuestas"].append(c["id"])
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})
 print(json.dumps(rep, ensure_ascii=False, indent=1))
