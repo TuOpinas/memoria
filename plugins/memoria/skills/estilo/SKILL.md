@@ -15,7 +15,7 @@ Este archivo es la fuente canónica del estilo. Si una plantilla del plugin lo c
 
 ## Cuándo se aplica
 
-Sin que nadie la invoque, en todo texto que se va a firmar o compartir: un entregable, un documento, un correo, lo que se escribe en la carpeta para que lo lea otra persona. «En corto» y el `Panorama` no la cargan: su voz la da `escribir.md`. Para las respuestas del chat bastan las dos preguntas de abajo, que el aviso de arranque ya trae, sin cargar esta skill. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
+Sin que nadie la invoque, en todo texto que se va a firmar o compartir: un entregable, un documento, un correo, lo que se escribe en la carpeta para que lo lea otra persona. El `Estatus` de un proyecto y el de un área no la cargan: su voz la da `escribir.md`. Para las respuestas del chat bastan las dos preguntas de abajo, que el aviso de arranque ya trae, sin cargar esta skill. Y de forma explícita cuando alguien pide que suene menos a IA, más ejecutivo, más al grano, más compacto, que se lea rápido, o que le quiten los rodeos.
 
 **No se cambia por iniciativa propia.** Este es el estilo de la casa y se aplica por defecto, aunque el texto parezca pedir otro registro. Solo cambia si quien encarga el texto lo pide de forma expresa, y el cambio vale para ese texto: no se guarda como estándar nuevo ni se arrastra al siguiente entregable.
 
@@ -93,4 +93,4 @@ La fecha basta cuando el dato es de la propia organización y está en una fuent
 3. Cuenta los guiones largos antes y después, y compáralos con el umbral de uno cada 500 palabras. Es la medida más rápida de si el texto mejoró.
 4. Busca cada cifra y comprueba que tenga fecha o fuente al lado.
 5. No toques las citas textuales de terceros ni los nombres propios de documentos y decisiones.
-6. Corregir el estilo de un entregable de otro proyecto o de otra área es tocar contenido ajeno, no forma. Se propone al dueño, no se aplica.
+6. Corregir el estilo de un entregable de otro proyecto o de otra área es tocar contenido ajeno, no forma. Se propone al responsable, no se aplica.
