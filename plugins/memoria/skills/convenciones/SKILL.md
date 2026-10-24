@@ -255,6 +255,8 @@ La superficie pública de un proyecto son `entregables/` y `decisiones.md`. Es l
 
 El cuerpo de `sesiones.md`, `taller/`, `fuentes/` y todo lo que está restringido son taller privado. Nadie de fuera del área los lee ni los cita en `basado_en`. Un entregable sí cita el taller de su propio proyecto, que es de donde salió.
 
+Del `taller/` también hay una parte pública: **su inventario**, que es la cabecera de cada archivo (`estado`, `actualizado`, `afirma`, `basado_en`, `reemplazado_por`) y su título. Dice qué hay, en qué estado y qué sostiene cada pieza, sin contar cómo se llegó, y es lo que el tablero enseña en «Qué hay» a quien lee el área (decisión 2026-10-23). El cuerpo sigue siendo privado: nadie de fuera del área lo lee, lo cita ni lo copia. Por eso la línea `afirma` de un archivo del taller, como su título, no lleva nada restringido ni personal.
+
 De `sesiones.md` hay una parte pública: la cabecera de cada entrada, que es la fecha, el título y la línea «Trabajamos en». Dice qué está moviendo el proyecto sin contar cómo, y es lo que otra área, `consulta` y el director pueden leer de una bitácora ajena. «Avances» y «Pendiente» son el cuerpo y siguen siendo taller privado. Lo que otra área necesita saber de un proyecto está pensado para leerse sin la bitácora: su «En corto», su «Estado actual», sus decisiones y sus entregables vigentes, y el `Panorama` de su área.
 
 Dentro de la misma área, un entregable puede citar en `basado_en` una fuente de otro proyecto del área, siempre la original y nunca una copia: un export vive en un solo `fuentes/` y los demás lo citan por su ruta. Entre áreas no se citan fuentes, solo entregables vigentes y decisiones.

@@ -131,6 +131,44 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s3), "--cola", str(tmp / "cola3"), "--hoy", "2026-10-23"], capture_output=True, text=True)
     ok([x["ruta"] for x in json.loads((s3 / "barrido.json").read_text())["para_afirma"]] == ["ventas/limpio/entregables/borrador.md"], "lo ya propuesto no se vuelve a pedir")
 
+    print("taller, candidatos y contradicciones")
+    sc = tmp / "sc"; (sc / "detalle").mkdir(parents=True)
+    escribir(sc / "detalle/ventas--limpio.json", json.dumps({"que_hay": {"piezas": [
+        {"tipo": "entregable", "archivo": "con.md", "estado": "vigente", "afirma": "Ya lo dice."},
+        {"tipo": "taller", "archivo": "nota-a.md", "estado": "borrador", "titulo": "Nota A", "afirma": "El tope deja fuera lo recurrente."},
+        {"tipo": "taller", "archivo": "nota-b.md", "estado": "borrador", "titulo": "Nota B", "afirma": "El tope incluye lo recurrente."},
+        {"tipo": "taller", "archivo": "sin-afirma.md", "estado": "borrador", "titulo": "Sin afirma"},
+        {"tipo": "taller", "archivo": "vieja.md", "estado": "reemplazado", "titulo": "Vieja"},
+        {"tipo": "taller", "archivo": "hoja.xlsx", "estado": None}]}}))
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sc), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    bc = json.loads((sc / "barrido.json").read_text(encoding="utf-8"))
+    pa = [x["ruta"] for x in bc["para_afirma"]]
+    ok(pa[-1] == "ventas/limpio/taller/sin-afirma.md" and pa[0].startswith("ventas/limpio/entregables/") and bc["para_afirma"][-1].get("leer_en_computadora") is True and bc["para_afirma"][-1]["arranque"] is None, f"pide afirma del taller después de los entregables, sin arranque y marcado para leer en la computadora ({pa})")
+    ok(len(bc["para_contraste"]) == 1 and bc["para_contraste"][0]["proyecto"] == "ventas--limpio" and {x["ruta"] for x in bc["para_contraste"][0]["piezas"]} == {"ventas/limpio/entregables/con.md", "ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/nota-b.md"}, "pone a contraste solo las piezas con afirma, del proyecto que tiene dos o más")
+    escribir(tmp / "juicio3.json", json.dumps({
+        "candidatos": [{"proyecto": "ventas--limpio", "rutas": ["ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/nota-b.md"], "entregable": "Una política de compras recurrentes"},
+                       {"proyecto": "ventas--limpio", "rutas": ["ventas/limpio/taller/nota-a.md"], "entregable": "una sola pieza no vale"},
+                       {"proyecto": "ventas--limpio", "rutas": ["ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/otra.md"], "entregable": "una ruta que no se puso delante"}],
+        "contradicciones": [{"proyecto": "ventas--limpio", "rutas": ["ventas/limpio/taller/nota-b.md", "ventas/limpio/taller/nota-a.md"], "texto": "Una incluye lo recurrente y la otra lo deja fuera"},
+                            {"proyecto": "ventas--hecho", "rutas": ["a", "b"], "texto": "proyecto que no se pidió"}]}))
+    r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sc), str(tmp / "juicio3.json")], capture_output=True, text=True)
+    res = json.loads(r.stdout)
+    bc = json.loads((sc / "barrido.json").read_text(encoding="utf-8"))
+    nuevas = {x["id"]: json.loads((sc / x["archivo"]).read_text(encoding="utf-8")) for x in bc["anadir"] if x["id"].startswith(("prop-candidato-entregable-", "prop-contradiccion-"))}
+    ok(res["propuestas_candidatos"] == 1 and res["propuestas_contradicciones"] == 1 and len(nuevas) == 2, f"solo entran el candidato y la contradicción con dos o más piezas puestas delante ({res})")
+    ok(all(d["rutas"] == ["ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/nota-b.md"] and "\n" not in d["texto"] and "nota-a.md" in d["texto"] for d in nuevas.values()), "la propuesta lleva las rutas ordenadas y las nombra en el texto")
+    # siguen valiendo mientras existan las piezas; si una desaparece, se retiran
+    cola4 = tmp / "cola4"; cola4.mkdir()
+    for i, (k, d) in enumerate(nuevas.items()):
+        escribir(cola4 / f"{k}.json", json.dumps({"id": k, "data": d, "version": 10 + i}))
+    s4 = tmp / "s4"; shutil.copytree(sc / "detalle", s4 / "detalle")
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s4), "--cola", str(cola4), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    ok(json.loads((s4 / "barrido.json").read_text())["borrar"] == [], "con las piezas en su sitio, el candidato y la contradicción siguen en la cola")
+    det = json.loads((s4 / "detalle/ventas--limpio.json").read_text()); det["que_hay"]["piezas"] = [x for x in det["que_hay"]["piezas"] if x["archivo"] != "nota-b.md"]
+    escribir(s4 / "detalle/ventas--limpio.json", json.dumps(det))
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s4), "--cola", str(cola4), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    ok(sorted(x["id"] for x in json.loads((s4 / "barrido.json").read_text())["borrar"]) == sorted(nuevas), "si una de las piezas desaparece, se retiran")
+
     print("aplicar_cambios.py y las propuestas")
     guia = raiz / "guia.md"
     escribir(guia, "# Org\n\n## Áreas\n\n| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|\n| `ventas/` | v | Ana | ana@ejemplo.test | Todo el equipo |\n\n## Quién responde por qué\n")

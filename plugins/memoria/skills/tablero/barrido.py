@@ -14,7 +14,9 @@ Uso:  barrido.py <copia> <salida> [--cola <volcado de «cambios»>] [--hoy AAAA-
       barrido.py --sumar-juicio <salida> <juicio.json> [--cola <volcado de «cambios»>]
           suma al barrido lo que el modelo juzgó: <juicio.json> es {"decisiones": [{"proyecto": "area--slug",
           "fecha": "AAAA-MM-DD", "decision": "una línea"}], "afirma": [{"ruta": "area/proyecto/entregables/x.md",
-          "afirma": "una línea"}]}, solo de lo que «para_juicio» y «para_afirma» pidieron (una lista sola vale como decisiones)
+          "afirma": "una línea"}], "candidatos": [{"proyecto": "area--slug", "rutas": ["…", "…"], "entregable": "una línea"}],
+          "contradicciones": [{"proyecto": "area--slug", "rutas": ["…", "…"], "texto": "una línea"}]}, solo de lo que
+          «para_juicio», «para_afirma» y «para_contraste» pidieron (una lista sola vale como decisiones)
 
 Detecta, con lo que está escrito y sin modelo:
   estado-desfasado  `proyecto.md` es más viejo que la última sesión que registra `sesiones.md`.
@@ -25,9 +27,13 @@ Detecta, con lo que está escrito y sin modelo:
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
-  para_afirma   los entregables que no llevan `afirma:` (hasta 6 por corrida, los vigentes primero), con su título y el
-                arranque de su cuerpo, para que el modelo escriba la línea que dice qué sostienen. Los del `taller/`
-                llegan cuando el inventario de la computadora los traiga a la copia.
+  para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 6 por corrida; entregables antes
+                que taller, vigentes antes que borradores), con su título y, en los entregables, el arranque de su cuerpo,
+                para que el modelo escriba la línea que dice qué sostienen. Del taller la copia solo tiene la cabecera
+                (la dejó el generador en <salida>/detalle): «leer_en_computadora» pide leer su arranque allí, en una llamada.
+  para_contraste los proyectos (hasta 5) con dos o más piezas con `afirma`, con esas líneas: el modelo dice qué piezas
+                del taller podrían alimentar un entregable que no existe (candidatos) y qué dos piezas sostienen cosas
+                incompatibles (contradicciones). Solo las líneas «afirma», nunca los cuerpos.
 
 Cada propuesta tiene un id estable (`prop-<clase>-<huella>`): la misma observación no se vuelve a proponer, una que
 el dueño descartó (estado «descartada») no vuelve, y una que ya no es cierta (el dueño puso al día lo que decía) se
@@ -44,6 +50,7 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
 LIMITE_LINEAS = 1500
 MAX_AFIRMA = 6
+MAX_CONTRASTE = 5
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
 
 
@@ -142,9 +149,18 @@ def proyectos_de(copia):
             yield area.name, proy
 
 
-def barrer(copia, hoy, hay_propuesta=lambda i: False):
-    """(propuestas, para_juicio, para_afirma, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
-    props, juicio, afirma, vistos, validas = [], [], [], [], set()
+def piezas_de(salida, pid):
+    """Las piezas de «Qué hay» que dejó el generador para el proyecto (entregables y taller, solo cabeceras), o []."""
+    try:
+        det = json.loads((salida / "detalle" / f"{pid}.json").read_text(encoding="utf-8"))
+        return (det.get("que_hay") or {}).get("piezas") or []
+    except (OSError, ValueError):
+        return []
+
+
+def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: []):
+    """(propuestas, para_juicio, para_afirma, para_contraste, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
+    props, juicio, afirma, contraste, vistos, validas = [], [], [], [], [], set()
     for area, proy in proyectos_de(copia):
         pid = f"{area}--{proy.name}"
         vistos.append(pid)
@@ -211,9 +227,31 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False):
                 titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
                 arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
                 afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente"})
-    afirma.sort(key=lambda x: (not x["_vigente"], x["ruta"]))
-    afirma = [{k: v for k, v in x.items() if k != "_vigente"} for x in afirma[:MAX_AFIRMA]]
-    return props, juicio, afirma, vistos, validas
+        # el taller: sus cabeceras las dejó el generador en el detalle; el cuerpo no está en la copia y se lee en la computadora
+        piezas = piezas_de(salida, pid) if salida else []
+        rutas = set()
+        con_afirma = []
+        for pz in piezas:
+            ruta = f"{area}/{proy.name}/{'entregables' if pz.get('tipo') == 'entregable' else 'taller'}/{pz.get('archivo', '')}"
+            rutas.add(ruta)
+            if pz.get("afirma") and pz.get("estado") != "reemplazado":
+                con_afirma.append({"ruta": ruta, "estado": pz.get("estado"), "afirma": una_linea(pz["afirma"], 240)})
+            if pz.get("tipo") != "taller" or not str(pz.get("archivo", "")).endswith(".md") or pz.get("estado") == "reemplazado" or pz.get("afirma"):
+                continue
+            validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
+            if not hay_propuesta(id_juicio("afirma", pid, "afirma|" + ruta)):
+                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(pz.get("titulo") or pz.get("nombre") or "", 120),
+                               "arranque": None, "leer_en_computadora": True, "_vigente": pz.get("estado") == "vigente", "_taller": True})
+        # candidatos a entregable y contradicciones: solo un modelo los ve, sobre las líneas «afirma» (nunca los cuerpos)
+        if len(con_afirma) >= 2 and len(contraste) < MAX_CONTRASTE:
+            contraste.append({"proyecto": pid, "piezas": con_afirma[:20]})
+        # una propuesta de candidato o de contradicción sigue valiendo mientras existan todas las piezas que nombra
+        for d in en_cola(pid):
+            if d["data"].get("clase") in ("candidato-entregable", "contradiccion") and set(d["data"].get("rutas") or []) <= rutas and d["data"].get("rutas"):
+                validas.add(d["id"])
+    afirma.sort(key=lambda x: (x.get("_taller", False), not x["_vigente"], x["ruta"]))
+    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller")} for x in afirma[:MAX_AFIRMA]]
+    return props, juicio, afirma, contraste, vistos, validas
 
 
 def sumar_juicio(salida, juicio, cola):
@@ -224,9 +262,10 @@ def sumar_juicio(salida, juicio, cola):
         juicio = {"decisiones": juicio}
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
+    pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
     ya = {d["id"] for d in cargar_cola(cola) if d["data"].get("tipo") == "propuesta"} | {x["id"] for x in bar["anadir"]}
     ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
-    nuevas = {"decisiones": 0, "afirma": 0}
+    nuevas = {"decisiones": 0, "afirma": 0, "candidatos": 0, "contradicciones": 0}
 
     def guardar(pid, data):
         (salida / "cambios").mkdir(parents=True, exist_ok=True)
@@ -258,8 +297,27 @@ def sumar_juicio(salida, juicio, cola):
                       "por_que": "el inventario del tablero necesita saber qué sostiene cada pieza", "origen": "barrido",
                       "estado": "pendiente", "creado": ahora})
         nuevas["afirma"] += 1
+    for clase, clave, campo_txt, cabeza, por_que in (
+            ("candidato-entregable", "candidatos", "entregable", "Candidato a entregable", "varias piezas del taller sostienen lo mismo y ningún entregable lo recoge"),
+            ("contradiccion", "contradicciones", "texto", "Contradicción", "dos piezas del proyecto sostienen cosas que no pueden ser ciertas a la vez")):
+        for j in juicio.get(clave, []) if isinstance(juicio.get(clave), list) else []:
+            if not isinstance(j, dict) or j.get("proyecto") not in pedido_contraste:
+                continue
+            rutas = sorted({str(r) for r in (j.get("rutas") or []) if isinstance(r, str)})
+            if len(rutas) < 2 or not set(rutas) <= pedido_contraste[j["proyecto"]]:
+                continue      # solo piezas que el barrido puso delante, y al menos dos
+            linea = una_linea(str(j.get(campo_txt) or ""), 200)
+            pid = id_juicio(clase, j["proyecto"], clase + "|" + "|".join(rutas))
+            if not linea or pid in ya:
+                continue
+            cortas = ", ".join(r.split("/", 2)[-1] for r in rutas)
+            guardar(pid, {"tipo": "propuesta", "clase": clase, "proyecto": j["proyecto"], "rutas": rutas,
+                          "texto": una_linea(f"{cabeza}: {linea} (de {cortas})"), "por_que": por_que, "origen": "barrido",
+                          "estado": "pendiente", "creado": ahora})
+            nuevas[clave] += 1
     (salida / "barrido.json").write_text(json.dumps(bar, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"]}, ensure_ascii=False))
+    print(json.dumps({"propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"],
+                      "propuestas_candidatos": nuevas["candidatos"], "propuestas_contradicciones": nuevas["contradicciones"]}, ensure_ascii=False))
 
 
 def main():
@@ -288,7 +346,10 @@ def main():
         sys.exit("--hoy no es una fecha AAAA-MM-DD")
     existentes = [d for d in cargar_cola(opt("--cola")) if d["data"].get("tipo") == "propuesta"]
     ya = {d["id"]: d for d in existentes}
-    props, juicio, afirma, vistos, validas = barrer(copia, hoy, lambda i: i in ya)
+    por_proyecto = {}
+    for d in existentes:
+        por_proyecto.setdefault(d["data"].get("proyecto"), []).append(d)
+    props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []))
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
@@ -304,9 +365,9 @@ def main():
         if d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(
-        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "proyectos": vistos}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar),
-                      "para_juicio": len(juicio), "para_afirma": len(afirma), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
+        {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "proyectos": vistos}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "para_juicio": len(juicio),
+                      "para_afirma": len(afirma), "para_contraste": len(contraste), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
