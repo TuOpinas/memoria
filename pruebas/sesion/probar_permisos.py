@@ -161,6 +161,10 @@ d = bien(); d["areas"]["ventas"]["limitada"] = True; f.write_text(json.dumps(d))
 o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout
 ok("pon «Restringida» en su columna «Acceso»" in o22, "y al revés, se le dice que la marque en «Acceso»")
 print("El administrador principal (1.22.2)")
+def _func(ruta):
+    src = ruta.read_text(encoding="utf-8"); i = src.index("def administrador_unico"); j = src.index("# --- fin del administrador principal ---", i)
+    return src[i:j]
+ok(_func(P) == _func(P.parent / "abrir.py"), "administrador_unico es la misma función en permisos.py y abrir.py")
 import shutil as _sh2
 def corre_en(raiz, drive):
     f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(drive))
@@ -171,7 +175,20 @@ RD = pathlib.Path(tempfile.mkdtemp()) / "raiz"; _sh2.copytree(R, RD)
 ok("son personas distintas en guia.md" in corre_en(RD, bien()), "quien administra y quien responde por el contexto, personas distintas: se dice")
 ok("son personas distintas" not in corre(bien())[1], "y si son la misma, no")
 d = bien(); d["areas"]["personas"]["permisos"] = [u("beto@ejemplo.test", "fileOrganizer")]
-ok("ana@ejemplo.test administra la carpeta y no lee el área restringida personas/" in corre(d)[1], "quien administra y no lee un área restringida")
+ok("no lee el área restringida" not in corre(d)[1], "el administrador de la unidad hereda el acceso a lo restringido: sin aviso aunque el conector no lo liste")
+d["raiz"]["permisos"][0] = u("ana@ejemplo.test", "fileOrganizer")
+ok("ana@ejemplo.test administra la carpeta y no lee el área restringida personas/" in corre(d)[1], "si no es administrador de la unidad y no está en el área restringida, se dice")
+d["areas"]["personas"]["permisos"].append({"email": "direccion@ejemplo.test", "role": "reader", "type": "group"})
+o_ = corre(d)[1]
+ok("no lee el área restringida" not in o_ and "puede entrar por un grupo (direccion@ejemplo.test)" in o_, "con un grupo en el área, es una nota para comprobar, no un hallazgo")
+RA2 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; _sh2.copytree(R, RA2)
+g2 = RA2 / "guia.md"; g2.write_text(g2.read_text(encoding="utf-8").replace("Contexto común: Ana Prueba", "Contexto común: Ana Prueba (ana@ejemplo.test)").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Ana Prueba (lleva también ventas, personas)"), encoding="utf-8")
+ok("son personas distintas" not in corre_en(RA2, bien()), "notas entre paréntesis y el correo en una sola de las líneas: la misma persona")
+g2.write_text(g2.read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba (lleva también ventas, personas)", "Administra la carpeta: Zoe Prueba"), encoding="utf-8")
+ok("son personas distintas" in corre_en(RA2, bien()), "un nombre que no está en la tabla frente a la cuenta del contexto: distintas")
+g2.write_text(g2.read_text(encoding="utf-8").replace("Administra la carpeta: Zoe Prueba", "Administra la carpeta: Ana Prueba y, como suplente, Beto Prueba"), encoding="utf-8")
+o2 = corre_en(RA2, bien())
+ok("son personas distintas" in o2 and "dale «Administrador»" not in o2, "dos administradores declarados: se dice, y no se pide dar «Administrador» al segundo")
 d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "writer"), u("zoe@ejemplo.test", "owner")] + BASE[1:]
 ok("en Drive no es su propietario" in corre(d)[1], "en «Mi unidad», quien administra tiene que ser el propietario")
 

@@ -48,6 +48,52 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+# --- el administrador principal: una sola persona (1.22.2) ---
+# La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
+# que las dos copias son idénticas. Recibe el texto de «Quién responde por qué» y {nombre en minúscula: cuentas} de la
+# tabla de áreas, y dice si quien administra la carpeta y quien responde por el contexto son la misma persona.
+def administrador_unico(quien, por_nombre):
+    """(veredicto, adm, ctx): «una», «dos» o «no se sabe» (un lado trae solo un nombre que no está en la tabla y el otro
+    una cuenta: no se afirma nada). Dos correos de la misma persona («En Drive: a@claude es a@drive») cuentan como una."""
+    ctx, adm, en_drive = "", "", ""
+    for l in (quien or "").split("\n"):
+        s = l.strip().lstrip("-* ").strip()
+        if s.lower().startswith("contexto común"):
+            ctx = s.split(":", 1)[-1].strip().rstrip(".").strip()
+        elif s.lower().startswith("administra"):
+            adm = s.split(":", 1)[-1].strip().rstrip(".").strip()
+        elif re.match(r"^(en\s+)?(google\s+)?drive\s*:", s, re.I):
+            en_drive = s.split(":", 1)[-1]
+    misma = {}
+    for par in re.split(r"[,;·]|\s+y\s+", en_drive.lower()):
+        cs = CORREO.findall(par)
+        if len(cs) == 2:
+            misma[cs[1]] = cs[0]
+    def personas(linea):
+        """(cuentas, nombres) de una línea: las cuentas que trae o que la tabla da a sus nombres, y los nombres que la
+        tabla reconoce; si no reconoce ninguno, el primer tramo antes de una coma o un punto («Ana Prueba, de forma
+        provisional. Hoy vive…» es Ana Prueba), que es donde va el nombre."""
+        cuentas, nombres = {misma.get(c, c) for c in CORREO.findall(linea.lower())}, []
+        tramos = [n.strip().rstrip(".").strip() for n in re.split(r",|\by\b|\be\b|·|;", re.sub(r"\([^)]*\)", "", linea))]
+        for n in tramos:
+            if n.lower() in por_nombre:
+                nombres.append(n.lower()); cuentas |= {misma.get(c, c) for c in por_nombre[n.lower()]}
+        if not nombres:
+            n = re.split(r"\.\s", tramos[0] if tramos else "")[0].strip().lower()
+            if n and not CORREO.fullmatch(n) and len(n.split()) >= 2:
+                nombres.append(n)
+        return cuentas, nombres
+    ca, na = personas(adm); cc, nc = personas(ctx)
+    if not adm or not ctx:
+        return "no se sabe", adm, ctx
+    if len(ca) > 1 or len(na) > 1:
+        return "dos", adm, ctx
+    if ca and cc:
+        return ("una" if ca & cc else "dos"), adm, ctx
+    if na and nc:
+        return ("una" if na == nc else "dos"), adm, ctx
+    return "no se sabe", adm, ctx
+# --- fin del administrador principal ---
 
 ROL = {"organizer": "Administrador", "fileOrganizer": "Gestor de contenido", "writer": "Colaborador",
        "commenter": "Comentarista", "reader": "Lector", "owner": "Propietario"}
@@ -109,7 +155,7 @@ def raiz_declarada(raiz):
             areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": c[0].strip("`").rstrip("/"), "dueno": solo_nombre(c[col["responsable"]]),
                           "duenos": de, "colaboran": co, "restringida": restr, "lectores": lect, "acceso": col["acceso"] is not None,
                           "aviso": aviso, "en_celda": set(CORREO.findall((c[col["cuenta"]] or "").lower()))})
-    quien = seccion(guia, "Quién responde por qué")
+    quien = quien_responde_txt = seccion(guia, "Quién responde por qué")
     ctx, adm, en_drive = "", "", ""
     for l in quien.split("\n"):
         s = l.strip().lstrip("-* ").strip()
@@ -213,7 +259,7 @@ def raiz_declarada(raiz):
                 no_mirados.append((f"{a['slug']}/{slug}/ (restringido, sin carpeta aquí)", False))
             else:
                 no_mirados.append((f"{a['slug']}/{slug}/ (en el índice del área, sin carpeta aquí)", True))
-    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip(), no_mirados, (drive_de, avisos_drive)
+    return areas, proyectos, admins, ctxc, adm.strip(), ctx.strip(), no_mirados, (drive_de, avisos_drive, quien_responde_txt, por_nombre)
 
 
 def plan(raiz):
@@ -234,7 +280,7 @@ def plan(raiz):
 
 
 def comparar(raiz, drive):
-    areas, proyectos, admins, ctxc, adm, ctx, no_mirados, (drive_de, avisos_drive) = raiz_declarada(raiz)
+    areas, proyectos, admins, ctxc, adm, ctx, no_mirados, (drive_de, avisos_drive, quien_responde, por_nombre) = raiz_declarada(raiz)
     # lo declarado, con la cuenta con la que cada quien entra a Drive («En Drive:» de guia.md)
     d = lambda c: drive_de.get(c, c)
     claude_de = {v: k for k, v in drive_de.items()}
@@ -320,10 +366,12 @@ def comparar(raiz, drive):
                 hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
     # el administrador principal (1.22.2): quien administra la carpeta, responde por el contexto y es su dueño en Drive es
     # una sola persona, y lee todo, también lo restringido
-    nom_ = lambda t: re.sub(r"\s*\([^)]*\)", "", (t or "").split(",")[0]).strip().rstrip(".").strip().lower()
-    if (admins and ctxc and not admins & ctxc) or (not (admins and ctxc) and nom_(adm) and nom_(ctx) and nom_(adm) != nom_(ctx)):
+    _ver, _, _ = administrador_unico(quien_responde, por_nombre)
+    if _ver == "dos":
         hall.append(f"Quien administra la carpeta («{adm.strip() or 'no consta'}») y quien responde por el contexto («{ctx.strip() or 'no consta'}») son personas distintas en guia.md: "
                     "son una sola persona, que además es la dueña de la carpeta en Drive y lee todo. Corrige «Quién responde por qué».")
+    if len(admins) > 1:
+        admins = set()     # con dos administradores declarados no se dice a quién darle qué: antes se corrige guia.md
     for e in sorted(admins):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")
@@ -394,8 +442,11 @@ def comparar(raiz, drive):
             hall.append(f"El área {a['slug']}/ tiene acceso limitado en Drive, pero guia.md no la declara restringida: " + ("pon «Restringida» en su columna «Acceso»" if a.get("acceso") else "escribe «Restringida: …» en su columna «Quién la lee»") + ", o quita el acceso limitado.")
         elif lim:
             for e in sorted(admins):
-                if ar and e not in ar:
-                    hall.append(f"{e} administra la carpeta y no lee el área restringida {a['slug']}/: quien administra lo lee todo. Dale acceso desde la web.")
+                if ar and e not in ar and rr.get(e) not in ("organizer", "owner"):   # el administrador de la unidad o el propietario hereda el acceso
+                    if ag:
+                        notas.append(f"{e} administra la carpeta y no aparece entre quienes leen el área restringida {a['slug']}/; puede entrar por un grupo ({', '.join(sorted(ag))}). Compruébalo: quien administra lo lee todo.")
+                    else:
+                        hall.append(f"{e} administra la carpeta y no lee el área restringida {a['slug']}/: quien administra lo lee todo. Dale acceso desde la web.")
             fuera = sorted(e for e in ar if e not in a["duenos"] | a["colaboran"] | a["leen"] and not admin(e, ar[e]))
             if fuera:
                 notas.append(f"El área restringida {a['slug']}/ la leen además {', '.join(fuera)}; guia.md dice «{a['lectores']}». Compruébalo.")

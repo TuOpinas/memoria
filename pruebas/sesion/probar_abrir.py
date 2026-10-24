@@ -221,6 +221,14 @@ o = subprocess.run([sys.executable, str(ABRIR), str(RX), "--minima", "--cuenta",
 ok("guia.md nombra a dos personas" in o, "si guia.md nombra a otra persona para administrar, se le dice al responsable de contexto")
 o = subprocess.run([sys.executable, str(ABRIR), str(AQUI.parent / "tablero" / "raiz"), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
 ok("nombra a dos personas" not in o, "y si es la misma, no")
+for adm_, ctx_, espera in (("Ana Prueba (lleva también ventas, personas)", "Contexto común: Ana Prueba", False),
+                            ("ana@ejemplo.test", "Contexto común: Ana Prueba", False),
+                            ("ana.drive@gmail.com", "Contexto común: Ana Prueba (ana@ejemplo.test).\nEn Drive: ana@ejemplo.test es ana.drive@gmail.com", False),
+                            ("Beto Prueba (con ayuda de ana@ejemplo.test)", "Contexto común: Ana Prueba", True),
+                            ("Ana Prueba y, como suplente, Beto Prueba", "Contexto común: Ana Prueba", True)):
+    (RX / "guia.md").write_text((AQUI.parent / "tablero" / "raiz" / "guia.md").read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: " + adm_).replace("Contexto común: Ana Prueba", ctx_), encoding="utf-8")
+    o = subprocess.run([sys.executable, str(ABRIR), str(RX), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+    ok(("nombra a dos personas" in o) == espera, f"«{adm_}» frente a «{ctx_.split(chr(10))[0]}»: {'dos' if espera else 'una'}")
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

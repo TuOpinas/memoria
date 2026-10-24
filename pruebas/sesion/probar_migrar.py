@@ -137,7 +137,18 @@ c, su = corre(RU, "--cuenta", "ana@ejemplo.test")
 ok(c == 0 and any(x["area"] == "personas" and x["motivo"].startswith("en uso: nomina") for x in su["pendientes"]) and "## Panorama" in (RU / "personas/area.md").read_text(encoding="utf-8")
    and "(migracion)" not in (RU / "personas/nomina/sesiones.md").read_text(encoding="utf-8"), "ni el proyecto ni su area.md se tocan, y pendientes dice por qué")
 o = subprocess.run([sys.executable, str(ABRIR), str(RU), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
-ok("personas (de Beto Prueba)" in o, "y la siguiente apertura lo vuelve a ofrecer")
+ok("personas (de Beto Prueba)" not in o.split("=== ESTRUCTURA")[1].split("\n")[1] and "en uso, no se ofrece ahora: personas" in o, "y la apertura no lo ofrece mientras siga en uso, y lo dice")
+ok(su["ajenas"] == [] and "personas" not in su["areas"], "un área en uso no sale como migrada en areas ni en ajenas")
+# lo que la propia migración escribió hace un momento no frena: repetirla completa lo que faltó
+RU2 = raiz_nueva(); (RU2 / "personas/nomina/taller").mkdir(exist_ok=True); (RU2 / "personas/area.md").chmod(0o000)
+c, s_a = corre(RU2, "--cuenta", "ana@ejemplo.test")
+(RU2 / "personas/area.md").chmod(0o644)
+c, s_b = corre(RU2, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and "## Estatus" in (RU2 / "personas/area.md").read_text(encoding="utf-8") and not any(x["area"] == "personas" for x in s_b["pendientes"]), "repetir la migración enseguida completa el area.md: lo recién migrado no cuenta como en uso")
+# una fecha en el futuro (reloj desfasado) se dice aparte
+RU3 = raiz_nueva(); os.utime(RU3 / "personas/nomina/sesiones.md", (time.time() + 86400, time.time() + 86400))
+c, s_f = corre(RU3, "--cuenta", "ana@ejemplo.test")
+ok(any(x["area"] == "personas" and "reloj desfasado" in x["motivo"] for x in s_f["pendientes"]), "una fecha futura se dice como reloj desfasado, no como «hace menos de 120 minutos»")
 
 print("migrar_estructura.py: si el taller no se deja escribir, proyecto.md no se toca")
 R6 = raiz_nueva()

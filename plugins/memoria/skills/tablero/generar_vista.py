@@ -930,17 +930,19 @@ def instante_inventario():
     preparar.py), esa: sin consola el inventario corre en el contenedor minutos después del listado de la computadora, y
     la hora de empezar la corrida es la que no deja ningún cierre por detrás de «sincronizado» (1.22.2)."""
     v = _arg("--instante")
+    ahora = datetime.datetime.now(TZ)
     if v:
         try:
             if v.endswith(".json"):
                 v = json.loads(pathlib.Path(v).read_text(encoding="utf-8")).get("inicio") or ""
             t = datetime.datetime.fromisoformat(v.replace("Z", "+00:00"))
             if t.tzinfo is None:
-                t = t.astimezone()
-            return t.astimezone(TZ).isoformat(timespec="minutes")
-        except (OSError, ValueError, AttributeError):
-            pass
-    return datetime.datetime.now(TZ).isoformat(timespec="minutes")
+                t = t.replace(tzinfo=TZ)      # una hora sin zona es de la organización, como las de los cierres
+            # nunca en el futuro: un instante adelantado borraría las marcas de los cierres que lleguen después
+            return min(t.astimezone(TZ), ahora).isoformat(timespec="minutes")
+        except (OSError, ValueError, AttributeError, TypeError):
+            print(f"--instante no se pudo leer ({v!r}): se usa la hora de ahora, y un cierre que llegó durante el listado puede quedar por detrás de «sincronizado»", file=sys.stderr)
+    return ahora.isoformat(timespec="minutes")
 
 
 # ---------- primer tiempo: el inventario, en la computadora ----------
