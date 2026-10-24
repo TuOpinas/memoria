@@ -2064,7 +2064,7 @@ function estatusArea(a){
     if(sangrado && enSig) return;
     if(esItem){ const x = t.replace(/^[-*]\s+/,""); enSig = /^\**\s*siguiente\s*:?\**\s*:?\s*$/i.test(x); if(!enSig) items.push(x); }
   });
-  tit = tit.trim().replace(/^\*\*|\*\*(?=\.?$)/g, "");
+  tit = tit.trim(); if(/^\*\*[^*]+\*\*\.?$/.test(tit)) tit = tit.replace(/^\*\*|\*\*(?=\.?$)/g, "");
   if(!tit && !items.length) return "";
   return `${tit?`<p class="corto-t">${inline(tit)}</p>`:""}${items.length?`<ul class="corto-l">${items.map(i=>`<li>${inline(i)}</li>`).join("")}</ul>`:""}${fecha?`<p class="more">Escrito el ${fmtD(fecha)}.</p>`:""}`;
 }

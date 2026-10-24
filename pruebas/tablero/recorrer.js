@@ -57,8 +57,8 @@ const path = require('path');
     if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);
     // «Qué hay» (1.21): la pestaña del proyecto con inventario, afirma, señales y trayectoria; nunca el cuerpo del taller; y la suma en el área
     await p.goto(url + '#p-ventas--cuentas-t-quehay'); await p.waitForTimeout(600);
-    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin «afirma»/.test(t), tray: document.querySelectorAll('.qh-tray li').length, flecha: /→/.test(t), paso: /la nombra un paso/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
-    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray === 2 && qh.flecha && qh.paso && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el inventario, el afirma, las señales y la trayectoria, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
+    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin «aportacion»/.test(t), tray: document.querySelectorAll('.qh-tray li').length, flecha: /→/.test(t), paso: /la nombra un paso/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
+    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray === 2 && qh.flecha && qh.paso && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el inventario, la aportacion, las señales y la trayectoria, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
     await p.goto(url + '#a-ventas'); await p.waitForTimeout(400);
     const qha = await p.evaluate(() => ({ tabla: document.querySelectorAll('.qh-sum tbody tr').length, giro: /Cliente Uno se sigue atendiendo/.test((document.querySelector('.qh-sum')||{}).textContent||'') }));
@@ -104,6 +104,22 @@ const path = require('path');
   await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
+  // la raíz migrada a la 1.22: la página no da errores y el área enseña su Estatus con sus prioridades aparte
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage(); const errs = [];
+    p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if(m.type() === 'error') errs.push(m.text()); });
+    await p.goto('file://' + path.resolve(dir, 'estructura.html') + '#a-ventas'); await p.waitForTimeout(800);
+    const v = await p.evaluate(() => { const m = document.getElementById('main'), h = document.getElementById('head');
+      const pan = m.querySelector('.card.pan'); return { est: !!pan && /Estatus/.test(pan.querySelector('h2').textContent) && /Ventas tiene una sola cuenta/.test(pan.textContent) && !/Siguiente/.test(pan.textContent),
+        prios: m.querySelectorAll('.prio-l li').length, resp: /Responsable:/.test(h.textContent) && !/Dueño:/.test(h.textContent) }; });
+    if(!(v.est && v.prios === 2 && v.resp)) errores.push(`estructura 1.22: el área no enseña su Estatus, sus dos prioridades o su responsable (${JSON.stringify(v)})`);
+    await p.goto('file://' + path.resolve(dir, 'estructura.html') + '#p-operacion--soporte'); await p.waitForTimeout(800);
+    const w = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { corto: !!document.querySelector('.corto'), term: /Terminado significa/.test(t) }; });
+    if(!(w.corto && !w.term)) errores.push(`estructura 1.22: el proyecto no enseña su Estatus o aún dice «Terminado significa» (${JSON.stringify(w)})`);
+    if(errs.length) errores.push(`estructura 1.22: la página dio errores: ${errs.slice(0, 3).join(' | ')}`);
+    await ctx.close();
+  }
   // un tablero que era público, ya puesto al día con la 1.18: Inicio lo dice, con lo que implica
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });

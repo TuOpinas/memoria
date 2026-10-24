@@ -1119,7 +1119,7 @@ for a in areas_guia:
         # «panorama» de las listas es su fecha y su frase
         area_doc["en_corto"] = est_a
         mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*[·:—-]\s*(.+?)$", est_a.split("\n")[0].strip())
-        frase = re.sub(r"^\*\*|\*\*(?=\.?$)", "", (mpan.group(2) if mpan else est_a.split("\n")[0]).strip())
+        frase = re.sub(r"\*\*(.+?)\*\*", r"\1", (mpan.group(2) if mpan else est_a.split("\n")[0]).strip())
         area_doc["panorama"] = {"fecha": mpan.group(1) if mpan else None, "texto": frase}
     else:
         pan = seccion(cuerpo, "Panorama").strip()
@@ -1178,7 +1178,7 @@ for a in areas_guia:
         if not pdoc["estado_resumen"] and pdoc.get("en_corto"):
             # 1.22: sin Estado actual, la línea de estado es la frase del Estatus (la que lee projStatus: «en pausa», «Arrancando»)
             _l0 = pdoc["en_corto"].strip().split("\n")[0]
-            pdoc["estado_resumen"] = re.sub(r"^\*\*|\*\*(?=\.?$)", "", re.sub(r"^20\d\d-\d\d-\d\d\s*[·:—-]\s*", "", _l0).strip())
+            pdoc["estado_resumen"] = re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"^20\d\d-\d\d-\d\d\s*[·:—-]\s*", "", _l0).strip())
         pdoc["cerrado"] = es_cerrado(cuerpo)
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
