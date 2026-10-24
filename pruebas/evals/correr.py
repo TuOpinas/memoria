@@ -448,7 +448,7 @@ def _(ctx, arg):
     """La primera respuesta pregunta si se colocan los archivos de «Claude outputs» (AskUserQuestion o texto)."""
     t = ctx["turnos"][0]
     pregunta = any(h["nombre"] == "AskUserQuestion" and "Claude outputs" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
-    pregunta = pregunta or re.search(r"coloco|colocar", texto_de(t), re.I) is not None and "Claude outputs" in texto_de(t)
+    pregunta = pregunta or re.search(r"coloco|colocar|(los|las) (pongo|ordeno|muevo)", texto_de(t), re.I) is not None and "Claude outputs" in texto_de(t)
     return pregunta, "pregunta por Claude outputs" if pregunta else "no pregunta por Claude outputs"
 
 
@@ -459,7 +459,7 @@ def _(ctx, arg):
     t = ctx["turnos"][int(arg or 1) - 1]
     preg = any(h["nombre"] == "AskUserQuestion" and "1.22" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
     preg = preg or ("1.22" in texto_de(t) and "?" in texto_de(t))
-    espera = not re.search(r"por cu[aá]l empezamos|focos", texto_de(t), re.I)
+    espera = not re.search(r"por cu[aá]l empezamos", texto_de(t), re.I)      # los focos, que cierran la apertura completa
     return preg and espera, ("pregunta y espera" if preg and espera else "no pregunta por la migración" if not preg else "pregunta, pero ya propone focos en el mismo turno")
 
 
