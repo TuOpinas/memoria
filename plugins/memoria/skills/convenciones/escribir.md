@@ -1,10 +1,10 @@
 # Escribir en la carpeta
 
-Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Panorama` basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Si la carpeta está conectada pero el shell de la computadora no la ve, se escribe además como dice el anexo `sin-consola.md`, junto a este archivo, y se lee antes de la primera escritura. Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 7, 11, 12) son las del contrato.
+Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Si la carpeta está conectada pero el shell de la computadora no la ve, se escribe además como dice el anexo `sin-consola.md`, junto a este archivo, y se lee antes de la primera escritura. Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 7, 11, 12) son las del contrato.
 
 ## 2. Estructura de `area.md`
 
-Fija, porque varias skills leen y escriben en ella:
+Fija, porque varias skills leen y escriben en ella. Responde las mismas preguntas que el proyecto y en el mismo orden: qué es, cómo va, qué contiene, quién.
 
 ```markdown
 # [Nombre del área]
@@ -12,33 +12,30 @@ Fija, porque varias skills leen y escriben en ella:
 ## Qué es
 [Dos o tres líneas]
 
-## Prioridades ahora
-[Tres a cinco líneas. Las pide el dueño, las escriben las skills]
+## Estatus
+AAAA-MM-DD · **[Cómo está el área, en una frase.]**
+- **Se completó:** [lo terminado en el área desde el estatus anterior]
+- **Siguiente:** [tres a cinco prioridades del área, cada una con quién]
+- **Falta decidir:** [qué, y quién lo decide]
+- **Preocupa:** [lo que puede salir mal]
+- `nombre-del-proyecto/`: [cómo va, en una frase]
 
 ## Proyectos
 - `nombre-del-proyecto/` — qué es
-  - nombre-del-entregable — qué es · actualizado AAAA-MM-DD
-
-## Panorama
-AAAA-MM-DD · [Tres a cinco líneas del director del área: cómo está, qué se movió, qué preocupa]
+  - nombre-del-entregable — [su aportacion] · actualizado AAAA-MM-DD
 
 ## Quién participa
-Dueño: [nombre y apellido]
-[Otras personas y su papel]
+Responsable: [nombre y apellido]
+Colabora: [nombre y apellido], solo si alguien colabora en el área
 ```
 
-`Panorama` es el resumen ejecutivo del área: una línea con la fecha en que se escribió y de tres a cinco frases, cómo está, qué se movió y qué preocupa, sin listas, sin rutas y sin repetir el índice de proyectos:
+`Estatus` es el resumen ejecutivo del área, con la estructura y la voz del `Estatus` del proyecto (sección 3): la fecha en que se escribió, la frase en negrita, «Se completó» y «Siguiente» siempre, «Falta decidir» y «Preocupa» solo si tienen algo, y después una línea por proyecto activo del área, que dice cómo va, no qué es (eso lo dice el bloque `Proyectos`). «Siguiente» son las prioridades del área: se reescriben en cada `Estatus`, y por eso no envejecen. Los proyectos cerrados no llevan línea, y los restringidos tampoco: de ellos no se dice nada más allá de su nombre, que ya está en `Proyectos`. Como `area.md` lo lee todo el equipo, en la carpeta y en el tablero de cada uno, no lleva nada de `restringido/` ni datos personales, aunque la sesión que lo escribe los haya leído. Lo escribe la skill `director` al cerrar una sesión en esa área, o cuando su responsable pide «actualiza el estatus del área»; se reescribe entero cada vez y no lleva historia: lo que pasó está en los registros de los proyectos. Si no existe, el área todavía no tiene estatus; no se escribe a mano.
 
-```markdown
-## Panorama
-2026-10-15 · Comercial cerró la propuesta de Lumbre y abrió dos leads por canal. Lo que preocupa: el pipeline no tiene fecha de seguimiento en tres de cinco oportunidades, y la tesis de posicionamiento lleva seis semanas en borrador.
-```
+El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. La línea del entregable dice lo que dice su clave `aportacion` (sección 5), copiada tal cual, para que el índice y el documento no digan dos cosas distintas; si el entregable no la tiene, lleva una línea de qué es hasta que la tenga. Un proyecto cerrado ocupa solo su línea, sin desglose. La línea de un proyecto restringido empieza por «restringido: responsable Nombre.» y sigue con su descripción (`` - `ronda/` — restringido: responsable Beto Prueba. Ronda de inversión ``): el nombre es lo único que ve quien no puede leerlo, y el tablero y la apertura lo toman de ahí. Lo escriben el cierre de sesión, la publicación de un entregable y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de los proyectos son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
 
-Va entre `## Proyectos` y `## Quién participa`; si la sección no existe, se crea en ese sitio. Como `area.md` lo lee todo el equipo, en la carpeta y en el tablero de cada uno, no lleva nada de `restringido/`, ni de un proyecto restringido más allá de su nombre, ni datos personales, aunque la sesión que lo escribe los haya leído. Lo escribe la skill `director` al cerrar una sesión en esa área, o cuando su dueño pide «actualiza el panorama»; se reescribe entero cada vez y no lleva historia: lo que pasó está en los registros de los proyectos. Si no existe, el área todavía no tiene resumen; no se escribe a mano.
+`Quién participa` es donde vive el responsable del área. No hay otra clave para él. Las cuentas de quienes colaboran en el área están en la celda Cuenta de `guia.md`, que es lo que decide quién escribe; la línea `Colabora:` del área dice sus nombres.
 
-El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. Un proyecto cerrado ocupa solo su línea, sin desglose. La línea de un proyecto restringido empieza por «restringido: dueño Nombre.» y sigue con su descripción (`` - `ronda/` — restringido: dueño Beto Prueba. Ronda de inversión ``): el nombre es lo único que ve quien no puede leerlo, y el tablero y la apertura lo toman de ahí. Lo escriben el cierre de sesión y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de esas líneas son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
-
-`Quién participa` es donde vive el dueño del área. No hay otra clave para él.
+Hasta la 1.21 el área llevaba `Prioridades ahora` y `Panorama`, y su responsable figuraba como `Dueño:`. Los scripts y las skills leen los nombres viejos durante la 1.22 y escriben solo los nuevos; la apertura ofrece la migración (skill `sesion`).
 
 ## 3. Estructura de `proyecto.md`
 
@@ -47,7 +44,7 @@ Fija, porque varias skills escriben en ella:
 ```markdown
 # [Nombre del proyecto]
 
-## En corto
+## Estatus
 AAAA-MM-DD · **[Lo último que se completó, y lo que sigue y cuándo.]**
 - **Se completó:** [lo terminado desde el estatus anterior, con su fecha, y para qué sirve ya]
 - **Siguiente:** [hasta tres pasos, cada uno con quién y para cuándo]
@@ -55,38 +52,33 @@ AAAA-MM-DD · **[Lo último que se completó, y lo que sigue y cuándo.]**
 - **Preocupa:** [lo que puede salir mal]
 
 ## Objetivo
-[Una frase. Qué problema resuelve y para quién.]
-
-## Terminado significa
-[Cómo sabremos que se acabó. Concreto y comprobable.]
+[Dos frases. Qué problema resuelve y para quién; y cuándo termina, concreto y comprobable, o cada cuánto se revisa si no termina.]
 
 ## Alcance
-Sí: [lo que entra]
-No: [lo que queda fuera]
+Entra: [lo que entra]
+No entra: [lo que queda fuera]
 
 ## Quién participa
-Dueño: [nombre] ([área])
+Responsable: [nombre] ([área])
 Colabora: [nombre (correo)], solo si alguien colabora en este proyecto sin colaborar en el área
-Consumen esto: [áreas o personas]
-
-## Estado actual
-[Dos o tres líneas]
 
 ## Siguientes pasos
 - [Lista corta]
 ```
 
-`En corto`, `Estado actual` y `Siguientes pasos` son las tres únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del dueño.
+`Estatus` y `Siguientes pasos` son las dos únicas secciones que reescribe el cierre de sesión. El resto cambia poco y solo a petición del responsable.
 
-`En corto` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión con la voz del director (skill `director`) y se sustituye entero cada vez. Es el reporte de un director: lo que completamos y lo que sigue. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe, como el `Panorama` del área, y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, en la carpeta y en el tablero de cada uno: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». `Estado actual` sigue siendo el detalle, para quien trabaja en el proyecto. Un proyecto sin `En corto` sigue siendo válido: lo escribe su siguiente cierre.
+`Estatus` es el estatus para quien no va a leer más: lo primero que ve el tablero y lo que responde Claude cuando alguien pregunta cómo va. Lo escribe el cierre de sesión desde lo que pasó en ella, con la voz del director (skill `director`), lo enseña para que se confirme como la entrada de la bitácora, y se sustituye entero cada vez. Responde cuatro preguntas: qué se completó, qué sigue, qué falta decidir y qué preocupa. Cinco líneas como mucho. La primera empieza por la fecha en que se escribe y sigue con la frase en negrita: lo último que se completó y lo próximo que pasa y cuándo, en lenguaje de persona, no de archivo. «Se completó» y «Siguiente» van siempre (si en la sesión no se completó nada, «Se completó» dice lo último terminado y cuándo; al arrancar un proyecto, solo «Siguiente»); «Falta decidir» y «Preocupa», solo si tienen algo. Cada línea, de una o dos frases, con nombres de personas y fechas absolutas («el 19 de octubre», nunca «el lunes»), sin rutas ni identificadores. Lo que no aplica se omite: no se escribe «nada». Lo lee todo el equipo, en la carpeta y en el tablero de cada uno: no lleva nada de `restringido/` ni datos personales, ni en «Preocupa». No es una historia: lo que pasó está en `sesiones.md` y en `decisiones.md`, y el contexto que dura (dónde vive algo, desde cuándo se trabaja así) va a `Alcance` o a un archivo de `taller/`. Un proyecto sin `Estatus` sigue siendo válido: lo escribe su siguiente cierre. El tablero puede enseñar en su página un borrador suyo para un proyecto cuyo `Estatus` es más viejo que lo que cambió; ese borrador vive solo en el tablero, nunca en la carpeta, y lo firmado gana por fecha (skill `tablero`).
 
-`Dueño`, en `Quién participa`, es el dueño de todo el proyecto: responde por sus entregables y sus decisiones, y es quien pide publicar. Quien colabora registra las decisiones de su propio trabajo, y el dueño puede reemplazarlas (sección 1, «Quién colabora»). Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
+`Responsable`, en `Quién participa`, responde por todo el proyecto: por sus entregables y sus decisiones, y es quien pide publicar. Quien colabora registra las decisiones de su propio trabajo, y el responsable puede reemplazarlas (sección 1, «Quién colabora»). Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
+
+Hasta la 1.21 el proyecto llevaba `En corto`, `Terminado significa`, `Estado actual` y `Consumen esto`, el alcance como «Sí / No» y el responsable como `Dueño:`. Quién consume un proyecto lo dicen las líneas `Afecta a:` y `basado_en` que lo nombran. Los scripts y las skills leen los nombres viejos durante la 1.22 y escriben solo los nuevos; la apertura ofrece la migración (skill `sesion`).
 
 ### Un proyecto cerrado
 
-Cuando se cumple lo que decía `Terminado significa`, el dueño lo pide y `Estado actual` abre diciendo **«Proyecto terminado el AAAA-MM-DD»**; `En corto` queda en una línea, la frase en negrita, que dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
+Cuando se cumple lo que dice la segunda frase de `Objetivo`, el responsable lo pide y el `Estatus` queda en una línea, la fecha y la frase en negrita, que empieza por **«Proyecto terminado el AAAA-MM-DD.»** y dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.
 
-Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**. Quien necesite el detalle abre su `proyecto.md`, que sigue contándolo entero.
+Lo que cambia es el índice. En el bloque `Proyectos` de su `area.md` **un proyecto cerrado ocupa una línea y no desglosa sus entregables**, y el `Estatus` del área no le dedica línea. Quien necesite el detalle abre su `proyecto.md`.
 
 Un proyecto cerrado no se borra ni se saca de la raíz. Se sigue citando, sus entregables vigentes se siguen consumiendo y su `decisiones.md` sigue explicando por qué las cosas están como están.
 
@@ -94,19 +86,19 @@ Un proyecto cerrado no se borra ni se saca de la raíz. Se sigue citando, sus en
 
 Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuesta de trabajo, un plan), se estima en el tiempo que de verdad cuesta trabajando con la IA, en sesiones o en horas, no en lo que tardaría un equipo de personas sin ella: construir, redactar o revisar algo acotado cabe casi siempre en una sesión. Lo que alarga un trabajo es lo que espera a una persona (que pruebe, apruebe, responda, firme o haga algo en otra herramienta), y eso se dice aparte, con quién y desde cuándo. Ante la duda, se da lo que cabe en la próxima sesión y lo que queda esperando a alguien, sin inventar fechas. En `Siguiente`, «para cuándo» es la fecha de la próxima sesión prevista si la hay, y si no, «cuando <persona> <haga X>»; nunca una fecha estimada de terminar.
 
-### La voz de `En corto` y del `Panorama`
+### La voz del `Estatus`
 
-Los lee alguien con poco tiempo que no va a abrir nada más. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir estas dos secciones basta con este párrafo.
+Lo lee alguien con poco tiempo que no va a abrir nada más, en el proyecto y en el área. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir un `Estatus` basta con este párrafo.
 
 ### Qué guarda el cierre y qué no
 
-**Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `En corto`, `Estado actual` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
+**Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `Estatus` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
 
 **Nunca**:
 - Un **valor vivo**: lo que cambia sin que nadie edite la memoria (un saldo, un precio de lista, cuántos registros hay en un sistema, el estado de un ticket). Se consulta en su fuente cuando hace falta; una cifra que sí se guarda lleva fecha y fuente (prohibición 13).
 - Lo que **se puede consultar en una fuente**: se cita dónde está, no se copia.
 - **Credenciales**, ni datos personales que el trabajo no necesita.
-- Lo que la propia sesión **probó y desechó sin llegar a decisión**: un intento, un borrador tirado, un error corregido en la misma conversación. Lo que se descartó al decidir sí va, en `Descartamos`.
+- Lo que la propia sesión **probó y desechó sin llegar a decisión**: un intento, un borrador tirado, un error corregido en la misma conversación. Lo que se descartó al decidir sí va, en `Descartado`.
 
 Ante la duda de si algo merece quedar, se pregunta; no se guarda por si acaso.
 
@@ -128,9 +120,11 @@ Un registro nunca vive dentro de un archivo vivo, porque la primera reescritura 
 ## AAAA-MM-DD · Título que dice la decisión en una frase
 Decidió: Nombre Apellido
 Por qué: … (puede ser más de un párrafo)
-Descartamos: …
+Descartado: …
 Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media línea)
 ```
+
+Las entradas anteriores a la 1.22 dicen `Descartamos:`; se quedan así, y los scripts leen las dos formas.
 
 Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`; una que sustituye a otra anterior añade `Reemplaza: <identificador de la sustituida> · <su título>` (la anterior no se edita: sigue en el registro, y el tablero encadena las dos en la trayectoria del proyecto); y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
 
@@ -145,9 +139,9 @@ Por qué: … (qué no cuadra, con su dato o su fuente)
 Cuestiona a: compras/automatizacion-ordenes#2026-08-29
 ```
 
-`Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el dueño de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza a P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
+`Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el responsable de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
 
-Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su dueño con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
+Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su responsable con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
 Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir nada más. El análisis que respalda la decisión (opciones, tablas, cifras) no va en la entrada: va a un entregable del proyecto y la entrada lo cita en `Afecta a` o en `Por qué`.
 
@@ -157,15 +151,14 @@ Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir n
 
 ```markdown
 ## AAAA-MM-DD
-Trabajamos en: …
+Tema: …
 Avances: …
-Pendiente: …
-Sesión de: Nombre Apellido · plugin 1.16.0
+Sesión de: Nombre Apellido · plugin 1.22.0
 ```
 
-La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances» y «Pendiente», y no sale fuera del área. Las entradas anteriores a la 1.16 no la llevan. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
+`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:», y las anteriores a la 1.22 dicen «Trabajamos en:» y llevan «Pendiente:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
-Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`: cuenta lo que hizo, pero no es una sesión, y el tablero no la cuenta como tal.
+Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`, y la migración de estructura de la 1.22, como `## AAAA-MM-DD (migracion)`: cuentan lo que hicieron, pero no son sesiones, y el tablero no las cuenta como tales.
 
 ### Regla de histórico
 
@@ -173,17 +166,17 @@ Las entradas escritas antes de adoptar este formato se dejan tal cual; el format
 
 ### Aviso entre áreas
 
-La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo o su área entera (`area/`) (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado y avisan a quien lo planteó, en su proyecto, de que le respondieron. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su dueño.
+La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo o su área entera (`area/`) (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado y avisan a quien lo planteó, en su proyecto, de que le respondieron. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su responsable.
 
 ## 5. Cabecera
 
-Todo `.md` empieza con una cabecera de estas claves y ninguna más, con dos excepciones: `guia.md` y `metodo.md`, que están hechos para leerse sin nada delante y empiezan directamente por el título, y el contenido de `fuentes/`, que es material y no se edita, así que añadirle una cabecera sería editarlo. El `enlaces.md` de `fuentes/` sí la lleva, porque ese lo escribimos nosotros.
+Todo `.md` empieza con una cabecera de estas claves y ninguna más, con dos excepciones: `guia.md` y `metodo.md`, que están hechos para leerse sin nada delante y empiezan directamente por el título, y el contenido de `fuentes/`, que es material y no se edita, así que añadirle una cabecera sería editarlo. El `inventario.md` de `fuentes/` sí la lleva, porque ese lo escribimos nosotros.
 
 ```yaml
 ---
 estado: vigente
 actualizado: 2026-08-29
-afirma: "El tope de 5.000 MXN deja fuera las compras recurrentes."
+aportacion: "El tope de 5.000 MXN deja fuera las compras recurrentes."
 basado_en:
   - base/contexto.md
   - compras/automatizacion-ordenes/fuentes/entrevista-ana.md
@@ -192,30 +185,31 @@ basado_en:
 
 Inmediatamente después va el título en `#`, para que quien abra el archivo sin renderizador vea de qué trata en la primera línea legible.
 
-| Archivo | `estado` | `actualizado` | `basado_en` | `afirma` |
-|---|---|---|---|---|
-| Entregables | sí | sí | sí, obligatoria | sí, obligatoria al crearlos |
-| `taller/` | sí, casi siempre `borrador` | sí | si se usó algo | opcional |
-| `proyecto.md`, `base/` | sí | sí | no | no |
-| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `enlaces.md` | `vigente` siempre | sí | no | no |
+| Archivo | `estado` | `actualizado` | `aportacion` y `basado_en` |
+|---|---|---|---|
+| `entregables/` y `taller/` | sí (en el taller, casi siempre `borrador`) | sí | sí, obligatorias las dos |
+| `proyecto.md`, `base/` | sí | sí | no |
+| `area.md`, `decisiones.md`, `sesiones.md`, `base/premisas.md`, los `inventario.md` | `vigente` siempre | sí | no |
 
 `area.md` y los registros llevan `vigente` desde que se crean y no lo cambian: son índice y registro, no algo que se publique. Lo que pasa de `borrador` a `vigente` es lo demás.
 
 **estado**, tres valores y nada más:
 
-- `borrador`: no se puede consumir todavía. Da igual si está a medias, terminado esperando al dueño, o adoptado de otro sitio sin revisar
+- `borrador`: no se puede consumir todavía. Da igual si está a medias, terminado esperando al responsable, o adoptado de otro sitio sin revisar
 - `vigente`: aprobado, se puede construir encima
-- `reemplazado`: superado. Requiere una cuarta clave, `reemplazado_por`, con la ruta del sustituto
+- `reemplazado`: superado. Requiere una clave más, `reemplazado_por`, con la ruta del sustituto
 
-El paso a `vigente` lo pide siempre el dueño del proyecto de forma explícita y tiene requisitos: los aplica la skill `revisar`. Ninguna otra skill cambia ese estado por su cuenta. Que un borrador esté a medias o terminado se dice en `Estado actual` de `proyecto.md`.
+El paso a `vigente` lo pide siempre el responsable del proyecto de forma explícita y tiene requisitos: los aplica la skill `revisar`. Ninguna otra skill cambia ese estado por su cuenta. Que un borrador esté a medias o terminado se dice en el `Estatus` de `proyecto.md`.
 
 **actualizado**: fecha en formato `AAAA-MM-DD`, la del último cambio de contenido real, en la zona horaria de la organización (sección 4).
 
-**basado_en**: rutas relativas a la raíz de todo lo que se usó para escribir el archivo. Es lo que permite detectar que un entregable quedó desactualizado cuando cambia algo aguas arriba. Es obligatoria en los entregables y la escribe la skill, no la persona. Para material adoptado sin trazabilidad se permite la lista vacía `[]`, y `revisar` la pide completa antes de publicar. Los registros, las fuentes y los archivos de `base/` no llevan esta clave.
+**aportacion**: una línea que dice qué aporta la pieza a lo que el proyecto sabía, no de qué trata: «El tope de 5.000 MXN deja fuera las compras recurrentes», no «Análisis de compras». Vale para cualquier pieza: un análisis dice su conclusión, una guía lo que permite hacer, una plantilla para qué sirve. Es lo que deja ver, sin abrir el documento, qué hay en un proyecto y si sigue valiendo, y es la línea del entregable vigente en el bloque `Proyectos` de `area.md` (sección 2). Una sola línea de hasta unos 200 caracteres, sin saltos, entre comillas si lleva dos puntos. La escribe la skill, como `basado_en`; el barrido del tablero propone una línea para cada archivo que no la tiene, y su responsable acepta las que valen. La leen todos los que leen el área, en el tablero, aunque el cuerpo del taller sea privado, así que lleva la regla del `Estatus`: nada de `restringido/` ni datos personales. Añadir o cambiar `aportacion` sin tocar el contenido no mueve `actualizado`: esa fecha es la del último cambio de contenido, y moverla escondería lo que quedó viejo frente a una decisión o frente a su base. Hasta la 1.21 se llamaba `afirma`; los scripts leen las dos durante la 1.22 y escriben solo `aportacion`.
 
-**afirma**: una línea que dice qué sostiene la pieza, no de qué trata: «El tope de 5.000 MXN deja fuera las compras recurrentes», no «Análisis de compras». Es lo que deja ver, sin abrir el documento, qué hay en un proyecto y si sigue valiendo. Una sola línea de hasta unos 200 caracteres, sin saltos, entre comillas si lleva dos puntos. La escribe la skill, como `basado_en`: es obligatoria en lo que crea `entregable` desde la 1.21 y opcional en lo que ya existe y en `taller/`; el barrido del tablero propone una línea para cada archivo que no la tiene y su dueño acepta las que valen. La leen todos los que leen el área, en el tablero, aunque el cuerpo del taller sea privado, así que lleva la regla de `En corto`: nada de `restringido/` ni datos personales. Añadir o cambiar `afirma` sin tocar el contenido no mueve `actualizado`: esa fecha es la del último cambio de contenido, y moverla escondería lo que quedó viejo frente a una decisión o frente a su base. Los registros, `area.md`, `proyecto.md`, `base/` y `fuentes/` no la llevan.
+**basado_en**: rutas relativas a la raíz de todo lo que se usó para escribir el archivo. Es lo que permite detectar que una pieza quedó desactualizada cuando cambia algo aguas arriba. La escribe la skill, no la persona. Si no se usó más que la conversación, o el material se adoptó sin trazabilidad, va la lista vacía `[]`; `revisar` la pide completa antes de publicar un entregable adoptado.
 
-No hay clave de dueño. El dueño vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
+Las dos claves son obligatorias en lo que se crea en `entregables/` y `taller/`; en lo que ya existía sin ellas, `verificar.sh` las cuenta y el barrido propone la `aportacion`. Ningún otro archivo las lleva: ni los registros, ni `area.md`, ni `proyecto.md`, ni `base/`, ni `fuentes/`.
+
+No hay clave de responsable. El responsable vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
 
 Las claves van sin acentos ni eñes.
 
@@ -227,17 +221,17 @@ Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o cambia el a�
 
 Valen para todas las skills y no se repiten en ninguna. Cada skill añade las suyas, que son las de su trabajo concreto.
 
-1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el dueño del proyecto; y `migrar`, con lo que su dueño en el origen pide publicar al migrar. `area.md` y los registros nacen `vigente` (sección 5).
+1. No marcar nada como `vigente`. Solo lo hace `revisar`, y solo cuando lo pide el responsable del proyecto; y `migrar`, con lo que su responsable en el origen pide publicar al migrar. `area.md` y los registros nacen `vigente` (sección 5).
 2. No editar una entrada ya escrita de `decisiones.md` o de `sesiones.md`, ni para corregir una errata. Un registro solo crece.
 3. No registrar una decisión que el usuario no confirmó en esta sesión, salvo las recuperadas al migrar, que entran marcadas «pendiente de confirmar» (sección 4).
-4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de un área de la que la cuenta no es dueña ni colabora. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
-5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto en el bloque `Proyectos` de su `area.md`, `Panorama` de ese `area.md` al cerrar sesión o cuando su dueño lo pide (skill `director`), `Prioridades ahora` de ese `area.md` cuando su dueño lo pide en la sesión, y lo mecánico que la puesta al día del tablero escribe en los proyectos donde la cuenta es dueña o colabora: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en los de otra cuenta. `Panorama` y `Prioridades ahora` son solo del dueño del área.
-6. No leer el cuerpo de `taller/`, `fuentes/`, lo restringido de otra área, ni el cuerpo de su `sesiones.md`: de la bitácora ajena solo la fecha, el título y «Trabajamos en» de cada entrada; del taller ajeno solo la cabecera y el título de cada archivo, su inventario (sección 7). Son taller privado y no responden a nadie de fuera.
-7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `enlaces.md`.
+4. No escribir en `guia.md`, en `base/`, en `metodo.md` ni en la carpeta de un área de la que la cuenta no es responsable ni colabora. Desde la sesión de otra área se prepara el texto y se le pasa a quien responde. Las excepciones: la sesión del responsable de contexto escribe `guia.md` y `base/`, y `metodo.md` lo pone al día cualquier cuenta con el plugin más nuevo (sección 11).
+5. No tocar archivos fuera del proyecto activo, salvo la línea de ese proyecto y las de sus entregables vigentes en el bloque `Proyectos` de su `area.md`, el `Estatus` de ese `area.md` al cerrar sesión o cuando su responsable lo pide (skill `director`), lo mecánico que la puesta al día del tablero escribe en los proyectos donde la cuenta es responsable o colabora: fechas de pasos y hechos marcados desde el tablero (skill `tablero`), nunca en los de otra cuenta, y lo que renombra la migración de estructura de la 1.22 en las áreas de la cuenta (skill `sesion`). El `Estatus` del área es solo de su responsable.
+6. No leer el cuerpo de `taller/`, `fuentes/`, lo restringido de otra área, ni el cuerpo de su `sesiones.md`: de la bitácora ajena solo la fecha, el título y «Tema» de cada entrada («Trabajamos en» en las anteriores a la 1.22); del taller ajeno solo la cabecera y el título de cada archivo, su inventario (sección 7). Son taller privado y no responden a nadie de fuera.
+7. No escribir en un archivo que lee todo el equipo la ruta ni el contenido de algo restringido, aunque sea resumido. Hacia fuera solo van el nombre del área o del proyecto, que ya están listados, y la fila de `inventario.md`.
 8. No guardar en `fuentes/` un material con indicios de información confidencial sin haberlo dicho y preguntado antes, ni mover nada a `restringido/` sin que el usuario lo confirme.
 9. No guardar fuera de `fuentes/` material que llegó de fuera del equipo del proyecto, aunque venga terminado y listo para usarse.
 10. No copiar a este `fuentes/` una fuente que ya existe en otro proyecto del área. Se cita la original por su ruta.
-11. No crear un área ni un proyecto sin dueño con nombre y apellido.
+11. No crear un área ni un proyecto sin responsable con nombre y apellido.
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
 14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
