@@ -934,7 +934,10 @@ if INVENTARIO:
         inv["reusar"] = reusar
     inv["sello"] = sello(inv)
     if SI_CAMBIA and SI_CAMBIA == inv["huella_raiz"]:
+        # al día: la segunda línea es el instante de esta comprobación en la zona de la organización, que la puesta al día
+        # deja como «sincronizado» (plan_subida.py --cierre); así ningún modelo escribe una hora
         print("AL DIA")
+        print(datetime.datetime.now(TZ).isoformat(timespec="minutes"))
         sys.exit(0)
     if LINEAS:
         print(json.dumps(inv, ensure_ascii=False, separators=(",", ":")))
@@ -1212,7 +1215,8 @@ enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candida
 fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
 docs["meta"]["estado"] = {
-    "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"),
+    "organizacion": org, "snapshot": HOY, "sincronizado": datetime.datetime.now(TZ).isoformat(timespec="minutes"), "zona": str(TZ),
+    "huella_candidatos": _huella_cand,     # la de «Por dónde empezar» que esta corrida ofreció: si no cambia, no se renueva
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,

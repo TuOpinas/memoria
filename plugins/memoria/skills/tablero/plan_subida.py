@@ -1,8 +1,25 @@
 #!/usr/bin/env python3
 """Qué hay que subir a la base del tablero, sin traer ningún documento a la conversación.
 
-Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000]
+Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000] [--cierres <volcado de «cierres»>]
+                    [--inicio <trabajo>/inicio.json] [--llamadas <n>] [--pagina '<json de pagina_actualizada>']
+                    [--tarea-desfasada true|false]
      plan_subida.py --guardada <volcado-de-la-base> --version <versión del plugin> [--tarea <id>] [--manual]
+     plan_subida.py --cierre <volcado-de-la-base> <carpeta de salida> --sincronizado <instante que imprimió el inventario>
+                    [--cierres …] [--inicio …] [--llamadas …] [--pagina …] [--tarea-desfasada …]
+                    [--retenidos <retenidos.json>] [--ajenos <ajenos.json>]
+
+Lo que cierra la puesta al día va en el mismo lote que meta/estado, el último, y nadie escribe una hora a mano:
+  --cierres   el volcado de la colección «cierres» (las marcas que deja cada cierre de sesión): van como «delete», con su
+              if_version, las de `hora` anterior o igual al `sincronizado` de esta corrida y las de `hora` posterior a
+              ahora (mal puestas); las demás se quedan, que son de un cierre que esta corrida pudo no ver.
+  --inicio    el inicio.json que dejó preparar.py --trabajo: de ahí sale `duracion_min` de la corrida.
+  --llamadas  cuántas llamadas a herramientas llevó la corrida (las cuenta quien la corre); se guarda tal cual.
+  --pagina    el campo pagina_actualizada que escribe el paso de versiones; --tarea-desfasada, su campo.
+Con --cierre (el tablero ya estaba al día: no hubo generación) escribe <salida>/meta/estado.json con solo lo que cambia
+(«sincronizado», el que imprimió el inventario en la zona de la organización, `cola_retenida`, `cola_ajena`, la duración,
+las llamadas, la página) y planea un lote: los «delete» de cierres y meta/estado como «update» (sin if_version: solo esta
+corrida escribe esos campos). Las huellas de la raíz y de los proyectos no se tocan.
 
 Con --guardada no planea nada: imprime dos líneas. La primera, la huella de la raíz que guardó la última puesta al día
 si el tablero sigue valiendo tal cual (misma versión del plugin, misma tarea, mismo «sin horario»), o «-» si hay que
@@ -43,11 +60,100 @@ if "--guardada" in sys.argv:
     print(",".join(hs) if isinstance(hs, list) and hs else "-")
     sys.exit(0)
 
+import datetime
+ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como doc_id
+
+
+def _opt(n, defecto=None):
+    return sys.argv[sys.argv.index(n) + 1] if n in sys.argv and len(sys.argv) > sys.argv.index(n) + 1 else defecto
+
+
+def _json(p):
+    if not p:
+        return None
+    try:
+        d = json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return d
+
+
+def _datos(d):
+    return d.get("data", d) if isinstance(d, dict) and "data" in d else (d if isinstance(d, dict) else {})
+
+
+def _zona(nombre):
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(nombre or "America/Mexico_City")
+    except Exception:
+        return datetime.timezone.utc
+
+
+def extras_cierre(sincronizado, zona):
+    """Los campos de meta/estado que cierran la corrida, y los «delete» de cierres. `sincronizado` lleva zona."""
+    campos = {}
+    ini = _json(_opt("--inicio"))
+    ahora = datetime.datetime.now(_zona(zona))
+    if ini and ini.get("inicio"):
+        try:
+            t0 = datetime.datetime.fromisoformat(ini["inicio"])
+            campos["duracion_min"] = round(max(0, (ahora - t0).total_seconds()) / 60, 1)
+        except ValueError:
+            pass
+    if _opt("--llamadas") and _opt("--llamadas").isdigit():
+        campos["llamadas"] = int(_opt("--llamadas"))
+    if _opt("--pagina"):
+        try:
+            campos["pagina_actualizada"] = json.loads(_opt("--pagina"))
+        except ValueError:
+            pass
+    if _opt("--tarea-desfasada") in ("true", "false"):
+        campos["tarea_desfasada"] = _opt("--tarea-desfasada") == "true"
+    borrar = []
+    d = pathlib.Path(_opt("--cierres")) if _opt("--cierres") else None
+    try:
+        t_sinc = datetime.datetime.fromisoformat(sincronizado) if sincronizado else None
+    except ValueError:
+        t_sinc = None
+    for p in sorted(d.glob("*.json")) if d and d.is_dir() else []:
+        raw = _json(p)
+        dd = _datos(raw)
+        try:
+            h = datetime.datetime.fromisoformat(str(dd.get("hora", "")))
+            if h.tzinfo is None:
+                h = h.replace(tzinfo=ahora.tzinfo)
+        except ValueError:
+            h = None
+        fuera = h is None or (t_sinc is not None and h <= t_sinc) or h > ahora
+        if fuera and ID_VALIDO.match(p.stem):
+            e = {"op": "delete", "collection": "cierres", "doc_id": p.stem}
+            if isinstance(raw, dict) and raw.get("version") is not None:
+                e["if_version"] = raw["version"]
+            borrar.append(e)
+    return campos, borrar
+
+
+if "--cierre" in sys.argv:
+    i = sys.argv.index("--cierre")
+    VOLCADO, SALIDA = pathlib.Path(sys.argv[i + 1]).resolve(), pathlib.Path(sys.argv[i + 2]).resolve()
+    base = _datos(_json(VOLCADO / "meta" / "estado.json") or {})
+    sinc = _opt("--sincronizado") or datetime.datetime.now(_zona(base.get("zona"))).isoformat(timespec="minutes")
+    campos, borrar = extras_cierre(sinc, base.get("zona"))
+    campos["sincronizado"] = sinc
+    for k, f in (("cola_retenida", _opt("--retenidos")), ("cola_ajena", _opt("--ajenos"))):
+        v = _json(f) if f else None
+        campos[k] = v if isinstance(v, list) else []
+    (SALIDA / "meta").mkdir(parents=True, exist_ok=True)
+    (SALIDA / "meta" / "estado.json").write_text(json.dumps(campos, ensure_ascii=False, indent=1), encoding="utf-8")
+    lote = borrar + [{"op": "update" if base else "set", "collection": "meta", "doc_id": "estado", "file_path": str(SALIDA / "meta" / "estado.json")}]
+    print(json.dumps({"lotes": [lote], "cierres_borrados": len(borrar), "duracion_min": campos.get("duracion_min")}, ensure_ascii=False, indent=1))
+    sys.exit(0)
+
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
 MAX = int(sys.argv[sys.argv.index("--max-bytes") + 1]) if "--max-bytes" in sys.argv else 900_000
 COLECCIONES = ("areas", "proyectos", "detalle")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
-ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como doc_id
 LIMITE = 1_000_000                                                    # un documento solo no puede pasar del cuerpo de un lote
 
 
@@ -63,6 +169,18 @@ def huella_en_base(col, doc):
     return d.get("huella"), True
 
 
+# lo que cierra la corrida entra en meta/estado antes de planear, para que suba en el mismo lote, el último
+_meta_p = SALIDA / "meta" / "estado.json"
+_meta_d = _json(_meta_p) or {}
+_campos, _borrar_cierres = extras_cierre(_meta_d.get("sincronizado"), _meta_d.get("zona"))
+if _campos:
+    _meta_d.update(_campos)
+    _meta_p.write_text(json.dumps(_meta_d, ensure_ascii=False, indent=1), encoding="utf-8")
+# «Por dónde empezar» solo se renueva si cambiaron los candidatos: la huella de los de hoy frente a la que guardó la base
+_cand = _json(SALIDA / "meta" / "enfoque-candidatos.json") or {}
+_base_meta = _datos(_json(VOLCADO / "meta" / "estado.json") or {})
+enfoque_cambio = bool(_cand.get("huella")) and _cand.get("huella") != _base_meta.get("huella_candidatos")
+
 indice = json.loads((SALIDA / "indice.json").read_text(encoding="utf-8"))
 escrituras, sin_cambios, salen, invalidos, grandes = [], 0, set(), [], []
 for it in indice:
@@ -70,6 +188,8 @@ for it in indice:
     salen.add((col, doc))
     if not ID_VALIDO.match(doc):
         invalidos.append(f"{col}/{doc}"); continue      # carpeta con espacios o acentos: la base no la admite
+    if (col, doc) == ("meta", "estado"):
+        it["bytes"] = _meta_p.stat().st_size      # cambió al sumarle lo que cierra la corrida
     if it["bytes"] > LIMITE:
         grandes.append(f"{col}/{doc}"); continue
     h, existe = huella_en_base(col, doc)
@@ -116,7 +236,7 @@ if _b.exists():
             if x.get("if_version") is not None:
                 e["if_version"] = x["if_version"]
             propuestas.append(e)
-orden += list(_det.values()) + borrar + propuestas + _meta
+orden += list(_det.values()) + borrar + propuestas + _borrar_cierres + _meta
 lotes, actual, peso = [], [], 0
 for e in orden:
     b = e.get("bytes", 200) + 300
@@ -127,6 +247,7 @@ for e in orden:
 if actual:
     lotes.append(actual)
 
-print(json.dumps({"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar),
+print(json.dumps({"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar), "cierres_borrados": len(_borrar_cierres),
+                  "enfoque_cambio": enfoque_cambio, "duracion_min": _campos.get("duracion_min"),
                   "propuestas": {"nuevas": sum(1 for e in propuestas if e["op"] == "set"), "retiradas": sum(1 for e in propuestas if e["op"] == "delete")},
                   "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}, ensure_ascii=False, indent=1))

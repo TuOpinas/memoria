@@ -7,7 +7,7 @@ Comprueba que generar sobre la copia de «leer» con el inventario da exactament
 sobre la raíz; que una copia incompleta o con archivos de más se rechaza; que el --modo de una tarea de antes de la
 1.18 no cambia nada (hay un solo modo); y que el plan de subida solo propone lo que cambió.
 """
-import json, os, re, shutil, subprocess, sys, pathlib
+import json, re, os, shutil, subprocess, sys, pathlib
 
 GEN, PLAN, RAIZ, TRAB = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3]), pathlib.Path(sys.argv[4])
 fallos = 0
@@ -93,8 +93,8 @@ _s_a = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario"], c
 r_a, _leer = _s_a["inventario"], _s_a["leer"]
 r_b = json.loads(subprocess.run([sys.executable, GEN, RAIZ2, "--inventario"], capture_output=True, text=True).stdout)["inventario"]
 ok(bool(r_a.get("huella_raiz")) and r_a["huella_raiz"] == r_b["huella_raiz"], "huella de la raíz: dos inventarios seguidos dan la misma")
-_al = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--lineas", "--si-cambia", r_a["huella_raiz"]], capture_output=True, text=True).stdout.strip()
-ok(_al == "AL DIA", "con la huella guardada igual, el inventario solo dice «AL DIA»")
+_al = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--lineas", "--si-cambia", r_a["huella_raiz"]], capture_output=True, text=True).stdout.strip().split("\n")
+ok(_al[0] == "AL DIA" and len(_al) == 2 and re.fullmatch(r"20\d\d-\d\d-\d\dT\d\d:\d\d[+-]\d\d:\d\d", _al[1]), f"con la huella guardada igual, el inventario dice «AL DIA» y el instante en la zona de la organización ({_al})")
 _ln = subprocess.run([sys.executable, GEN, RAIZ2, "--inventario", "--lineas", "--si-cambia", "otra"], capture_output=True, text=True).stdout.split("\n")
 ok(json.loads(_ln[0]).get("sello") == r_a["sello"] and int(_ln[1]) == len(_leer) and _ln[2] == _leer[0], "con otra huella, el inventario sale en líneas: inventario, cuántos archivos y sus rutas")
 tocado = RAIZ2 / _leer[1]

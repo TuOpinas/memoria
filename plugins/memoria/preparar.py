@@ -15,8 +15,12 @@ Un archivo que ya está en el destino con la huella del plugin no se vuelve a tr
 termina en `sha256sum -c`, así que detrás se le añade ` && <lo que se corre>` y eso solo corre
 si todos los archivos cuadran.
 
-Uso: python3 preparar.py <destino en la computadora> <ruta dentro del plugin>...
-     python3 preparar.py '$HOME/tablero' skills/tablero/generar_vista.py skills/tablero/aplicar_cambios.py
+Uso: python3 preparar.py <destino en la computadora> <ruta dentro del plugin>... [--trabajo <carpeta de trabajo>]
+     python3 preparar.py '$HOME/tablero' skills/tablero/generar_vista.py skills/tablero/aplicar_cambios.py --trabajo <trabajo>
+
+Con --trabajo deja la carpeta de trabajo lista para la puesta al día del tablero: la crea, vacía su `base` (lo que haya de
+otra corrida o de otro tablero) y escribe `inicio.json` con el instante en que empieza, del que plan_subida.py --cierre saca
+la duración.
 """
 import hashlib
 import json
@@ -31,7 +35,18 @@ def main(argv):
     if len(argv) < 3:
         print(__doc__.strip(), file=sys.stderr)
         return 2
+    trabajo = None
+    if "--trabajo" in argv:
+        i = argv.index("--trabajo")
+        trabajo = argv[i + 1] if len(argv) > i + 1 else None
+        argv = argv[:i] + argv[i + 2:]
     destino, rutas = argv[1], argv[2:]
+    if trabajo:
+        import shutil, datetime
+        os.makedirs(trabajo, exist_ok=True)
+        shutil.rmtree(os.path.join(trabajo, "base"), ignore_errors=True)
+        with open(os.path.join(trabajo, "inicio.json"), "w", encoding="utf-8") as f:
+            json.dump({"inicio": datetime.datetime.now().astimezone().isoformat(timespec="seconds")}, f)
     plugin = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(plugin, ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
         version = json.load(f)["version"]
