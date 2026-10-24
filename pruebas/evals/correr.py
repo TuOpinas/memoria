@@ -283,9 +283,10 @@ def comprobacion(nombre):
 
 @comprobacion("recuadro")
 def _(ctx, arg):
-    """La primera respuesta lleva el recuadro «Memoria activa»."""
+    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»)."""
     t = texto_de(ctx["turnos"][0])
-    return "Memoria activa" in t, "en la primera respuesta" if "Memoria activa" in t else "no está en la primera respuesta"
+    hay = "Memoria de trabajo ·" in t
+    return hay, "en la primera respuesta" if hay else "no está en la primera respuesta"
 
 
 @comprobacion("sin-escrituras")
@@ -550,7 +551,7 @@ def _(ctx, arg):
 @comprobacion("palabras-maximo")
 def _(ctx, arg):
     """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
-    recuadro «Memoria activa». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
+    recuadro «Memoria de trabajo». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
     pueda borrar») y la skill estilo; el tope lo fija cada escenario según lo que pregunta."""
     n, _, t = arg.partition("@")
     turnos = [ctx["turnos"][int(t) - 1]] if t else ctx["turnos"]

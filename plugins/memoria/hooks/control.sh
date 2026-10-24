@@ -9,7 +9,7 @@
 #      sesión en la nube enlazada a la computadora, el aviso del sistema que lista las carpetas que eligió la persona
 #      y Claude todavía no las miró (get_device_info, device_list_dir): si las miró y no abrió, no hay memoria.
 #   2. No hubo apertura: ningún resultado de herramienta que empiece por lo que imprime abrir.py, ni la línea
-#      «Memoria activa» en la respuesta que acaba de terminar.
+#      «Memoria de trabajo ·» (o «Memoria activa», hasta la 1.22.0) en la respuesta que acaba de terminar.
 #   3. No es la puesta al día del tablero (una tarea programada que no es una sesión de trabajo).
 #   4. Este control no intervino antes en esta conversación: lo apunta en un sello por conversación (session_id),
 #      fuera de la carpeta; si no puede apuntarlo, no interviene, para no repetirse.
@@ -20,7 +20,7 @@ ENTRADA="$(cat 2>/dev/null)" || exit 0
 # lo que sigue a un recordatorio de este mismo control no se vuelve a mirar
 printf '%s' "$ENTRADA" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true' && exit 0
 # la respuesta que acaba de terminar ya abrió (el registro puede ir con retraso)
-printf '%s' "$ENTRADA" | grep -Fq 'Memoria activa' && exit 0
+printf '%s' "$ENTRADA" | grep -Eq 'Memoria de trabajo ·|Memoria activa' && exit 0
 T="$(printf '%s' "$ENTRADA" | sed -n 's/.*"transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
 T="${T/#\~/$HOME}"
 [ -n "$T" ] && [ -r "$T" ] || exit 0
@@ -54,7 +54,7 @@ else
   QUE="Esta conversación tiene carpetas conectadas y todavía no se comprobó si alguna es una carpeta de memoria (con guia.md y metodo.md en su primer nivel)."
 fi
 mkdir -p "$SELLOS" 2>/dev/null && : > "$SELLOS/$SID" 2>/dev/null || exit 0
-TEXTO="$MARCA $QUE Haz ahora la apertura mínima de la skill sesion de memoria; si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta solo el recuadro «Memoria activa…» y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
+TEXTO="$MARCA $QUE Haz ahora la apertura mínima de la skill sesion de memoria; si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta solo el recuadro «Memoria de trabajo · …» y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
 j=$TEXTO
 j=${j//\\/\\\\}
 j=${j//\"/\\\"}
