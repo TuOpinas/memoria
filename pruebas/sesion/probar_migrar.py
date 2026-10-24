@@ -3,7 +3,7 @@
 
 Uso: python3 pruebas/sesion/probar_migrar.py
 """
-import hashlib, importlib.util, json, pathlib, shutil, subprocess, sys, tempfile
+import hashlib, importlib.util, json, pathlib, shutil, subprocess, sys, tempfile, time
 
 AQUI = pathlib.Path(__file__).resolve().parent
 SES = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion"
@@ -147,6 +147,83 @@ b = f.read_bytes()
 ok(b"\r\n" in b and b"\n" not in b.replace(b"\r\n", b"") and b"## Estatus" in b, "un archivo con finales de línea de Windows sigue así")
 c, s6 = corre(R4, "--cuenta", "nadie@ejemplo.test")
 ok(c == 0 and not s6["areas"] and not s6["archivos"], "una cuenta sin áreas no migra nada")
+
+print("migrar_estructura.py sin consola: la misma migración por la copia (espejo.py migracion)")
+import os, re as re_
+ESPEJO = SES.parent.parent / "espejo.py"
+def con_extras(r):
+    (r / "ventas/cuentas/restringido/enlaces.md").write_text("---\nestado: vigente\nactualizado: 2026-09-01\n---\n\n# Enlaces\n", encoding="utf-8")
+    n = r / "ventas/cuentas/taller/nota-precios.md"
+    n.write_text(n.read_text(encoding="utf-8").replace("---\n", '---\nafirma: "Los precios suben en enero."\n', 1), encoding="utf-8")
+    return r
+RD, RC = con_extras(raiz_nueva()), con_extras(raiz_nueva())   # RD: la computadora sin consola; RC: la misma, con consola
+c, sc = corre(RC, "--cuenta", "ana@ejemplo.test", "--nombre", "Ana Prueba", "--plugin", "1.22.0", "--sin-consola")
+ok(c == 0 and sc["nuevos"] and all(e.endswith("· sin consola") for e in [(RC / x).read_text(encoding="utf-8").split("\n## ")[1].split("\n")[3] for x in sc["entradas"]]), "con --sin-consola la entrada lleva la marca, y dice qué archivos del taller crea")
+def esp(*a):
+    r = subprocess.run([sys.executable, str(ESPEJO), *map(str, a)], capture_output=True, text=True)
+    return r.returncode, r.stdout, r.stderr
+C = pathlib.Path(tempfile.mkdtemp()) / "uploads" / "raiz"
+listado = pathlib.Path(tempfile.mkdtemp()) / "listado.txt"
+mias = ("ventas", "operacion", "futura", "archivo")
+listado.write_text("\n".join(p.relative_to(RD).as_posix() for a_ in mias if (RD / a_).is_dir() for p in sorted((RD / a_).rglob("*")) if p.is_file()), encoding="utf-8")
+pedidas, rondas = [], 0
+def trae(rs):
+    for r in rs:
+        if (RD / r).is_file():
+            (C / r).parent.mkdir(parents=True, exist_ok=True); shutil.copy(RD / r, C / r)   # la fecha de la copia es la de la traída
+        else:
+            esp("falta", C, r)
+while rondas < 5:
+    _, out, _ = esp("migracion", C, listado)
+    if out.strip() == "COMPLETA":
+        break
+    rondas += 1; pedidas += out.split(); trae(out.split())
+ok(out.strip() == "COMPLETA" and rondas == 1, f"una ronda (la lista entera, por lotes de 50) y COMPLETA (rondas: {rondas})")
+ok(not any(re_.search(r"/(fuentes|restringido)/", r) for r in pedidas) and "ventas/cuentas/taller/nota-precios.md" in pedidas and not any(r.endswith(".xlsx") for r in pedidas), "trae los .md del taller y de entregables, nunca fuentes/ ni restringido/ ni lo que no es .md")
+ok((C / "ventas/cuentas/restringido/enlaces.md").is_file() and (C / "ventas/cuentas/restringido/enlaces.md").stat().st_size == 0, "lo de fuentes/ y restringido/ queda como marcador vacío, solo para renombrarlo")
+plan = pathlib.Path(tempfile.mkdtemp()) / "plan.json"
+r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
+_, out, _ = esp("migracion", C, "--plan", plan)
+traer = out.split()[1:]
+ok(out.startswith("TRAER") and "ventas/cuentas/sesiones.md" in traer and "guia.md" in traer and not any(x in traer for x in json.loads(r_.stdout)["nuevos"]), "el plan dice qué traer otra vez y registrar (también los sesiones.md), y no los nuevos")
+trae(traer)
+tri = [x for r in traer for x in (r, int(os.stat(RD / r).st_mtime * 1000), os.stat(RD / r).st_size)]
+c, _, err = esp("registrar", C, *tri)
+ok(c == 0, "se registran con la fecha y el tamaño de la computadora " + err)
+salida = pathlib.Path(tempfile.mkdtemp()) / "salida.json"
+r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--nombre", "Ana Prueba", "--plugin", "1.22.0", "--sin-consola"], capture_output=True, text=True); salida.write_text(r_.stdout, encoding="utf-8")
+c, out, _ = esp("migracion", C, "--hecha", salida)
+h = json.loads(out)
+ok(c == 0 and h["listo"] and sorted(map(tuple, h["renombrar"])) == sorted(map(tuple, sc["renombrados"])), "todo lo cambiado está registrado o declarado, y dice qué renombrar con el conector")
+for viejo, nuevo_ in h["renombrar"]:   # el conector de Drive renombra en la computadora, antes de devolver
+    os.rename(RD / viejo, RD / nuevo_)
+_, out, _ = esp("devolver", C, str(RD), "--salidas", pathlib.Path(tempfile.mkdtemp()))
+d = json.loads(out)
+ok(not d["retenidos"] and not d["sin_registrar"], f"devolver sin retenidos ni sin registrar ({d['retenidos']}, {d['sin_registrar']})")
+ok(d["lotes"] and all("expectedMtimeMs" not in x for x in d["lotes"][0]) and all("expectedMtimeMs" in x for l in d["lotes"][1:] for x in l), "los archivos nuevos del taller van solos en el primer lote")
+rechazos = []
+for lote in d["lotes"]:   # device_commit_files: escribe si la fecha sigue siendo la esperada
+    for x in lote:
+        dst = pathlib.Path(x["devicePath"])
+        if "expectedMtimeMs" in x and abs(int(os.stat(dst).st_mtime * 1000) - x["expectedMtimeMs"]) > 1:
+            rechazos.append(x["rel"]); continue
+        dst.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(x["stagedPath"], dst)
+ok(not rechazos, f"la computadora acepta todo ({rechazos})")
+dif = sorted(k for k in set(huellas(RD)) | set(huellas(RC)) if huellas(RD).get(k) != huellas(RC).get(k))
+ok(not dif, f"la raíz migrada sin consola queda idéntica a la migrada con consola ({dif[:5]})")
+# un cierre que llega entre el registro y la devolución: la computadora rechaza ese archivo
+RD2 = con_extras(raiz_nueva()); C2 = pathlib.Path(tempfile.mkdtemp()) / "uploads" / "raiz"
+C, RD = C2, RD2
+while esp("migracion", C, listado)[1].strip() != "COMPLETA":
+    trae(esp("migracion", C, listado)[1].split())
+r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
+traer = esp("migracion", C, "--plan", plan)[1].split()[1:]; trae(traer)
+esp("registrar", C, *[x for r in traer for x in (r, int(os.stat(RD / r).st_mtime * 1000), os.stat(RD / r).st_size)])
+subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--sin-consola"], capture_output=True)
+time.sleep(0.02); (RD / "ventas/cuentas/proyecto.md").write_text((RD / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8") + "\n", encoding="utf-8")
+d = json.loads(esp("devolver", C, str(RD), "--salidas", pathlib.Path(tempfile.mkdtemp()))[1])
+x = next(x for l in d["lotes"] for x in l if x["rel"] == "ventas/cuentas/proyecto.md")
+ok(abs(int(os.stat(RD / x["rel"]).st_mtime * 1000) - x["expectedMtimeMs"]) > 1, "un proyecto.md que alguien escribió entre medias se rechaza por su fecha (no se pisa)")
 
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

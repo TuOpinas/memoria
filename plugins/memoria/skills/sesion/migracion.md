@@ -6,7 +6,7 @@ Anexo de la skill `sesion`. Se lee cuando la sección ESTRUCTURA de `abrir.py` d
 
 Una línea al final de la respuesta, después de lo que se pidió: «Tu parte de la carpeta usa la estructura de antes de la 1.22 (<lo que nombra el veredicto: las áreas y, si está, `guia.md`>). ¿La paso a la nueva? Renombra secciones y claves sin perder nada, y deja una línea en la bitácora de cada proyecto.» Con la herramienta de preguntas si está («Migrar ahora» / «Después»), o en texto. Una vez por conversación. Si esa respuesta ya pide confirmar otra cosa (las decisiones y el `Estatus` de un cierre, una prioridad), la oferta espera a la respuesta siguiente, para que un «sí» no valga por dos. Con «Después», no se vuelve a ofrecer en esa conversación y se trabaja igual.
 
-**Sin consola** (la carpeta está conectada pero el shell de la computadora no la monta) no se ofrece: la migración renombra archivos y escribe en muchos a la vez, y por la copia del contenedor no hay camino seguro. Se dice en media línea que se migra en una sesión con consola, y se trabaja igual: la raíz sin migrar funciona.
+**Sin consola** (la carpeta está conectada pero el shell de la computadora no la monta, `sin-consola.md` de `convenciones`) se ofrece igual, y con el sí se sigue «Sin consola», abajo. Ahí la apertura solo ve los `area.md` y el proyecto que se abre, así que el veredicto sale de ellos.
 
 **Las raíces de otras organizaciones** no se migran desde una sesión de otra raíz: cada una, en la apertura de su responsable. La skill `migrar` no interviene: es para adoptar estructuras ajenas.
 
@@ -19,6 +19,20 @@ Una línea al final de la respuesta, después de lo que se pidió: «Tu parte de
 3. Al terminar, dos o tres líneas: cuántos proyectos y áreas se migraron, que «Estado actual» de cada proyecto quedó en su `taller/estado-anterior.md` (lo que siga valiendo lo lleva al `Estatus` o a `Alcance` la siguiente sesión de ese proyecto), los conflictos si los hubo, y que las áreas de otras personas se migran cuando sus responsables abran sesión con el plugin 1.22.
 
 La entrada «(migracion)» que deja en cada `sesiones.md` no es una sesión: la apertura y el tablero no la cuentan como tal ni la enseñan entre las recientes. Repetir el script no hace nada: lo ya migrado no tiene marcas viejas.
+
+## Sin consola
+
+El mismo script corre en el contenedor sobre la copia, y lo que cambia vuelve con `espejo.py` como en un cierre sin consola; lo único que no puede devolver, renombrar `enlaces.md` a `inventario.md`, lo hace el conector de Google Drive. El resultado es el mismo que con consola. `espejo.py` está en la raíz del plugin; `<la copia>` es la de la apertura.
+
+1. **El listado.** `device_list_dir` recursivo de cada área que nombra el veredicto (si sale `truncated`, por proyecto). Se escribe en un archivo del contenedor, una ruta relativa a la raíz por línea, solo lo que cuenta: `<area>/area.md`, el `proyecto.md` y el `sesiones.md` de cada proyecto, los `.md` de sus `entregables/` y `taller/`, y los `enlaces.md` o `inventario.md` de sus `fuentes/` y `restringido/`.
+2. **La copia.** `espejo.py migracion "<la copia>" <listado>` imprime qué traer; se trae con `device_stage_files`, de 50 en 50 (lo que no existe, con `espejo.py falta`), y se repite hasta COMPLETA. Trae los `.md` del taller de las áreas que se migran: la migración reescribe sus cabeceras y su cuerpo no sale del contenedor ni se lee. De `fuentes/` y `restringido/` no trae nada.
+3. **El plan.** `python3 migrar_estructura.py "<la copia>" --cuenta <correo> --plan > plan.json` y `espejo.py migracion "<la copia>" --plan plan.json`: declara nuevos los archivos del taller que crea e imprime TRAER, los archivos que va a cambiar. Si `renombrados` del plan no está vacío y no hay conector de Google Drive, se dice que hace falta conectarlo (`SuggestConnectors`) y se para aquí: nada se ha escrito.
+4. **Registrar.** Lo de TRAER se trae otra vez y se registra con lo que dio `device_stage_files`: `espejo.py registrar "<la copia>" <ruta> <mtimeMs> <bytes> …`, todo en una llamada.
+5. **Migrar la copia.** `python3 migrar_estructura.py "<la copia>" --cuenta <correo> --nombre "<nombre>" --plugin <versión> --sin-consola > salida.json` y `espejo.py migracion "<la copia>" --hecha salida.json`. Si no sale `listo`, lo de `sin_registrar` se trae, se registra y se repite este paso (el script no repite lo hecho).
+6. **Renombrar.** Cada par de `renombrar`, con el conector, como dice «Mover, renombrar» de `sin-consola.md`: `update_file` con el `title` nuevo. Se comprueba con `device_list_dir`. Si uno falla, se para: lo renombrado ya vale, porque durante la 1.22 todo lee los dos nombres, y la copia se tira.
+7. **Devolver.** `espejo.py devolver "<la copia>" "<ruta de la raíz en la computadora>"`: los archivos nuevos del taller van solos en el primer lote. Ese lote se devuelve con `device_commit_files`; solo si llegaron todos, los demás. Después, `espejo.py hecho` con lo escrito. Un rechazo por fecha (alguien cerró entre medias) se trata como en `sin-consola.md`, punto 5: se trae, se registra y se repite el paso 5 sobre lo nuevo.
+
+Cuesta una llamada de listado por área, una de traer por cada 50 archivos (dos veces lo que cambia) y una de devolver por cada 50; en una raíz de 20 proyectos, unas quince llamadas.
 
 ## Lo que hace el script, en una tabla
 

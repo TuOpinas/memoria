@@ -39,7 +39,8 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
   espejo.py devolver <copia> <ruta de la raíz en la computadora> [--forzar <ruta>]... [--salidas <carpeta>]
       Lo registrado que cambió y lo nuevo que existe, listo para device_commit_files: copia cada archivo a una carpeta nueva de
       salidas (nunca una ruta ya usada) e imprime un JSON con «lotes» (de 50 como mucho, cada entrada con stagedPath,
-      devicePath y, si no es nuevo, expectedMtimeMs), «retenidos» (lo que no pasa la comprobación de contenido, con el motivo)
+      devicePath y, si no es nuevo, expectedMtimeMs; los nuevos van primero y en lotes propios, para que lo que depende de
+      ellos se devuelva solo si llegaron), «retenidos» (lo que no pasa la comprobación de contenido, con el motivo)
       y «sin_registrar» (lo que cambió en la copia sin registrar: no se devuelve). Las salidas son /mnt/project-files/ si
       existe y si no /mnt/user-data/outputs/.
 
@@ -58,7 +59,20 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
   espejo.py subcopia <copia> <destino> <archivo con una ruta por línea>
       Copia esas rutas de la copia a otra carpeta, con su estructura (la copia exacta que pide la generación del tablero).
 
-Nunca escribe dentro de la raíz de la computadora ni pide nada de fuentes/, taller/ ni restringido/.
+  espejo.py migracion <copia> <listado>
+  espejo.py migracion <copia> --plan <json de migrar_estructura.py --plan>
+  espejo.py migracion <copia> --hecha <json de migrar_estructura.py>
+      La migración a la estructura de la 1.22 sin consola (skill sesion, migracion.md), en tres tiempos. Con el listado (una
+      ruta relativa a la raíz por línea, sacada de device_list_dir de las áreas que se migran), qué traer, por rondas como
+      «rutas»: guia.md, cada area.md, el proyecto.md y el sesiones.md de cada proyecto y los .md de sus entregables/ y
+      taller/ (solo los de las áreas listadas; la migración reescribe sus cabeceras y su cuerpo nunca sale del contenedor);
+      con COMPLETA, deja con su nombre y vacíos los fuentes/ y restringido/ enlaces.md o inventario.md del listado (la
+      migración solo los renombra, nunca los lee) y guarda la instantánea. Con --plan, qué traer otra vez y registrar
+      (TRAER, los archivos que la migración cambia) y declara nuevos los del taller que crea. Con --hecha, comprueba que
+      todo lo que la migración cambió está registrado o declarado, y dice qué renombrar con el conector (RENOMBRAR).
+
+Nunca escribe dentro de la raíz de la computadora ni pide nada de fuentes/, taller/ ni restringido/, salvo los .md del
+taller de las áreas que se migran.
 """
 import hashlib
 import json
@@ -259,15 +273,6 @@ def devolver(copia, raiz_dispositivo, forzar, salidas):
     sep = "\\" if "\\" in raiz_dispositivo and "/" not in raiz_dispositivo else "/"
     base = raiz_dispositivo.rstrip("/\\")
     entradas, retenidos = [], []
-    for r, reg in sorted(e["registrados"].items()):
-        p = copia / r
-        if not p.is_file() or huella(p) == reg["huella"]:
-            continue
-        motivo = None if r in forzar else motivo_retenido(reg["bytes"], p, reg.get("cabecera", False))
-        if motivo:
-            retenidos.append({"rel": r, "motivo": motivo})
-            continue
-        entradas.append((r, reg["mtimeMs"]))
     for r in sorted(e["nuevos"]):
         p = copia / r
         if not p.is_file():
@@ -277,6 +282,16 @@ def devolver(copia, raiz_dispositivo, forzar, salidas):
             retenidos.append({"rel": r, "motivo": motivo})
             continue
         entradas.append((r, None))
+    n_nuevos = len(entradas)
+    for r, reg in sorted(e["registrados"].items()):
+        p = copia / r
+        if not p.is_file() or huella(p) == reg["huella"]:
+            continue
+        motivo = None if r in forzar else motivo_retenido(reg["bytes"], p, reg.get("cabecera", False))
+        if motivo:
+            retenidos.append({"rel": r, "motivo": motivo})
+            continue
+        entradas.append((r, reg["mtimeMs"]))
     # lo que cambió en la copia desde la instantánea sin estar registrado ni declarado nuevo: no se devuelve, se avisa
     conocidos = set(e["registrados"]) | set(e["nuevos"])
     sin_registrar = []
@@ -289,7 +304,9 @@ def devolver(copia, raiz_dispositivo, forzar, salidas):
                 if r not in conocidos and e["instantanea"].get(r) != huella(pathlib.Path(d) / f):
                     sin_registrar.append(r)
     lotes, lote = [], []
-    for r, mt in entradas:
+    for i, (r, mt) in enumerate(entradas):
+        if i == n_nuevos and lote and n_nuevos < len(entradas):   # los nuevos van solos en su(s) lote(s), primero
+            lotes.append(lote); lote = []
         dst = destino / r
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(copia / r, dst)
@@ -310,11 +327,8 @@ def devolver(copia, raiz_dispositivo, forzar, salidas):
 
 
 def instantanea(copia):
-    copia, e = pathlib.Path(copia), estado(copia)
-    e["instantanea"] = {(pathlib.Path(d) / f).relative_to(copia).as_posix(): huella(pathlib.Path(d) / f)
-                        for d, ds, fs in os.walk(copia) for f in fs}
-    guarda(copia, e)
-    print(f"{len(e['instantanea'])} archivos")
+    instantanea_silenciosa(pathlib.Path(copia))
+    print(f"{len(estado(copia)['instantanea'])} archivos")
     return 0
 
 
@@ -363,6 +377,85 @@ def subcopia(copia, destino, lista):
     return 0
 
 
+MIG_TRAER = (re.compile(r"^[^/]+/area\.md$"), re.compile(r"^[^/]+/[^/]+/(proyecto|sesiones)\.md$"),
+             re.compile(r"^[^/]+/[^/]+/(entregables|taller)/(?:[^/.][^/]*/)?[^/.][^/]*\.md$"))
+MIG_MARCA = re.compile(r"^[^/]+/[^/]+/(fuentes|restringido)/(enlaces|inventario)\.md$")
+
+
+def migracion(copia, resto):
+    copia, e = pathlib.Path(copia), estado(copia)
+    m = e.setdefault("migracion", {})
+    if resto and resto[0] in ("--plan", "--hecha"):
+        if len(resto) != 2:
+            print("migracion --plan y --hecha van con el JSON que imprimió migrar_estructura.py", file=sys.stderr)
+            return 2
+        try:
+            s = json.loads(pathlib.Path(resto[1]).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as ex:
+            print(f"No pude leer el JSON de la migración: {ex}", file=sys.stderr)
+            return 2
+        listado = set(m.get("listado", []))
+        cambia = list(s.get("archivos", {})) + list(s.get("entradas", []))
+        nuevos = list(s.get("nuevos", []))
+        if resto[0] == "--plan":
+            for r in nuevos:
+                if r in listado:   # la migración no lo crea si existe; si lo pide, la copia está incompleta
+                    print(f"{r} existe en la computadora y no está en la copia: tráelo y vuelve a correr el plan.", file=sys.stderr)
+                    return 2
+                if r not in e["nuevos"]:
+                    e["nuevos"].append(r)
+            guarda(copia, e)
+            traer = sorted(set(r for r in cambia if r not in nuevos))
+            print("TRAER\n" + "\n".join(traer) if traer else "NADA QUE TRAER")
+            return 0
+        conocidos = set(e["registrados"]) | set(e["nuevos"])
+        faltan = sorted(set(r for r in cambia + nuevos if r not in conocidos))
+        # los renombrados de la copia son marcadores vacíos: la instantánea los da por sabidos para que «devolver» no avise
+        inst = e.get("instantanea") or {}
+        for viejo, nuevo_ in s.get("renombrados", []):
+            inst.pop(viejo, None)
+            if (copia / nuevo_).is_file():
+                inst[nuevo_] = huella(copia / nuevo_)
+        e["instantanea"] = inst
+        guarda(copia, e)
+        print(json.dumps({"listo": not faltan and not s.get("fallidos"), "sin_registrar": faltan, "fallidos": s.get("fallidos", []),
+                          "renombrar": s.get("renombrados", [])}, ensure_ascii=False))
+        return 0 if not faltan else 3
+    if len(resto) != 1:
+        print("migracion va con el listado, o con --plan o --hecha y el JSON de la migración", file=sys.stderr)
+        return 2
+    try:
+        lineas = [l for l in pathlib.Path(resto[0]).read_text(encoding="utf-8").split("\n") if l.strip() and not l.strip().endswith(("/", "\\"))]
+    except OSError as ex:
+        print(f"No pude leer el listado: {ex}", file=sys.stderr)
+        return 2
+    listado = sorted(set(map(limpia, lineas)))
+    m["listado"] = listado
+    faltan = set(e["faltan"])
+    viejo = lambda r: time.time() - (copia / r).stat().st_mtime > FRESCO
+    ronda = [r for r in ["guia.md"] + [r for r in listado if any(x.match(r) for x in MIG_TRAER)]
+             if r not in faltan and (not (copia / r).is_file() or (r == "guia.md" and viejo(r)))]
+    if ronda:
+        guarda(copia, e)
+        print("\n".join(dict.fromkeys(ronda)))
+        return 0
+    for r in listado:
+        if MIG_MARCA.match(r) and not (copia / r).exists():
+            (copia / r).parent.mkdir(parents=True, exist_ok=True)
+            (copia / r).touch()
+    guarda(copia, e)
+    instantanea_silenciosa(copia)
+    print("COMPLETA")
+    return 0
+
+
+def instantanea_silenciosa(copia):
+    e = estado(copia)
+    e["instantanea"] = {(pathlib.Path(d) / f).relative_to(copia).as_posix(): huella(pathlib.Path(d) / f)
+                        for d, ds, fs in os.walk(copia) for f in fs}
+    guarda(copia, e)
+
+
 def main(argv):
     if len(argv) < 3:
         print(__doc__.strip(), file=sys.stderr)
@@ -386,6 +479,8 @@ def main(argv):
         return marcadores(copia, resto[0])
     if orden == "subcopia" and len(resto) == 2:
         return subcopia(copia, resto[0], resto[1])
+    if orden == "migracion":
+        return migracion(copia, resto)
     if orden == "devolver" and resto:
         raiz, forzar, salidas, i = resto[0], set(), None, 1
         while i < len(resto):

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Migra una raíz del método a la estructura de la 1.22, solo en lo que escribe la cuenta (skill sesion).
 
-Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--nombre "Nombre Apellido"]
+Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--nombre "Nombre Apellido"] [--sin-consola]
 
 Lo ofrece la apertura cuando abrir.py dice «ESTRUCTURA: ANTERIOR»; con el sí de la persona se corre una vez, sin --plan.
 Con --plan no escribe nada y dice qué haría. Toca solo las áreas de las que la cuenta es responsable (la celda Cuenta de
 guia.md, antes de «colabora:») y guia.md si la cuenta es la del responsable de contexto; las áreas de otras cuentas
 esperan a que su responsable abra sesión con el plugin 1.22, y una raíz mezclada funciona porque scripts y skills leen
-los dos nombres durante la 1.22. Sin consola (la carpeta no está montada en la computadora) no se corre: la apertura
-lo ofrece en una sesión con consola.
+los dos nombres durante la 1.22. Sin consola (la carpeta no está montada en la computadora) se corre en el contenedor sobre
+la copia que arma «espejo.py migracion», con --sin-consola (la entrada de la bitácora lleva la marca), y lo que cambia se
+devuelve con espejo.py; los renombrados de archivo los hace después el conector de Drive (skill sesion, migracion.md).
 
 Lo que renombra (contrato, escribir.md, secciones 2, 3, 4 y 5), sin perder nada:
   guia.md       en la primera tabla de «## Áreas», la columna «Dueño» pasa a «Responsable» y se añade «Acceso»
@@ -39,8 +40,9 @@ relee y se vuelve a transformar en el momento de escribirlo, bajo un cerrojo por
 un cierre que llegue entre medias. No toca decisiones.md, las entradas ya escritas de sesiones.md, base/ ni lo que hay
 dentro de fuentes/ y restringido/ salvo su inventario. La fecha es la del día en la zona horaria de guia.md. Repetirlo
 no hace nada. Imprime un JSON compacto con, primero, lo que hay que mirar: «conflictos» (un inventario.md o un
-estado-anterior.md que ya existían), «fallidos», «entradas» (los sesiones.md donde dejó su entrada), «resumen» (cuántos
-archivos por tipo de cambio), «areas», «guia», «pendientes» (áreas de otras cuentas) y, al final, «archivos» (ruta: cambios).
+estado-anterior.md que ya existían), «fallidos», «entradas» (los sesiones.md donde dejó su entrada, o la dejaría con
+--plan), «resumen» (cuántos archivos por tipo de cambio), «areas», «guia», «pendientes» (áreas de otras cuentas), «nuevos»
+(los archivos del taller que crea), «renombrados» y, al final, «archivos» (ruta: cambios).
 """
 import datetime, hashlib, json, os, pathlib, re, sys, tempfile
 
@@ -627,7 +629,7 @@ def main(argv):
     nombre = op("--nombre") or (mias[0]["nombre"] if mias else cuenta)
     salida = {"plan": plan, "hoy": hoy, "conflictos": [], "fallidos": [], "entradas": [], "resumen": {},
               "areas": [a["slug"] for a in mias], "guia": False, "pendientes": [a["slug"] for a in areas if cuenta not in a["responsables"]],
-              "renombrados": [], "archivos": {}}
+              "nuevos": [], "renombrados": [], "archivos": {}}
     # lo que se va a escribir: cada entrada es (ruta relativa, función texto→texto nuevo, o texto entero si es nuevo)
     # el orden importa: taller antes que proyecto.md, y la entrada de la bitácora al final
     tareas = []
@@ -678,7 +680,7 @@ def main(argv):
                     act = clave_cabecera(tp, "actualizado") or hoy
                     titulo = (re.search(r"^# (.+)$", tp, re.M) or [None, d.name])[1]
                     taller_rel = rel_p + "/taller/estado-anterior.md"
-                    tareas.append((taller_rel, archivo_taller(rel_p, titulo, act, aparte, "proyecto.md")))
+                    tareas.append((taller_rel, archivo_taller(rel_p, titulo, act, aparte, "proyecto.md"))); salida["nuevos"].append(taller_rel)
                 tareas.append((rel_p + "/proyecto.md", (lambda mv: (lambda t: migrar_proyecto(t, [], mover_estado=mv)[0]))(mover), taller_rel))
             if not cerrado_en(tp) and d.name not in restringidos:
                 fr = frase_proyecto(nuevo)
@@ -710,7 +712,7 @@ def main(argv):
                 entrada = (f"## {hoy} (migracion)\nTema: la estructura del método pasa a la de la 1.22.\n"
                            f"Avances: secciones, claves y archivos renombrados por el plugin, sin cambiar contenido"
                            + ("; lo que salió de proyecto.md quedó en taller/estado-anterior.md" if any(k == rel_p + "/taller/estado-anterior.md" for k, *_ in tareas) else "")
-                           + f".\nSesión de: {nombre} · plugin {version}")
+                           + f".\nSesión de: {nombre} · plugin {version}" + (" · sin consola" if "--sin-consola" in argv else ""))
                 tareas.append((rel_p + "/sesiones.md#entrada", entrada))
         pa = carpeta / "area.md"
         if pa.is_file():
@@ -731,7 +733,7 @@ def main(argv):
                         if (raiz / taller_rel).exists():
                             salida["conflictos"].append({"ruta": taller_rel, "motivo": "ya existía: el bloque de estatus que no ganó no se guardó"}); taller_rel = None
                         else:
-                            tareas.append((taller_rel, archivo_taller(a["slug"], a["slug"], clave_cabecera(ta, "actualizado") or hoy, [("## Estatus del área que no ganó al fundir", aparte)], "area.md")))
+                            tareas.append((taller_rel, archivo_taller(a["slug"], a["slug"], clave_cabecera(ta, "actualizado") or hoy, [("## Estatus del área que no ganó al fundir", aparte)], "area.md"))); salida["nuevos"].append(taller_rel)
                     else:
                         salida["conflictos"].append({"ruta": a["slug"] + "/area.md", "motivo": "había dos bloques de estatus y el área no tiene proyectos donde guardar el que no ganó"})
                 tareas.append((a["slug"] + "/area.md", (lambda cp, fr: (lambda t: migrar_area(t, cp, [], fr)[0]))(carpeta, frases), taller_rel))
@@ -742,7 +744,9 @@ def main(argv):
             resumen[c] = resumen.get(c, 0) + 1
     salida["resumen"] = resumen
 
-    if not plan:
+    if plan:
+        salida["entradas"] = [tarea[0][:-len("#entrada")] for tarea in tareas if tarea[0].endswith("#entrada")]
+    else:
         escritos_ok = set()
         for tarea in tareas:
             rel, que = tarea[0], tarea[1]
@@ -773,6 +777,7 @@ def main(argv):
                     escritos_ok.add(rel)
             except (OSError, UnicodeDecodeError) as ex:
                 salida["fallidos"].append({"ruta": rel.split("#")[0], "motivo": str(ex)})
+        salida["nuevos"] = [r for r in salida["nuevos"] if r in escritos_ok]
         for viejo, nuevo in salida["renombrados"]:
             try:
                 os.rename(raiz / viejo, raiz / nuevo)
