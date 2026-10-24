@@ -228,7 +228,12 @@ def plantilla(t):
 
 
 def primera_frase(texto):
-    t = re.sub(r"\s*\n\s*", " ", (texto or "").strip())
+    """La primera frase de un texto, saltando las tablas, los encabezados y las viñetas que vayan delante; sin prosa, vacía."""
+    parrafos = [x.strip() for x in re.split(r"\n\s*\n", (texto or "").strip()) if x.strip()]
+    prosa = next((x for x in parrafos if not re.match(r"^(\||#|[-*]\s|\d+[.)]\s|```)", x)), "")
+    if not prosa:
+        return "", ""
+    t = re.sub(r"\s*\n\s*", " ", prosa)
     mf = FRASE.match(t)
     return (mf.group(1), mf.group(3).strip()) if mf else (t, "")
 
