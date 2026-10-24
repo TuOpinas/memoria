@@ -1408,7 +1408,7 @@ function decItem(d, p, conProy){
   const esC = d.tipo==="cuestionamiento", cqA = (d.cuestionado_por||[]).filter(c=>c.abierto);
   const w = [esC?`<span class="pill ${d.abierto?"soon":"closed"}">cuestionamiento${d.abierto?" abierto":" respondido"}</span>`:"", cqA.length?`<span class="pill soon">cuestionada</span>`:"", isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su responsable. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
   return `<div class="dl-i"><button type="button" class="dl-b" data-dec-open="${esc(k)}" aria-expanded="${open}"><time>${d.fecha?fmtD(d.fecha):""}</time><span class="dl-t">${inline(d.titulo)}</span><span class="dl-c" aria-hidden="true">${open?"−":"+"}</span>${w?`<span class="dl-w">${w}</span>`:""}</button>
-    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartamos</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
+    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartado</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
 }
 function decList(items, conProy, limite){
   let mes = null, out = "";
@@ -1828,7 +1828,7 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Dónde viven</dt><dd>En <code>base/premisas.md</code>, una por línea: su identificador (P1, P2…), qué dice, quién la confirmó y cuándo.</dd>
       <dt>Quién las escribe</dt><dd>El responsable del contexto, en su sesión, cuando la dirección confirma una. Dile ${F("registra como premisa que…")}.</dd>
-      <dt>Cuando cambian</dt><dd>No se corrigen: ${F("la premisa P1 cambia a…")} añade otra que dice «Reemplaza a P1», y la anterior queda como historia.</dd>
+      <dt>Cuando cambian</dt><dd>No se corrigen: ${F("la premisa P1 cambia a…")} añade otra que dice «Reemplaza P1», y la anterior queda como historia.</dd>
       <dt>Si no estás de acuerdo</dt><dd>Se cuestiona como cualquier decisión: lo explica la parte de abajo.</dd>
     </dl>
     <h3 class="hc-h">Cuestionar algo</h3>
@@ -1878,7 +1878,7 @@ function ayudaArts(){
             <ul>
               <li><code>proyecto.md</code><span>La ficha: estatus, objetivo, alcance, siguientes pasos y quién participa.</span></li>
               <li><code>decisiones.md</code><span>Qué se decidió, quién, por qué y qué se descartó.</span></li>
-              <li><code>sesiones.md</code><span>La bitácora: qué se trabajó en cada sesión y qué quedó pendiente.</span></li>
+              <li><code>sesiones.md</code><span>La bitácora: el tema y los avances de cada sesión; lo que sigue está en el Estatus.</span></li>
               <li><code>entregables/</code><span>Lo que el proyecto produce para que otros lo usen.</span></li>
               <li><code>taller/</code><span>Borradores y trabajo intermedio, que no sale del proyecto.</span></li>
               <li><code>fuentes/</code><span>Material que llega de fuera, tal como llegó.</span></li>
@@ -2062,7 +2062,7 @@ function estatusArea(a){
     const t = l.trim(), sangrado = /^\s{2,}[-*]\s+/.test(l), esItem = /^[-*]\s+/.test(t);
     if(k === 0 && !esItem){ const m = t.match(/^(20\d\d-\d\d-\d\d)\s*[·:—-]\s*(.*)$/); if(m){ fecha = m[1]; tit = m[2]; } else tit = t; return; }
     if(sangrado && enSig) return;
-    if(esItem){ const x = t.replace(/^[-*]\s+/,""); enSig = /^\**\s*siguiente\s*:?\**\s*:?\s*$/i.test(x); if(!enSig) items.push(x); }
+    if(esItem){ const x = t.replace(/^[-*]\s+/,""); enSig = /^\**\s*siguiente\s*:?\**\s*:?/i.test(x); if(!enSig) items.push(x); }   // «Siguiente» son las prioridades, que ya salen numeradas abajo, también si van en la misma línea
   });
   tit = tit.trim(); if(/^\*\*[^*]+\*\*\.?$/.test(tit)) tit = tit.replace(/^\*\*|\*\*(?=\.?$)/g, "");
   if(!tit && !items.length) return "";

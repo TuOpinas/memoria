@@ -275,9 +275,14 @@ def columnas_areas(cab):
 
 
 def area_restringida(c, col):
-    """Con columna «Acceso» (1.22), restringida si dice «Restringida»; sin ella, la regla de «Quién la lee» de la 1.21."""
+    """Con columna «Acceso» (1.22), restringida si dice «Restringida» y abierta si dice «Abierta»; con otra cosa o vacía,
+    y sin la columna, la regla de «Quién la lee» de la 1.21: nunca se falla abierto."""
     if col["acceso"] is not None and col["acceso"] < len(c):
-        return bool(re.match(r"^[\W_]*restringid[oa]s?\b", c[col["acceso"]], re.I))
+        v = c[col["acceso"]]
+        if re.match(r"^[\W_]*restringid[oa]s?\b", v, re.I):
+            return True
+        if re.match(r"^[\W_]*abiert[oa]s?\b", v, re.I):
+            return False
     return restringida_celda(c[col["lectores"]] if col["lectores"] < len(c) else "")
 
 
@@ -354,44 +359,48 @@ if CUENTA:
 
 
 # ---------- la estructura de la 1.22 ----------
-# Las marcas de la estructura anterior. migrar_estructura.py las usa también (ESTRUCTURA_VIEJA) para decidir qué renombra;
-# pruebas/sesion/probar_migrar.py comprueba que las dos copias coinciden.
-ESTRUCTURA_VIEJA = {
-    "area": [r"^## Panorama\s*$", r"^## Prioridades ahora\s*$", r"^\s*[-*]?\s*\**\s*Due[ñn][oa]\s*\**\s*:"],
-    "proyecto": [r"^## En corto\s*$", r"^## Estado actual\s*$", r"^## Terminado significa\s*$",
-                 r"^\s*[-*]?\s*\**\s*Due[ñn][oa]\s*\**\s*:", r"^\s*[-*]?\s*\**\s*Consumen esto\s*\**\s*:"],
-    "archivos": ["fuentes/enlaces.md", "restringido/enlaces.md"],
-}
+# La misma función en migrar_estructura.py, que renombra justo lo que esta detecta; probar_migrar.py comprueba que coinciden.
+def marcas_anteriores(texto, tipo):
+    """Qué marcas de la estructura de la 1.21 tiene un area.md («area») o un proyecto.md («proyecto»): las secciones
+    viejas, y «Dueño:» o «Consumen esto:» solo dentro de «Quién participa», que es donde la migración las renombra."""
+    secs = set(re.findall(r"^## (.+?)\s*$", texto or "", re.M))
+    viejas = {"area": ("Panorama", "Prioridades ahora"), "proyecto": ("En corto", "Estado actual", "Terminado significa")}[tipo]
+    out = [x for x in viejas if x in secs]
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", texto or "", re.M | re.S)
+    q = m.group(1) if m else ""
+    if re.search(r"^\s*[-*]?\s*\**\s*Due[ñn][oa]\s*\**\s*:", q, re.M):
+        out.append("Dueño")
+    if tipo == "proyecto" and re.search(r"^\s*[-*]?\s*\**\s*Consumen esto\s*\**\s*:", q, re.M):
+        out.append("Consumen esto")
+    return out
+ARCHIVOS_ANTERIORES = ("fuentes/enlaces.md", "restringido/enlaces.md")
 
 
 def area_anterior(slug):
     """Cierto si el área (su area.md, o algún proyecto con proyecto.md dentro) tiene todavía la estructura de la 1.21."""
     t = leer(RAIZ / slug / "area.md")
-    if t and any(re.search(x, t, re.M) for x in ESTRUCTURA_VIEJA["area"]):
+    if t and marcas_anteriores(cabecera(t)[1], "area"):
         return True
     try:
         proyectos = sorted(d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
     except OSError:
         return False
     for d in proyectos:
-        tp_ = leer(d / "proyecto.md") or ""
-        if any(re.search(x, tp_, re.M) for x in ESTRUCTURA_VIEJA["proyecto"]) or any((d / f).is_file() for f in ESTRUCTURA_VIEJA["archivos"]):
+        if marcas_anteriores(cabecera(leer(d / "proyecto.md") or "")[1], "proyecto") or any((d / f).is_file() for f in ARCHIVOS_ANTERIORES):
             return True
     return False
 
 
 titulo("ESTRUCTURA")
 if not CUENTA:
-    print("Veredicto: SIN CUENTA: sin --cuenta no se sabe qué áreas migraría; no se ofrece nada")
+    print("Veredicto: SIN CUENTA")
 else:
     propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
     guia_vieja = es_resp and guia_anterior
     if propias_viejas or guia_vieja:
-        que = ", ".join(propias_viejas) + (" y " if propias_viejas and guia_vieja else "") + ("guia.md" if guia_vieja else "")
-        print(f"Veredicto: ANTERIOR en {que}: se ofrece la migración a la 1.22 en una línea; con el sí, migrar_estructura.py "
-              "(renombra solo en las áreas de las que esta cuenta es responsable, y guia.md si responde por el contexto)")
+        print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + (["guia.md"] if guia_vieja else [])))
     else:
-        print("Veredicto: AL DIA en lo que escribe esta cuenta" + (" (las áreas de otras cuentas, si están sin migrar, esperan a su responsable)" if any(CUENTA not in a["cuentas_dueno"] for a in areas) else ""))
+        print("Veredicto: AL DIA")
 
 
 def primera_frase(l, minimo=40, maximo=220):
@@ -570,12 +579,13 @@ ses_txt = leer(pc / "sesiones.md") or ""
 titulo("DECISIONES (las 5 más recientes)")
 print("\n\n".join(e["texto"] for e in recientes(dec_txt, 5)) or "(ninguna)")
 titulo("SESIONES (las 3 más recientes)")
-ses = recientes(ses_txt, 3)
+ses = [e for e in recientes(ses_txt, 4) if "(migracion)" not in e["cab"]][:3]   # la entrada de la migración no cuenta como sesión
 print("\n\n".join(e["texto"] for e in ses) or "(ninguna)")
-ultima_ses = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True) if fecha_ok(e["fecha"])), None)
-# para los avisos de otras áreas cuenta la última sesión de trabajo: las entradas «(tarea)» o «(tablero)» no son sesiones
+# la última sesión de trabajo: las entradas «(tarea)», «(tablero)» y «(migracion)» no son sesiones, y lo que cambió
+# después de la última real sigue siendo trabajo sin sesión aunque una tarea o la migración hayan escrito después
 ultima_real = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True)
                     if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero|migracion)\)", e["cab"], re.I)), None)
+ultima_ses = ultima_real
 # «Proyecto terminado el …» abre el Estatus desde la 1.22; hasta la 1.21, Estado actual o En corto
 cerrado = any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cabecera(tp)[1], n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
 

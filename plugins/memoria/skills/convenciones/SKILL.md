@@ -222,7 +222,7 @@ El caso que más lo pide es un proyecto que se pliega dentro de otro, cuando dos
 
 ### Estructura de `fuentes/inventario.md`
 
-Hasta la 1.21 se llamaba `enlaces.md`, aunque casi nada de lo que lista es un enlace; la migración lo renombra, y mientras tanto los scripts leen los dos nombres.
+Hasta la 1.21 se llamaba `enlaces.md`, aunque casi nada de lo que lista es un enlace; la migración lo renombra, y mientras tanto los scripts leen los dos nombres. Si un proyecto tiene todavía `enlaces.md` y hay que añadirle una fila, primero se renombra a `inventario.md` (está en la carpeta donde la cuenta escribe) y la fila va ahí: nunca un segundo archivo al lado.
 
 ```markdown
 | Qué es | Enlace | Qué tener presente |

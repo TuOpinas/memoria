@@ -1,6 +1,6 @@
 ---
 name: tablero
-description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia cuando su dueno lo pide, con el boton de la pagina o con 'sincroniza el tablero'. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
+description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia cuando quien lo monto lo pide, con el boton de la pagina o con 'sincroniza el tablero'. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
 ---
 
 # Tablero
@@ -12,8 +12,8 @@ Cinco reglas que no cambian:
 - **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su puesta al día escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Muestra todo lo que lee la cuenta de su responsable, también lo restringido y la bitácora (las cinco sesiones más recientes a la vista, y las demás al abrir la pestaña), así que no se comparte: quien quiera verlo monta el suyo.
 - **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/` y de `taller/`) y nada más. Nunca abre `fuentes/`, `restringido/` ni `base/`, salvo `base/premisas.md`, que es de toda la organización y va arriba de todo; del `taller/` lee solo la cabecera y el título de cada archivo (su inventario, para «Qué hay»; el cuerpo es privado del área y no viaja), y de `fuentes/` y `taller/` mira las fechas de los archivos, para avisar del trabajo sin sesión.
 - **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la puesta al día lo mecánico, la siguiente sesión del proyecto lo que pide juicio. Y la puesta al día escribe solo en las áreas y proyectos donde la cuenta que la lanza es responsable o colabora: lo que su responsable marcó en un proyecto de otra área espera en la cola, y el tablero dice a quién pasárselo.
-- **Se pone al día cuando su responsable lo pide.** Esta es la frase, y es la misma en el contrato, en la receta de `nuevo`, en el README y en la ayuda. Hasta la 1.18 la puesta al día se lanzaba sola al abrirse tras un cierre; desde la 1.19 no, porque cada puesta al día es una tarea que gasta del plan y varias sesiones al día lanzaban varias (decisión del 2026-10-23). El cierre de una sesión (skill `sesion`, anexo `cerrar.md`, paso 11) no lanza nada: deja apuntado el cierre en la colección `cierres` de la base, y al abrir el tablero la página ve los cierres posteriores a la última sincronización y avisa arriba de cuáles son, con el botón que lanza la tarea, que solo trae lo que cambió y aplica lo mecánico de la cola. Lo que escriben otras personas no deja marca: se trae con el botón «Sincronizar ahora», que todo tablero tiene junto al nombre de la organización (su tarea, sin horario, se crea al montarlo y solo corre cuando su responsable lo pulsa), o con «sincroniza el tablero». Que corra también cada mañana es opcional y se crea solo si lo piden.
-- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea del botón son de la cuenta de su responsable. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
+- **Se pone al día cuando quien lo montó lo pide.** Esta es la frase, y es la misma en el contrato, en la receta de `nuevo`, en el README y en la ayuda. Hasta la 1.18 la puesta al día se lanzaba sola al abrirse tras un cierre; desde la 1.19 no, porque cada puesta al día es una tarea que gasta del plan y varias sesiones al día lanzaban varias (decisión del 2026-10-23). El cierre de una sesión (skill `sesion`, anexo `cerrar.md`, paso 11) no lanza nada: deja apuntado el cierre en la colección `cierres` de la base, y al abrir el tablero la página ve los cierres posteriores a la última sincronización y avisa arriba de cuáles son, con el botón que lanza la tarea, que solo trae lo que cambió y aplica lo mecánico de la cola. Lo que escriben otras personas no deja marca: se trae con el botón «Sincronizar ahora», que todo tablero tiene junto al nombre de la organización (su tarea, sin horario, se crea al montarlo y solo corre cuando su responsable lo pulsa), o con «sincroniza el tablero». Que corra también cada mañana es opcional y se crea solo si lo piden.
+- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea del botón son de la cuenta de quien lo montó. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
 
 ## Qué muestra
 
@@ -54,7 +54,7 @@ user: {}
 mcp: servers [{server: "Claude Code Remote", tools: ["fire_trigger"]}]
 ```
 
-Con eso el responsable lo ve, actúa desde él (lo que toca va a la cola) y lanza la sincronización; la base la escriben la tarea y los editores. La regla de `cambios` para quien no es editor viene de cuando el tablero se compartía, y se queda igual en todos para que ninguno tenga que volver a publicarse con otras capacidades.
+Con eso quien lo montó lo ve, actúa desde él (lo que toca va a la cola) y lanza la sincronización; la base la escriben la tarea y los editores. La regla de `cambios` para quien no es editor viene de cuando el tablero se compartía, y se queda igual en todos para que ninguno tenga que volver a publicarse con otras capacidades.
 
 **2. La tarea del botón.** Se crea siempre, sin horario, como dice «La tarea del botón y la diaria» abajo, y su id se pasa al generador en el paso 3 con `--manual`; si la persona pide además que corra cada mañana, se crea con horario en vez de sin él. Crearla pide una aprobación en la app, que forma parte de montar. Si falta el conector «Claude Code Remote», se monta igual, con el botón apagado diciendo que falta el conector, y se dice en una línea.
 
@@ -69,7 +69,7 @@ Con eso el responsable lo ve, actúa desde él (lo que toca va a la cola) y lanz
 Cuatro líneas, sin recapitular los pasos:
 
 - Qué quedó montado: el tablero, con lo que muestra.
-- **Cuándo se pone al día:** cuando su responsable lo pide, con el botón junto al nombre de la organización o con «sincroniza el tablero», con la computadora encendida y la app abierta; al abrirlo avisa de las sesiones cerradas que aún no muestra. Si en esa raíz escriben varias personas, se ofrece la tarea diaria en una línea.
+- **Cuándo se pone al día:** cuando quien lo montó lo pide, con el botón junto al nombre de la organización o con «sincroniza el tablero», con la computadora encendida y la app abierta; al abrirlo avisa de las sesiones cerradas que aún no muestra. Si en esa raíz escriben varias personas, se ofrece la tarea diaria en una línea.
 - **No se comparte:** muestra todo lo que lee su cuenta, también lo restringido; quien quiera verlo monta el suyo.
 - **La ayuda** está dentro del tablero, en «Ayuda» del índice, y cada bloque lleva un «?» que abre su artículo.
 
@@ -132,8 +132,8 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 - Cambiar desde aquí el modelo de una tarea, o borrar una tarea para recrearla con otro prompt.
 - Escribir en `proyecto.md`, `sesiones.md` o `decisiones.md` desde la página. La página solo escribe en su cola.
 - Cerrar un hecho que huela a decisión, o una nota, sin una sesión del proyecto.
-- Compartir el tablero, o decirle a alguien cómo compartirlo: muestra lo restringido que lee su responsable. Quien quiera verlo monta el suyo.
-- Borrar un tablero o su tarea sin el sí de su responsable, también el que sobra de quien tenía dos.
+- Compartir el tablero, o decirle a alguien cómo compartirlo: muestra lo restringido que lee la cuenta que lo montó. Quien quiera verlo monta el suyo.
+- Borrar un tablero o su tarea sin el sí de quien lo montó, también el que sobra de quien tenía dos.
 
 ## Ejemplo
 

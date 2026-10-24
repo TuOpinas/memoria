@@ -19,6 +19,8 @@ sa, sb = j(A, "proyectos", "operacion--soporte.json"), j(B, "proyectos", "operac
 ok(sa["en_corto"] == sb["en_corto"] and sb["dueno"] == sa["dueno"] == "Ana Prueba", "En corto pasa a Estatus tal cual, y Responsable da el mismo nombre que Dueño")
 ok(not sb.get("terminado") and not sb.get("estado_actual") and not sb.get("consumen"), "sin Terminado significa, Estado actual ni Consumen esto")
 ca, cb = j(A, "proyectos", "ventas--cuentas.json"), j(B, "proyectos", "ventas--cuentas.json")
+ok(cb.get("en_corto", "").startswith("2026-10-01 · **En curso desde el 2026-09-01.**") and cb.get("estado_resumen") == "En curso desde el 2026-09-01." and (sb.get("sesiones") or [{}])[0].get("titulo", "").find("(migracion)") < 0, "un proyecto que solo tenía Estado actual llega con un Estatus mínimo y su línea de estado; la entrada (migracion) no viaja como sesión")
+ok("- `cuentas/`: En curso" in vb.get("en_corto", "") and "`precios/`" not in vb.get("en_corto", ""), "el Estatus del área lleva una línea por proyecto activo y ninguna de los restringidos")
 pa = {z["archivo"]: z.get("afirma") for z in (ca.get("que_hay") or {}).get("piezas", [])} if ca.get("que_hay") else None
 det = lambda d: json.loads((d / "detalle" / "ventas--cuentas.json").read_text(encoding="utf-8")) if (d / "detalle" / "ventas--cuentas.json").exists() else {}
 pz = lambda d, p: {z["archivo"]: z.get("afirma") for z in ((det(d).get("que_hay") or {}).get("piezas") or [])}

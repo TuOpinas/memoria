@@ -14,19 +14,24 @@ Uso:
 cambios.json, todo opcional:
   {"sesion": "## AAAA-MM-DD\\nTema: …\\nAvances: …\\nSesión de: Nombre · plugin X.Y.Z",
    "decisiones": ["## AAAA-MM-DD · Título\\nDecidió: …\\nPor qué: …\\nDescartado: …", …],
-   "proyecto": {"estatus": "texto entero del bloque Estatus, sin el encabezado",
+   "proyecto": {"estatus": "texto entero del bloque Estatus, sin el encabezado: «AAAA-MM-DD · **frase**» y sus viñetas",
                 "reemplazos": [{"de": "texto exacto viejo", "a": "texto nuevo"}, …]},
    "area": {"linea": "- `slug/` — descripción",
             "entregables": [{"archivo": "x.md"}, "  - nombre — línea ya escrita · actualizado AAAA-MM-DD", …]},
-   "estatus_area": "texto entero del bloque Estatus de area.md, sin el encabezado",
+   "estatus_area": "texto entero del bloque Estatus de area.md, sin el encabezado, con las prioridades debajo de «Siguiente»",
    "otros": [{"ruta": "<relativa a la raíz, dentro del área del proyecto>", "reemplazos": [{"de": "…", "a": "…"}]}, …]}
 
-Los nombres de la 1.21 se aceptan en la entrada y se escriben con los nuevos (1.22): «en_corto» vale como «estatus» y
-«panorama» como «estatus_area»; el bloque Estatus sustituye en su sitio a un «En corto» o un «Panorama» que haya, y en
-un área sin ninguno de los dos se crea debajo del título, como en el proyecto. Una entrada nueva con «Trabajamos en:», «Pendiente:» o
-«Descartamos:» se rechaza: los registros viejos se quedan como están, pero lo nuevo se escribe con «Tema:» y «Descartado:».
-Un entregable dado como {"archivo": "x.md"} se escribe en area.md como «  - x — <su aportacion> · actualizado <su fecha>»,
-leídas de su cabecera en entregables/ (o «afirma», si la cabecera aún no se migró); sin ninguna de las dos, va en «sin_match».
+Se escriben solo los nombres de la 1.22, también en una raíz sin migrar: el bloque Estatus va debajo del título y retira un
+«En corto» o un «Panorama» que haya; en un área, retira también «Prioridades ahora», y las prioridades que no estén ya en el
+Estatus nuevo se añaden debajo de «Siguiente» (vuelven en «fundidas»), para que no se pierda ninguna; sin ninguno de los
+viejos, el Estatus se crea debajo del título. Cada Estatus tiene que empezar por «AAAA-MM-DD · **…**». Una entrada nueva con
+«Trabajamos en:», «Pendiente:» o «Descartamos:» se rechaza: los registros viejos se quedan como están, pero lo nuevo se
+escribe con «Tema:» y «Descartado:». Un entregable dado como {"archivo": "x.md"} se escribe en area.md como
+«  - x — <su aportacion> · actualizado <su fecha>», leídas de su cabecera en entregables/ (o «afirma», si la cabecera aún
+no se migró); sin ninguna de las dos, se conserva la línea que ese entregable ya tenía en el bloque y va en «sin_match». Si
+«entregables» no viene, las líneas que había debajo del proyecto se conservan: el índice nunca pierde un entregable por un
+cierre. «otros» se escribe antes que area.md, para que la línea de un entregable que se publica en la misma llamada lleve
+la fecha nueva.
 
 Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
 fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
@@ -113,15 +118,16 @@ def celda_cuenta(raiz, area):
     except OSError:
         return set(), set()
     m = re.search(r"^##\s+Áreas\s*$(.*?)(?=^##\s|\Z)", guia, re.M | re.S)
-    cab = False
+    col = None
     for l in (m.group(1) if m else "").split("\n"):
         if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
             continue
-        if not cab:
-            cab = True; continue
         c = [x.strip() for x in l.strip().strip("|").split("|")]
-        if len(c) >= 4 and c[0].strip("`").rstrip("/") == area:
-            de, co, _ = cuentas(c[3])
+        if col is None:   # la columna Cuenta por su encabezado; sin él, la cuarta, como siempre
+            n_ = [re.sub(r"[*_`]", "", x).strip().lower() for x in c]
+            col = next((i for i, x in enumerate(n_) if x == "cuenta"), 3); continue
+        if len(c) > col and c[0].strip("`").rstrip("/") == area:
+            de, co, _ = cuentas(c[col])
             return de, co
     return set(), set()
 
@@ -224,18 +230,21 @@ def con_entrada_arriba(t, entrada):
     return t.rstrip("\n") + "\n\n" + entrada, True
 
 
+def sin_bloque(t, nombre):
+    """Quita entero el bloque «## nombre», si está."""
+    return re.sub(r"^## " + re.escape(nombre) + r"\s*\n.*?(?=^## |\Z)", "", t, count=1, flags=re.M | re.S)
+
+
 def con_bloque(t, nombre, cuerpo, antes_de=None, alias=()):
-    """Reescribe entero el bloque «## nombre». Si no existe y hay uno con un nombre de alias (el de la 1.21), lo
-    sustituye en su sitio con el nombre nuevo. Si no hay ninguno, lo crea debajo del título o, con antes_de, justo antes
-    de ese bloque (al final si tampoco está)."""
+    """Reescribe entero el bloque «## nombre». Si no existe, lo crea debajo del título o, con antes_de, justo antes de
+    ese bloque (al final si tampoco está). Los bloques de alias (los nombres de la 1.21) se retiran siempre: desde la
+    1.22 solo queda el nombre nuevo, y en su sitio de la 1.22, no en el que tenía el viejo."""
     cuerpo = cuerpo.strip() + "\n"
+    for viejo in alias:
+        t = sin_bloque(t, viejo)
     m = re.search(r"^## " + re.escape(nombre) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
     if m:
         return t[:m.start(1)] + cuerpo + "\n" + t[m.end(1):]
-    for viejo in alias:
-        m = re.search(r"^## " + re.escape(viejo) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
-        if m:
-            return t[:m.start()] + f"## {nombre}\n" + cuerpo + "\n" + t[m.end(1):]
     nuevo = f"## {nombre}\n{cuerpo}\n"
     if antes_de:
         ma = re.search(r"^## " + re.escape(antes_de) + r"\s*$", t, re.M)
@@ -273,18 +282,39 @@ def clave_cabecera(texto, clave):
     return v or None
 
 
-def lineas_entregables(pd, entregables, sin_match, rel):
+def sublineas_de(t, slug):
+    """{nombre: línea} de los entregables que el bloque Proyectos ya lista debajo de un proyecto."""
+    m = re.search(r"^## Proyectos\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
+    out, dentro = {}, False
+    for l in (m.group(1) if m else "").split("\n"):
+        if re.match(r"^- `" + re.escape(slug) + r"/?`", l):
+            dentro = True; continue
+        if dentro and l.startswith("  "):
+            mm = re.match(r"^\s+-\s+([\w.-]+)", l)
+            if mm:
+                out[mm.group(1)] = l.rstrip()
+            continue
+        dentro = False
+    return out
+
+
+def lineas_entregables(pd, entregables, sin_match, rel, existentes):
     """Las líneas de los entregables para area.md: un texto se deja tal cual; {"archivo": "x.md"} se arma con la
-    aportacion y la fecha de su cabecera (sección 2 de escribir.md: la línea es su aportacion)."""
+    aportacion y la fecha de su cabecera (sección 2 de escribir.md: la línea es su aportacion). Si no se puede armar,
+    se conserva la línea que ese entregable ya tenía: el índice nunca pierde una por un cierre."""
     fuera = []
     for e in entregables or []:
         if isinstance(e, str):
             fuera.append(e); continue
         nombre = str((e or {}).get("archivo", "")).replace("\\", "/").strip("/")
         nombre = nombre[len("entregables/"):] if nombre.startswith("entregables/") else nombre
+        tallo = pathlib.PurePosixPath(nombre).stem if nombre else ""
         p = pd / "entregables" / nombre
         if not nombre or ".." in nombre.split("/") or not p.is_file():
-            sin_match.append({"ruta": rel, "de": f"(entregable {nombre or '?'})", "veces": 0, "motivo": "no existe en entregables/"}); continue
+            sin_match.append({"ruta": rel, "de": f"(entregable {nombre or '?'})", "veces": 0, "motivo": "no existe en entregables/" + ("; se conservó su línea de antes" if tallo in existentes else "")})
+            if tallo in existentes:
+                fuera.append(existentes[tallo])
+            continue
         try:
             texto = p.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeDecodeError):
@@ -292,9 +322,42 @@ def lineas_entregables(pd, entregables, sin_match, rel):
         aporta = clave_cabecera(texto, "aportacion") or clave_cabecera(texto, "afirma")
         fecha = clave_cabecera(texto, "actualizado")
         if not aporta:
-            sin_match.append({"ruta": rel, "de": f"(entregable {nombre})", "veces": 0, "motivo": "no tiene aportacion en la cabecera: pásale la línea escrita"}); continue
-        fuera.append(f"  - {pathlib.PurePosixPath(nombre).stem} — {aporta}" + (f" · actualizado {fecha}" if fecha else ""))
+            sin_match.append({"ruta": rel, "de": f"(entregable {nombre})", "veces": 0, "motivo": "no tiene aportacion en la cabecera" + ("; se conservó su línea de antes" if tallo in existentes else ": pásale la línea escrita")})
+            if tallo in existentes:
+                fuera.append(existentes[tallo])
+            continue
+        fuera.append(f"  - {tallo} — {aporta}" + (f" · actualizado {fecha}" if fecha else ""))
     return fuera
+
+
+def prioridades_viejas(t):
+    """Las viñetas de «Prioridades ahora» (hasta la 1.21), para no perder ninguna al escribir el Estatus del área."""
+    m = re.search(r"^## Prioridades ahora\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
+    out = []
+    for l in (m.group(1) if m else "").split("\n"):
+        x = l.strip()
+        if re.match(r"^([-*]|\d+[.)])\s+", x):
+            out.append(re.sub(r"^([-*]|\d+[.)])\s+", "", x))
+        elif x and out:
+            out[-1] += " " + x
+    return [x for x in out if not x.startswith("[")]
+
+
+def con_siguientes(estatus, nuevas):
+    """Añade debajo de «Siguiente» las prioridades que el Estatus no trae (por su texto). Devuelve (texto, añadidas)."""
+    faltan = [x for x in nuevas if x and x not in estatus]
+    if not faltan:
+        return estatus, []
+    lineas = estatus.rstrip("\n").split("\n")
+    idx = next((k for k, l in enumerate(lineas) if re.match(r"^\s*[-*]\s*\**\s*Siguiente\s*:?\s*\**\s*:?", l, re.I)), None)
+    if idx is None:
+        idx = next((k for k, l in enumerate(lineas) if re.match(r"^\s*[-*]\s*\**\s*Se completó", l, re.I)), 0)
+        lineas[idx + 1:idx + 1] = ["- **Siguiente:**"]; idx += 1
+    fin = idx + 1
+    while fin < len(lineas) and re.match(r"^\s{2,}[-*]\s+", lineas[fin]):
+        fin += 1
+    lineas[fin:fin] = [f"  - {x}" for x in faltan]
+    return "\n".join(lineas) + "\n", faltan
 
 
 def con_linea_proyecto(t, slug, linea, entregables):
@@ -469,6 +532,9 @@ def main(argv):
     for d in cambios.get("decisiones") or []:
         if re.search(r"^Descartamos\s*:", d, re.M):
             malos.append("una decisión lleva «Descartado:», no «Descartamos:»")
+    for que, e in (("«estatus»", (cambios.get("proyecto") or {}).get("estatus")), ("«estatus_area»", cambios.get("estatus_area"))):
+        if e and not re.match(r"^\s*20\d\d-\d\d-\d\d\s*·\s*\*\*.+?\*\*", e.strip(), re.S):
+            malos.append(f"{que} empieza por «AAAA-MM-DD · **frase**», como dice escribir.md")
     otros = []
     for o in cambios.get("otros") or []:
         r = str(o.get("ruta", "")).replace("\\", "/").strip("/")
@@ -501,7 +567,7 @@ def main(argv):
         c.cambiar(pd / "decisiones.md", f_dec)
     # 4. proyecto.md: Estatus entero (sustituye a «En corto» si la raíz no se migró) y reemplazos exactos en lo demás
     pr = cambios.get("proyecto") or {}
-    estatus = pr.get("estatus") or pr.get("en_corto")
+    estatus = pr.get("estatus")
     if estatus or pr.get("reemplazos"):
         def f_pro(t, sm):
             t0 = t
@@ -510,27 +576,6 @@ def main(argv):
                 t = con_bloque(t, "Estatus", estatus, alias=("En corto",))
             return t, t != t0
         c.cambiar(pd / "proyecto.md", f_pro)
-    # 5 y 10. area.md: la línea del proyecto (con las de sus entregables) y el Estatus del área
-    ar = cambios.get("area") or {}
-    if ar.get("linea") and not puede_area:
-        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el responsable del área o quien colabora en ella; {cuenta} no está en su celda Cuenta: pásasela al responsable"})
-        ar = {}
-    est_area = cambios.get("estatus_area") or cambios.get("panorama")
-    if est_area and not puede_estatus_area:
-        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"el Estatus del área lo escribe solo su responsable; {cuenta} no lo es"})
-        est_area = None
-    if ar.get("linea") or est_area:
-        def f_area(t, sm):
-            t0 = t
-            if ar.get("linea"):
-                lineas = lineas_entregables(pd, ar.get("entregables"), sm, c.rel(pa))
-                t, ok = con_linea_proyecto(t, slug, ar["linea"], lineas)
-                if not ok:
-                    sm.append({"ruta": c.rel(pa), "de": "(bloque Proyectos)", "veces": 0, "motivo": "area.md no tiene bloque «## Proyectos»: la línea no se escribió"})
-            if est_area:
-                t = con_bloque(t, "Estatus", est_area, alias=("Panorama",))   # sin Estatus ni Panorama, debajo del título
-            return t, t != t0
-        c.cambiar(pa, f_area)
     # otros archivos del área, por reemplazos exactos
     for r, o in otros:
         p = raiz / r
@@ -540,6 +585,33 @@ def main(argv):
             n = con_reemplazos(t, o.get("reemplazos"), sm, r)
             return n, n != t
         c.cambiar(p, f_otro)
+    # 5 y 10. area.md: la línea del proyecto (con las de sus entregables) y el Estatus del área
+    ar = cambios.get("area") or {}
+    if ar.get("linea") and not puede_area:
+        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el responsable del área o quien colabora en ella; {cuenta} no está en su celda Cuenta: pásasela al responsable"})
+        ar = {}
+    est_area = cambios.get("estatus_area")
+    if est_area and not puede_estatus_area:
+        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"el Estatus del área lo escribe solo su responsable; {cuenta} no lo es"})
+        est_area = None
+    if ar.get("linea") or est_area:
+        def f_area(t, sm):
+            t0 = t
+            if ar.get("linea"):
+                existentes = sublineas_de(t, slug)
+                lineas = lineas_entregables(pd, ar.get("entregables"), sm, c.rel(pa), existentes) if "entregables" in ar else list(existentes.values())
+                t, ok = con_linea_proyecto(t, slug, ar["linea"], lineas)
+                if not ok:
+                    sm.append({"ruta": c.rel(pa), "de": "(bloque Proyectos)", "veces": 0, "motivo": "area.md no tiene bloque «## Proyectos»: la línea no se escribió"})
+            if est_area:
+                # las prioridades de un «Prioridades ahora» que el Estatus nuevo no traiga entran en «Siguiente»; después
+                # se retiran «Panorama» y «Prioridades ahora»: desde la 1.22 el Estatus es la única sección de estatus
+                est, fundidas = con_siguientes(est_area.strip() + "\n", prioridades_viejas(t))
+                if fundidas:
+                    s["fundidas"] = s.get("fundidas", []) + fundidas
+                t = con_bloque(t, "Estatus", est, alias=("Panorama", "Prioridades ahora"))
+            return t, t != t0
+        c.cambiar(pa, f_area)
     c.guardar_estado()
     ahora = datetime.datetime.now(datetime.timezone.utc)
     s["hora"] = ahora.strftime("%Y-%m-%dT%H:%MZ")

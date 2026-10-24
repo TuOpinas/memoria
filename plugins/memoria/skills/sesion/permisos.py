@@ -100,10 +100,10 @@ def raiz_declarada(raiz):
         if len(c) > max(v for v in col.values() if v is not None):
             de, co, aviso = cuentas(c[col["cuenta"]])
             lect = c[col["lectores"]]
-            if col["acceso"] is not None:
-                # 1.22: «Acceso» dice si está restringida y «Quién la lee», a quiénes
+            if col["acceso"] is not None and re.match(r"^[\W_]*(restringid|abiert)[oa]s?\b", c[col["acceso"]], re.I):
+                # 1.22: «Acceso» dice si está restringida y «Quién la lee», a quiénes; con otra cosa o vacía, la regla de la 1.21
                 restr = bool(re.match(r"^[\W_]*restringid[oa]s?\b", c[col["acceso"]], re.I))
-                lect = ("Restringida: " + lect) if restr else lect
+                lect = ("Restringida: " + lect) if restr and not re.match(r"^[\W_]*restringid", lect, re.I) else lect
             else:
                 restr = restringida_celda(lect)
             areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": c[0].strip("`").rstrip("/"), "dueno": solo_nombre(c[col["responsable"]]),

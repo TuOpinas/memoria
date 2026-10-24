@@ -153,4 +153,4 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> No lo publico. La dueña del proyecto es Ana Pérez según `proyecto.md`, y esta sesión está abierta desde tu cuenta, que en `guia.md` es la de Luis Romero. Tiene que pedirlo ella. Además sigue abierto el hueco de quién aprueba entre 5.000 y 20.000 MXN: si Ana acepta publicarlo con el hueco, lo dejo escrito en el documento y entonces sí pasa a vigente.
+> No lo publico. La responsable del proyecto es Ana Pérez según `proyecto.md`, y esta sesión está abierta desde tu cuenta, que en `guia.md` es la de Luis Romero. Tiene que pedirlo ella. Además sigue abierto el hueco de quién aprueba entre 5.000 y 20.000 MXN: si Ana acepta publicarlo con el hueco, lo dejo escrito en el documento y entonces sí pasa a vigente.

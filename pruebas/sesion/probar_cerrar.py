@@ -36,10 +36,10 @@ HOY = datetime.datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat() 
 SESION = f"## {HOY}\nTema: PRUEBA-CERRAR la llamada.\nAvances: PRUEBA-CERRAR cerrada.\nSesión de: Ana Prueba · plugin 9.9.9"
 DEC = f"## {HOY} · El soporte de Cliente Uno responde en menos de 24 horas\nDecidió: Ana Prueba\nPor qué: es la condición para firmar."
 CAMBIOS = {"sesion": SESION, "decisiones": [DEC],
-           "proyecto": {"estatus": f"**{HOY}: Cliente Uno acepta si el soporte responde en 24 horas.** Siguiente: firmar.",
+           "proyecto": {"estatus": f"{HOY} · **Cliente Uno acepta si el soporte responde en 24 horas.**\n- **Siguiente:** firmar.",
                         "reemplazos": [{"de": "- Llamar a Cliente Uno antes del 2026-10-06 para cerrar la propuesta.", "a": "- Firmar con Cliente Uno."}]},
            "area": {"linea": "- `cuentas/` — las cuentas grandes; Cliente Uno a punto de firmar", "entregables": ["  - kit-cuentas — guía para preparar una cuenta · actualizado 2026-09-10"]},
-           "estatus_area": "PANORAMA-NUEVO del área, escrito por su responsable."}
+           "estatus_area": f"{HOY} · **PANORAMA-NUEVO del área, escrito por su responsable.**\n- **Siguiente:**\n  - Cerrar la propuesta de Cliente Uno. Es la única cuenta grande abierta."}
 
 print("cerrar.py: un cierre normal")
 R = raiz_nueva()
@@ -52,16 +52,17 @@ dec = (R / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8")
 ok(dec.index(f"## {HOY} · El soporte") < dec.index("## 2026-09-26"), "la decisión nueva va arriba")
 pro = (R / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
 ok("- Firmar con Cliente Uno." in pro and "antes del 2026-10-06" not in pro and "Segundo párrafo con detalle" in pro, "el reemplazo exacto cambia solo ese paso")
-ok(f"## Estatus\n**{HOY}: Cliente Uno" in pro and pro.index("## Estatus") < pro.index("## Objetivo") and "## En corto" not in pro, "el Estatus sustituye a En corto en su sitio, debajo del título")
+ok(f"## Estatus\n{HOY} · **Cliente Uno" in pro and pro.index("## Estatus") < pro.index("## Objetivo") and "## En corto" not in pro, "el Estatus sustituye a En corto en su sitio, debajo del título")
 area = (R / "ventas/area.md").read_text(encoding="utf-8")
 ok("Cliente Uno a punto de firmar" in area and "propuesta-base" not in area.split("## Proyectos")[1].split("## ")[0] and "- `precios/` — restringido" in area, "la línea del proyecto y sus entregables se reescriben; las demás líneas no se tocan")
-ok("## Estatus\nPANORAMA-NUEVO" in area and "## Panorama" not in area and area.index("## Estatus") < area.index("## Quién participa"), "en un área sin migrar, el Estatus sustituye al Panorama en su sitio")
+ok(f"## Estatus\n{HOY} · **PANORAMA-NUEVO" in area and "## Panorama" not in area and "## Prioridades ahora" not in area and area.index("## Estatus") < area.index("## Quién participa"), "en un área sin migrar, el Estatus sustituye al Panorama y retira Prioridades ahora")
+ok("  - Ordenar los precios antes del cierre del trimestre." in area and s.get("fundidas") == ["Ordenar los precios antes del cierre del trimestre."], "la prioridad que el Estatus nuevo no traía entra en «Siguiente» y se devuelve en fundidas")
 ok(s["sin_match"] == [] and s["ajenos"] == [] and s["rechazados"] == [] and s["fallidos"] == [] and s["hora"].endswith("Z") and s["documento"].startswith("ventas--cuentas--") and "escrito_en" in s, "sin_match, ajenos, rechazados y fallidos vacíos; hora, documento y escrito_en para seguir")
 ok(not list((R / "ventas/cuentas").glob("*.cerrar-tmp")), "no deja temporales")
 
 print("cerrar.py: repetir no duplica; un reemplazo que no cuadra, cruza encabezados o encoge se devuelve")
 c, s2 = corre(R, CAMBIOS, "--cuenta", "ana@ejemplo.test")
-ok(s2["escritos"] == [] and ses == (R / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8"), "el mismo cierre otra vez no escribe nada")
+ok(set(s2["escritos"]) <= {"ventas/area.md"} and ses == (R / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8"), "el mismo cierre otra vez no escribe nada (salvo el Estatus del área, que ya no tiene prioridades que fundir)")
 c, s3 = corre(R, {"proyecto": {"reemplazos": [{"de": "- Sostener la llamada", "a": "- X"}, {"de": "no está en el archivo", "a": "y"}]}})
 ok(len(s3["sin_match"]) == 1 and s3["sin_match"][0]["veces"] == 0 and "- X" in (R / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "el reemplazo que no aparece va a sin_match; el que sí, se aplica")
 pro = (R / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
@@ -79,26 +80,46 @@ ok(c == 1 and "Tema" in sv.get("error", ""), "una entrada nueva con «Trabajamos
 c, sv = corre(raiz_nueva(), {"decisiones": [DEC + "\nDescartamos: otra cosa."]})
 ok(c == 1 and "Descartado" in sv.get("error", ""), "una decisión nueva con «Descartamos» se rechaza")
 Rv = raiz_nueva()
-c, sv = corre(Rv, {"proyecto": {"en_corto": "VIEJA-CLAVE"}, "panorama": "VIEJO-PANORAMA"}, "--cuenta", "ana@ejemplo.test")
-pv, av = (Rv / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), (Rv / "ventas/area.md").read_text(encoding="utf-8")
-ok(c == 0 and "## Estatus\nVIEJA-CLAVE" in pv and "## Estatus\nVIEJO-PANORAMA" in av, "las claves en_corto y panorama se aceptan y se escriben como Estatus")
+c, sv = corre(Rv, {"proyecto": {"estatus": "VIEJA-CLAVE sin fecha ni negrita"}}, "--cuenta", "ana@ejemplo.test")
+ok(c == 1 and "AAAA-MM-DD" in sv.get("error", ""), "un Estatus que no empieza por «AAAA-MM-DD · **frase**» se rechaza")
 Rv2 = raiz_nueva()
 av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8"); import re as _re
 (Rv2 / "ventas/area.md").write_text(_re.sub(r"## Panorama\n.*?(?=^## )", "", av2, flags=_re.S | _re.M), encoding="utf-8")
-c, sv = corre(Rv2, {"estatus_area": "NUEVO-ESTATUS"}, "--cuenta", "ana@ejemplo.test")
+c, sv = corre(Rv2, {"estatus_area": f"{HOY} · **NUEVO-ESTATUS.**"}, "--cuenta", "ana@ejemplo.test")
 av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8")
-ok(c == 0 and av2.index("## Estatus") < av2.index("## Qué es") < av2.index("## Proyectos"), "en un área sin Panorama, el Estatus se crea debajo del título")
+ok(c == 0 and av2.index("## Estatus") < av2.index("## Qué es") and "## Prioridades ahora" not in av2, "en un área sin Panorama, el Estatus se crea debajo del título y retira Prioridades ahora")
 pb = Rv2 / "ventas/cuentas/entregables/propuesta-base.md"
 pb.write_text(pb.read_text(encoding="utf-8").replace("estado: vigente\n", 'estado: vigente\naportacion: "Toda propuesta parte de esta estructura."\n', 1), encoding="utf-8")
 c, sv = corre(Rv2, {"area": {"linea": "- `cuentas/` — x", "entregables": [{"archivo": "propuesta-base.md"}, {"archivo": "no-existe.md"}]}}, "--cuenta", "ana@ejemplo.test")
 av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8")
 ok("  - propuesta-base — Toda propuesta parte de esta estructura. · actualizado 2026-09-20" in av2 and len(sv["sin_match"]) == 1, "la línea del entregable se toma de su aportacion; uno que no existe va a sin_match")
+# un entregable sin aportacion conserva su línea de antes; sin «entregables», se conservan todas
+Rv2 = raiz_nueva()
+c, sv = corre(Rv2, {"area": {"linea": "- `cuentas/` — y", "entregables": [{"archivo": "kit-cuentas.md"}]}}, "--cuenta", "ana@ejemplo.test")
+av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8")
+ok("  - kit-cuentas — guía para preparar una cuenta · actualizado 2026-09-10" in av2 and sv["sin_match"] and "se conservó" in sv["sin_match"][0]["motivo"], "un entregable sin aportacion conserva su línea del índice y lo dice en sin_match")
+c, sv = corre(Rv2, {"area": {"linea": "- `cuentas/` — z"}}, "--cuenta", "ana@ejemplo.test")
+av2 = (Rv2 / "ventas/area.md").read_text(encoding="utf-8")
+ok("- `cuentas/` — z\n  - kit-cuentas — guía" in av2 and sv["sin_match"] == [], "sin «entregables», las sublíneas que había se conservan")
+# publicar en una llamada: «otros» pasa la cabecera a vigente antes de armar la línea en area.md
+Rv3 = raiz_nueva()
+pb3 = Rv3 / "ventas/cuentas/entregables/borrador-viejo.md"; tb = pb3.read_text(encoding="utf-8")
+pb3.write_text(tb.replace("estado: borrador\n", 'estado: borrador\naportacion: "Vale para publicar."\n', 1), encoding="utf-8")
+c, sv = corre(Rv3, {"otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador\naportacion", "a": f"estado: vigente\nactualizado: {HOY}\naportacion"}, {"de": "actualizado: 2026-08-01\n", "a": ""}]}], "area": {"linea": "- `cuentas/` — w", "entregables": [{"archivo": "borrador-viejo.md"}]}}, "--cuenta", "ana@ejemplo.test")
+av3 = (Rv3 / "ventas/area.md").read_text(encoding="utf-8")
+ok(c == 0 and f"  - borrador-viejo — Vale para publicar. · actualizado {HOY}" in av3, "la línea del entregable recién publicado lleva la fecha de hoy")
+# un Estatus de proyecto sobre una raíz con «En corto» y «Estatus» a la vez: queda solo el Estatus
+Rv4 = raiz_nueva()
+pp4 = Rv4 / "ventas/precios/proyecto.md"; pp4.write_text(pp4.read_text(encoding="utf-8").replace("## En corto\n", "## Estatus\n2026-10-01 · **VIEJO.**\n\n## En corto\n", 1), encoding="utf-8")
+c, sv = corre(Rv4, {"proyecto": {"estatus": f"{HOY} · **NUEVO.**"}}, "--cuenta", "ana@ejemplo.test", proyecto="ventas/precios")
+pp4t = pp4.read_text(encoding="utf-8")
+ok(c == 0 and "## En corto" not in pp4t and pp4t.count("## Estatus") == 1 and "**NUEVO.**" in pp4t, "con Estatus y En corto a la vez, el cierre deja solo el Estatus")
 
 print("cerrar.py: la cuenta que solo colabora, y «otros» fuera del área")
 R2 = raiz_nueva()
 c, s7 = corre(R2, CAMBIOS, "--cuenta", "carla@ejemplo.test")
 ok("ventas/cuentas/sesiones.md" in s7["escritos"] and "ventas/area.md" in s7["escritos"] and any("Estatus del área" in r["motivo"] for r in s7["rechazados"]) and "PANORAMA-NUEVO" not in (R2 / "ventas/area.md").read_text(encoding="utf-8") and "Cliente Uno a punto de firmar" in (R2 / "ventas/area.md").read_text(encoding="utf-8"), "quien colabora en el área escribe la línea del proyecto pero no el Estatus del área")
-c, s8 = corre(R2, {"sesion": SESION, "area": {"linea": "- `soporte/` — x"}, "estatus_area": "y"}, "--cuenta", "carla@ejemplo.test", proyecto="operacion/soporte")
+c, s8 = corre(R2, {"sesion": SESION, "area": {"linea": "- `soporte/` — x"}, "estatus_area": f"{HOY} · **y.**"}, "--cuenta", "carla@ejemplo.test", proyecto="operacion/soporte")
 ok(len(s8["rechazados"]) == 2 and "operacion/area.md" not in s8["escritos"], "quien no es del área no escribe su area.md: se le dice que se lo pase al responsable")
 # añadir `aportacion` a una cabecera no mueve `actualizado`; un cambio en el cuerpo sí
 c, s8b = corre(R2, {"otros": [{"ruta": "ventas/cuentas/entregables/propuesta-base.md", "reemplazos": [{"de": "estado: vigente\nactualizado: 2026-09-20", "a": 'estado: vigente\naportacion: "La plantilla fija la estructura de toda propuesta."\nactualizado: 2026-09-20'}]}]}, "--cuenta", "ana@ejemplo.test")

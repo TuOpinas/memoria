@@ -38,7 +38,7 @@ Las demás preguntas de cada nivel se hacen juntas, en una sola tanda, en lengua
 
 Quien escribe en un área o en un proyecto sin ser su responsable (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe.
 
-- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del responsable: `dueno@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
+- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del responsable: `responsable@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
 - **En un solo proyecto**: se añade en `Quién participa` de su `proyecto.md` la línea `Colabora: Nombre Apellido (correo)`, o la persona al final de la que ya hay. Solo lo escribe la sesión del responsable del área.
 
 - **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
@@ -437,8 +437,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 ## 2026-08-29
 Tema: arranque del proyecto.
 Avances: encuadre definido con Ana Pérez.
-Pendiente: reunir los exports del ERP.
-Sesión de: Ana Pérez · plugin 1.16.0
+Sesión de: Ana Pérez · plugin <la versión del plugin>
 ```
 
 **5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías. Sin consola en la computadora se crean con el conector de Google Drive (anexo `sin-consola.md` de `convenciones`); sin el conector, aparecen con su primer archivo.
@@ -537,7 +536,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como dueña, que la lee todo el equipo.
+> Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como responsable, que la lee todo el equipo.
 >
 > Me faltan las cuentas de Jorge y de Ana para la tabla de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
 >

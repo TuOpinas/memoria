@@ -31,7 +31,7 @@ Si el área o el proyecto están restringidos y no tengo acceso, la lectura fall
 
 Se para en la primera que dé un sí.
 
-**1. ¿Es un enlace?** Va a `fuentes/inventario.md` del proyecto, una fila con qué es, el enlace y qué tener presente. Si el archivo no existe, se crea con su tabla. No se guarda una copia de la página como archivo salvo que el usuario lo pida.
+**1. ¿Es un enlace?** Va a `fuentes/inventario.md` del proyecto, una fila con qué es, el enlace y qué tener presente. Si el archivo no existe, se crea con su tabla; si lo que hay es `fuentes/enlaces.md` (de antes de la 1.22), primero se renombra a `inventario.md` y la fila va ahí. No se guarda una copia de la página como archivo salvo que el usuario lo pida.
 
 **2. ¿Lo produjo alguien de fuera del equipo del proyecto?** Exports, PDFs de terceros, transcripciones, correos, capturas, y también un documento o una presentación que ya vienen con forma de entregable. Va a `fuentes/` del proyecto, con un nombre legible. Las fuentes no se editan nunca.
 

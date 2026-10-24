@@ -287,12 +287,14 @@ for l in tabla.split("\n"):
         continue
     slug = celdas[0].strip("`").rstrip("/")
     lect = celdas[col["lee"]]
-    if col["acceso"] is not None:
-        # con «Acceso», lo restringido lo dice esa columna; para la página, que lo lee al inicio de «lectores», se antepone
+    acceso_vale = col["acceso"] is not None and bool(re.match(r"^[\W_]*(restringid|abiert)[oa]s?\b", celdas[col["acceso"]], re.I))
+    if acceso_vale:
+        # con «Acceso» (Abierta o Restringida), lo restringido lo dice esa columna; para la página, que lo lee al inicio de
+        # «lectores», se antepone. Con otra cosa o vacía, la regla de «Quién la lee» de la 1.21: nunca se falla abierto
         restr = bool(RE_RESTRINGIDA.match(celdas[col["acceso"]]))
         lect = ("Restringida: " + lect) if restr and not RE_RESTRINGIDA.match(lect) else lect
     areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[col["resp"]], "cuenta": celdas[col["cuenta"]], "lectores": lect,
-                       "restringida": restr if col["acceso"] is not None else restringida_celda(lect)})
+                       "restringida": restr if acceso_vale else restringida_celda(lect)})
     if cuentas(celdas[col["cuenta"]])[2]:
         guia_avisos.append(f"la celda Cuenta de «{slug}» en guia.md: {cuentas(celdas[col['cuenta']])[2]}")
 if ZONA_AVISO:
@@ -1221,7 +1223,7 @@ for a in areas_guia:
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
-        pdoc["sesiones"] = ses[:5]
+        pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
