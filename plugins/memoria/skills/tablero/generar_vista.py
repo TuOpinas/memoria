@@ -393,6 +393,7 @@ def parse_sesiones(texto):
         fecha = (fechas_en(cab) or [""])[0]
         titulo = cab.strip()
         campos = {"trabajamos": "", "avances": "", "pendiente": ""}
+        quien = ""
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
@@ -404,10 +405,12 @@ def parse_sesiones(texto):
             elif low.startswith("pendiente:"):
                 actual = "pendiente"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("sesión de:") or low.startswith("sesion de:"):
-                actual = None   # quién y con qué plugin: cuerpo del área, que la página no usa; no viaja a la base
+                actual = None
+                # quién cerró, sin la versión del plugin: «Sesión de: Nombre Apellido · plugin 1.16.0» → «Nombre Apellido»
+                quien = re.split(r"\s+[·\-–—]\s+|\s*\(", s.split(":", 1)[1].strip(), 1)[0].strip()[:80]
             elif actual and s:
                 campos[actual] += "\n" + s
-        out.append({"fecha": fecha, "titulo": titulo, **campos})
+        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {})})
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
 
@@ -443,6 +446,16 @@ def fecha_de(p):
         return datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).date().isoformat()
     except OSError:
         return None
+
+def momento(p):
+    """Fecha y hora de modificación de p («AAAA-MM-DD», «HH:MM») en la zona de la organización, o (None, None)."""
+    if SIN_FECHAS:
+        return None, None
+    try:
+        t = datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ)
+        return t.date().isoformat(), t.strftime("%H:%M")
+    except OSError:
+        return None, None
 
 def marca(p):
     """Lo que dice si p cambió: su fecha de modificación en la computadora; en una copia (sin fechas), su contenido."""
@@ -606,25 +619,30 @@ def sin_sesion_de(pc, ses, cerrado):
     ultima_entrada = ses[0]["fecha"] if ses and fecha_valida(ses[0]["fecha"]) else None
     if not ultima_entrada or cerrado:
         return None
-    donde, ultimo = {}, None
+    donde, ultimo, lista = {}, None, []
     objetivos = [("entregables", pc / "entregables"), ("taller", pc / "taller"), ("fuentes", pc / "fuentes")]
     for nombre, d in objetivos:
         for raiz_, dirs, files in os.walk(d) if d.exists() else []:
-            dirs[:] = [x for x in dirs if not x.startswith(".")]
+            dirs[:] = [x for x in dirs if not x.startswith(".") and x != "restringido"]
             for f in files:
                 if f.startswith("."):
                     continue
-                fm_ = fecha_de(os.path.join(raiz_, f))
+                fm_, hora_ = momento(os.path.join(raiz_, f))
                 if not fm_:
                     continue
                 if fm_ > ultima_entrada:
                     donde[nombre] = donde.get(nombre, 0) + 1
                     ultimo = max(ultimo or fm_, fm_)
-    fd = fecha_de(pc / "decisiones.md")
+                    # qué archivo y cuándo; del taller solo cuántos y cuándo, nunca el nombre, que es privado del área
+                    lista.append({"archivo": pathlib.Path(raiz_, f).relative_to(pc).as_posix() if nombre != "taller" else "taller/…",
+                                  "fecha": fm_, "hora": hora_})
+    fd, hd = momento(pc / "decisiones.md")
     if fd and fd > ultima_entrada:
-        donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd)
+        donde["decisiones"] = 1; ultimo = max(ultimo or fd, fd); lista.append({"archivo": "decisiones.md", "fecha": fd, "hora": hd})
     if donde:
-        return {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values())}
+        # quién hizo cada cambio no consta: la carpeta no lo guarda y Drive no se lo da al plugin. Se dice qué y cuándo.
+        lista.sort(key=lambda x: (x["fecha"], x["hora"] or ""), reverse=True)
+        return {"desde": ultima_entrada, "ultimo": ultimo, "donde": donde, "archivos": sum(donde.values()), "lista": lista[:12]}
     return None
 
 def motivo_de(p):
@@ -983,6 +1001,9 @@ for a in areas_guia:
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
         pdoc["sesiones"] = ses[:5]
         pdoc["ultima_sesion"] = ultima_real
+        _q = next((s_.get("quien") for s_ in reales if s_.get("quien")), "")
+        if _q:
+            pdoc["ultima_sesion_de"] = _q
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
         # contenido; proyecto.md no cuenta, porque la tarea del tablero lo toca al aplicar fechas, y restringido/ no se mira.

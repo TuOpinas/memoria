@@ -43,6 +43,7 @@ ESTADOS = {"borrador", "vigente", "reemplazado"}
 PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
 hallazgos = set()
 sin_afirma = []   # entregables y taller sin «afirma:»: se cuentan, no bloquean (opcional en lo que ya existía)
+sin_charset = []  # .html sin <meta charset="utf-8">: abiertos desde la carpeta salen con los acentos rotos
 SUELTOS_OK = {"guia.md", "metodo.md", "desktop.ini", "Icon\r"}
 ROTADO = re.compile(r"^(sesiones|decisiones)-\d{4}(-\d+)?\.md$")   # el registro que se rota por año
 
@@ -250,6 +251,18 @@ for area, aruta in areas:
         if not re.search(r"`" + re.escape(proj) + r"/?`", bloque):
             h("proyecto que no está en el bloque Proyectos de su área", rel(pruta))
 
+# --- los .html: sin charset, abiertos desde la carpeta se ven con los acentos rotos (escribir.md, prohibición 23) ---
+for dp, dn, fn in os.walk(raiz):
+    dn[:] = [d for d in dn if not d.startswith(".")]
+    for f in fn:
+        if f.endswith(".html") and not f.startswith("."):
+            try:
+                cab = open(os.path.join(dp, f), "rb").read(4096).decode("utf-8", "ignore").lower()
+            except OSError:
+                continue
+            if not re.search(r"<meta[^>]+charset\s*=\s*['\"]?utf-8", cab):
+                sin_charset.append(rel(os.path.join(dp, f)))
+
 # --- todos los .md ---
 for dp, dn, fn in os.walk(raiz):
     dn[:] = [d for d in dn if not d.startswith(".") and not (dp == raiz and d.lower() == "claude outputs")]
@@ -298,6 +311,8 @@ for dp, dn, fn in os.walk(raiz):
             h("enlaces.md sin filas", r)
 
 def nota_afirma():
+    if sin_charset:
+        print("\nNota: %d archivo%s .html sin `<meta charset=\"utf-8\">`: abiertos desde la carpeta, los acentos salen rotos. Añade la etiqueta en su <head>: %s" % (len(sin_charset), "" if len(sin_charset) == 1 else "s", ", ".join(sorted(sin_charset)[:5]) + (" …" if len(sin_charset) > 5 else "")))
     if sin_afirma:
         print("\nNota: %d archivo%s de entregables/ y taller/ sin `afirma:`. No bloquea: es opcional en lo que ya existía; el barrido del tablero propone una línea y su dueño la acepta." % (len(sin_afirma), "" if len(sin_afirma) == 1 else "s"))
 

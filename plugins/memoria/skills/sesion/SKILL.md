@@ -82,7 +82,7 @@ Después, cuatro bloques, en este orden y sin encabezados largos, y la puesta al
 - Una decisión de otro proyecto que nombra este, o su área entera (`area/`), en `Afecta a:` desde la última sesión: la entrada, su fecha, quién decidió y de qué proyecto viene. Las anteriores a la última sesión ya se vieron y no se repiten.
 - Una decisión reciente de este proyecto que choca con una premisa vigente: se dice cuál y por qué, sin darlo por resuelto. Esto no lo calcula el script: se mira con las premisas y las decisiones que imprime.
 - `base/contexto.md` con más de 90 días; un entregable con una base más nueva que él; un borrador de más de 30 días.
-- Trabajo sin sesión: archivos que cambiaron después de la última entrada de `sesiones.md`. Se dice qué cambió y se propone registrarlo hoy, preguntando qué pasó.
+- Trabajo sin sesión: archivos que cambiaron después de la última entrada de `sesiones.md`. El script dice cuáles y cuándo (fecha y hora del archivo); quién los cambió no consta en ninguna parte, así que se pregunta qué pasó y se propone registrarlo hoy, con quien lo hizo en «Sesión de:».
 
 Si no hay avisos, no se menciona que no los hay.
 

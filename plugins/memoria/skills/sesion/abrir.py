@@ -144,6 +144,14 @@ def recientes(texto, n):
 
 
 
+def hora_de(p):
+    """«HH:MM» de la modificación de p en la zona de la organización, o «»."""
+    try:
+        return "" if SIN_FECHAS else datetime.datetime.fromtimestamp(os.stat(p).st_mtime, TZ).strftime("%H:%M")
+    except OSError:
+        return ""
+
+
 def mtime(p):
     if SIN_FECHAS:   # en la copia, la fecha de archivo es la de la copia: no dice nada
         return None
@@ -544,10 +552,10 @@ if SIN_FECHAS and ultima_ses and not cerrado:
                   f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
 if not SIN_FECHAS and ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
-    donde = {}
+    donde, lista = {}, []
     md = mtime(pc / "decisiones.md")
     if md and md > lim:
-        donde["decisiones"] = 1
+        donde["decisiones"] = 1; lista.append((md.isoformat(), hora_de(pc / "decisiones.md"), "decisiones.md"))
     for sub in ("entregables", "taller", "fuentes"):
         for r_, ds, fs in os.walk(pc / sub):
             ds[:] = [x for x in ds if not x.startswith(".") and x != "restringido"]
@@ -555,9 +563,14 @@ if not SIN_FECHAS and ultima_ses and not cerrado:
                 m_ = mtime(os.path.join(r_, f))
                 if not f.startswith(".") and m_ and m_ > lim:
                     donde[sub] = donde.get(sub, 0) + 1
+                    lista.append((m_.isoformat(), hora_de(os.path.join(r_, f)), pathlib.Path(r_, f).relative_to(pc).as_posix()))
     if donde:
+        # qué archivo y cuándo; quién lo cambió no consta (la carpeta no lo guarda y Drive no se lo da al plugin), así que se pregunta
+        lista.sort(reverse=True)
         avisos.append("Trabajo sin sesión por fecha de archivo, después del " + ultima_ses + ": "
-                      + ", ".join(f"{k} {v}" for k, v in donde.items()) + " (se pregunta qué pasó y se propone registrarlo).")
+                      + ", ".join(f"{k} {v}" for k, v in donde.items()) + ". Qué y cuándo: "
+                      + "; ".join(f"{a} ({f} {h})".replace(" )", ")") for f, h, a in lista[:12]) + (" …" if len(lista) > 12 else "")
+                      + ". Quién lo cambió no consta: se pregunta qué pasó y se propone registrarlo.")
 
 # ---------- el barrido: Afecta a / Cuestiona a / Responde a en toda la raíz ----------
 def proyectos_legibles():
