@@ -100,14 +100,20 @@ def fecha_ok(f):
 no_legibles = []
 
 
+_LEIDOS = {}
 def leer(p):
-    try:
-        return pathlib.Path(p).read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
-    except FileNotFoundError:
-        return None
-    except OSError:
-        no_legibles.append(rel(p))   # sin permiso o sin descargar: se cuenta, sin suponer qué hay
-        return None
+    """El texto de p, una sola vez por apertura: guia.md, los area.md y decisiones.md se piden en varios pasos, y en una
+    carpeta de Drive cada lectura es una descarga (1.22.2). Lo que no se deja leer se cuenta, sin suponer qué hay."""
+    k = str(p)
+    if k not in _LEIDOS:
+        try:
+            _LEIDOS[k] = pathlib.Path(p).read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+        except FileNotFoundError:
+            _LEIDOS[k] = None
+        except OSError:
+            no_legibles.append(rel(p))   # sin permiso o sin descargar
+            _LEIDOS[k] = None
+    return _LEIDOS[k]
 
 
 def rel(p):

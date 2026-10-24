@@ -925,13 +925,31 @@ def sello(inv):
     sin = {k: v for k, v in inv.items() if k != "sello"}
     return hashlib.sha1(json.dumps(sin, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
 
+def instante_inventario():
+    """Cuándo se miró la carpeta, en la zona de la organización. Con --instante (una hora ISO, o el inicio.json que deja
+    preparar.py), esa: sin consola el inventario corre en el contenedor minutos después del listado de la computadora, y
+    la hora de empezar la corrida es la que no deja ningún cierre por detrás de «sincronizado» (1.22.2)."""
+    v = _arg("--instante")
+    if v:
+        try:
+            if v.endswith(".json"):
+                v = json.loads(pathlib.Path(v).read_text(encoding="utf-8")).get("inicio") or ""
+            t = datetime.datetime.fromisoformat(v.replace("Z", "+00:00"))
+            if t.tzinfo is None:
+                t = t.astimezone()
+            return t.astimezone(TZ).isoformat(timespec="minutes")
+        except (OSError, ValueError, AttributeError):
+            pass
+    return datetime.datetime.now(TZ).isoformat(timespec="minutes")
+
+
 # ---------- primer tiempo: el inventario, en la computadora ----------
 if INVENTARIO:
     leer_ = []
     # «instante»: cuándo se miró la carpeta, en la zona de la organización. La generación lo estampa como «sincronizado»,
     # y no la hora en que genera: un cierre que llegue entre el inventario y la generación no sale en esta página, así que
     # su marca no puede quedar por detrás de «sincronizado» (1.22.1, hallazgo 30 de la revisión de la 1.21)
-    inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "instante": datetime.datetime.now(TZ).isoformat(timespec="minutes"), "version_metodo": version_metodo,
+    inv = {"formato": 1, "raiz_nombre": RAIZ.name, "modo": MODO, "generado": HOY, "instante": instante_inventario(), "version_metodo": version_metodo,
            "motivos": {}, "proyectos": {}, "entregables": {}, "sin_sesion": {}}
     _script = hashlib.sha1(pathlib.Path(__file__).read_bytes()).hexdigest()
     huellas, reusar, por_proyecto, huellas_taller = {}, [], {}, {}   # huellas: {pid: huella}; por_proyecto: {area/proyecto: (sus archivos, sus entregables, su trabajo sin sesión)}

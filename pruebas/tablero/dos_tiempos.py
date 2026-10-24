@@ -245,5 +245,11 @@ ok(all(pathlib.Path(e["file_path"]).is_file() for e in escr if e["op"] != "delet
 ok(all(len(l) <= 50 for l in plan["lotes"]), "plan: ningún lote pasa de 50 entradas")
 ok([e for l in plan["lotes"] for e in l][-1]["doc_id"] == "estado", "plan: meta/estado va el último, para que un lote que falla no deje la huella nueva")
 
+# sin consola el inventario corre en el contenedor minutos después: con --instante, el instante es el de inicio.json
+_ini = TRAB / "inicio.json"; _ini.write_text(json.dumps({"inicio": "2026-10-24T15:00:00+00:00"}), encoding="utf-8")
+_r = subprocess.run([sys.executable, GEN, RAIZ, "--inventario", "--sin-fechas", "--instante", str(_ini)], capture_output=True, text=True)
+_i = json.loads(_r.stdout)["inventario"]["instante"]
+ok(_i.startswith("2026-10-24T09:00"), f"--instante con el inicio.json de la corrida: el instante es ese, en la zona de la organización ({_i})")
+
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
