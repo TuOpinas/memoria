@@ -32,7 +32,7 @@ REGISTROS solo da el tamaño. Con --listado <archivo> (el resultado de device_li
 proyecto, guardado tal cual en un archivo del contenedor) calcula él el aviso de trabajo sin sesión, con fecha y hora en la
 zona de la organización, como en la computadora: nadie compara milisegundos a mano.
 """
-import datetime, json, os, pathlib, re, sys
+import datetime, json, os, pathlib, re, sys, time
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 RAIZ_RESUELTA = False
@@ -66,12 +66,15 @@ if "--listado" in args:
     i = args.index("--listado"); LISTADO = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args and not MINIMA else None
 ZONA_AVISO = None
+_LEIDOS = {}
 def zona_horaria(raiz, defecto="America/Mexico_City"):
     """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas
     invertidas, y UTC o Etc/GMT+5), si la hay; si no, Ciudad de México. Una zona que no vale se avisa en ZONA_AVISO."""
     global ZONA_AVISO
     try:
-        m = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", (raiz / "guia.md").read_text(encoding="utf-8-sig"), re.M | re.I)
+        _g = (raiz / "guia.md").read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+        _LEIDOS[str(raiz / "guia.md")] = _g      # la misma lectura que después hace leer(): guia.md se lee una vez
+        m = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", _g, re.M | re.I)
     except OSError:
         m = None
     try:
@@ -101,13 +104,18 @@ no_legibles = []
 
 
 def leer(p):
-    try:
-        return pathlib.Path(p).read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
-    except FileNotFoundError:
-        return None
-    except OSError:
-        no_legibles.append(rel(p))   # sin permiso o sin descargar: se cuenta, sin suponer qué hay
-        return None
+    """El texto de p, una sola vez por apertura: guia.md, los area.md y decisiones.md se piden en varios pasos, y en una
+    carpeta de Drive cada lectura es una descarga (1.22.2). Lo que no se deja leer se cuenta, sin suponer qué hay."""
+    k = str(p)
+    if k not in _LEIDOS:
+        try:
+            _LEIDOS[k] = pathlib.Path(p).read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+        except FileNotFoundError:
+            _LEIDOS[k] = None
+        except OSError:
+            no_legibles.append(rel(p))   # sin permiso o sin descargar
+            _LEIDOS[k] = None
+    return _LEIDOS[k]
 
 
 def rel(p):
@@ -208,6 +216,52 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+# --- el administrador principal: una sola persona (1.22.2) ---
+# La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
+# que las dos copias son idénticas. Recibe el texto de «Quién responde por qué» y {nombre en minúscula: cuentas} de la
+# tabla de áreas, y dice si quien administra la carpeta y quien responde por el contexto son la misma persona.
+def administrador_unico(quien, por_nombre):
+    """(veredicto, adm, ctx): «una», «dos» o «no se sabe» (un lado trae solo un nombre que no está en la tabla y el otro
+    una cuenta: no se afirma nada). Dos correos de la misma persona («En Drive: a@claude es a@drive») cuentan como una."""
+    ctx, adm, en_drive = "", "", ""
+    for l in (quien or "").split("\n"):
+        s = l.strip().lstrip("-* ").strip()
+        if s.lower().startswith("contexto común"):
+            ctx = s.split(":", 1)[-1].strip().rstrip(".").strip()
+        elif s.lower().startswith("administra"):
+            adm = s.split(":", 1)[-1].strip().rstrip(".").strip()
+        elif re.match(r"^(en\s+)?(google\s+)?drive\s*:", s, re.I):
+            en_drive = s.split(":", 1)[-1]
+    misma = {}
+    for par in re.split(r"[,;·]|\s+y\s+", en_drive.lower()):
+        cs = CORREO.findall(par)
+        if len(cs) == 2:
+            misma[cs[1]] = cs[0]
+    def personas(linea):
+        """(cuentas, nombres) de una línea: las cuentas que trae o que la tabla da a sus nombres, y los nombres que la
+        tabla reconoce; si no reconoce ninguno, el primer tramo antes de una coma o un punto («Ana Prueba, de forma
+        provisional. Hoy vive…» es Ana Prueba), que es donde va el nombre."""
+        cuentas, nombres = {misma.get(c, c) for c in CORREO.findall(linea.lower())}, []
+        tramos = [n.strip().rstrip(".").strip() for n in re.split(r",|\by\b|\be\b|·|;", re.sub(r"\([^)]*\)", "", linea))]
+        for n in tramos:
+            if n.lower() in por_nombre:
+                nombres.append(n.lower()); cuentas |= {misma.get(c, c) for c in por_nombre[n.lower()]}
+        if not nombres:
+            n = re.split(r"\.\s", tramos[0] if tramos else "")[0].strip().lower()
+            if n and not CORREO.fullmatch(n) and len(n.split()) >= 2:
+                nombres.append(n)
+        return cuentas, nombres
+    ca, na = personas(adm); cc, nc = personas(ctx)
+    if not adm or not ctx:
+        return "no se sabe", adm, ctx
+    if len(ca) > 1 or len(na) > 1:
+        return "dos", adm, ctx
+    if ca and cc:
+        return ("una" if ca & cc else "dos"), adm, ctx
+    if na and nc:
+        return ("una" if na == nc else "dos"), adm, ctx
+    return "no se sabe", adm, ctx
+# --- fin del administrador principal ---
 def restringida_celda(celda):
     """«Quién la lee» declara el área restringida: la palabra al inicio («Restringida: …», «Restringido a …»), o
     «restringida» como palabra suelta en otra parte de la celda («Dirección (restringida)») sin negarla («nunca
@@ -356,6 +410,11 @@ if CUENTA:
     donde_ = ", ".join([f"{s} (responsable)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
+    # el administrador principal es una sola persona (1.22.2): se le dice al responsable de contexto si guia.md nombra a dos
+    _ver, _adm, _ctx = administrador_unico(seccion(guia, "Quién responde por qué"), {re.sub(r"\s*\([^)]*\)", "", a["dueno"]).split(",")[0].strip().lower(): a["cuentas_dueno"] for a in areas if a["cuentas_dueno"]})
+    if es_resp and _ver == "dos":
+        print(f"(aviso para decirlo: guia.md nombra a dos personas, «{_adm}» administra la carpeta y «{_ctx}» responde por el contexto; "
+              "son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».)")
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
     # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
     for a in areas:
@@ -410,6 +469,31 @@ def area_anterior(slug):
     return False
 
 
+EN_USO_MIN = 120   # como migrar_estructura.py: un proyecto ajeno tocado hace menos puede estar en sesión en otra computadora
+
+
+def area_en_uso(slug):
+    """Cierto si todo lo que queda por migrar en el área (los proyectos con marcas viejas) lo tocó alguien hace menos de
+    EN_USO_MIN minutos: la migración lo dejaría igual, así que no se ofrece ahora y se dice. Sin fechas (la copia), falso."""
+    if SIN_FECHAS:
+        return False
+    try:
+        proyectos = [d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file()]
+    except OSError:
+        return False
+    viejos = [d for d in proyectos if marcas_anteriores(cabecera(leer(d / "proyecto.md") or "")[1], "proyecto") or any((d / f).is_file() for f in ARCHIVOS_ANTERIORES)]
+    def tocado(d):
+        for n in ("proyecto.md", "sesiones.md"):
+            try:
+                t = os.stat(d / n).st_mtime
+            except OSError:
+                continue
+            if t > time.time() + 60 or time.time() - t < EN_USO_MIN * 60:
+                return True
+        return False
+    return bool(viejos) and all(tocado(d) for d in viejos)
+
+
 titulo("ESTRUCTURA")
 if not CUENTA:
     print("Veredicto: SIN CUENTA")
@@ -417,14 +501,18 @@ else:
     # el responsable de contexto migra también las áreas de otros responsables (1.22.1), las que su carpeta deja leer
     propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
     # la misma regla que migrar_estructura.py: todas las áreas con carpeta, restringidas incluidas
-    ajenas_viejas = [f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})" for a in areas
-                     if es_resp and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir() and area_anterior(a["slug"])]
+    ajenas_viejas, ajenas_en_uso = [], []
+    for a in areas:
+        if es_resp and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir() and area_anterior(a["slug"]):
+            (ajenas_en_uso if area_en_uso(a["slug"]) else ajenas_viejas).append(f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})")
     guia_vieja = es_resp and guia_anterior
     if propias_viejas or ajenas_viejas or guia_vieja:
         print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))
               + " · se pregunta antes de responder («Puesta al día de la estructura»)")
     else:
         print("Veredicto: AL DIA")
+    if ajenas_en_uso:
+        print(f"(en uso, no se ofrece ahora: {', '.join(ajenas_en_uso)}; alguien tocó lo que queda por migrar hace menos de {EN_USO_MIN} minutos y puede estar en sesión en otra computadora. Se ofrece en una apertura más tarde; no hace falta decir nada.)")
 
 
 def primera_frase(l, minimo=40, maximo=220):

@@ -5,7 +5,7 @@ guia_122(texto) pasa la tabla de áreas de su guia.md a la de la 1.22 («Respons
 cuenta de Ana (responsable de contexto: migra todo lo que su carpeta deja leer). Así ninguna prueba fabrica a mano su propia
 versión de la 1.22.
 """
-import json, pathlib, shutil, subprocess, sys, tempfile
+import json, os, pathlib, shutil, subprocess, sys, tempfile, time
 
 PRUEBAS = pathlib.Path(__file__).resolve().parent
 RAIZ = PRUEBAS / "tablero" / "raiz"
@@ -27,6 +27,11 @@ def raiz_migrada(cuenta="ana@ejemplo.test", nombre="Ana Prueba"):
     """Una copia de la raíz de prueba migrada a la 1.22 con el script de verdad; devuelve (ruta, salida del script)."""
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     shutil.copytree(RAIZ, r)
+    # fechas fijas, como probar.sh y raiz_nueva(): con la fecha del checkout, la migración tomaría por «en uso» (tocado hace
+    # menos de dos horas) cualquier proyecto de un área ajena, y la raíz no quedaría migrada entera
+    viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+    for f in r.rglob("*"):
+        os.utime(f, (viejo, viejo))
     p = subprocess.run([sys.executable, str(MIG), str(r), "--cuenta", cuenta, "--nombre", nombre, "--plugin", "1.22.1"],
                        capture_output=True, text=True)
     return r, json.loads(p.stdout)

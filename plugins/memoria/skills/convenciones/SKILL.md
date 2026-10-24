@@ -80,7 +80,7 @@ Valen para cualquier sistema de carpetas (Drive, OneDrive, iCloud…); el ejempl
 - Lectura de toda la raíz para todo el equipo, salvo lo restringido.
 - Escritura en la carpeta de un área solo para su responsable y quienes colaboran en ella, y en la de un proyecto, además, para quienes colaboran en ese proyecto (sección 1, «Quién colabora»).
 - Escritura en `guia.md` y en `base/` solo para el responsable de contexto. La IA escribe los dos, y solo puede hacerlo en la sesión de esa persona; desde la sesión de otra área prepara el texto y se lo pasa.
-- Administrar la carpeta compartida es de quien dirige la organización, o de una persona de su total confianza, y de nadie más. Quien administra puede quitar cualquier restricción, así que todo lo que sigue se apoya en esa lista.
+- Administrar la carpeta compartida es de quien dirige la organización, o de una persona de su total confianza, y de nadie más. Es una sola persona, el administrador principal: administra la carpeta, responde por el contexto y es su dueña en Drive (propietaria en «Mi unidad», administradora en una unidad compartida). Lo lee todo, también lo restringido, y es quien migra la raíz entera cuando cambia la estructura (sección 11). Quien administra puede quitar cualquier restricción, así que todo lo que sigue se apoya en esa lista. `permisos.py` (skill `sesion`, «revisa los permisos») avisa si `guia.md` nombra a dos personas, si no es la dueña en Drive o si no lee un área restringida.
 
 ### Lo restringido
 

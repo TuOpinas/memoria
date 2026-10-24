@@ -50,7 +50,9 @@ estado-anterior.md que ya existían), «fallidos», «entradas» (los sesiones.m
 contexto), «guia», «pendientes» (las áreas de otras cuentas que no migra, con su motivo), «nuevos»
 (los archivos del taller que crea), «renombrados» y, al final, «archivos» (ruta: cambios).
 """
-import datetime, hashlib, json, os, pathlib, re, sys, tempfile
+import datetime, hashlib, json, os, pathlib, re, sys, tempfile, time
+
+EN_USO_MIN = 120   # un proyecto ajeno tocado hace menos se deja: puede estar en sesión en otra computadora
 
 # --- las marcas de la estructura anterior: la misma función en abrir.py; probar_migrar.py comprueba que coinciden ---
 def marcas_anteriores(texto, tipo):
@@ -591,12 +593,31 @@ class Cerrojo:
             self.f.close()
 
 
+def fecha_de(p):
+    """Cuándo cambió p en la computadora (segundos). Con consola, su fecha de archivo; sin consola (--sin-consola, sobre la
+    copia), la que registró espejo.py con device_list_dir, porque la de la copia es la de la traída; sin registro, None."""
+    if SIN_CONSOLA:
+        try:
+            e = json.loads(pathlib.Path(str(RAIZ_COPIA).rstrip("/") + ".estado.json").read_text(encoding="utf-8"))
+            r = e.get("registrados", {}).get(pathlib.Path(p).relative_to(RAIZ_COPIA).as_posix())
+            return r["mtimeMs"] / 1000 if r else None
+        except (OSError, ValueError, KeyError):
+            return None
+    try:
+        return pathlib.Path(p).stat().st_mtime
+    except OSError:
+        return None
+SIN_CONSOLA, RAIZ_COPIA = False, None
+
+
 # ---------- main ----------
 def main(argv):
     if len(argv) < 2 or "--cuenta" not in argv:
         print(__doc__.strip(), file=sys.stderr)
         return 2
     raiz = pathlib.Path(argv[1])
+    global SIN_CONSOLA, RAIZ_COPIA
+    SIN_CONSOLA, RAIZ_COPIA = "--sin-consola" in argv, raiz
     if not (raiz / "guia.md").is_file():
         print("La raíz es la carpeta con guia.md y metodo.md.", file=sys.stderr)
         return 2
@@ -678,6 +699,8 @@ def main(argv):
             ta0 = ""
         restringidos = set(re.findall(r"^- `([^`/]+)/?`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", sec(partir(ta0)[2], "Proyectos") or "", re.M | re.I))
         frases, proy_area = [], []
+        ajena = cuenta not in a["responsables"]
+        en_uso = []
         for d in proyectos:
             rel_p = d.relative_to(raiz).as_posix()
             hecho = []
@@ -685,6 +708,24 @@ def main(argv):
                 tp, _ = leer(d / "proyecto.md")
             except (OSError, UnicodeDecodeError) as ex:
                 salida["fallidos"].append({"ruta": rel_p + "/proyecto.md", "motivo": str(ex)}); continue
+            # el cerrojo solo vale en esta computadora: en un área de otro responsable, un proyecto que alguien tocó hace
+            # menos de EN_USO_MIN minutos puede estar abierto en otra máquina, y se deja para la siguiente apertura (1.22.2).
+            # Solo si todavía tiene algo que migrar: lo ya migrado (también por esta misma migración hace un momento) no se
+            # toca y no frena; y la fecha tiene que ser pasada: una futura es un reloj desfasado, y se dice aparte
+            if ajena and (marcas_anteriores(tp[len(partir(tp)[0]):], "proyecto") or any((d / f).is_file() for f in ARCHIVOS_ANTERIORES)):
+                reciente, futuro = [], []
+                for n in ("proyecto.md", "sesiones.md"):
+                    t = fecha_de(d / n)
+                    if t is None:
+                        continue
+                    if t > time.time() + 60:
+                        futuro.append(n)
+                    elif time.time() - t < EN_USO_MIN * 60:
+                        reciente.append(n)
+                if reciente or futuro:
+                    en_uso.append(f"{d.name} ({', '.join(reciente)}: cambió hace menos de {EN_USO_MIN} minutos)" if reciente
+                                  else f"{d.name} ({', '.join(futuro)}: su fecha está en el futuro, un reloj desfasado)")
+                    continue
             destino = d / "taller" / "estado-anterior.md"
             mover = not destino.exists()
             cambios = []
@@ -736,7 +777,11 @@ def main(argv):
                 # la entrada dice que se migró: solo si proyecto.md quedó escrito (si no, no se migró y no se registra)
                 tareas.append((rel_p + "/sesiones.md#entrada", entrada, [rel_p + "/proyecto.md"] if rel_p + "/proyecto.md" in salida["archivos"] else None))
         pa = carpeta / "area.md"
-        if pa.is_file():
+        if en_uso:
+            # sin todos sus proyectos, area.md no se migra: la pregunta vuelve y la siguiente apertura completa lo que falta
+            salida["pendientes"].append({"area": a["slug"], "motivo": f"en uso: {'; '.join(en_uso)}; puede estar en sesión en otra computadora y se completa en la siguiente apertura"})
+            salida["areas"].remove(a["slug"]); salida["ajenas"].remove(a["slug"])
+        if pa.is_file() and not en_uso:
             try:
                 ta, _ = leer(pa)
             except (OSError, UnicodeDecodeError) as ex:

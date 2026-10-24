@@ -3,7 +3,7 @@
 
 Uso: python3 pruebas/sesion/probar_migrar.py
 """
-import hashlib, importlib.util, json, pathlib, shutil, subprocess, sys, tempfile, time
+import hashlib, importlib.util, json, os, pathlib, shutil, subprocess, sys, tempfile, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
@@ -20,6 +20,9 @@ def ok(c, t):
 def raiz_nueva(personas_abierta=True):
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     shutil.copytree(AQUI.parent / "tablero" / "raiz", r)
+    viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))   # fechas fijas: la del checkout del repo haría «en uso» cualquier proyecto
+    for f_ in r.rglob("*"):
+        os.utime(f_, (viejo, viejo))
     if personas_abierta:   # personas/, de Beto, abierta: la que el responsable de contexto migra por él
         (r / "guia.md").write_text((r / "guia.md").read_text(encoding="utf-8").replace("| Restringida: dirección |", "| Todo el equipo |"), encoding="utf-8")
     (r / "ventas/cuentas/fuentes").mkdir(exist_ok=True)
@@ -128,6 +131,25 @@ o = subprocess.run([sys.executable, str(ABRIR), str(RP), "--cuenta", "ana@ejempl
 ver_ = o.split("=== ESTRUCTURA")[1].split("\n")[1]
 ok(sp_["guia"] and "guia.md" in ver_ and sp_["ajenas"] == ["personas"] and "personas (de Beto Prueba)" in ver_, "con notas entre paréntesis en la celda, abrir.py y la migración reconocen igual al responsable de contexto")
 
+print("migrar_estructura.py: un proyecto ajeno en uso se deja para la siguiente apertura (1.22.2)")
+RU = raiz_nueva(); (RU / "personas/nomina/sesiones.md").touch()
+c, su = corre(RU, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and any(x["area"] == "personas" and x["motivo"].startswith("en uso: nomina") for x in su["pendientes"]) and "## Panorama" in (RU / "personas/area.md").read_text(encoding="utf-8")
+   and "(migracion)" not in (RU / "personas/nomina/sesiones.md").read_text(encoding="utf-8"), "ni el proyecto ni su area.md se tocan, y pendientes dice por qué")
+o = subprocess.run([sys.executable, str(ABRIR), str(RU), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok("personas (de Beto Prueba)" not in o.split("=== ESTRUCTURA")[1].split("\n")[1] and "en uso, no se ofrece ahora: personas" in o, "y la apertura no lo ofrece mientras siga en uso, y lo dice")
+ok(su["ajenas"] == [] and "personas" not in su["areas"], "un área en uso no sale como migrada en areas ni en ajenas")
+# lo que la propia migración escribió hace un momento no frena: repetirla completa lo que faltó
+RU2 = raiz_nueva(); (RU2 / "personas/nomina/taller").mkdir(exist_ok=True); (RU2 / "personas/area.md").chmod(0o000)
+c, s_a = corre(RU2, "--cuenta", "ana@ejemplo.test")
+(RU2 / "personas/area.md").chmod(0o644)
+c, s_b = corre(RU2, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and "## Estatus" in (RU2 / "personas/area.md").read_text(encoding="utf-8") and not any(x["area"] == "personas" for x in s_b["pendientes"]), "repetir la migración enseguida completa el area.md: lo recién migrado no cuenta como en uso")
+# una fecha en el futuro (reloj desfasado) se dice aparte
+RU3 = raiz_nueva(); os.utime(RU3 / "personas/nomina/sesiones.md", (time.time() + 86400, time.time() + 86400))
+c, s_f = corre(RU3, "--cuenta", "ana@ejemplo.test")
+ok(any(x["area"] == "personas" and "reloj desfasado" in x["motivo"] for x in s_f["pendientes"]), "una fecha futura se dice como reloj desfasado, no como «hace menos de 120 minutos»")
+
 print("migrar_estructura.py: si el taller no se deja escribir, proyecto.md no se toca")
 R6 = raiz_nueva()
 (R6 / "ventas/cuentas/taller").rename(R6 / "ventas/cuentas/taller-x"); (R6 / "ventas/cuentas/taller").write_text("no soy una carpeta", encoding="utf-8")
@@ -217,7 +239,7 @@ ok(out.strip() == "COMPLETA" and rondas == 1, f"una ronda (la lista entera, por 
 ok(not any(re_.search(r"/(fuentes|restringido)/", r) for r in pedidas) and "ventas/cuentas/taller/nota-precios.md" in pedidas and not any(r.endswith(".xlsx") for r in pedidas), "trae los .md del taller y de entregables, nunca fuentes/ ni restringido/ ni lo que no es .md")
 ok((C / "ventas/cuentas/restringido/enlaces.md").is_file() and (C / "ventas/cuentas/restringido/enlaces.md").stat().st_size == 0, "lo de fuentes/ y restringido/ queda como marcador vacío, solo para renombrarlo")
 plan = pathlib.Path(tempfile.mkdtemp()) / "plan.json"
-r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
+r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan", "--sin-consola"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
 _, out, _ = esp("migracion", C, "--plan", plan)
 traer = out.split()[1:]
 ok(out.startswith("TRAER") and "ventas/cuentas/sesiones.md" in traer and "guia.md" in traer and not any(x in traer for x in json.loads(r_.stdout)["nuevos"]), "el plan dice qué traer otra vez y registrar (también los sesiones.md), y no los nuevos")
@@ -251,7 +273,7 @@ RD2 = con_extras(raiz_nueva()); C2 = pathlib.Path(tempfile.mkdtemp()) / "uploads
 C, RD = C2, RD2
 while esp("migracion", C, listado)[1].strip() != "COMPLETA":
     trae(esp("migracion", C, listado)[1].split())
-r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
+r_ = subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--plan", "--sin-consola"], capture_output=True, text=True); plan.write_text(r_.stdout, encoding="utf-8")
 traer = esp("migracion", C, "--plan", plan)[1].split()[1:]; trae(traer)
 esp("registrar", C, *[x for r in traer for x in (r, int(os.stat(RD / r).st_mtime * 1000), os.stat(RD / r).st_size)])
 subprocess.run([sys.executable, str(MIG), str(C), "--cuenta", "ana@ejemplo.test", "--sin-consola"], capture_output=True)
