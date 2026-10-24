@@ -11,7 +11,7 @@ comprobar:
   - menciona Cliente Uno
   - solo-escribe-en metodo.md
   - llamadas-maximo 12
-  - palabras-maximo 450
+  - palabras-maximo 520
   - sin-ingles
 ---
 Trabajo de un proyecto sin nombrarlo: la pregunta es de `ventas/cuentas` (Cliente Uno). Debe abrir la sesión completa

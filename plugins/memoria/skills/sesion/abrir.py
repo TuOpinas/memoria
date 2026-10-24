@@ -222,6 +222,8 @@ except OSError:
 guia = leer(RAIZ / "guia.md") or ""
 print("=== METODO (primera línea)")
 print(linea_metodo)
+if not SIN_FECHAS:
+    print(f"RAIZ: {RAIZ} · la carpeta en esta consola; todo lo que se lea o escriba aquí va con esta ruta, nunca con la de get_device_info")
 print(f"HOY: {HOY.isoformat()} · zona {getattr(TZ, 'key', TZ)} · la fecha de todo lo que se escribe hoy en la carpeta; no la del reloj de la consola ni del contenedor, que van en UTC")
 
 def version_huella(linea):

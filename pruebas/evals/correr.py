@@ -498,9 +498,11 @@ def _(ctx, arg):
 
 @comprobacion("sin-ingles")
 def _(ctx, arg):
-    """sin-ingles: ninguna respuesta empieza con una frase en inglés (razonamiento que se cuela antes de la respuesta)."""
+    """sin-ingles: lo que la persona lee de cada turno (el último bloque de texto, después de la última llamada) no
+    empieza en inglés. Las notas que el modelo suelta entre llamadas no cuentan: la app no las enseña tal cual."""
     for i, x in enumerate(ctx["turnos"], 1):
-        primera = next((l for l in texto_de(x).split("\n") if l.strip()), "")
+        ultimo = x["respuestas"][-1] if x["respuestas"] else ""
+        primera = next((l for l in ultimo.split("\n") if l.strip()), "")
         if re.search(r"\b(the|this|is|it's|so|open|let me|I'll|session)\b", primera, re.I) and not re.search(r"[áéíóúñ¿¡]", primera):
             return False, f"el turno {i} empieza en inglés: «{primera[:80]}»"
     return True, "ninguna respuesta empieza en inglés"
