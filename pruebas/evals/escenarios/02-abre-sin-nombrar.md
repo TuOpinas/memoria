@@ -3,7 +3,7 @@ raiz: raiz
 cuenta: ana@ejemplo.test
 consola: si
 max_turnos: 25
-preparar:                       # la raíz ya en la 1.22: sin migrar, la pregunta bloqueante ocuparía el turno 1 (eval 10)
+preparar:
   - "migrar"
 turnos:
   - "¿Qué le ofrecimos a Cliente Uno en la propuesta y qué falta para cerrarla?"
