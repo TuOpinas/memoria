@@ -6,6 +6,7 @@ Copia la raíz a una carpeta temporal con fechas de archivo fijas (todo del 2026
 como probar.sh del tablero, y comprueba lo que sale y, sobre todo, lo que no debe salir.
 """
 import os, pathlib, re, shutil, subprocess, sys, tempfile, time
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
 ABRIR = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "abrir.py"
@@ -187,9 +188,7 @@ for f_ in ("ventas/cuentas/sesiones (1).md", "ventas/area [Conflict].md", "venta
     (R / f_).unlink()
 print("La guia.md de la 1.22: «Responsable» y la columna «Acceso»")
 g = R / "guia.md"; g_viejo = g.read_text(encoding="utf-8")
-nueva = (g_viejo.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|")
-         .replace("| Todo el equipo |\n", "| Todo el equipo | Abierta |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo, nada restringido | Abierta |")
-         .replace("| Restringida: dirección |", "| Dirección | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana Prueba y Beto Prueba | Restringida |"))
+nueva = guia_122(g_viejo)
 g.write_text(nueva, encoding="utf-8")
 c, o = abrir("--cuenta", "ana@ejemplo.test")
 ok(c == 0 and "personas/ · restringida a Dirección" in o and "nomina" not in o and "futura/ · es de esta cuenta" in o, "con «Acceso», lo restringido sale por esa columna y «Quién la lee» dice a quiénes")

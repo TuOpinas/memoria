@@ -112,7 +112,7 @@ def zona_horaria(raiz, defecto="America/Mexico_City"):
 
 
 def celda_cuenta(raiz, area):
-    """(dueños, colaboran) del área según la tabla de guia.md."""
+    """(responsables, colaboran) del área según la tabla de guia.md."""
     try:
         guia = (raiz / "guia.md").read_text(encoding="utf-8-sig")
     except OSError:

@@ -4,6 +4,7 @@
 Uso: python3 pruebas/sesion/probar_permisos.py
 """
 import json, pathlib, subprocess, sys, tempfile
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
 AQUI = pathlib.Path(__file__).resolve().parent
 P = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "permisos.py"
 R = AQUI.parent / "tablero" / "raiz"
@@ -148,9 +149,7 @@ BASE[:] = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "reader"),
 import shutil as _sh
 R22 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; _sh.copytree(R, R22)
 g = R22 / "guia.md"; t = g.read_text(encoding="utf-8")
-t = (t.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|")
-      .replace("| Todo el equipo |\n", "| Todo el equipo | Abierta |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo | Abierta |")
-      .replace("| Restringida: dirección |", "| Beto Prueba | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana Prueba y Beto Prueba | Restringida |"))
+t = guia_122(t, personas="Beto Prueba")
 g.write_text(t, encoding="utf-8")
 f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(bien()))
 o22 = subprocess.run([sys.executable, str(P), str(R22), "--drive", str(f)], capture_output=True, text=True).stdout

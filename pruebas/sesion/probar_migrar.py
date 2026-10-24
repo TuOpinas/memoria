@@ -4,6 +4,7 @@
 Uso: python3 pruebas/sesion/probar_migrar.py
 """
 import hashlib, importlib.util, json, pathlib, shutil, subprocess, sys, tempfile, time
+import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
 SES = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion"
@@ -235,6 +236,11 @@ time.sleep(0.02); (RD / "ventas/cuentas/proyecto.md").write_text((RD / "ventas/c
 d = json.loads(esp("devolver", C, str(RD), "--salidas", pathlib.Path(tempfile.mkdtemp()))[1])
 x = next(x for l in d["lotes"] for x in l if x["rel"] == "ventas/cuentas/proyecto.md")
 ok(abs(int(os.stat(RD / x["rel"]).st_mtime * 1000) - x["expectedMtimeMs"]) > 1, "un proyecto.md que alguien escribió entre medias se rechaza por su fecha (no se pisa)")
+
+print("pruebas/comun.py: raiz_migrada() deja la raíz entera en la 1.22")
+RM, sm = raiz_migrada()
+o = subprocess.run([sys.executable, str(ABRIR), str(RM), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok(not sm["fallidos"] and "Veredicto: AL DIA" in o, "migrada por el script de verdad, y abrir.py la da por al día")
 
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

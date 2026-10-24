@@ -155,7 +155,7 @@ LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 
 
 def areas_de_la_cuenta(copia, cuenta):
-    """Las áreas donde la cuenta es dueña o colabora, por la columna Cuenta de guia.md (como aplicar_cambios.py); None sin cuenta."""
+    """Las áreas donde la cuenta es responsable o colabora, por la columna Cuenta de guia.md (como aplicar_cambios.py); None sin cuenta."""
     if not cuenta:
         return None
     guia = leer(copia / "guia.md")
@@ -181,8 +181,8 @@ def colabora_en(proy, cuenta):
 
 
 def proyectos_de(copia, cuenta=None):
-    """Los proyectos que el barrido mira: con --cuenta, solo los de las áreas donde es dueña o colabora, y los proyectos
-    ajenos donde su «Colabora:» la nombra. La memoria propone a quien puede escribir; lo de otra área lo barre su dueño."""
+    """Los proyectos que el barrido mira: con --cuenta, solo los de las áreas donde es responsable o colabora, y los proyectos
+    ajenos donde su «Colabora:» la nombra. La memoria propone a quien puede escribir; lo de otra área lo barre su responsable."""
     mias = areas_de_la_cuenta(copia, cuenta)
     for area in sorted(p for p in copia.iterdir() if p.is_dir() and (p / "area.md").exists()):
         for proy in sorted(p for p in area.iterdir() if p.is_dir() and (p / "proyecto.md").exists()):

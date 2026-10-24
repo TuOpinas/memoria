@@ -314,13 +314,13 @@ if not areas:
     print("(aviso: no se encontró ninguna área en la sección «## Áreas» de guia.md: sin ella nadie tiene área ni cuenta; que el responsable de contexto revise guia.md)")
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
 # «Contexto común (`guia.md` y `base/`): Nombre (correo).»); sin correo, la cuenta del responsable es la de las áreas
-# de las que es dueño
+# de las que es responsable
 resp_contexto = ""
 for l in seccion(guia, "Quién responde por qué").split("\n"):
     if l.strip().lower().startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
 # la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
-# como antes, es la de las áreas de las que esa persona es dueña
+# como antes, es la de las áreas de las que esa persona es responsable
 cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
 resp_contexto = re.sub(r"\s*\([^)]*\)", "", resp_contexto).strip()
 es_resp = bool(CUENTA) and (CUENTA in cuenta_resp or (bool(resp_contexto) and not cuenta_resp and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)))
@@ -359,7 +359,7 @@ if CUENTA:
 
 
 def solo_nombre(d):
-    """El dueño sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
+    """El responsable sin las notas entre paréntesis de su celda («Ana (escribe también Beto…)»), que empiezan en minúscula;
     «Dirección (Ana, Beto)» se queda. Como el tablero."""
     return re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", d or "").strip()
 
@@ -475,7 +475,7 @@ def lectores_de(celda):
 
 
 def de_la_cuenta(a):
-    """El área es de la cuenta de esta sesión: dueña o colabora. Entonces la puede leer aunque esté restringida."""
+    """El área es de la cuenta de esta sesión: responsable o colabora. Entonces la puede leer aunque esté restringida."""
     return bool(CUENTA) and CUENTA in (a["cuentas_dueno"] | a["colaboran"])
 
 
@@ -484,7 +484,7 @@ def motivo_area(slug):
     abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
     leer. El mismo criterio que el tablero con --cuenta, salvo un caso: un área restringida que la cuenta lee sin ser
     dueña ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
-    su área; el tablero, que es solo de su dueño, la muestra entera."""
+    su área; el tablero, que es solo de quien lo monta, la muestra entera."""
     a = next((x for x in areas if x["slug"] == slug), None)
     quien = solo_nombre(a["dueno"]) if a else "su responsable"
     if a and a["restringida"] and not de_la_cuenta(a):

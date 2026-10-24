@@ -659,7 +659,7 @@ async function corregir(p, s, propuesta){
   render();
 }
 const isDone = (p, s) => !!pend(p.id, s.texto).hecho;
-// lo que la cola trae de un proyecto o un área que este tablero no muestra no se enseña ni se cuenta a quien no es el dueño
+// lo que la cola trae de un proyecto o un área que este tablero no muestra no se enseña ni se cuenta a quien no montó el tablero
 const cambiosVis = () => OWNER ? CAMBIOS : CAMBIOS.filter(c => c.area && !c.proyecto ? (areaBy[c.area] && areaBy[c.area].legible!==false) : (byId[c.proyecto] && !byId[c.proyecto].restringido));
 const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s)));
@@ -804,7 +804,7 @@ afectan = _memo1("afectan", afectan);
 mtDatos = _memo1("mt", mtDatos);
 entIdx = _memo1("ents", entIdx);
 // por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14; «restringido» cuando la carpeta
-// lo declara, 1.18.1); sin motivo, se supone restringido. Del dueño, solo el nombre: se quitan las notas entre paréntesis
+// lo declara, 1.18.1); sin motivo, se supone restringido. Del responsable, solo el nombre: se quitan las notas entre paréntesis
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
 const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
@@ -941,7 +941,7 @@ function regNecesita(p){
   return {total: live.length, raros: raros.map(k=>pl(k,by[k])), nRaros: raros.reduce((n,k)=>n+by[k],0)};
 }
 // lo que alguien marcó aquí en un proyecto cuya área no es de quien montó el tablero: su puesta al día no lo escribe,
-// y el dueño no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
+// y su responsable no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
 function ajenaAviso(p){
   const aj = new Set((META && META.cola_ajena) || []), n = CAMBIOS.filter(c => c.proyecto === p.id && aj.has(c.id)).length;
   return n ? `<p class="hint">${n===1?"Hay 1 cosa marcada":`Hay ${n} cosas marcadas`} aquí que no se escriben solas: el área de este proyecto es de ${esc(((AREAS||[]).find(a=>a.slug===p.area)||{}).dueno||p.dueno||"otra persona")}, y su puesta al día no lee este tablero. Díselo, o pídele que lo marque en el suyo.</p>` : "";

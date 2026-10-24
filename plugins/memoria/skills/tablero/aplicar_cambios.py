@@ -69,7 +69,7 @@ def colaboran_en(quien):
 # --- fin de quién escribe ---
 
 def mis_areas():
-    """(áreas de las que la cuenta es dueña, áreas en las que colabora), según la columna Cuenta de guia.md."""
+    """(áreas de las que la cuenta es responsable, áreas en las que colabora), según la columna Cuenta de guia.md."""
     try:
         guia = (RAIZ / "guia.md").read_text(encoding="utf-8-sig")
     except OSError:
@@ -105,7 +105,7 @@ def colabora_en_proyecto(area, slug):
     return CUENTA in colaboran_en(m.group(1) if m else "")
 
 def puede(t, c, area):
-    """Las prioridades del área son de su dueño; lo demás lo escribe también quien colabora en el área o en el proyecto."""
+    """Las prioridades del área son de su responsable; lo demás lo escribe también quien colabora en el área o en el proyecto."""
     if not CUENTA or not area:
         return bool(CUENTA)
     if area in MIAS:
@@ -224,7 +224,7 @@ for c in cargar():
     t = c.get("tipo")
     area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
     if t == "propuesta":
-        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún dueño; se cuentan aparte
+        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún responsable; se cuentan aparte
         if not partes(c)[0] or not texto_de_una_linea(c.get("texto")) or \
            any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")) or \
            (c.get("rutas") is not None and not (isinstance(c["rutas"], list) and c["rutas"] and all(texto_de_una_linea(r) for r in c["rutas"]))):

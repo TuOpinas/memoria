@@ -131,7 +131,7 @@ def raiz_declarada(raiz):
             avisos_drive.append(f"el tramo «{par.strip()[:60]}» de «En Drive:» no da dos correos (va «cuenta@claude es cuenta@drive»)")
             continue
         drive_de[cs[0]] = cs[1]
-    # cuenta de cada nombre, por la tabla de áreas (el dueño) y por los correos que la línea lleve entre paréntesis;
+    # cuenta de cada nombre, por la tabla de áreas (el responsable) y por los correos que la línea lleve entre paréntesis;
     # el nombre, sin lo que siga a una coma («Juanjo Jiménez-Alfaro, de forma provisional»)
     por_nombre = {}
     for a in areas:
@@ -347,7 +347,7 @@ def comparar(raiz, drive):
     def web(sin_resolver):
         return (" Hazlo desde la web, que enseña quién conserva el acceso: aquí no se sabe la cuenta de " + ", ".join(sin_resolver) + "."
                 if sin_resolver else " Márcala con acceso limitado.")
-    # 2. cada área: escriben su dueño y quienes colaboran, nadie más
+    # 2. cada área: escriben su responsable y quienes colaboran, nadie más
     for a in areas:
         info = (drive.get("areas") or {}).get(a["slug"])
         if info is None:

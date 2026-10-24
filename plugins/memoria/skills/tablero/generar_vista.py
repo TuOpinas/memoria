@@ -745,9 +745,9 @@ def naturaleza(texto):
     if re.match(r"^(decidir|definir|confirmar|elegir|acordar|aprobar|fijar|cerrar `?[\w\-/.]+\.md|pasar(lo|la)? a vigente|revisar .{0,80} para pasar(lo|la)? a vigente|resolver|replantear)", t): return "decision"
     return "accion"
 
-# palabras que aparecen en todas partes y no agrupan nada: las genéricas, el nombre de la organización y sus dueños
+# palabras que aparecen en todas partes y no agrupan nada: las genéricas, el nombre de la organización y sus responsables
 RUIDO = set("claude cowork memoria pro google workspace mac ahora después".split())
-# un dueño solo es ruido si lleva la mitad de las áreas o más: entonces sale en casi todos los pasos y no distingue
+# un responsable solo es ruido si lleva la mitad de las áreas o más: entonces sale en casi todos los pasos y no distingue
 _duenos = [a["dueno"] for a in areas_guia]
 RUIDO |= {w.lower() for w in re.findall(r"[\wáéíóúñ]+", org + " " + " ".join(d for d in set(_duenos) if len(_duenos) > 1 and _duenos.count(d) * 2 > len(_duenos))) if len(w) > 2}
 def tokens_tema(texto):
@@ -767,7 +767,7 @@ def tokens_tema(texto):
         if re.search(r"\b" + rol + r"\b", sin_cod.lower()): toks.add(rol)
     for tool in ("posthog", "linkedin", "github", "gitlab", "cloudflare", "drive", "odoo", "whatsapp", "gmail", "outlook", "slack", "teams", "jira", "clickup", "figma", "notion", "hubspot", "salesforce", "sap", "shopify", "stripe", "aws"):
         if re.search(r"\b" + re.escape(tool) + r"\b", sin_cod.lower()): toks.add(tool)
-    # un token de varias palabras es ruido si lo es alguna de ellas («ana pérez» con «ana» de dueña de casi todo)
+    # un token de varias palabras es ruido si lo es alguna de ellas («ana pérez» con «ana» de responsable de casi todo)
     return {t for t in toks if t not in RUIDO and not (set(t.split()) & RUIDO)}
 
 
@@ -1151,7 +1151,7 @@ for a in areas_guia:
             # su línea del índice del área es pública: se muestra sin la palabra «restringido», y si la lleva, el motivo
             # es ese aunque la carpeta no esté en la computadora (lo mismo que con un área). Que el área esté restringida
             # no cuenta: si se llegó a sus proyectos es que la cuenta lee su area.md. Y si el área es de la cuenta que
-            # genera el tablero como dueña, lo restringido de dentro también lo lee (el dueño de un área lo es de lo
+            # genera el tablero como responsable, lo restringido de dentro también lo lee (el responsable de un área lo es de lo
             # restringido dentro de ella; quien colabora, no necesariamente)
             linea = ref.get("descripcion", "")
             mia = bool(CUENTA_TABLERO) and CUENTA_TABLERO in cuentas(a["cuenta"])[0]
@@ -1239,7 +1239,7 @@ for a in areas_guia:
         docs["proyectos"][pid] = pdoc
     docs["areas"][a["slug"]] = area_doc
 
-# ---------- cuestionamientos: quién cuestionó qué, y si el dueño ya respondió ----------
+# ---------- cuestionamientos: quién cuestionó qué, y si el responsable ya respondió ----------
 respuestas = set()
 for pid, pdoc in docs["proyectos"].items():
     for d_ in pdoc.get("decisiones") or []:
