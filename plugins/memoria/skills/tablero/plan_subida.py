@@ -109,7 +109,10 @@ def extras_cierre(sincronizado, zona):
         campos["llamadas"] = int(_opt("--llamadas"))
     if _opt("--pagina"):
         try:
-            campos["pagina_actualizada"] = json.loads(_opt("--pagina"))
+            pag = json.loads(_opt("--pagina"))
+            if isinstance(pag, dict):
+                pag.setdefault("fecha", ahora.date().isoformat())     # la fecha la pone el script, en la zona de la organización
+                campos["pagina_actualizada"] = pag
         except ValueError:
             pass
     if _opt("--tarea-desfasada") in ("true", "false"):

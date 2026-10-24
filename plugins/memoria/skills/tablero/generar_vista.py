@@ -105,7 +105,7 @@ def sin_palabra_restringido(linea):
     """La línea sin la palabra que la declara: «**restringido**: márgenes» → «márgenes»."""
     return re.sub(r"^[\W_]*restringid[oa]\b[*_»\"”'’\s]*[:—–,-]?\s*", "", linea or "", flags=re.I).strip()
 # --veredicto-metodo "<primera línea del metodo.md del plugin>": compara versión y huella con el metodo.md de la raíz,
-# en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 0 de tarea.md: la
+# en numérico («1.14.10» es mayor que «1.14.9»), imprime el veredicto y termina. Lo usa el paso 1b de tarea.md: la
 # comparación la hace el script, no quien lo lee. Mismo criterio que abrir.py de la skill sesion.
 _plugin_linea = _arg("--veredicto-metodo")
 if _plugin_linea is not None:

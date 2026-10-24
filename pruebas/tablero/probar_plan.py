@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """plan_subida.py: lo que cierra la corrida va en el último lote con meta/estado, sin que nadie escriba una hora (1.21)."""
-import json, pathlib, subprocess, sys, tempfile, shutil, datetime
+import json, re, pathlib, subprocess, sys, tempfile, shutil, datetime
 AQUI = pathlib.Path(__file__).resolve().parent
 TABLERO = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "tablero"
 PLAN, PREPARAR = TABLERO / "plan_subida.py", TABLERO.parent.parent / "preparar.py"
@@ -34,13 +34,13 @@ try:
     escribir(cierres / "c-futura.json", json.dumps({"data": {"hora": "2099-01-01T00:00-06:00"}, "version": 5}))  # mal puesta
     escribir(tmp / "ret.json", '["c9"]'); escribir(tmp / "aj.json", "[]")
     rc, out, err = corre(PLAN, "--cierre", base, tmp / "salida", "--sincronizado", sinc, "--cierres", cierres.parent, "--inicio", trab / "inicio.json",
-                         "--llamadas", "9", "--retenidos", tmp / "ret.json", "--ajenos", tmp / "aj.json", "--pagina", '{"version": "1.21.0", "fecha": "2026-10-23", "desde": "1.20.1"}', "--tarea-desfasada", "false")
+                         "--llamadas", "9", "--retenidos", tmp / "ret.json", "--ajenos", tmp / "aj.json", "--pagina", '{"version": "1.21.0", "desde": "1.20.1"}', "--tarea-desfasada", "false")
     res = json.loads(out) if rc == 0 else {}
     lote = (res.get("lotes") or [[]])[0]
     meta = json.loads((tmp / "salida" / "meta" / "estado.json").read_text(encoding="utf-8")) if rc == 0 else {}
     ok(rc == 0 and len(res["lotes"]) == 1 and lote[-1] == {"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str((tmp / "salida" / "meta" / "estado.json").resolve())}, f"un solo lote que termina en meta/estado como update sin if_version ({err[-200:]})")
     ok(sorted((e["doc_id"], e["if_version"]) for e in lote[:-1] if e["op"] == "delete" and e["collection"] == "cierres") == [("c-futura", 5), ("c-igual", 2), ("c-vieja", 1)], "borra las marcas anteriores o iguales al sincronizado (comparadas como instantes) y las del futuro, con su if_version; la posterior se queda")
-    ok(meta.get("sincronizado") == sinc and meta.get("cola_retenida") == ["c9"] and meta.get("cola_ajena") == [] and meta.get("llamadas") == 9 and meta.get("pagina_actualizada", {}).get("desde") == "1.20.1" and meta.get("tarea_desfasada") is False, "meta/estado lleva el sincronizado que imprimió el inventario, la cola, las llamadas y la página")
+    ok(meta.get("sincronizado") == sinc and meta.get("cola_retenida") == ["c9"] and meta.get("cola_ajena") == [] and meta.get("llamadas") == 9 and meta.get("pagina_actualizada", {}).get("desde") == "1.20.1" and re.fullmatch(r"20\d\d-\d\d-\d\d", meta["pagina_actualizada"].get("fecha", "")) and meta.get("tarea_desfasada") is False, "meta/estado lleva el sincronizado que imprimió el inventario, la cola, las llamadas y la página con su fecha puesta por el script")
     ok(6.5 <= (meta.get("duracion_min") or 0) <= 8, f"la duración sale de inicio.json ({meta.get('duracion_min')} min)")
     ok("huella_raiz" not in meta and "huellas" not in meta, "no toca las huellas: es un update parcial")
     rc2, out2, _ = corre(PLAN, "--cierre", tmp / "base-vacia", tmp / "salida2", "--sincronizado", sinc)
@@ -57,7 +57,7 @@ try:
     ult = (res.get("lotes") or [[]])[-1]
     meta = json.loads((sal / "meta" / "estado.json").read_text(encoding="utf-8"))
     ok(rc == 0 and ult[-1]["collection"] == "meta" and [e["doc_id"] for e in ult if e["collection"] == "cierres"] == ["c-futura", "c-igual", "c-vieja"], f"los delete de cierres van justo antes de meta/estado, en el último lote ({err[-200:]})")
-    ok(meta.get("llamadas") == 14 and meta.get("pagina_actualizada") == {"version": "1.21.0"} and 6.5 <= (meta.get("duracion_min") or 0) <= 8 and meta.get("sincronizado") == sinc, "meta/estado del generador gana las llamadas, la duración y la página, y conserva el sincronizado que estampó")
+    ok(meta.get("llamadas") == 14 and meta.get("pagina_actualizada", {}).get("version") == "1.21.0" and meta["pagina_actualizada"].get("fecha") and 6.5 <= (meta.get("duracion_min") or 0) <= 8 and meta.get("sincronizado") == sinc, "meta/estado del generador gana las llamadas, la duración y la página, y conserva el sincronizado que estampó")
     ok(res.get("enfoque_cambio") is True and res.get("cierres_borrados") == 3, "dice que el enfoque cambió cuando la huella de los candidatos no es la de la base")
     ok(meta.get("huella_candidatos") == "cand-vieja" and json.loads(pathlib.Path(res["enfoque_meta"]).read_text())["huella_candidatos"] == "cand-nueva", "la huella nueva no sube con meta/estado: la deja aparte para que el paso 6 la escriba junto al enfoque")
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-nueva"}, "version": 4}))
