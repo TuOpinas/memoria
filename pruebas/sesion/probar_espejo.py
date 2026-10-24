@@ -104,6 +104,18 @@ def sin_lo_de_fechas(t):
 ok(sin_lo_de_fechas(a_raiz) == sin_lo_de_fechas(a_copia), "dice lo mismo que en la computadora, salvo las fechas de archivo")
 ok("mtimeMs mayor o igual que" in a_copia, "da el instante desde el que mirar el trabajo sin sesión en el listado")
 ok("bytes (sin consola" in a_copia and not re.search(r"proyecto\.md: 20\d\d-", a_copia), "REGISTROS sin la hora de la copia")
+# --listado: el listado de device_list_dir de la carpeta del proyecto, tal cual; abrir.py calcula el trabajo sin sesión
+import datetime as _dt
+_lst = tmp / "listado.json"
+_ahora = int(_dt.datetime.now().timestamp() * 1000); _viejo = 1_600_000_000_000
+_lst.write_text(json.dumps({"entries": [{"name": "entregables", "type": "dir"}, {"name": "entregables/nuevo.md", "type": "file", "size": 9, "mtimeMs": _ahora},
+                                         {"name": "taller/viejo.md", "type": "file", "size": 9, "mtimeMs": _viejo},
+                                         {"name": "restringido/oculto.md", "type": "file", "size": 9, "mtimeMs": _ahora},
+                                         {"name": "decisiones.md", "type": "file", "size": 9, "mtimeMs": _ahora}]}), encoding="utf-8")
+rc, a_lst, err = corre(ABRIR, C, ACTIVO, "--cuenta", "ana@ejemplo.com", "--sin-fechas", "--listado", _lst)
+av = a_lst.split("=== AVISOS")[1] if "=== AVISOS" in a_lst else ""
+ok(rc == 0 and "Trabajo sin sesión por fecha de archivo" in av and "entregables/nuevo.md (" in av and "decisiones.md (" in av and "taller/viejo.md" not in av and "oculto" not in av and "mtimeMs" not in av,
+   "con --listado, el trabajo sin sesión sale calculado, con fecha y hora, sin restringido/ ni lo de antes" + (f": {err[-200:]}" if rc else ""))
 
 print("Sin consola: el inventario del tablero sin fechas")
 T = tmp / "tablero"

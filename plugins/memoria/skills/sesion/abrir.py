@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas] [--minima]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas [--listado <archivo>]] [--minima]
 
 Con --minima (la apertura mínima, la primera respuesta de cualquier conversación con la carpeta conectada) imprime solo
 la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta, una línea por proyecto de cada
@@ -28,7 +28,9 @@ se cuenta, sin suponer qué hay.
 Con --sin-fechas corre sobre una copia en el contenedor (sesión sin consola: la copia la arma espejo.py y sus fechas de
 archivo son las de la copia, no las de la computadora). No usa ninguna fecha de archivo: no da el aviso de trabajo sin sesión
 por fechas, sino el instante desde el que hay que mirarlo en el listado de la computadora (device_list_dir, mtimeMs), y en
-REGISTROS solo da el tamaño.
+REGISTROS solo da el tamaño. Con --listado <archivo> (el resultado de device_list_dir recursivo de la carpeta del
+proyecto, guardado tal cual en un archivo del contenedor) calcula él el aviso de trabajo sin sesión, con fecha y hora en la
+zona de la organización, como en la computadora: nadie compara milisegundos a mano.
 """
 import datetime, os, pathlib, re, sys
 
@@ -59,6 +61,9 @@ if MINIMA:
 SIN_FECHAS = "--sin-fechas" in args
 if SIN_FECHAS:
     args.remove("--sin-fechas")
+LISTADO = None
+if "--listado" in args:
+    i = args.index("--listado"); LISTADO = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args and not MINIMA else None
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
@@ -646,7 +651,35 @@ for n in nombres:
         avisos.append(f"Trabajo sin sesión: entregables/{n} tiene actualizado {act}, posterior a la última sesión ({ultima_ses}).")
 
 # trabajo sin sesión por fechas de archivo (nunca el contenido) en entregables/, taller/ y fuentes/
-if SIN_FECHAS and ultima_ses and not cerrado:
+def listado_sin_sesion(ruta, desde):
+    """[(fecha, hora, ruta)] de lo que el listado de device_list_dir da como cambiado desde «desde» (un datetime en la zona):
+    decisiones.md y los archivos de entregables/, taller/ y fuentes/, fuera de restringido/ y de lo que empieza por punto."""
+    try:
+        d = __import__("json").loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    out, lim = [], desde.timestamp() * 1000
+    for e in (d.get("entries") if isinstance(d, dict) else d) or []:
+        n, ms = str(e.get("name") or ""), e.get("mtimeMs")
+        partes = n.split("/")
+        if e.get("type") != "file" or not isinstance(ms, (int, float)) or ms < lim or any(x.startswith(".") or x == "restringido" for x in partes):
+            continue
+        if n == "decisiones.md" or (len(partes) > 1 and partes[0] in ("entregables", "taller", "fuentes")):
+            t = datetime.datetime.fromtimestamp(ms / 1000, TZ)
+            out.append((t.date().isoformat(), t.strftime("%H:%M"), n))
+    return sorted(out, reverse=True)
+
+
+if SIN_FECHAS and ultima_ses and not cerrado and LISTADO:
+    _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)
+    _lista = listado_sin_sesion(LISTADO, _desde)
+    if _lista is None:
+        avisos.append(f"Trabajo sin sesión: el listado {LISTADO} no se pudo leer; se mira a mano en device_list_dir (mtimeMs desde {int(_desde.timestamp() * 1000)}).")
+    elif _lista:
+        avisos.append("Trabajo sin sesión por fecha de archivo, después del " + ultima_ses + ": "
+                      + "; ".join(f"{a} ({f} {h})" for f, h, a in _lista[:12]) + (" …" if len(_lista) > 12 else "")
+                      + ". Quién lo cambió no consta: se pregunta qué pasó y se propone registrarlo.")
+elif SIN_FECHAS and ultima_ses and not cerrado:
     # sin consola las fechas de verdad solo están en el listado de la computadora: se da el instante, en milisegundos como
     # los da device_list_dir, a partir del cual un archivo cuenta (el día siguiente a la última sesión, en la zona de la organización)
     _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)

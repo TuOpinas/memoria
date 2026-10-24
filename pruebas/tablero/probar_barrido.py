@@ -289,6 +289,17 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), str(rz), str(st3), "--hoy", "2026-10-23", "--base", str(vol)], capture_output=True, text=True)
     d3 = {q.stem for q in (st3 / "cambios").glob("*.json")}
     ok(r.returncode == 0 and vieja not in d3 and len(d3) == 8, f"ni en la siguiente, y su hueco lo ocupa la novena ({len(d3)})")
+
+    print("el tope de afirma, primero para lo activo (1.22.1)")
+    ra = tmp / "raiz-afirma"
+    proyecto(ra, "aaa", "dormido", "2026-06-01", ["Nada"], sesion("2026-06-01", "x", "y"))
+    proyecto(ra, "zzz", "activo", "2026-10-22", ["Nada"], sesion("2026-10-22", "x", "y"))
+    for pr in ("aaa/dormido", "zzz/activo"):
+        for k in range(5):
+            escribir(ra / pr / "entregables" / f"e{k}.md", f"---\nestado: vigente\nactualizado: 2026-10-01\n---\n# Pieza {k}\n\nTexto.\n")
+    sa = tmp / "sa"; sa.mkdir()
+    ba, _ = correr(ra, sa)
+    ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"], f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

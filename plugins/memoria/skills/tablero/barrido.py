@@ -31,8 +31,8 @@ Detecta, con lo que está escrito y sin modelo:
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
-  para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 6 por corrida; entregables antes
-                que taller, vigentes antes que borradores), con su título y, en los entregables, el arranque de su cuerpo,
+  para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 6 por corrida; primero los de
+                los proyectos con sesiones más recientes y, en cada uno, entregables antes que taller y vigentes antes que borradores), con su título y, en los entregables, el arranque de su cuerpo,
                 para que el modelo escriba la línea que dice qué sostienen. Del taller solo hay título y cabecera (la copia
                 no trae su cuerpo, que es privado del área): si con eso no se puede decir qué sostiene, se salta.
   para_contraste los proyectos (hasta 5) con dos o más piezas con `afirma`, con esas líneas: el modelo dice qué piezas
@@ -247,6 +247,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         ses = entradas(ses_t)
         reales = [e for e in ses if "(tarea)" not in e[1] and "(migracion)" not in e[1]]
         cerrado = any(re.search(r"Proyecto terminado el \d{4}-\d{2}-\d{2}", seccion(tp, n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
+        reciente = max((e[0] for e in reales if fecha_ok(e[0])), default="")      # la última sesión real: el tope de afirma va primero a lo activo
 
         def prop(clase, clave, texto, por_que):
             props.append({"id": f"prop-{clase}-{huella(pid, clave)}", "data": {
@@ -314,7 +315,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                 cuerpo = re.sub(r"^---\s*\n.*?\n---\s*\n", "", ft, count=1, flags=re.S)
                 titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
                 arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
-                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente"})
+                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente", "_reciente": reciente})
         # el taller: sus cabeceras las dejó el generador en el detalle; su cuerpo no está en la copia ni se lee nunca
         piezas = piezas_de(salida, pid) if salida else []
         if not any(pz.get("tipo") == "taller" for pz in piezas):
@@ -334,7 +335,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
             validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
             if not visto(id_juicio("afirma", pid, "afirma|" + ruta)):
                 afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(pz.get("titulo") or pz.get("nombre") or "", 120),
-                               "arranque": None, "_vigente": pz.get("estado") == "vigente", "_taller": True})
+                               "arranque": None, "_vigente": pz.get("estado") == "vigente", "_taller": True, "_reciente": reciente})
         # candidatos a entregable y contradicciones: solo un modelo los ve, sobre las líneas «afirma» (nunca los cuerpos)
         # el contraste se pide una vez por conjunto de piezas: si ese conjunto ya se juzgó (con o sin hallazgo), no se repite
         if len(con_afirma) >= 2 and len(contraste) < MAX_CONTRASTE and id_contraste(pid, [x["ruta"] for x in con_afirma[:20]]) not in juzgado["contraste"]:
@@ -343,8 +344,12 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         for d in en_cola(pid):
             if d["data"].get("clase") in ("candidato-entregable", "contradiccion") and set(d["data"].get("rutas") or []) <= rutas and d["data"].get("rutas"):
                 validas.add(d["id"])
-    afirma.sort(key=lambda x: (x.get("_taller", False), not x["_vigente"], x["ruta"]))
-    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller")} for x in afirma[:MAX_AFIRMA]]
+    # el tope de MAX_AFIRMA, primero para los proyectos con sesiones más recientes (1.22.1: la primera puesta al día real
+    # dio las seis a un solo proyecto por orden alfabético); dentro de cada uno, entregables antes que taller y vigentes antes
+    afirma.sort(key=lambda x: x["ruta"])
+    afirma.sort(key=lambda x: (x.get("_taller", False), not x["_vigente"]))
+    afirma.sort(key=lambda x: x.get("_reciente") or "", reverse=True)
+    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller", "_reciente")} for x in afirma[:MAX_AFIRMA]]
     return props, juicio, afirma, contraste, vistos, validas
 
 
