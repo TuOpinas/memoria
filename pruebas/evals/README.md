@@ -46,9 +46,9 @@ comprobar:
 ---
 ```
 
-Pasos de `preparar` y `entre`: `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `otro-cierre <area>/<proyecto>`.
+Pasos de `preparar` y `entre`: `migrar` (la raíz pasa a la estructura de la 1.22 por la cuenta del escenario), `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `otro-cierre <area>/<proyecto>`.
 
-Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <ruta> <bloque>`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `en-corto <a>/<p>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-contiene <texto>`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`, `palabras-maximo N[@T]`, `sin-ingles`. Se añaden en `correr.py` con `@comprobacion`.
+Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <ruta> <bloque>`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `estatus <a>/<p>` (o `en-corto`), `nombres-nuevos <a>/<p>`, `migrada <area>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-contiene <texto>`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`, `palabras-maximo N[@T]`, `sin-ingles`. Se añaden en `correr.py` con `@comprobacion`.
 
 ## Los escenarios
 
@@ -62,6 +62,8 @@ Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <
 | 06 | Cuenta que solo colabora | escribe solo en `ventas`; no toca el Panorama; no se le habla de «Claude outputs» |
 | 07 | Cierre sin consola (Windows) con otra persona cerrando mientras | copia por `device_stage_files`, `cerrar.py --sin-fechas` sobre la copia, `device_commit_files` con rechazo por fecha y repetición; nada se pierde |
 | 08 | Cierre con lo que no se guarda | la decisión entra con su porqué; el saldo de hoy, la contraseña y los borradores tirados no quedan en ningún archivo (`no-contiene`) |
+| 09 | Cierre sobre una raíz migrada a la 1.22 | sin oferta de migrar; decisión y `Estatus` enseñados antes de escribir; entrada con «Tema:», decisión con «Descartado:», `Estatus` del proyecto y del área, con `cerrar.py` |
+| 10 | Apertura sobre una raíz sin migrar | ofrece migrar en una línea sin escribir; con el sí, `migrar_estructura.py` migra solo las áreas de la cuenta y `guia.md`, con su entrada `(migracion)`; las de otra cuenta quedan igual |
 
 Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20), y qué pasó con cada cosa: la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí (corregido en `cerrar.md`); el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); «Descartamos: no consta» como relleno (corregido en `cerrar.md`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt` (dos llamadas de más; sin cambio todavía, pendiente de ver si se repite).
 

@@ -110,6 +110,15 @@ def aplicar_paso(e, raiz, paso):
             partes = t.split("\n## ", 1)
             extra = "## 2026-09-30 (desde otra computadora)\nSesión de: Carla Prueba\nTrabajamos en: la copia en conflicto, para la prueba.\nAvances: ENTRADA-CONFLICTO escrita en la otra copia.\nPendiente: nada.\n\n"
             (p.parent / (p.stem + " (1)" + p.suffix)).write_text(partes[0] + "\n" + extra + ("## " + partes[1] if len(partes) > 1 else ""), encoding="utf-8")
+        elif orden == "migrar":                # migrar: la raíz pasa a la estructura de la 1.22 por la cuenta del escenario, antes de empezar
+            real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip().lower() or e.get("cuenta", "ana@ejemplo.test")
+            r = subprocess.run([sys.executable, str(AQUI.parent.parent / "plugins/memoria/skills/sesion/migrar_estructura.py"), str(raiz), "--cuenta", real, "--plugin", "1.22.0"], capture_output=True, text=True)
+            if r.returncode != 0:
+                raise SystemExit(f"{e['nombre']}: la migración de preparar falló: {r.stdout[-400:]} {r.stderr[-400:]}")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            for d, _, fs in os.walk(raiz):
+                for f in fs:
+                    os.utime(os.path.join(d, f), (viejo, viejo))
         elif orden == "tocar":                 # tocar <ruta>: fecha de archivo de ahora (trabajo sin sesión)
             os.utime(raiz / arg, None)
         elif orden == "escribir":              # escribir <ruta> <texto>: añade una línea al final
@@ -171,7 +180,7 @@ def preparar_plugin(origen, trabajo):
 
 def sembrar_scripts(plugin, hogar):
     """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
-    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py"]),
+    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py"]),
                            ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
         d = hogar / destino
         d.mkdir(parents=True, exist_ok=True)
@@ -335,15 +344,53 @@ def _(ctx, arg):
     return bool(nuevas) and ent[0] in nuevas and ent[0].startswith(HOY), ("registrada: «" + ent[0] + "»") if nuevas else "sin decisión nueva"
 
 
+@comprobacion("estatus")
 @comprobacion("en-corto")
 def _(ctx, arg):
+    """estatus <area>/<proyecto> (en-corto, su nombre hasta la 1.21): el Estatus de proyecto.md, reescrito hoy, y sin
+    un «En corto» al lado: desde la 1.22 el cierre escribe solo el nombre nuevo, también en una raíz sin migrar."""
     p = ctx["raiz"] / arg / "proyecto.md"
     t = p.read_text(encoding="utf-8") if p.exists() else ""
-    m = re.search(r"^## En corto\s*\n(.*?)(?=^## )", t, re.M | re.S)
+    m = re.search(r"^## Estatus\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
     if not m:
-        return False, "sin bloque En corto"
+        return False, "sin bloque Estatus"
+    if re.search(r"^## En corto\s*$", t, re.M):
+        return False, "quedó un bloque En corto junto al Estatus"
     cuerpo = m.group(1).strip()
     return cuerpo.startswith(HOY) or HOY in cuerpo.split("\n")[0], "primera línea: " + cuerpo.split("\n")[0][:100]
+
+
+@comprobacion("nombres-nuevos")
+def _(ctx, arg):
+    """nombres-nuevos <area>/<proyecto>: lo que escribió esta conversación usa los nombres de la 1.22: la entrada nueva de
+    sesiones.md con «Tema:» y sin «Trabajamos en:» ni «Pendiente:», y las decisiones nuevas sin «Descartamos:»."""
+    malos = []
+    for nombre, prohibidos in (("sesiones.md", ("Trabajamos en:", "Pendiente:")), ("decisiones.md", ("Descartamos:",))):
+        p = ctx["raiz"] / arg / nombre
+        t = p.read_text(encoding="utf-8") if p.exists() else ""
+        antes = ctx["antes_textos"].get(f"{arg}/{nombre}", "")
+        nuevas = [b for b in re.split(r"^(?=## )", t, flags=re.M) if b.startswith("## ") and b not in antes]
+        for b in nuevas:
+            malos += [f"{nombre}: {x}" for x in prohibidos if re.search(r"^" + re.escape(x), b, re.M)]
+            if nombre == "sesiones.md" and "(migracion)" not in b.split("\n")[0] and not re.search(r"^Tema:", b, re.M):
+                malos.append("sesiones.md: entrada sin «Tema:»")
+    return not malos, "; ".join(malos) or "con los nombres nuevos"
+
+
+@comprobacion("migrada")
+def _(ctx, arg):
+    """migrada <area>: el área y sus proyectos tienen la estructura de la 1.22 (abrir.py da AL DIA para la cuenta) y cada
+    proyecto tiene su entrada «(migracion)»."""
+    a = ctx["raiz"] / arg / "area.md"
+    ta = a.read_text(encoding="utf-8") if a.exists() else ""
+    viejo = [x for x in ("## Panorama", "## Prioridades ahora", "\nDueño:") if x in ta]
+    sin_entrada = []
+    for d in sorted(x for x in (ctx["raiz"] / arg).iterdir() if (x / "proyecto.md").is_file()):
+        tp = (d / "proyecto.md").read_text(encoding="utf-8")
+        viejo += [f"{d.name}: {x}" for x in ("## En corto", "## Estado actual", "## Terminado significa", "\nDueño:") if x in tp]
+        if "(migracion)" not in (d / "sesiones.md").read_text(encoding="utf-8"):
+            sin_entrada.append(d.name)
+    return not viejo and not sin_entrada, ("quedan: " + ", ".join(viejo) if viejo else "") + (f"; sin entrada (migracion): {', '.join(sin_entrada)}" if sin_entrada else "") or "migrada"
 
 
 @comprobacion("solo-escribe-en")
