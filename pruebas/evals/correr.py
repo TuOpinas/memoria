@@ -482,6 +482,30 @@ def _(ctx, arg):
     return n == 0, f"{arg}: {n} llamadas"
 
 
+@comprobacion("palabras-maximo")
+def _(ctx, arg):
+    """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
+    recuadro «Memoria activa». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
+    pueda borrar») y la skill estilo; el tope lo fija cada escenario según lo que pregunta."""
+    n, _, t = arg.partition("@")
+    turnos = [ctx["turnos"][int(t) - 1]] if t else ctx["turnos"]
+    peor = 0
+    for x in turnos:
+        cuerpo = "\n".join(l for l in texto_de(x).split("\n") if not l.startswith("|"))
+        peor = max(peor, len(cuerpo.split()))
+    return peor <= int(n), f"{peor} palabras (tope {n})"
+
+
+@comprobacion("sin-ingles")
+def _(ctx, arg):
+    """sin-ingles: ninguna respuesta empieza con una frase en inglés (razonamiento que se cuela antes de la respuesta)."""
+    for i, x in enumerate(ctx["turnos"], 1):
+        primera = next((l for l in texto_de(x).split("\n") if l.strip()), "")
+        if re.search(r"\b(the|this|is|it's|so|open|let me|I'll|session)\b", primera, re.I) and not re.search(r"[áéíóúñ¿¡]", primera):
+            return False, f"el turno {i} empieza en inglés: «{primera[:80]}»"
+    return True, "ninguna respuesta empieza en inglés"
+
+
 @comprobacion("llamadas-maximo")
 def _(ctx, arg):
     """llamadas-maximo N[@T]: como mucho N llamadas a herramientas en total (o en el turno T)."""

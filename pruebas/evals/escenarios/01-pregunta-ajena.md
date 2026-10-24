@@ -12,6 +12,8 @@ comprobar:
   - pregunta-claude-outputs
   - menciona 31@1
   - solo-escribe-en metodo.md
+  - palabras-maximo 120
+  - sin-ingles
 ---
 Una pregunta que no tiene que ver con la memoria, en una conversación con la carpeta conectada y la cuenta del
 responsable de contexto. Lo que debe pasar: la apertura mínima antes de responder, el recuadro «Memoria activa» en la

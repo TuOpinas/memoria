@@ -33,8 +33,18 @@ REGISTROS solo da el tamaño.
 import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+if RAIZ is not None and not (RAIZ / "guia.md").is_file():
+    # la ruta que da get_device_info (/Users/…/Carpeta) no existe en esta consola, donde la carpeta cuelga de $HOME/mnt con
+    # su último tramo como nombre: se resuelve aquí para que un error de ruta no cueste dos llamadas más
+    _mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    _raices = [d for d in (sorted(_mnt.glob("*")) if _mnt.is_dir() else []) if (d / "guia.md").is_file() and (d / "metodo.md").is_file()]
+    _cand = [d for d in _raices if d.name == RAIZ.name or d.name.endswith("--" + RAIZ.name)] or (_raices if len(_raices) == 1 else [])
+    if _cand:
+        sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]
+    elif len(_raices) > 1:
+        sys.exit("Esa ruta no existe en esta consola y hay varias raíces bajo $HOME/mnt: " + ", ".join(d.name for d in _raices) + ". Pasa la de $HOME/mnt/<nombre>.")
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
-    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md)")
+    sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas] [--minima]  (la raíz es la carpeta con guia.md y metodo.md: en esta consola, la de $HOME/mnt/ cuyo nombre es el último tramo de la ruta que da get_device_info)")
 args = [a for a in sys.argv[2:]]
 CUENTA = None
 if "--cuenta" in args:
