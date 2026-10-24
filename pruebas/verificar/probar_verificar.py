@@ -21,7 +21,7 @@ def ok(c, t):
 
 def dueno_distinto():
     out = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True).stdout
-    return [l for l in out.split("\n") if "dueño distinto" in l and "ventas" in l]
+    return [l for l in out.split("\n") if "responsable distinto" in l and "ventas" in l]
 
 
 print("verificar.sh: el dueño de area.md")
@@ -43,23 +43,39 @@ _sh.copy(R / "ventas" / "cuentas" / "decisiones.md", R / "ventas" / "cuentas" / 
 out = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True).stdout
 cf = [l for l in out.split("\n") if "copia en conflicto" in l]
 ok(len(cf) == 1 and "decisiones [Conflict].md" in cf[0], f"marca la copia con su original al lado, y solo esa ({len(cf)})")
-print("verificar.sh: la clave afirma se cuenta y no bloquea")
+print("verificar.sh: la clave aportacion (afirma hasta la 1.21) se cuenta y no bloquea")
 def sin_afirma():
     r = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
-    m = re.search(r"Nota: (\d+) archivos? de entregables/ y taller/ sin `afirma:`", r.stdout)
+    m = re.search(r"Nota: (\d+) archivos? de entregables/ y taller/ sin `aportacion:`", r.stdout)
     return (int(m.group(1)) if m else 0), r.returncode, r.stdout
-n0, rc0, _ = sin_afirma()
+ant = lambda t: int((re.search(r"Nota: (\d+) archivos? con la estructura de la 1\.21", t) or [0, 0])[1])
+n0, rc0, o0 = sin_afirma()
+ant0 = ant(o0)
 ok(n0 > 0, f"la raíz de prueba, sin afirma en sus entregables y taller, lo dice ({n0})")
 ent = next(p for p in R.rglob("*.md") if "/entregables/" in str(p).replace("\\", "/") and p.read_text(encoding="utf-8").startswith("---") and "estado: reemplazado" not in p.read_text(encoding="utf-8"))
 tx = ent.read_text(encoding="utf-8")
-ent.write_text(tx.replace("\nactualizado:", '\nafirma: "Una cosa que el documento sostiene."\nactualizado:', 1), encoding="utf-8")
+ent.write_text(tx.replace("\nactualizado:", '\naportacion: "Una cosa que el documento aporta."\nactualizado:', 1), encoding="utf-8")
 n1, rc1, _ = sin_afirma()
 ok(n1 == n0 - 1, f"un entregable con afirma deja de contarse ({n0} → {n1})")
 ok(rc1 == rc0, "no cambia el código de salida: no bloquea")
-ent.write_text(tx.replace("\nactualizado:", '\nafirma: ""\nactualizado:', 1), encoding="utf-8")
+ent.write_text(tx.replace("\nactualizado:", '\naportacion: ""\nactualizado:', 1), encoding="utf-8")
 n2, _, _ = sin_afirma()
 ok(n2 == n0, "una afirma vacía cuenta como sin afirma")
+ent.write_text(tx.replace("\nactualizado:", '\nafirma: "La clave vieja también vale."\nactualizado:', 1), encoding="utf-8")
+n3, rc3, o3 = sin_afirma()
+ok(n3 == n0 - 1 and rc3 == rc0 and ant(o3) == ant0 + 1, f"la clave vieja afirma vale, y se cuenta como estructura anterior sin bloquear ({ant0} → {ant(o3)})")
 ent.write_text(tx, encoding="utf-8")
+print("verificar.sh: la estructura de la 1.21 se cuenta y no bloquea; la de la 1.22 se lee")
+r = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
+ok(re.search(r"Nota: \d+ archivos con la estructura de la 1\.21", r.stdout) and "guia.md (columnas" in r.stdout, "la raíz de prueba, sin migrar, lo dice en una nota")
+g = R / "guia.md"; gt = g.read_text(encoding="utf-8")
+g.write_text(gt.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|"), encoding="utf-8")
+r2 = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
+ok("columnas de menos" in r2.stdout and "hacen falta 6" in r2.stdout, "con «Acceso» en el encabezado, una fila de cinco columnas se marca")
+g.write_text(gt.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|").replace("| Todo el equipo |\n", "| Todo el equipo | Quizá |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo | Abierta |").replace("| Restringida: dirección |", "| Dirección | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana y Beto | Restringida |"), encoding="utf-8")
+r3 = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
+ok("columna Acceso sin «Abierta» ni «Restringida»" in r3.stdout and "guia.md (columnas" not in r3.stdout and "columnas de menos" not in r3.stdout, "un valor que no es Abierta ni Restringida se marca; guia.md ya no cuenta como anterior")
+g.write_text(gt, encoding="utf-8")
 print("verificar.sh: un .html sin charset se avisa y no bloquea")
 h1, h2 = ent.parent / "con-charset.html", ent.parent / "sin-charset.html"
 h1.write_text('<!doctype html><html><head><META CHARSET="UTF-8"><title>x</title></head><body>á</body></html>', encoding="utf-8")

@@ -13,7 +13,7 @@ Responder una pregunta con lo que ya está escrito en la raíz, diciendo de dón
 
 También cuando en medio de otra tarea hace falta saber qué hizo otra área antes de construir encima.
 
-No es abrir sesión. Si la pregunta es sobre el proyecto en el que el usuario va a trabajar hoy, eso es la skill `sesion`. Tampoco cuando el dueño de un proyecto pregunta cómo va el suyo («¿en qué estatus está X?», «¿cómo va X?», «¿qué falta en X?»): eso abre sesión, porque su respuesta necesita lo que la consulta no lee, su bitácora y lo que marcó en el tablero. Consulta es para lo de otros, o para quien no es su dueño.
+No es abrir sesión. Si la pregunta es sobre el proyecto en el que el usuario va a trabajar hoy, eso es la skill `sesion`. Tampoco cuando el responsable de un proyecto pregunta cómo va el suyo («¿en qué estatus está X?», «¿cómo va X?», «¿qué falta en X?»): eso abre sesión, porque su respuesta necesita lo que la consulta no lee, su bitácora y lo que marcó en el tablero. Consulta es para lo de otros, o para quien no es su responsable.
 
 ## Qué leo antes de responder
 
@@ -21,14 +21,14 @@ Por los niveles de la sección 12 de `convenciones`, parándome en el primero qu
 
 1. `guia.md`: qué áreas hay, quién responde por cada una y las reglas propias de la casa
 2. El bloque `Proyectos` del `area.md` de las áreas pertinentes. Casi siempre esto ya dice si existe algo y dónde
-3. Solo si hace falta, del proyecto que toque: `proyecto.md` (su «En corto» es la respuesta a «cómo va»), `decisiones.md` completo, las cabeceras de `entregables/` y, de `sesiones.md`, solo la cabecera de sus entradas (fecha, título y «Trabajamos en»): dice en qué anda el proyecto. `taller/`, `fuentes/` y el cuerpo de `sesiones.md` no: son taller privado y no se consultan desde fuera de su área. Si la pregunta es sobre un área («¿qué sabemos de ventas?», «¿cómo va comercial?»), la respuesta abre con el `Panorama` de su `area.md`, que es lo que su director dejó escrito para quien pregunta desde fuera
+3. Solo si hace falta, del proyecto que toque: `proyecto.md` (su «Estatus» es la respuesta a «cómo va»), `decisiones.md` completo, las cabeceras de `entregables/` y, de `sesiones.md`, solo la cabecera de sus entradas (fecha, título y «Tema»): dice en qué anda el proyecto. `taller/`, `fuentes/` y el cuerpo de `sesiones.md` no: son taller privado y no se consultan desde fuera de su área. Si la pregunta es sobre un área («¿qué sabemos de ventas?», «¿cómo va comercial?»), la respuesta abre con el `Estatus` de su `area.md` (el `Panorama`, sin migrar), que es lo que su director dejó escrito para quien pregunta desde fuera
 4. El cuerpo de un entregable `vigente`, solo si la pregunta pide el contenido y no basta con saber que existe
 
 `base/premisas.md` se lee siempre que exista: si una premisa vigente toca la pregunta, la respuesta la nombra primero, porque todo lo demás se apoya en ella. Del resto de `base/` no leo nada por defecto. `glosario.md` entra si la pregunta trae una sigla o un nombre interno que no entiendo; `contexto.md`, si la pregunta es sobre la organización; `sistemas.md`, si es sobre un sistema.
 
 Un entregable en `borrador` se menciona si existe, con su estado, pero no se cita su contenido como si fuera verdad de la organización.
 
-Si `guia.md` dice que un área está restringida, hay dos casos. Si tengo acceso, se lee igual que cualquier otra: su superficie pública son sus entregables vigentes y sus decisiones. Si no lo tengo, la lectura falla y ahí se para: se dice que el área existe, que su trabajo no es visible desde aquí y quién es su dueño, y la respuesta se da con lo que sí se puede leer. Lo mismo vale para un proyecto restringido dentro de un área que sí leo, y para `restringido/` dentro de un proyecto.
+Si `guia.md` dice que un área está restringida, hay dos casos. Si tengo acceso, se lee igual que cualquier otra: su superficie pública son sus entregables vigentes y sus decisiones. Si no lo tengo, la lectura falla y ahí se para: se dice que el área existe, que su trabajo no es visible desde aquí y quién es su responsable, y la respuesta se da con lo que sí se puede leer. Lo mismo vale para un proyecto restringido dentro de un área que sí leo, y para `restringido/` dentro de un proyecto.
 
 Al revés no se cruza nunca: una respuesta que se dé a alguien que no tiene ese acceso no lleva nada de lo leído en una carpeta restringida, ni siquiera resumido.
 
@@ -42,11 +42,11 @@ Respuesta corta y primero la respuesta, no el recorrido. Después, una línea po
 
 Si hay varias fuentes que se contradicen, se dicen las dos con su fecha y no se elige una.
 
-Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, `escribir.md`, sección 4). Si una decisión de la respuesta tiene un cuestionamiento abierto (una línea `Cuestiona a:` que la nombra y ninguna `Responde a:` que la cierre), se dice: quién la cuestionó y por qué, en una línea. Una decisión cuestionada sigue vigente hasta que su dueño responde, pero quien va a construir encima tiene que saberlo.
+Cada decisión se cita con su identificador (`area/proyecto#AAAA-MM-DD`, `escribir.md`, sección 4). Si una decisión de la respuesta tiene un cuestionamiento abierto (una línea `Cuestiona a:` que la nombra y ninguna `Responde a:` que la cierre), se dice: quién la cuestionó y por qué, en una línea. Una decisión cuestionada sigue vigente hasta que su responsable responde, pero quien va a construir encima tiene que saberlo.
 
 Si no hay nada escrito sobre el tema, se dice en una línea y se propone dónde debería vivir: qué área y, si aplica, si merece un proyecto nuevo con la skill `nuevo` o una entrada en `base/`. No se inventa una respuesta con lo que parece razonable.
 
-Si la pregunta es cómo va un proyecto, la respuesta empieza por su `En corto`, tal cual o casi, y solo baja a `Estado actual` si piden más.
+Si la pregunta es cómo va un proyecto, la respuesta empieza por su `Estatus`, tal cual o casi, y solo baja a sus decisiones, sus entregables y la cabecera de sus sesiones si piden más.
 
 Si la pregunta es sobre quién lleva algo, la respuesta es la persona con nombre y apellido que dice `guia.md`, `area.md` o `proyecto.md`, nunca el nombre del área.
 
@@ -86,4 +86,4 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 > Nada escrito. Ni `operaciones/area.md` ni `compras/area.md` tienen un proyecto sobre proveedores de logística, y en `base/contexto.md` solo aparece el nombre del proveedor actual.
 >
-> Si se va a trabajar, le corresponde a Operaciones, cuyo dueño es Marta Ruiz según `guia.md`. Sería un proyecto nuevo; si quieres lo arrancamos con `nuevo`.
+> Si se va a trabajar, le corresponde a Operaciones, cuya responsable es Marta Ruiz según `guia.md`. Sería un proyecto nuevo; si quieres lo arrancamos con `nuevo`.

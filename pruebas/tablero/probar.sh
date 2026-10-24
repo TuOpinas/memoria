@@ -76,6 +76,8 @@ python3 "$AQUI/../sesion/probar_preparar.py"
 python3 "$AQUI/../sesion/probar_permisos.py"
 # el cierre escribe con cerrar.py, archivo por archivo y sin pisar a nadie (1.20)
 python3 "$AQUI/../sesion/probar_cerrar.py"
+# la migración a la estructura de la 1.22 (migrar_estructura.py), solo en las áreas de la cuenta
+python3 "$AQUI/../sesion/probar_migrar.py"
 # la página con el detalle de cada proyecto aparte (1.19): cuántos textos se traen y cuándo
 python3 "$AQUI/probar_textos.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
@@ -85,6 +87,12 @@ bash "$AQUI/../hook/probar_salidas.sh"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo.html"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/completo" "$OUT/completo-cierres.html" --cierres
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/migrado" "$OUT/migrado.html"
+# la misma raíz migrada a la estructura de la 1.22 por la cuenta de Ana (raíz mezclada: lo de Beto sigue como estaba)
+rm -rf "$OUT/raiz-122"; cp -R "$OUT/raiz" "$OUT/raiz-122"
+python3 "$TABLERO/../sesion/migrar_estructura.py" "$OUT/raiz-122" --cuenta ana@ejemplo.test >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz-122" "$OUT/estructura" --version "${VERSION:-prueba}" >/dev/null
+python3 "$AQUI/comprobar_122.py" "$OUT/completo" "$OUT/estructura"
+python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/estructura" "$OUT/estructura.html"
 if command -v node >/dev/null && node -e "require('playwright')" 2>/dev/null; then
   node "$AQUI/recorrer.js" "$OUT" "$OUT/capturas"
   echo "Capturas en $OUT/capturas"

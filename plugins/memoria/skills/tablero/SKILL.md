@@ -1,23 +1,23 @@
 ---
 name: tablero
-description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia cuando su dueno lo pide, con el boton de la pagina o con 'sincroniza el tablero'. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
+description: Monta, actualiza y sincroniza el tablero de una persona sobre la carpeta de su organizacion, una pagina que muestra la carpeta entera (areas, proyectos, estado, decisiones, siguientes pasos) generada desde los archivos y puesta al dia cuando quien lo monto lo pide, con el boton de la pagina o con 'sincroniza el tablero'. Usala cuando digan 'monta el tablero', 'monta mi tablero', 'quiero ver la carpeta sin abrirla', 'actualiza el tablero', 'sincroniza el tablero', 'regenera la vista', 'pon el tablero al dia cada manana', 'pon el boton de sincronizar', 'cambie de computadora' o pregunten por que el tablero no muestra algo.
 ---
 
 # Tablero
 
-Una página que muestra la carpeta de la organización sin abrirla: qué áreas hay y de quién son, en qué va cada proyecto, qué se decidió, qué entregables hay y qué pasos siguen. Se genera desde los archivos y se pone al día cuando su dueño lo pide. Antes de escribir en la carpeta se carga el anexo `escribir.md` de `convenciones`, cuyas prohibiciones aplican a todo lo que sigue; montar, y una sincronización con la cola vacía que solo pone al día `metodo.md` (una copia exacta del plugin), no lo necesitan.
+Una página que muestra la carpeta de la organización sin abrirla: qué áreas hay y de quién son, en qué va cada proyecto, qué se decidió, qué entregables hay y qué pasos siguen. Se genera desde los archivos y se pone al día cuando su responsable lo pide. Antes de escribir en la carpeta se carga el anexo `escribir.md` de `convenciones`, cuyas prohibiciones aplican a todo lo que sigue; montar, y una sincronización con la cola vacía que solo pone al día `metodo.md` (una copia exacta del plugin), no lo necesitan.
 
 Cinco reglas que no cambian:
 
-- **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su puesta al día escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Muestra todo lo que lee la cuenta de su dueño, también lo restringido y la bitácora (las cinco sesiones más recientes a la vista, y las demás al abrir la pestaña), así que no se comparte: quien quiera verlo monta el suyo.
+- **El tablero es de una persona.** Lo monta cada quien desde su propia cuenta, sobre la raíz conectada, y corre con sus permisos: lo que esa cuenta no puede leer en la carpeta sale como «restringido», y lo que su puesta al día escribe en la carpeta lo escribe con sus permisos. El de quien administra la carpeta es uno más. Muestra todo lo que lee la cuenta de su responsable, también lo restringido y la bitácora (las cinco sesiones más recientes a la vista, y las demás al abrir la pestaña), así que no se comparte: quien quiera verlo monta el suyo.
 - **La carpeta es la fuente.** El tablero lee la superficie pública de la raíz (`guia.md`, los `area.md` y, de cada proyecto, `proyecto.md`, `decisiones.md`, `sesiones.md` y las cabeceras de `entregables/` y de `taller/`) y nada más. Nunca abre `fuentes/`, `restringido/` ni `base/`, salvo `base/premisas.md`, que es de toda la organización y va arriba de todo; del `taller/` lee solo la cabecera y el título de cada archivo (su inventario, para «Qué hay»; el cuerpo es privado del área y no viaja), y de `fuentes/` y `taller/` mira las fechas de los archivos, para avisar del trabajo sin sesión.
-- **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la puesta al día lo mecánico, la siguiente sesión del proyecto lo que pide juicio. Y la puesta al día escribe solo en las áreas y proyectos donde la cuenta que la lanza es dueña o colabora: lo que su dueño marcó en un proyecto de otra área espera en la cola, y el tablero dice a quién pasárselo.
-- **Se pone al día cuando su dueño lo pide.** Esta es la frase, y es la misma en el contrato, en la receta de `nuevo`, en el README y en la ayuda. Hasta la 1.18 la puesta al día se lanzaba sola al abrirse tras un cierre; desde la 1.19 no, porque cada puesta al día es una tarea que gasta del plan y varias sesiones al día lanzaban varias (decisión del 2026-10-23). El cierre de una sesión (skill `sesion`, anexo `cerrar.md`, paso 11) no lanza nada: deja apuntado el cierre en la colección `cierres` de la base, y al abrir el tablero la página ve los cierres posteriores a la última sincronización y avisa arriba de cuáles son, con el botón que lanza la tarea, que solo trae lo que cambió y aplica lo mecánico de la cola. Lo que escriben otras personas no deja marca: se trae con el botón «Sincronizar ahora», que todo tablero tiene junto al nombre de la organización (su tarea, sin horario, se crea al montarlo y solo corre cuando su dueño lo pulsa), o con «sincroniza el tablero». Que corra también cada mañana es opcional y se crea solo si lo piden.
-- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea del botón son de la cuenta de su dueño. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
+- **El tablero no escribe en la carpeta.** Lo que alguien toca en él (fechar un paso, marcarlo hecho, anotar algo, corregir un estado) espera en una cola propia de la página, y lo escribe quien tiene contexto: la puesta al día lo mecánico, la siguiente sesión del proyecto lo que pide juicio. Y la puesta al día escribe solo en las áreas y proyectos donde la cuenta que la lanza es responsable o colabora: lo que su responsable marcó en un proyecto de otra área espera en la cola, y el tablero dice a quién pasárselo.
+- **Se pone al día cuando quien lo montó lo pide.** Esta es la frase, y es la misma en el contrato, en la receta de `nuevo`, en el README y en la ayuda. Hasta la 1.18 la puesta al día se lanzaba sola al abrirse tras un cierre; desde la 1.19 no, porque cada puesta al día es una tarea que gasta del plan y varias sesiones al día lanzaban varias (decisión del 2026-10-23). El cierre de una sesión (skill `sesion`, anexo `cerrar.md`, paso 11) no lanza nada: deja apuntado el cierre en la colección `cierres` de la base, y al abrir el tablero la página ve los cierres posteriores a la última sincronización y avisa arriba de cuáles son, con el botón que lanza la tarea, que solo trae lo que cambió y aplica lo mecánico de la cola. Lo que escriben otras personas no deja marca: se trae con el botón «Sincronizar ahora», que todo tablero tiene junto al nombre de la organización (su tarea, sin horario, se crea al montarlo y solo corre cuando su responsable lo pulsa), o con «sincroniza el tablero». Que corra también cada mañana es opcional y se crea solo si lo piden.
+- **Vive fuera de la raíz.** La página, su base de datos, los scripts y la tarea del botón son de la cuenta de quien lo montó. En la carpeta de la organización no entra nada: ni un enlace. El tablero se encuentra por su nombre, que es fijo, entre los artifacts de la cuenta; es así como `sesion` lo localiza para leer su cola, sin que nadie apunte la URL en ningún sitio.
 
 ## Qué muestra
 
-Un solo tablero por persona y raíz, desde la 1.18: todo lo que su cuenta lee, incluidas las áreas y proyectos restringidos a los que tiene acceso, con las cinco sesiones más recientes de cada proyecto enteras; lo que la cuenta no puede leer sale con su nombre y su dueño, y nada más. Lleva una marca fija que dice que no se comparte. Antes de la 1.18 había dos modos, público y completo, y la gente montaba el que no le servía o miraba uno creyendo que era el otro; cómo pasan los de entonces está en «Los tableros de antes de la 1.18», abajo.
+Un solo tablero por persona y raíz, desde la 1.18: todo lo que su cuenta lee, incluidas las áreas y proyectos restringidos a los que tiene acceso, con las cinco sesiones más recientes de cada proyecto enteras; lo que la cuenta no puede leer sale con su nombre y su responsable, y nada más. Lleva una marca fija que dice que no se comparte. Antes de la 1.18 había dos modos, público y completo, y la gente montaba el que no le servía o miraba uno creyendo que era el otro; cómo pasan los de entonces está en «Los tableros de antes de la 1.18», abajo.
 
 Antes de montar, la skill mira si la cuenta ya tiene un tablero de esa raíz (`Artifact` con `list`, por los nombres de abajo) o su tarea (`list_triggers`); si lo tiene, lo dice y propone actualizarlo o sincronizarlo en vez de montar otro.
 
@@ -54,7 +54,7 @@ user: {}
 mcp: servers [{server: "Claude Code Remote", tools: ["fire_trigger"]}]
 ```
 
-Con eso el dueño lo ve, actúa desde él (lo que toca va a la cola) y lanza la sincronización; la base la escriben la tarea y los editores. La regla de `cambios` para quien no es editor viene de cuando el tablero se compartía, y se queda igual en todos para que ninguno tenga que volver a publicarse con otras capacidades.
+Con eso quien lo montó lo ve, actúa desde él (lo que toca va a la cola) y lanza la sincronización; la base la escriben la tarea y los editores. La regla de `cambios` para quien no es editor viene de cuando el tablero se compartía, y se queda igual en todos para que ninguno tenga que volver a publicarse con otras capacidades.
 
 **2. La tarea del botón.** Se crea siempre, sin horario, como dice «La tarea del botón y la diaria» abajo, y su id se pasa al generador en el paso 3 con `--manual`; si la persona pide además que corra cada mañana, se crea con horario en vez de sin él. Crearla pide una aprobación en la app, que forma parte de montar. Si falta el conector «Claude Code Remote», se monta igual, con el botón apagado diciendo que falta el conector, y se dice en una línea.
 
@@ -69,7 +69,7 @@ Con eso el dueño lo ve, actúa desde él (lo que toca va a la cola) y lanza la 
 Cuatro líneas, sin recapitular los pasos:
 
 - Qué quedó montado: el tablero, con lo que muestra.
-- **Cuándo se pone al día:** cuando su dueño lo pide, con el botón junto al nombre de la organización o con «sincroniza el tablero», con la computadora encendida y la app abierta; al abrirlo avisa de las sesiones cerradas que aún no muestra. Si en esa raíz escriben varias personas, se ofrece la tarea diaria en una línea.
+- **Cuándo se pone al día:** cuando quien lo montó lo pide, con el botón junto al nombre de la organización o con «sincroniza el tablero», con la computadora encendida y la app abierta; al abrirlo avisa de las sesiones cerradas que aún no muestra. Si en esa raíz escriben varias personas, se ofrece la tarea diaria en una línea.
 - **No se comparte:** muestra todo lo que lee su cuenta, también lo restringido; quien quiera verlo monta el suyo.
 - **La ayuda** está dentro del tablero, en «Ayuda» del índice, y cada bloque lleva un «?» que abre su artículo.
 
@@ -104,7 +104,7 @@ La puesta al día, en esta sesión, con la raíz conectada: los pasos 0 a 8 de `
 Es la misma tarea programada en los dos casos, con o sin horario, y en los dos la página tiene el botón «Sincronizar ahora». Hace falta el conector «Claude Code Remote»; se comprueba con `ToolSearch`.
 
 - **Solo el botón**, la de siempre: se crea al montar. Para ponerlo al día cuando quiera sin pedírselo a Claude, sin que corra solo: por ejemplo, para traer lo que escribieron otras personas. La tarea se crea sin `cron_expression` ni `run_once_at`, así que nunca corre por su cuenta.
-- **Cada mañana**: «pon el tablero al día cada mañana». Tiene sentido en una raíz donde escriben varias personas: sin ella, lo que escriben los demás no llega al tablero hasta que su dueño pulse el botón. De lunes a viernes a una hora de la mañana que no sea en punto (9:35 si no dicen otra).
+- **Cada mañana**: «pon el tablero al día cada mañana». Tiene sentido en una raíz donde escriben varias personas: sin ella, lo que escriben los demás no llega al tablero hasta que su responsable pulse el botón. De lunes a viernes a una hora de la mañana que no sea en punto (9:35 si no dicen otra).
 
 Con `create_trigger`: nombre «Regenerar tablero <organización>», ligada a la computadora (`requires_local_device`) y con la carpeta de la raíz declarada en `folders`. El prompt es `tarea-prompt.md` de esta skill con sus cuatro huecos sustituidos (no `tarea.md`, que la tarea lee del plugin en cada corrida): `{{ORGANIZACION}}`, `{{RUTA_RAIZ}}` (la ruta absoluta de la raíz en la computadora), `{{URL}}` (la del artifact) y `{{MODO}}`, que es siempre `completo` (el hueco se queda para que el prompt de los tableros de antes de la 1.18 no cuente como desfasado). Si ya hay una tarea de ese tablero, se dice y se propone cambiarla en vez de crear otra, como en el paso 4 de «Actualizar». Después se sincroniza una vez pasando su id al generador, con `--manual` si no tiene horario, y el botón se enciende.
 
@@ -126,14 +126,14 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 - Pedir, para poner al día un tablero, acceso a otra carpeta que no sea la raíz, o pedirle a la persona que haga algo (añadir una carpeta, conectar, aprobar, pulsar). La puesta al día es invisible para quien la tiene; si algo falla, se dice en una línea y la siguiente lo reintenta.
 - Pasar por la conversación el contenido de los documentos del tablero (con `cat`, pegado o como `data`): se generan en Claude y se suben con `file_path`.
 
-- Escribir en la raíz nada del tablero: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración. En la carpeta solo entra lo mecánico de la cola (fechas y hechos con nota), y solo donde la cuenta es dueña o colabora.
+- Escribir en la raíz nada del tablero: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración. En la carpeta solo entra lo mecánico de la cola (fechas y hechos con nota), y solo donde la cuenta es responsable o colabora.
 - Montar un tablero sin decir que no se comparte.
 - Montar un segundo tablero de la misma raíz sin avisar de que ya existe.
 - Cambiar desde aquí el modelo de una tarea, o borrar una tarea para recrearla con otro prompt.
 - Escribir en `proyecto.md`, `sesiones.md` o `decisiones.md` desde la página. La página solo escribe en su cola.
 - Cerrar un hecho que huela a decisión, o una nota, sin una sesión del proyecto.
-- Compartir el tablero, o decirle a alguien cómo compartirlo: muestra lo restringido que lee su dueño. Quien quiera verlo monta el suyo.
-- Borrar un tablero o su tarea sin el sí de su dueño, también el que sobra de quien tenía dos.
+- Compartir el tablero, o decirle a alguien cómo compartirlo: muestra lo restringido que lee la cuenta que lo montó. Quien quiera verlo monta el suyo.
+- Borrar un tablero o su tarea sin el sí de quien lo montó, también el que sobra de quien tenía dos.
 
 ## Ejemplo
 
@@ -141,6 +141,6 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Montado. «Tablero Acme», con las 4 áreas y los 11 proyectos de la carpeta (`legal/` solo con nombre y dueño: tu cuenta no la lee) y «Por dónde empezar» con tres grupos.
+> Montado. «Tablero Acme», con las 4 áreas y los 11 proyectos de la carpeta (`legal/` solo con nombre y responsable: tu cuenta no la lee) y «Por dónde empezar» con tres grupos.
 >
 > Se pone al día cuando quieras, con el botón junto a «Acme», arriba a la izquierda; al abrirlo te avisa si hay sesiones que aún no muestra. En Acme escriben cinco personas: si quieres ver lo de los demás cada mañana sin pulsar nada, puedo hacer que corra solo de lunes a viernes. Muestra todo lo que lee tu cuenta, así que es solo para ti: quien quiera uno, que lo monte. La ayuda está en el índice, en «Ayuda».

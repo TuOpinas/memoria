@@ -29,7 +29,7 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 
 ## Las cinco comprobaciones
 
-**1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `enlaces.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
+**1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `inventario.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
 
 **2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md`, ni siquiera de hace meses.
 
@@ -45,7 +45,7 @@ Los hallazgos separados en dos grupos, nunca mezclados:
 
 **Bloqueantes**, que impiden publicar: contradicciones con decisiones, afirmaciones sin fuente, cifras sin fecha ni fuente, `basado_en` vacía, huecos abiertos, fuentes desfasadas.
 
-**Mejoras**, que no impiden nada: estilo, estructura, extensión, y un `afirma` ausente o que ya no dice lo que el documento sostiene (se propone la línea; añadirla o cambiarla no mueve `actualizado`).
+**Mejoras**, que no impiden nada: estilo, estructura, extensión, y un `aportacion` ausente o que ya no dice lo que el documento sostiene (se propone la línea; añadirla o cambiarla no mueve `actualizado`).
 
 Cada hallazgo con el pasaje concreto y la reescritura propuesta. El documento no se reescribe entero en silencio.
 
@@ -62,7 +62,7 @@ Se devuelve una tabla ordenada por lo que más gente consume:
 | Entregable | Estado | Días sin tocar | Problema |
 |---|---|---|---|
 | compras/…/flujo-aprobacion.md | vigente | 12 | `decisiones.md` cambió después |
-| compras/…/mapa-proceso.md | borrador | 41 | Parado esperando al dueño |
+| compras/…/mapa-proceso.md | borrador | 41 | Parado esperando al responsable |
 | compras/…/modelo-datos.md | vigente | 8 | `basado_en` vacía |
 
 Cuatro cosas se marcan siempre: entregables `vigente` con una fuente más reciente que ellos, entregables con más de 30 días en `borrador`, entregables `vigente` que citan un archivo `reemplazado`, y entregables `vigente` con `basado_en` vacía.
@@ -93,9 +93,9 @@ Pasar de `borrador` a `vigente`. Es el único momento en que un documento se vue
 ## Requisitos
 
 1. La revisión se pasó y no quedan hallazgos bloqueantes
-2. No hay huecos abiertos, o el dueño del proyecto los acepta de forma explícita y quedan escritos en el documento
-3. `basado_en` no está vacía. Si el documento es material adoptado y no hay forma de reconstruir sus fuentes, el dueño del proyecto acepta el hueco de forma explícita y queda escrito en el documento, en una línea bajo el título: de quién venía el material, con qué fecha y por qué no hay trazabilidad. Esa línea no nombra rutas ni carpetas del sistema del que se migró
-4. **Lo pide el dueño del proyecto, y se comprueba.** El dueño es quien figura en `Quién participa` de `proyecto.md`, y su cuenta está junto a su nombre en `guia.md`, la primera de la celda Cuenta, antes de «colabora:». Quien colabora en el área o en el proyecto no publica: su cuenta no cuenta como la del dueño. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
+2. No hay huecos abiertos, o el responsable del proyecto los acepta de forma explícita y quedan escritos en el documento
+3. `basado_en` no está vacía y la cabecera lleva `aportacion` (si falta, se escribe ahora, con el responsable, porque es la línea del índice del área). Si el documento es material adoptado y no hay forma de reconstruir sus fuentes, el responsable del proyecto acepta el hueco de forma explícita y queda escrito en el documento, en una línea bajo el título: de quién venía el material, con qué fecha y por qué no hay trazabilidad. Esa línea no nombra rutas ni carpetas del sistema del que se migró
+4. **Lo pide el responsable del proyecto, y se comprueba.** El responsable es quien figura en `Quién participa` de `proyecto.md`, y su cuenta está junto a su nombre en `guia.md`, la primera de la celda Cuenta, antes de «colabora:». Quien colabora en el área o en el proyecto no publica: su cuenta no cuenta como la del responsable. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
 
 Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 
@@ -103,14 +103,14 @@ Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 
 1. `estado: vigente` y la fecha de hoy en `actualizado`
 2. Si sustituye a otro entregable, el viejo pasa a `estado: reemplazado` con `reemplazado_por` apuntando al nuevo
-3. La línea del entregable en el bloque `Proyectos` de `area.md`, debajo de su proyecto, con la fecha de hoy
+3. La línea del entregable en el bloque `Proyectos` de `area.md`, debajo de su proyecto: su `aportacion`, con la fecha de hoy (con `cerrar.py`, el entregable como `{"archivo": "x.md"}` en `area.entregables`)
 4. Una línea en `sesiones.md` al cerrar la sesión, indicando qué se publicó
 
 Publicar no es una decisión y no entra en `decisiones.md`. Lo que se decidió ya está registrado; publicar solo cambia quién puede leerlo.
 
 ## Después de publicar
 
-Se avisa de quién consume este entregable, según el campo `Consumen esto` de `proyecto.md`, para que el dueño se lo comunique. El sistema no notifica a nadie, y no fingir que lo hace es parte del método.
+Se avisa de quién consume este entregable, según las líneas `Afecta a:` y `basado_en` de otros proyectos que nombran este (y, en un proyecto sin migrar, «Consumen esto» de su `proyecto.md`), para que el responsable se lo comunique. El sistema no notifica a nadie, y no fingir que lo hace es parte del método.
 
 ---
 
@@ -118,13 +118,13 @@ Se avisa de quién consume este entregable, según el campo `Consumen esto` de `
 
 Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
-- Publicar sin comprobar que quien lo pide es el dueño del proyecto
-- Publicar con `basado_en` vacía sin que el dueño acepte el hueco y quede escrito
+- Publicar sin comprobar que quien lo pide es el responsable del proyecto
+- Publicar con `basado_en` vacía sin que el responsable acepte el hueco y quede escrito
 - Reescribir un entregable durante una revisión sin aprobación previa
 - Tratar un hallazgo de estilo como bloqueante
 - Marcar algo como desfasado sin haber comparado fechas reales
 - Leer el cuerpo de los entregables durante un barrido
-- Revisar y modificar entregables de otra área. Se propone al dueño y ahí termina
+- Revisar y modificar entregables de otra área. Se propone al responsable y ahí termina
 - Cerrar un hueco eligiendo la fuente que parece más fiable
 - Tratar como hallazgo bloqueante algo que apareció en el listado de carpeta. Se dice, no se detiene nada
 
@@ -153,4 +153,4 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> No lo publico. La dueña del proyecto es Ana Pérez según `proyecto.md`, y esta sesión está abierta desde tu cuenta, que en `guia.md` es la de Luis Romero. Tiene que pedirlo ella. Además sigue abierto el hueco de quién aprueba entre 5.000 y 20.000 MXN: si Ana acepta publicarlo con el hueco, lo dejo escrito en el documento y entonces sí pasa a vigente.
+> No lo publico. La responsable del proyecto es Ana Pérez según `proyecto.md`, y esta sesión está abierta desde tu cuenta, que en `guia.md` es la de Luis Romero. Tiene que pedirlo ella. Además sigue abierto el hueco de quién aprueba entre 5.000 y 20.000 MXN: si Ana acepta publicarlo con el hueco, lo dejo escrito en el documento y entonces sí pasa a vigente.

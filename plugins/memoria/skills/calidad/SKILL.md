@@ -30,7 +30,7 @@ La revisión rinde según el modelo que la haga, y la recomendación se hace sie
 
 Lo primero que se lee es la vara de medir, no el material:
 
-- **De un proyecto:** `Objetivo`, `Terminado significa` y `Alcance` de su `proyecto.md`, sus decisiones completas y las premisas vigentes de `base/premisas.md`.
+- **De un proyecto:** `Objetivo` (con su segunda frase: cuándo termina o cada cuánto se revisa) y `Alcance` de su `proyecto.md`, sus decisiones completas y las premisas vigentes de `base/premisas.md`.
 - **De un entregable:** su proyecto (lo de arriba) y lo que dice su primera línea que debe resolver.
 - **De un desarrollo o un plugin:** su README, el proyecto de la carpeta que lo mantiene y sus decisiones; en un repo, también sus pruebas.
 - **De la carpeta entera:** `guia.md`, `base/premisas.md` y el bloque `Proyectos` de cada `area.md`.
@@ -83,7 +83,7 @@ Propuesta: … (qué cambiar, sin cambiarlo)
 Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Arreglar lo que encuentro. Se propone; lo cambia la sesión del proyecto.
-- Registrar decisiones. Si un hallazgo pide decidir, se dice y la sesión lo registra con la confirmación de su dueño.
+- Registrar decisiones. Si un hallazgo pide decidir, se dice y la sesión lo registra con la confirmación de su responsable.
 - Dar un hallazgo sin evidencia, o una opinión como si fuera un hallazgo.
 - Empezar sin acordar el alcance, o una revisión a fondo sin haber recomendado el modelo.
 - Medir contra lo que ya existe en lugar de contra el objetivo.

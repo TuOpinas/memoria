@@ -6,7 +6,7 @@ Uso: python3 pruebas/sesion/probar_cuentas.py
 import pathlib, re, sys
 AQUI = pathlib.Path(__file__).resolve().parent
 PL = AQUI.parent.parent / "plugins" / "memoria"
-sitios = [PL / "skills/sesion/abrir.py", PL / "skills/sesion/permisos.py", PL / "skills/sesion/cerrar.py", PL / "skills/tablero/aplicar_cambios.py", PL / "skills/tablero/generar_vista.py", PL / "verificar.sh"]
+sitios = [PL / "skills/sesion/abrir.py", PL / "skills/sesion/permisos.py", PL / "skills/sesion/cerrar.py", PL / "skills/sesion/migrar_estructura.py", PL / "skills/tablero/aplicar_cambios.py", PL / "skills/tablero/generar_vista.py", PL / "verificar.sh"]
 fallos = 0
 def ok(c, t):
     global fallos
@@ -17,7 +17,7 @@ def bloque(p):
     return t[a:b]
 print("Quién escribe")
 bs = [bloque(p) for p in sitios]
-ok(all(b == bs[0] for b in bs), "la función es idéntica en abrir.py, permisos.py, cerrar.py, aplicar_cambios.py, generar_vista.py y verificar.sh")
+ok(all(b == bs[0] for b in bs), "la función es idéntica en abrir.py, permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py y verificar.sh")
 ns = {"re": re}; exec(bs[0], ns); cuentas, colaboran_en = ns["cuentas"], ns["colaboran_en"]
 ok(cuentas("ana@x.com")[:2] == ({"ana@x.com"}, set()) and cuentas("ana@x.com")[2] is None, "una sola cuenta sigue siendo la del dueño, sin aviso")
 ok(cuentas("Ana@X.com · colabora: b@x.com, c+1@sub.x.com")[:2] == ({"ana@x.com"}, {"b@x.com", "c+1@sub.x.com"}), "dueño y colaboradores, sin mayúsculas, con «+» y subdominios")

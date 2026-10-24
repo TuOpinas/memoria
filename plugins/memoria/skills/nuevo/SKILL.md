@@ -16,7 +16,7 @@ También cuando una conversación de trabajo lleva veinte minutos sobre algo que
 ## Qué leo antes de escribir nada
 
 1. La carpeta conectada: si tiene `guia.md`. Si no lo tiene, falta la raíz y se empieza por el nivel 1. Si tiene documentos de otra estructura, se para y se propone `migrar` después de montar la raíz
-2. `guia.md`: qué áreas hay, quién responde por cada una, y las reglas propias de la casa. Si el área del dueño no está, falta el área y se pasa por el nivel 2
+2. `guia.md`: qué áreas hay, quién responde por cada una, y las reglas propias de la casa. Si el área del responsable no está, falta el área y se pasa por el nivel 2
 3. El bloque `Proyectos` del `area.md` que toca: qué proyectos hay ya, para no duplicar
 4. El nombre de la carpeta conectada: si trae algún signo que no sea letra, número, espacio o guion, se dice y se propone renombrarla antes de seguir. Un nombre que no se puede teclear se copia mal y se escribe distinto cada vez
 
@@ -24,24 +24,24 @@ Nada más. Dar algo de alta no necesita abrir `base/` ni ningún proyecto.
 
 Si el proyecto se parece a uno existente, se dice antes de crear nada. Dos proyectos sobre el mismo tema son la forma más rápida de romper el sistema. Lo mismo con un área parecida a otra.
 
-## El dueño
+## El responsable
 
-**El dueño por defecto es quien abre la sesión.** Se propone su nombre y su cuenta, y solo se pregunta si en este momento se asigna a otra persona:
+**El responsable por defecto es quien abre la sesión.** Se propone su nombre y su cuenta, y solo se pregunta si en este momento se asigna a otra persona:
 
-> Lo creo contigo como dueño, o dime de quién es.
+> Lo creo contigo como responsable, o dime de quién es.
 
-Si la identidad de la cuenta no está disponible, se pregunta el nombre y apellido y se espera: un área o un proyecto sin dueño no se crea.
+Si la identidad de la cuenta no está disponible, se pregunta el nombre y apellido y se espera: un área o un proyecto sin responsable no se crea.
 
 Las demás preguntas de cada nivel se hacen juntas, en una sola tanda, en lenguaje llano. Nadie tiene que saber qué es un alcance ni un entregable para responderlas. Si el usuario responde a medias, se crea igual con lo que haya y lo que falta queda marcado como hueco.
 
 ## Sumar a quien colabora
 
-Quien escribe en un área o en un proyecto sin ser su dueño (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe.
+Quien escribe en un área o en un proyecto sin ser su responsable (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe.
 
-- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del dueño: `dueno@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
-- **En un solo proyecto**: se añade en `Quién participa` de su `proyecto.md` la línea `Colabora: Nombre Apellido (correo)`, o la persona al final de la que ya hay. Solo lo escribe la sesión del dueño del área.
+- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del responsable: `responsable@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
+- **En un solo proyecto**: se añade en `Quién participa` de su `proyecto.md` la línea `Colabora: Nombre Apellido (correo)`, o la persona al final de la que ya hay. Solo lo escribe la sesión del responsable del área.
 
-- **Cambiar el dueño de un área**: «[nombre] con [correo] es el dueño del área [área]» cambia el Dueño y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
+- **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
 
 En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta; cuando diga que ya lo puso, se ofrece comprobarlo (skill `sesion`, anexo `permisos.md`); y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
@@ -60,7 +60,7 @@ Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está 
 3. ¿Qué sistemas usáis a diario? Nombre y para qué, aunque sea una lista rápida
 4. ¿Hay ya una primera área con la que empezar, y de quién es?
 
-Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el dueño de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
+Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: ¿quién administra la carpeta compartida? Tiene que ser el responsable de la organización o una persona de su total confianza, porque quien administra puede quitar cualquier restricción. Y la zona horaria de la organización, si no es la de Ciudad de México (por ejemplo, Europe/Madrid): va en la línea «Zona horaria:» de `guia.md`; si nadie la dice, se escribe America/Mexico_City.
 
 ## Qué escribo y dónde
 
@@ -76,23 +76,24 @@ con Claude. Aquí solo está lo nuestro.
 
 ## Áreas
 
-| Área | Qué es | Dueño | Cuenta | Quién la lee |
-|---|---|---|---|---|
-| `comercial/` | … | Nombre Apellido | correo@… | Todo el equipo |
-| `nordia/` | … | Nombre Apellido | correo@… | Restringida |
+| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |
+|---|---|---|---|---|---|
+| `comercial/` | … | Nombre Apellido | correo@… | Todo el equipo | Abierta |
+| `nordia/` | … | Nombre Apellido | correo@… | Dirección | Restringida |
 
 La cuenta es con la que esa persona trabaja con la IA. Es lo que permite comprobar
-que quien pide publicar algo es su dueño. Quien escribe en un área sin ser su dueño va en
-la misma celda, después de la cuenta del dueño: `dueno@… · colabora: ana@…, luis@…`.
-Quien colabora abre y cierra sesión y registra las decisiones de su trabajo; publicar,
-las prioridades y el panorama del área son de su dueño.
+que quien pide publicar algo es su responsable. Quien escribe en un área sin ser su responsable va en
+la misma celda, después de la cuenta del responsable: `responsable@… · colabora: ana@…, luis@…`.
+Quien colabora abre y cierra sesión y registra las decisiones de su trabajo; publicar
+y el estatus del área, con sus prioridades, son de su responsable. «Acceso» dice si el área
+la lee todo el equipo («Abierta») o solo quien está en «Quién la lee» («Restringida»).
 
 ## Quién responde por qué
 
 Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
 En Drive: [solo si alguien entra a Drive con otra cuenta que la de la tabla: `cuenta@claude es cuenta@drive`, separadas por comas; si no, la línea no va]
-Cada área, su dueño de la tabla de arriba.
+Cada área, su responsable de la tabla de arriba.
 Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 
 ## Reglas propias de la casa
@@ -260,9 +261,9 @@ Para sumar a un compañero, abre en el tablero **Ayuda › Sumar a un compañero
 hacer de tu lado y trae el mensaje con las instrucciones, listo para copiar. Quién lleva y
 quién colabora en cada área se le dice a Claude con una frase:
 
-- «[nombre] con [correo] es el dueño del área [área]», o «añade a [nombre] con [correo] como
+- «[nombre] con [correo] es el responsable del área [área]», o «añade a [nombre] con [correo] como
   colaborador del área [área]»: en una sesión de quien mantiene el contexto común.
-- «añade a [nombre] con [correo] como colaborador de este proyecto»: en una sesión del dueño
+- «añade a [nombre] con [correo] como colaborador de este proyecto»: en una sesión del responsable
   del área, dentro del proyecto.
 
 Además, quien administra la carpeta compartida le da «Gestor de contenido» en la carpeta del área
@@ -342,7 +343,7 @@ Nada más. No se crea carpeta de plantillas, ni archivo de reglas propias en `ba
 
 ## Qué respondo al terminar
 
-Tres o cuatro líneas: qué se creó, quién responde por qué, y los siguientes pasos. Permisos en Drive (lectura de la raíz para todo el equipo, escritura en `guia.md` y `base/` para el responsable de contexto, escritura en cada área para su dueño, y administrar la carpeta solo quien se nombró), y rellenar `contexto.md` en una primera sesión con el responsable. Si había documentos de otra estructura, se recuerda que el siguiente paso es `migrar`.
+Tres o cuatro líneas: qué se creó, quién responde por qué, y los siguientes pasos. Permisos en Drive (lectura de la raíz para todo el equipo, escritura en `guia.md` y `base/` para el responsable de contexto, escritura en cada área para su responsable, y administrar la carpeta solo quien se nombró), y rellenar `contexto.md` en una primera sesión con el responsable. Si había documentos de otra estructura, se recuerda que el siguiente paso es `migrar`.
 
 El tablero se sugiere para la segunda sesión, no para esta: sobre una carpeta recién montada dice poco. Cuando ya haya un área con un proyecto y una sesión cerrada, «monta el tablero» enseña algo.
 
@@ -352,9 +353,9 @@ Si quien monta la raíz mantiene el método para otros, se recuerda además abri
 
 # Nivel 2. El área
 
-Solo si el área del dueño no está en `guia.md`.
+Solo si el área del responsable no está en `guia.md`.
 
-Antes de crearla se dice en una línea: un área es una capa de propiedad nueva, con un dueño que responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Si el usuario confirma, se sigue.
+Antes de crearla se dice en una línea: un área es una capa de propiedad nueva, con un responsable que responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Si el usuario confirma, se sigue.
 
 ## Las cuatro preguntas
 
@@ -377,34 +378,36 @@ actualizado: 2026-09-01
 
 # Operaciones
 
+## Estatus
+2026-09-01 · **Arrancamos Operaciones.**
+- **Siguiente:**
+  - [Las prioridades que dijo el usuario, de tres a cinco, una por línea]
+
 ## Qué es
 [Lo que dijo el usuario, en dos o tres líneas]
-
-## Prioridades ahora
-[Tres a cinco líneas]
 
 ## Proyectos
 [Vacío. Lo escriben esta skill al crear un proyecto y el cierre de sesión]
 
 ## Quién participa
-Dueño: Marta Ruiz
+Responsable: Marta Ruiz
 ```
 
-Sin `## Panorama`: esa sección la crea la skill `director` al cerrar la primera sesión en el área, entre `Proyectos` y `Quién participa`.
+El `Estatus` nace con la fecha de hoy, una frase y las prioridades; lo reescribe la skill `director` al cerrar cada sesión en el área.
 
-**3. La fila del área en la tabla de `guia.md`**, con su dueño, su cuenta y quién la lee. La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
+**3. La fila del área en la tabla de `guia.md`**, con su responsable, su cuenta, quién la lee y su acceso («Abierta» o «Restringida»). La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
 
 Nada más: ni proyectos vacíos, ni plantillas, ni un `README`.
 
 ## Si el área es restringida
 
-La carpeta y su `area.md` se crean igual, en su sitio de la raíz, y su fila en `guia.md` dice que está restringida. Lo que cambia es el permiso, y esta skill no lo pone: se dice qué carpeta hay que limitar y con acceso para quién (lo aplica quien administra desde la web, o Claude en su sesión con «aplica los permisos», anexo `permisos.md` de `sesion`), y se avisa de que hasta que no se haga, lo que hay dentro lo lee todo el equipo. Ponerle el acceso limitado a una carpeta lo hace quien administra la carpeta compartida, desde la web de Drive.
+La carpeta y su `area.md` se crean igual, en su sitio de la raíz, y su fila en `guia.md` lleva «Restringida» en «Acceso» y en «Quién la lee», a quiénes. Lo que cambia es el permiso, y esta skill no lo pone: se dice qué carpeta hay que limitar y con acceso para quién (lo aplica quien administra desde la web, o Claude en su sesión con «aplica los permisos», anexo `permisos.md` de `sesion`), y se avisa de que hasta que no se haga, lo que hay dentro lo lee todo el equipo. Ponerle el acceso limitado a una carpeta lo hace quien administra la carpeta compartida, desde la web de Drive.
 
-Un área que ya existe no se convierte en restringida por las buenas: se dice qué carpeta habría que limitar y se espera confirmación, porque cambia quién ve qué y eso lo decide su dueño.
+Un área que ya existe no se convierte en restringida por las buenas: se dice qué carpeta habría que limitar y se espera confirmación, porque cambia quién ve qué y eso lo decide su responsable.
 
 ## Qué respondo al terminar
 
-Dos líneas: qué se creó, dónde, y de quién es, más el recordatorio de que su dueño necesita permiso de escritura sobre la carpeta en Drive y, si el área es restringida, que alguien tiene que ponerle el acceso limitado. Eso no lo da la skill.
+Dos líneas: qué se creó, dónde, y de quién es, más el recordatorio de que su responsable necesita permiso de escritura sobre la carpeta en Drive y, si el área es restringida, que alguien tiene que ponerle el acceso limitado. Eso no lo da la skill.
 
 ---
 
@@ -413,18 +416,18 @@ Dos líneas: qué se creó, dónde, y de quién es, más el recordatorio de que 
 ## Las cinco preguntas
 
 1. ¿Qué problema resuelve y para quién?
-2. ¿Cómo sabremos que está terminado?
+2. ¿Cómo sabremos que está terminado, o, si no termina, cada cuánto se revisa?
 3. ¿De quién es? Por defecto, de quien abre la sesión
-4. ¿Quién más va a usar lo que salga de aquí?
+4. ¿Qué entra y qué no?
 5. ¿Qué material ya existe? Documentos, exports, correos, grabaciones, enlaces
 
 Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 ## Qué escribo y dónde
 
-**1. La carpeta**, con nombre en minúsculas y guiones, sin número de fase ni de etapa, dentro del área del dueño. Si el proyecto entero no lo puede leer todo el equipo y su área sí, se dice que hay que limitar el acceso a esta carpeta y quién tiene que hacerlo, y su línea en el bloque `Proyectos` del área empieza por «restringido: dueño Nombre.» y sigue con la descripción. Si solo una parte no lo puede leer, el proyecto se crea normal y esa parte va a `restringido/`.
+**1. La carpeta**, con nombre en minúsculas y guiones, sin número de fase ni de etapa, dentro del área del responsable. Si el proyecto entero no lo puede leer todo el equipo y su área sí, se dice que hay que limitar el acceso a esta carpeta y quién tiene que hacerlo, y su línea en el bloque `Proyectos` del área empieza por «restringido: responsable Nombre.» y sigue con la descripción. Si solo una parte no lo puede leer, el proyecto se crea normal y esa parte va a `restringido/`.
 
-**2. `proyecto.md`**, con la estructura fija de `escribir.md`, sección 3. Se rellena con las respuestas: `Quién participa` lleva al dueño, `En corto` lleva la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; `Estado actual` queda como "arrancando" y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
+**2. `proyecto.md`**, con la estructura fija de `escribir.md`, sección 3. Se rellena con las respuestas: `Objetivo` lleva las dos frases (para qué y cuándo termina o cada cuánto se revisa), `Alcance` lo que entra y lo que no, `Quién participa` al responsable, `Estatus` la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
 
 **3. `decisiones.md`**, con cabecera y solo el título. Vacío de entradas: las que haya se registran al cerrar la primera sesión.
 
@@ -432,15 +435,14 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 ```markdown
 ## 2026-08-29
-Trabajamos en: arranque del proyecto.
+Tema: arranque del proyecto.
 Avances: encuadre definido con Ana Pérez.
-Pendiente: reunir los exports del ERP.
-Sesión de: Ana Pérez · plugin 1.16.0
+Sesión de: Ana Pérez · plugin <la versión del plugin>
 ```
 
 **5. Las tres carpetas** `entregables/`, `taller/` y `fuentes/`, vacías. Sin consola en la computadora se crean con el conector de Google Drive (anexo `sin-consola.md` de `convenciones`); sin el conector, aparecen con su primer archivo.
 
-**6. El material existente** se mueve a `fuentes/` con nombres legibles, si el usuario lo tiene a mano. Si no, queda como siguiente paso. Los enlaces van a `fuentes/enlaces.md`, una fila por enlace; ese archivo solo se crea si hay filas. Antes de guardar cada archivo se mira si trae indicios de información confidencial (la lista está en `convenciones`, sección 1, «Material sensible»); si los trae, se dice y se propone llevarlo a `restringido/` con su fila en el `enlaces.md` público. El usuario decide.
+**6. El material existente** se mueve a `fuentes/` con nombres legibles, si el usuario lo tiene a mano. Si no, queda como siguiente paso. Los enlaces van a `fuentes/inventario.md`, una fila por enlace; ese archivo solo se crea si hay filas. Antes de guardar cada archivo se mira si trae indicios de información confidencial (la lista está en `convenciones`, sección 1, «Material sensible»); si los trae, se dice y se propone llevarlo a `restringido/` con su fila en el `inventario.md` público. El usuario decide.
 
 **7. La línea del proyecto en el bloque `Proyectos` de `area.md`**: `` `nombre-del-proyecto/` — qué es ``, sin entregables debajo porque todavía no hay ninguno vigente. Es lo único que se toca de `area.md`.
 
@@ -458,12 +460,12 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 - Montar la raíz encima de una carpeta con documentos sin avisar de que después toca `migrar`
 - Editar `metodo.md` al copiarlo, o montar la raíz en una carpeta donde una aplicación escribe sola
 - Rellenar `contexto.md` con lo que parece razonable para una organización de ese tipo
-- Crear entregables vacíos "para ir rellenando", o `fuentes/enlaces.md` sin filas
+- Crear entregables vacíos "para ir rellenando", o `fuentes/inventario.md` sin filas
 - Inventar alcance, plazos o participantes que nadie mencionó
-- Crear un proyecto en un área que no es la del dueño
+- Crear un proyecto en un área que no es la del responsable
 - Crear un área restringida sin su fila en `guia.md`, o dar por restringida una carpeta cuyo acceso limitado nadie ha puesto todavía
 - Proponer para una carpeta compartida un nombre con signos fuera de letras, números, espacios y guiones
-- Proponer restringir un área existente sin que su dueño lo haya confirmado
+- Proponer restringir un área existente sin que su responsable lo haya confirmado
 - Tocar de `area.md` o de `guia.md` algo que no sea la línea o la fila nueva
 - Duplicar un proyecto o un área existente sin avisar antes
 
@@ -475,20 +477,20 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> En `guia.md` está Compras con Ana Pérez como dueña, y en su bloque `Proyectos` hay dos que no se parecen, así que solo falta el proyecto. Cuatro preguntas y lo creo, contigo como dueño salvo que me digas otra cosa:
+> En `guia.md` está Compras con Ana Pérez como responsable, y en su bloque `Proyectos` hay dos que no se parecen, así que solo falta el proyecto. Cuatro preguntas y lo creo, contigo como responsable salvo que me digas otra cosa:
 >
 > 1. ¿Qué problema resuelve y para quién?
 > 2. ¿Cómo sabremos que está terminado?
-> 3. ¿Quién más va a usar lo que salga?
+> 3. ¿Qué entra y qué no?
 > 4. ¿Qué material ya existe?
 
-**Usuario:** las aprobaciones manuales tardan días y frenan a operaciones. Terminado cuando las órdenes bajo cierto monto se aprueben solas en el ERP. La dueña es Ana Pérez. Lo usarán Finanzas y Sistemas. Tengo un export de órdenes del último año, la grabación de la reunión con Ana, el enlace a la documentación del ERP y un Excel con los sueldos del equipo para calcular el tope.
+**Usuario:** las aprobaciones manuales tardan días y frenan a operaciones. Terminado cuando las órdenes bajo cierto monto se aprueben solas en el ERP. La responsable es Ana Pérez. Entran las órdenes de compra nacionales; las de importación no. Tengo un export de órdenes del último año, la grabación de la reunión con Ana, el enlace a la documentación del ERP y un Excel con los sueldos del equipo para calcular el tope.
 
 **Respuesta:**
 
-> Creado `compras/automatizacion-ordenes/` con el paquete completo, con Ana Pérez como dueña, y su línea en `compras/area.md`. El enlace del ERP ya está en `fuentes/enlaces.md`.
+> Creado `compras/automatizacion-ordenes/` con el paquete completo, con Ana Pérez como responsable, y su línea en `compras/area.md`. El enlace del ERP ya está en `fuentes/inventario.md`.
 >
-> El Excel de sueldos trae nombres con salario, así que no lo guardo en `fuentes/`. Si lo confirmas, va a `restringido/` de este proyecto y dejo su fila en `enlaces.md` con la nota de que a los entregables solo sale el total agregado. ¿Lo tratamos como confidencial?
+> El Excel de sueldos trae nombres con salario, así que no lo guardo en `fuentes/`. Si lo confirmas, va a `restringido/` de este proyecto y dejo su fila en `inventario.md` con la nota de que a los entregables solo sale el total agregado. ¿Lo tratamos como confidencial?
 
 **Usuario:** sí
 
@@ -502,17 +504,17 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Un área es una capa de propiedad nueva: alguien responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Cuatro preguntas y la creo, contigo como dueño salvo que me digas otra cosa:
+> Un área es una capa de propiedad nueva: alguien responde por todo lo que hay dentro, y conviene que lo sepa el responsable de contexto. Cuatro preguntas y la creo, contigo como responsable salvo que me digas otra cosa:
 >
 > 1. ¿Qué es el área, en dos o tres líneas?
 > 2. ¿Qué tiene entre manos ahora?
 > 3. Me dices que no la puede leer todo el equipo, así que la carpeta se crea aquí y hay que ponerle el acceso limitado. ¿Quién entra?
 
-**Usuario:** la dueña es Marta Ruiz. Es la cuenta del cliente: campañas, automatizaciones y lo que nos pidan. Ahora mismo la revisión de automatizaciones. Entra la gente que ya trabaja en ella
+**Usuario:** la responsable es Marta Ruiz. Es la cuenta del cliente: campañas, automatizaciones y lo que nos pidan. Ahora mismo la revisión de automatizaciones. Entra la gente que ya trabaja en ella
 
 **Respuesta:**
 
-> Creada la carpeta del área con su `area.md`, con Marta Ruiz como dueña, y su fila en `guia.md`: nombre, dueña, cuenta y que está restringida, para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
+> Creada la carpeta del área con su `area.md`, con Marta Ruiz como responsable, y su fila en `guia.md`: nombre, responsable, cuenta y «Restringida» en «Acceso», para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
 >
 > Y una cosa más que no hace la skill: darle a Marta escritura sobre esa carpeta en Drive.
 
@@ -526,7 +528,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 >
 > 1. ¿El nombre es Acme, o tiene otro nombre completo?
 > 2. ¿Quién mantiene el contexto común? Por defecto, tú
-> 3. ¿Quién administra la carpeta compartida? Tiene que ser el dueño de la organización o alguien de su total confianza: puede quitar cualquier restricción
+> 3. ¿Quién administra la carpeta compartida? Tiene que ser el responsable de la organización o alguien de su total confianza: puede quitar cualquier restricción
 > 4. ¿Qué sistemas usan a diario?
 > 5. ¿Hay una primera área con la que empezar, y de quién es?
 
@@ -534,8 +536,8 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como dueña, que la lee todo el equipo.
+> Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como responsable, que la lee todo el equipo.
 >
-> Me faltan las cuentas de Jorge y de Ana para la tabla de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su dueño.
+> Me faltan las cuentas de Jorge y de Ana para la tabla de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
 >
 > Dos siguientes pasos. Permisos en Drive: lectura de la raíz para todo el equipo, escritura en `base/` para Jorge y en `compras/` para Ana. Y una sesión con Jorge para rellenar `contexto.md`, que ahora mismo son cuatro huecos.

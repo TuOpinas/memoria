@@ -17,19 +17,19 @@ CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
 PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
 LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 def cuentas(celda):
-    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
-    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
-    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    """(responsable, colaboran, aviso) de una celda Cuenta: «resp@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es responsable; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en responsable."""
     texto = (celda or "").lower()
     partes = PALABRA_COLABORA.split(texto, maxsplit=1)
     antes = set(CORREO.findall(partes[0]))
     despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
     aviso = None
     if len(antes) > 1:
-        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        aviso = "más de un correo antes de «colabora:»; nadie es responsable hasta que se corrija"
         antes = set()
     elif not antes:
-        aviso = "sin el correo del dueño"
+        aviso = "sin el correo del responsable"
     elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
         aviso = "la palabra para quien colabora va escrita «colabora:»"
     return antes, despues, aviso
@@ -42,7 +42,9 @@ raiz = sys.argv[1]
 ESTADOS = {"borrador", "vigente", "reemplazado"}
 PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
 hallazgos = set()
-sin_afirma = []   # entregables y taller sin «afirma:»: se cuentan, no bloquean (opcional en lo que ya existía)
+sin_afirma = []   # entregables y taller sin «aportacion:» (o «afirma:», su nombre hasta la 1.21): se cuentan, no bloquean
+sin_basado = []   # taller sin «basado_en»: se cuenta, no bloquea (obligatoria desde la 1.22 en lo que se crea)
+anterior = []     # lo que sigue con la estructura de la 1.21: se cuenta, no bloquea; lo migra la apertura de su responsable
 sin_charset = []  # .html sin <meta charset="utf-8">: abiertos desde la carpeta salen con los acentos rotos
 SUELTOS_OK = {"guia.md", "metodo.md", "desktop.ini", "Icon\r"}
 ROTADO = re.compile(r"^(sesiones|decisiones)-\d{4}(-\d+)?\.md$")   # el registro que se rota por año
@@ -125,21 +127,30 @@ if guia_txt:
     if not re.search(r"^## Áreas\s*$", guia_txt, re.M):
         h("guia.md sin la sección «## Áreas»", "guia.md", "con ese título exacto; es la que leen abrir.py y el tablero")
     m = re.search(r"^## Áreas\s*\n(.*?)(?=^## |\Z)", guia_txt, re.S | re.M)
-    primera = True
+    col = None
     for l in (m.group(1) if m else "").split("\n"):
         if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
             continue
-        if primera:
-            primera = False; continue
         celdas = [c.strip() for c in l.strip().strip("|").split("|")]
+        if col is None:
+            # por el encabezado: «Responsable» y «Acceso» desde la 1.22; «Dueño» y sin «Acceso» hasta la 1.21
+            n_ = [re.sub(r"[*_`]", "", x).strip().lower() for x in celdas]
+            pos = lambda *ns, d=None: next((i for i, x in enumerate(n_) if x in ns), d)
+            col = {"resp": pos("responsable", "dueño", "dueno", d=2), "cuenta": pos("cuenta", d=3), "lee": pos("quién la lee", "quien la lee", d=4), "acceso": pos("acceso")}
+            if col["acceso"] is None or any(x in ("dueño", "dueno") for x in n_):
+                anterior.append("guia.md (columnas «Dueño» y «Quién la lee» sin «Acceso»)")
+            continue
         slug = celdas[0].strip("`").rstrip("/")
-        if len(celdas) < 5:
-            h("fila de la tabla de áreas con columnas de menos", "guia.md", "«%s» tiene %d y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)" % (slug, len(celdas))); continue
-        guia_areas[slug] = {"dueno": celdas[2], "cuenta": celdas[3]}
-        _de, _co, _av = cuentas(celdas[3])
+        minimo = max(v for v in col.values() if v is not None) + 1
+        if len(celdas) < minimo:
+            h("fila de la tabla de áreas con columnas de menos", "guia.md", "«%s» tiene %d y hacen falta %d (%s)" % (slug, len(celdas), minimo, "área, qué es, responsable, cuenta, quién la lee, acceso" if col["acceso"] is not None else "área, qué es, dueño, cuenta, quién la lee")); continue
+        guia_areas[slug] = {"dueno": celdas[col["resp"]], "cuenta": celdas[col["cuenta"]]}
+        if col["acceso"] is not None and not re.match(r"^[\W_]*(abiert|restringid)[oa]s?\b", celdas[col["acceso"]], re.I):
+            h("columna Acceso sin «Abierta» ni «Restringida»", slug, "dice «%s»" % celdas[col["acceso"]])
+        _de, _co, _av = cuentas(celdas[col["cuenta"]])
         if _av:
-            h("celda Cuenta mal escrita en guia.md", slug, _av + ": primero el correo del dueño y, si hace falta, «· colabora: correo, correo»")
-        if PALABRA_COLABORA.search(celdas[3]) and not _co:
+            h("celda Cuenta mal escrita en guia.md", slug, _av + ": primero el correo del responsable y, si hace falta, «· colabora: correo, correo»")
+        if PALABRA_COLABORA.search(celdas[col["cuenta"]]) and not _co:
             h("«colabora:» sin cuentas en guia.md", slug, "detrás de «colabora:» van los correos de quienes colaboran, separados por comas")
         if not os.path.isdir(os.path.join(raiz, slug)):
             h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
@@ -174,12 +185,14 @@ for area, aruta in areas:
     fm, txt = cabecera(amd)
     if guia_txt and area not in guia_areas:
         h("carpeta de área que no está en guia.md", area, "sin su fila en la tabla de áreas nadie escribe en ella")
-    md = re.search(r"^Dueñ[oa]: *(.+?)\s*$", txt, re.M)
+    md = re.search(r"^(?:Responsable|Dueñ[oa]): *(.+?)\s*$", txt, re.M)
     if not md:
-        h("área sin dueño", rel(amd))
-    # la línea puede seguir con una frase («Dueño: Ana Pérez. Consume esta área…»): cuenta el nombre, hasta el primer punto
+        h("área sin responsable", rel(amd))
+    # la línea puede seguir con una frase («Responsable: Ana Pérez. Consume esta área…»): cuenta el nombre, hasta el primer punto
     elif area in guia_areas and re.split(r"\.(?:\s|$)", md.group(1).strip())[0].strip().lower() != re.split(r"\.(?:\s|$)", guia_areas[area]["dueno"].strip())[0].strip().lower():
-        h("dueño distinto en guia.md y en area.md", area, "guia.md dice «%s» y area.md «%s»" % (guia_areas[area]["dueno"], md.group(1).strip()))
+        h("responsable distinto en guia.md y en area.md", area, "guia.md dice «%s» y area.md «%s»" % (guia_areas[area]["dueno"], md.group(1).strip()))
+    if re.search(r"^## (Panorama|Prioridades ahora)\s*$|^Dueñ[oa]:", txt, re.M):
+        anterior.append(rel(amd))
     if "## Proyectos" not in txt:
         h("area.md sin bloque Proyectos", rel(amd))
     bloque = seccion_proyectos(txt)
@@ -236,6 +249,9 @@ for area, aruta in areas:
         # salvo en un proyecto cerrado, que ocupa solo su línea
         pfm, ptxt = cabecera(os.path.join(pruta, "proyecto.md"))
         cerrado = "Proyecto terminado el" in ptxt
+        if re.search(r"^## (En corto|Estado actual|Terminado significa)\s*$|^(Dueñ[oa]|Consumen esto):", ptxt or "", re.M) or \
+                any(os.path.isfile(os.path.join(pruta, x, "enlaces.md")) for x in ("fuentes", "restringido")):
+            anterior.append(rel(os.path.join(pruta, "proyecto.md")))
         _qp = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", ptxt or "", re.S | re.M)
         for _l in (_qp.group(1).split("\n") if _qp else []):
             if LINEA_COLABORA.match(_l) and not re.search(r"\([^)]*@[^)]*\)", _l):
@@ -274,8 +290,8 @@ for dp, dn, fn in os.walk(raiz):
         if r in ("guia.md", "metodo.md"):
             continue
         # fuentes/ y restringido/ son material, no documentos del método: no se editan,
-        # así que no se les pide cabecera ni nombre. Sus enlaces.md sí son nuestros.
-        if ("/fuentes/" in "/" + r or "/restringido/" in "/" + r) and f != "enlaces.md":
+        # así que no se les pide cabecera ni nombre. Sus inventario.md (enlaces.md hasta la 1.21) sí son nuestros.
+        if ("/fuentes/" in "/" + r or "/restringido/" in "/" + r) and f not in ("inventario.md", "enlaces.md"):
             continue
         if not nombre_ok(f) or (nombre_con_orden_version_o_fecha(f) and not ROTADO.match(f)):
             h("nombre de archivo", r)
@@ -297,8 +313,12 @@ for dp, dn, fn in os.walk(raiz):
             h("fecha mal formada", r, a.group(1))
         if "/entregables/" in r and "basado_en" not in fm:
             h("entregable sin basado_en", r)
-        if ("/entregables/" in r or "/taller/" in r) and estado != "reemplazado" and not re.search(r"^afirma: *[^\s'\"]|^afirma: *['\"][^'\"\s]", fm, re.M):
+        if ("/entregables/" in r or "/taller/" in r) and estado != "reemplazado" and not re.search(r"^(?:aportacion|afirma): *[^\s'\"]|^(?:aportacion|afirma): *['\"][^'\"\s]", fm, re.M):
             sin_afirma.append(r)
+        if "/taller/" in r and estado != "reemplazado" and "basado_en" not in fm:
+            sin_basado.append(r)
+        if ("/entregables/" in r or "/taller/" in r) and re.search(r"^afirma:", fm, re.M):
+            anterior.append(r + " (afirma)")
         # un [[ dentro de codigo, en linea o en bloque, no es un enlace: es hablar de ellos
         sin_codigo = re.sub(r"`[^`\n]*`", "", re.sub(r"```.*?```", "", txt, flags=re.S))
         if "[[" in sin_codigo:
@@ -307,14 +327,18 @@ for dp, dn, fn in os.walk(raiz):
         # una ruta de máquina citada dentro de un runbook es contenido legítimo
         if re.search(r"/(Users|home|Volumes)/[^\s`)]*\.md\b", txt):
             h("ruta absoluta a un archivo del método", r)
-        if f == "enlaces.md" and len([l for l in txt.splitlines() if l.startswith("|")]) <= 2:
-            h("enlaces.md sin filas", r)
+        if f in ("inventario.md", "enlaces.md") and len([l for l in txt.splitlines() if l.startswith("|")]) <= 2:
+            h(f + " sin filas", r)
 
 def nota_afirma():
     if sin_charset:
         print("\nNota: %d archivo%s .html sin `<meta charset=\"utf-8\">`: abiertos desde la carpeta, los acentos salen rotos. Añade la etiqueta en su <head>: %s" % (len(sin_charset), "" if len(sin_charset) == 1 else "s", ", ".join(sorted(sin_charset)[:5]) + (" …" if len(sin_charset) > 5 else "")))
     if sin_afirma:
-        print("\nNota: %d archivo%s de entregables/ y taller/ sin `afirma:`. No bloquea: es opcional en lo que ya existía; el barrido del tablero propone una línea y su dueño la acepta." % (len(sin_afirma), "" if len(sin_afirma) == 1 else "s"))
+        print("\nNota: %d archivo%s de entregables/ y taller/ sin `aportacion:`. No bloquea en lo que ya existía; el barrido del tablero propone una línea y su responsable la acepta." % (len(sin_afirma), "" if len(sin_afirma) == 1 else "s"))
+    if sin_basado:
+        print("\nNota: %d archivo%s de taller/ sin `basado_en`. No bloquea en lo que ya existía; lo que se crea desde la 1.22 la lleva (`[]` si no se usó nada)." % (len(sin_basado), "" if len(sin_basado) == 1 else "s"))
+    if anterior:
+        print("\nNota: %d archivo%s con la estructura de la 1.21 (En corto, Panorama, Dueño, afirma, enlaces.md…). No bloquea: la raíz funciona mezclada, y cada responsable lo migra al abrir sesión con el plugin 1.22: %s" % (len(anterior), "" if len(anterior) == 1 else "s", ", ".join(anterior[:5]) + (" …" if len(anterior) > 5 else "")))
 
 if not hallazgos:
     print("La raíz cumple el contrato.")

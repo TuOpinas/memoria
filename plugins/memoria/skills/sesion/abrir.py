@@ -183,19 +183,19 @@ CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
 PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
 LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 def cuentas(celda):
-    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
-    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
-    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    """(responsable, colaboran, aviso) de una celda Cuenta: «resp@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es responsable; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en responsable."""
     texto = (celda or "").lower()
     partes = PALABRA_COLABORA.split(texto, maxsplit=1)
     antes = set(CORREO.findall(partes[0]))
     despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
     aviso = None
     if len(antes) > 1:
-        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        aviso = "más de un correo antes de «colabora:»; nadie es responsable hasta que se corrija"
         antes = set()
     elif not antes:
-        aviso = "sin el correo del dueño"
+        aviso = "sin el correo del responsable"
     elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
         aviso = "la palabra para quien colabora va escrita «colabora:»"
     return antes, despues, aviso
@@ -264,23 +264,50 @@ else:
     if omitidas:
         print(f"(se omiten {' y '.join('«' + s + '»' for s in omitidas)}: si hacen falta, se leen en guia.md)")
 
+def columnas_areas(cab):
+    """Dónde está cada columna de la tabla de áreas, por su encabezado: la 1.22 dice «Responsable» y añade «Acceso»;
+    hasta la 1.21, «Dueño» y sin «Acceso». Sin encabezado reconocible, las posiciones de siempre."""
+    n = [re.sub(r"[*_`]", "", x).strip().lower() for x in cab]
+    def pos(*nombres, defecto=None):
+        return next((i for i, x in enumerate(n) if x in nombres), defecto)
+    return {"responsable": pos("responsable", "dueño", "dueno", defecto=2), "cuenta": pos("cuenta", defecto=3),
+            "lectores": pos("quién la lee", "quien la lee", defecto=4), "acceso": pos("acceso")}
+
+
+def area_restringida(c, col):
+    """Con columna «Acceso» (1.22), restringida si dice «Restringida» y abierta si dice «Abierta»; con otra cosa o vacía,
+    y sin la columna, la regla de «Quién la lee» de la 1.21: nunca se falla abierto."""
+    if col["acceso"] is not None and col["acceso"] < len(c):
+        v = c[col["acceso"]]
+        if re.match(r"^[\W_]*restringid[oa]s?\b", v, re.I):
+            return True
+        if re.match(r"^[\W_]*abiert[oa]s?\b", v, re.I):
+            return False
+    return restringida_celda(c[col["lectores"]] if col["lectores"] < len(c) else "")
+
+
 areas = []
 filas = seccion(guia, "Áreas").split("\n")
-cab_vista = False
+col_areas = None
+guia_anterior = False
 for l in filas:
     if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
         continue
-    if not cab_vista:
-        cab_vista = True; continue
     c = [x.strip() for x in l.strip().strip("|").split("|")]
-    if len(c) >= 5:
-        de, co, av = cuentas(c[3])
+    if col_areas is None:
+        col_areas = columnas_areas(c)
+        guia_anterior = col_areas["acceso"] is None or any(re.sub(r"[*_`]", "", x).strip().lower() in ("dueño", "dueno") for x in c)
+        continue
+    minimo = max(v for v in col_areas.values() if v is not None) + 1
+    if len(c) >= minimo:
+        de, co, av = cuentas(c[col_areas["cuenta"]])
         if av:
             print(f"(aviso: la celda Cuenta de «{c[0].strip('`')}» en guia.md: {av})")
-        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[2], "cuentas_dueno": de, "colaboran": co, "restringida": restringida_celda(c[4]), "lectores": c[4],
-                      "en_celda": set(CORREO.findall(c[3].lower())), "aviso": av})
+        areas.append({"slug": c[0].strip("`").rstrip("/"), "dueno": c[col_areas["responsable"]], "cuentas_dueno": de, "colaboran": co,
+                      "restringida": area_restringida(c, col_areas), "lectores": c[col_areas["lectores"]],
+                      "en_celda": set(CORREO.findall(c[col_areas["cuenta"]].lower())), "aviso": av})
     else:
-        print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta 5; esa área no se lee hasta que se corrija)")
+        print(f"(aviso: la fila «{c[0].strip('`')}» de la tabla de áreas de guia.md tiene {len(c)} columnas y hacen falta {minimo}; esa área no se lee hasta que se corrija)")
 if ZONA_AVISO:
     print(f"(aviso: {ZONA_AVISO})")
 if not areas:
@@ -303,7 +330,7 @@ for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
     m = re.match(r"^\s*-\s*(P\d+)\s*·\s*(.+)$", l)
     if m:
         partes = [x.strip() for x in m.group(2).split("·")]
-        r = next((re.search(r"P\d+", x, re.I).group(0).upper() for x in partes[1:] if x.lower().startswith("reemplaza a") and re.search(r"P\d+", x, re.I)), None)
+        r = next((re.search(r"P\d+", x, re.I).group(0).upper() for x in partes[1:] if re.match(r"reemplaza\b", x, re.I) and re.search(r"P\d+", x, re.I)), None)
         f = next((x for x in partes[1:] if re.fullmatch(r"20\d\d-\d\d-\d\d", x)), "")
         premisas.append((m.group(1).upper(), l.strip(), r, f))
 reemplazadas = {r for _, _, r, _ in premisas if r}
@@ -320,7 +347,7 @@ if CUENTA:
         tp_ = leer(RAIZ / ACTIVO / "proyecto.md")
         if tp_ and CUENTA in colaboran_en(seccion(cabecera(tp_)[1], "Quién participa")):
             proy_co = [ACTIVO]
-    donde_ = ", ".join([f"{s} (dueño)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
+    donde_ = ", ".join([f"{s} (responsable)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
@@ -328,15 +355,60 @@ if CUENTA:
     for a in areas:
         if a["aviso"] and CUENTA in a["en_celda"] and CUENTA not in a["cuentas_dueno"] | a["colaboran"]:
             print(f"(aviso para decirlo: esta cuenta está en la celda Cuenta de «{a['slug']}» en guia.md, pero no cuenta como suya: {a['aviso']}. "
-                  f"Se escribe «correo del dueño · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
+                  f"Se escribe «correo del responsable · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
+
+
+# ---------- la estructura de la 1.22 ----------
+# La misma función en migrar_estructura.py, que renombra justo lo que esta detecta; probar_migrar.py comprueba que coinciden.
+def marcas_anteriores(texto, tipo):
+    """Qué marcas de la estructura de la 1.21 tiene un area.md («area») o un proyecto.md («proyecto»): las secciones
+    viejas, y «Dueño:» o «Consumen esto:» solo dentro de «Quién participa», que es donde la migración las renombra."""
+    secs = set(re.findall(r"^## (.+?)\s*$", texto or "", re.M))
+    viejas = {"area": ("Panorama", "Prioridades ahora"), "proyecto": ("En corto", "Estado actual", "Terminado significa")}[tipo]
+    out = [x for x in viejas if x in secs]
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", texto or "", re.M | re.S)
+    q = m.group(1) if m else ""
+    if re.search(r"^\s*[-*]?\s*\**\s*Due[ñn][oa]\s*\**\s*:", q, re.M):
+        out.append("Dueño")
+    if tipo == "proyecto" and re.search(r"^\s*[-*]?\s*\**\s*Consumen esto\s*\**\s*:", q, re.M):
+        out.append("Consumen esto")
+    return out
+ARCHIVOS_ANTERIORES = ("fuentes/enlaces.md", "restringido/enlaces.md")
+
+
+def area_anterior(slug):
+    """Cierto si el área (su area.md, o algún proyecto con proyecto.md dentro) tiene todavía la estructura de la 1.21."""
+    t = leer(RAIZ / slug / "area.md")
+    if t and marcas_anteriores(cabecera(t)[1], "area"):
+        return True
+    try:
+        proyectos = sorted(d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
+    except OSError:
+        return False
+    for d in proyectos:
+        if marcas_anteriores(cabecera(leer(d / "proyecto.md") or "")[1], "proyecto") or any((d / f).is_file() for f in ARCHIVOS_ANTERIORES):
+            return True
+    return False
+
+
+titulo("ESTRUCTURA")
+if not CUENTA:
+    print("Veredicto: SIN CUENTA")
+else:
+    propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
+    guia_vieja = es_resp and guia_anterior
+    if propias_viejas or guia_vieja:
+        print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + (["guia.md"] if guia_vieja else [])))
+    else:
+        print("Veredicto: AL DIA")
 
 
 def primera_frase(l, minimo=40, maximo=220):
     """Hasta el primer punto que cierra frase fuera de paréntesis y de `código` (no «S. de R.L.»: lo que sigue va en
     minúscula o es otra inicial); si no lo hay antes de «maximo», se corta en una palabra con «…»."""
     nivel, cod = 0, False
-    # «restringido: dueño Nombre. Descripción…»: el dueño no es la primera frase; se salta y se corta la descripción
-    m = re.match(r"^(.*?[—–:-]\s*restringid[oa]\s*:\s*due[ñn][oa]\s+[^.;]+[.;]\s*)(.+)$", l, re.I)
+    # «restringido: responsable Nombre. Descripción…» («dueño» hasta la 1.21): el nombre no es la primera frase; se salta
+    m = re.match(r"^(.*?[—–:-]\s*restringid[oa]\s*:\s*(?:due[ñn][oa]|responsable)\s+[^.;]+[.;]\s*)(.+)$", l, re.I)
     if m:
         return m.group(1) + primera_frase(m.group(2), min(minimo, 20), maximo)
     for i, ch in enumerate(l):
@@ -404,7 +476,7 @@ def motivo_area(slug):
     dueña ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
     su área; el tablero, que es solo de su dueño, la muestra entera."""
     a = next((x for x in areas if x["slug"] == slug), None)
-    quien = solo_nombre(a["dueno"]) if a else "su dueño"
+    quien = solo_nombre(a["dueno"]) if a else "su responsable"
     if a and a["restringida"] and not de_la_cuenta(a):
         lect = lectores_de(a["lectores"])
         return f"restringida{' ' + lect if lect else ''}; si hace falta acceso, se pide a {quien}"
@@ -478,7 +550,7 @@ if CUENTA:
     # colaborar en un solo proyecto: una línea «Colabora:» en «Quién participa» con la cuenta entre paréntesis
     a_act = next((a for a in areas if a["slug"] == area_activa), None)
     if a_act and CUENTA in a_act["cuentas_dueno"]:
-        rol = "dueño del área"
+        rol = "responsable del área"
     elif a_act and CUENTA in a_act["colaboran"]:
         rol = "colabora en el área"
     elif CUENTA in colaboran_en(seccion(cabecera(tp)[1], "Quién participa")):
@@ -507,13 +579,15 @@ ses_txt = leer(pc / "sesiones.md") or ""
 titulo("DECISIONES (las 5 más recientes)")
 print("\n\n".join(e["texto"] for e in recientes(dec_txt, 5)) or "(ninguna)")
 titulo("SESIONES (las 3 más recientes)")
-ses = recientes(ses_txt, 3)
+ses = [e for e in recientes(ses_txt, 4) if "(migracion)" not in e["cab"]][:3]   # la entrada de la migración no cuenta como sesión
 print("\n\n".join(e["texto"] for e in ses) or "(ninguna)")
-ultima_ses = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True) if fecha_ok(e["fecha"])), None)
-# para los avisos de otras áreas cuenta la última sesión de trabajo: las entradas «(tarea)» o «(tablero)» no son sesiones
+# la última sesión de trabajo: las entradas «(tarea)», «(tablero)» y «(migracion)» no son sesiones, y lo que cambió
+# después de la última real sigue siendo trabajo sin sesión aunque una tarea o la migración hayan escrito después
 ultima_real = next((e["fecha"] for e in sorted(entradas(ses_txt), key=lambda e: e["fecha"], reverse=True)
-                    if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero)\)", e["cab"], re.I)), None)
-cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cabecera(tp)[1], "Estado actual")))
+                    if fecha_ok(e["fecha"]) and not re.search(r"\((tarea|tablero|migracion)\)", e["cab"], re.I)), None)
+ultima_ses = ultima_real
+# «Proyecto terminado el …» abre el Estatus desde la 1.22; hasta la 1.21, Estado actual o En corto
+cerrado = any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cabecera(tp)[1], n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
 
 titulo("ENTREGABLES (cabeceras)")
 avisos = []
@@ -654,7 +728,7 @@ reemplazo_fecha = {r: (f or "9999") for _, _, r, f in premisas if r}   # sin fec
 abiertos = []
 for origen, e, c, prem in cuestiona:
     if not e["id"]:
-        avisos.insert(0, f"Un cuestionamiento sin fecha válida en {origen} («{e['cab']}») nombra este proyecto: no tiene identificador y no se puede responder hasta que su dueño lo registre con fecha.")
+        avisos.insert(0, f"Un cuestionamiento sin fecha válida en {origen} («{e['cab']}») nombra este proyecto: no tiene identificador y no se puede responder hasta que su responsable lo registre con fecha.")
         continue
     if (origen, e["id"]) in respuestas:
         continue
@@ -676,12 +750,12 @@ afecta = [x for x in afecta if x[1]["fecha"]]
 nuevos = [x for x in afecta if not ultima_real or x[1]["fecha"] >= ultima_real]
 for origen, e, c in sorted(nuevos, key=lambda x: x[1]["fecha"], reverse=True):
     avisos.append(f"Le afecta una decisión de {origen} ({origen}#{e['id']}): «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Afecta a: {c['Afecta a'][:300]}")
-# a quien cuestionó: la respuesta del dueño, si llegó después de su última sesión
+# a quien cuestionó: la respuesta del responsable, si llegó después de su última sesión
 for origen, e, c, cid in me_responden:
     if cid not in mis_cuestionamientos:
         continue   # «Responde a» apunta a una entrada de este proyecto que no es un cuestionamiento
     if not e["fecha"]:
-        avisos.append(f"Una entrada sin fecha válida de {origen} responde a tu cuestionamiento {ACTIVO}#{cid} («{e['cab']}»): conviene que su dueño la registre con fecha.")
+        avisos.append(f"Una entrada sin fecha válida de {origen} responde a tu cuestionamiento {ACTIVO}#{cid} («{e['cab']}»): conviene que su responsable la registre con fecha.")
     elif not ultima_real or e["fecha"] >= ultima_real:
         avisos.insert(0, f"Respondieron tu cuestionamiento {ACTIVO}#{cid} («{mis_cuestionamientos[cid][0]}»): {origen}#{e['id']}, «{e['cab']}». Decidió: {c['Decidió'] or 'no consta'}. Por qué: {c['Por qué'][:300]}")
 # una premisa cuestionada desde aquí y reemplazada después por otra: también es una respuesta
@@ -690,7 +764,7 @@ for cid, (cab_, fecha_, prem_) in mis_cuestionamientos.items():
         nueva = next((l for pid, l, r, f in premisas if r == prem_), "")
         avisos.insert(0, f"Respondieron tu cuestionamiento {ACTIVO}#{cid} («{cab_}»): la premisa {prem_} se reemplazó el {reemplazo_fecha[prem_]}: {nueva}")
 for origen, e, c in sin_fecha:
-    avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su dueño la revise.")
+    avisos.append(f"Una entrada sin fecha válida de {origen} nombra este proyecto en «Afecta a» («{e['cab']}»): no se puede citar ni saber si es nueva; conviene que su responsable la revise.")
 viejos = len(afecta) - len(nuevos)
 
 # copias en conflicto: cuando dos computadoras escriben el mismo archivo antes de sincronizarse, Drive guarda las dos

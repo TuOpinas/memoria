@@ -241,8 +241,8 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         tp = leer(proy / "proyecto.md")
         ses_t, dec_t = leer(proy / "sesiones.md"), leer(proy / "decisiones.md")
         ses = entradas(ses_t)
-        reales = [e for e in ses if "(tarea)" not in e[1]]
-        cerrado = bool(re.search(r"Proyecto terminado el \d{4}-\d{2}-\d{2}", seccion(tp, "Estado actual")))
+        reales = [e for e in ses if "(tarea)" not in e[1] and "(migracion)" not in e[1]]
+        cerrado = any(re.search(r"Proyecto terminado el \d{4}-\d{2}-\d{2}", seccion(tp, n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
 
         def prop(clase, clave, texto, por_que):
             props.append({"id": f"prop-{clase}-{huella(pid, clave)}", "data": {
@@ -255,7 +255,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
             ultima = max(e[0] for e in reales)
             if act < ultima:
                 prop("estado-desfasado", f"{act}>{ultima}",
-                     f"Poner al día «Estado actual» y «Siguientes pasos»: son de {act} y la última sesión es de {ultima}.",
+                     f"Poner al día «Estatus» y «Siguientes pasos»: son de {act} y la última sesión es de {ultima}.",
                      "proyecto.md es más viejo que la última entrada de sesiones.md")
         # pasos que el registro da por hechos: las palabras del paso están en una frase de Avances que no lo niega.
         # Se mira frase por frase, porque «revisamos la encuesta; falta mandarla» comparte las palabras del paso y dice lo contrario.
@@ -291,18 +291,18 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         # bitácora un día y la decisión el otro
         registrada = lambda f: f in fechas_dec or (fecha_ok(f) and (datetime.date.fromisoformat(f) + datetime.timedelta(days=1)).isoformat() in fechas_dec)
         for e in reales:
-            if not registrada(e[0]) and DECIDIO.search(" ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))):
+            if not registrada(e[0]) and DECIDIO.search(" ".join(campo(e[2], k) for k in ("Tema", "Trabajamos en", "Avances"))):
                 validas.add(id_juicio("decision-sin-registrar", pid, "decision|" + e[0]))      # sigue siendo cierta mientras no se registre
         for e in reales[:3]:
             if e[0] >= limite and not registrada(e[0]):
-                texto = " ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))
+                texto = " ".join(campo(e[2], k) for k in ("Tema", "Trabajamos en", "Avances"))
                 if DECIDIO.search(texto) and not visto(id_juicio("decision-sin-registrar", pid, "decision|" + e[0])):
                     juicio.append({"proyecto": pid, "fecha": e[0], "extracto": una_linea(texto, 600)})
         # entregables que no dicen qué sostienen (en un proyecto terminado ya no se pide: nadie lo va a abrir)
         for f in sorted((proy / "entregables").glob("*.md")) if (proy / "entregables").is_dir() and not cerrado else []:
             ft = leer(f)
             cab = cabecera(ft)
-            if cab.get("estado") == "reemplazado" or cab.get("afirma", "").strip():
+            if cab.get("estado") == "reemplazado" or cab.get("aportacion", "").strip() or cab.get("afirma", "").strip():
                 continue
             ruta = f"{area}/{proy.name}/entregables/{f.name}"
             validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
@@ -389,7 +389,7 @@ def sumar_juicio(salida, juicio, cola):
         if not linea or pid in ya:
             continue
         guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea,
-                      "texto": una_linea(f"Añadir a la cabecera de {j['ruta']}: afirma: «{linea}»"),
+                      "texto": una_linea(f"Añadir a la cabecera de {j['ruta']}: aportacion: «{linea}»"),
                       "por_que": "el inventario del tablero necesita saber qué sostiene cada pieza", "origen": "barrido",
                       "estado": "pendiente", "creado": ahora})
         nuevas["afirma"] += 1
