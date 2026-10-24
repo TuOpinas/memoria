@@ -12,23 +12,31 @@ Uso:
             [--sin-fechas] [--forzar <ruta>]... [--fuera-del-area <ruta>]... [--cualquier-fecha]
 
 cambios.json, todo opcional:
-  {"sesion": "## AAAA-MM-DD\\nTrabajamos en: …\\nAvances: …\\nPendiente: …\\nSesión de: Nombre · plugin X.Y.Z",
-   "decisiones": ["## AAAA-MM-DD · Título\\nDecidió: …\\nPor qué: …", …],
-   "proyecto": {"en_corto": "texto entero del bloque En corto, sin el encabezado",
+  {"sesion": "## AAAA-MM-DD\\nTema: …\\nAvances: …\\nSesión de: Nombre · plugin X.Y.Z",
+   "decisiones": ["## AAAA-MM-DD · Título\\nDecidió: …\\nPor qué: …\\nDescartado: …", …],
+   "proyecto": {"estatus": "texto entero del bloque Estatus, sin el encabezado",
                 "reemplazos": [{"de": "texto exacto viejo", "a": "texto nuevo"}, …]},
-   "area": {"linea": "- `slug/` — descripción", "entregables": ["  - nombre — descripción · actualizado AAAA-MM-DD", …]},
-   "panorama": "texto entero del bloque Panorama de area.md, sin el encabezado",
+   "area": {"linea": "- `slug/` — descripción",
+            "entregables": [{"archivo": "x.md"}, "  - nombre — línea ya escrita · actualizado AAAA-MM-DD", …]},
+   "estatus_area": "texto entero del bloque Estatus de area.md, sin el encabezado",
    "otros": [{"ruta": "<relativa a la raíz, dentro del área del proyecto>", "reemplazos": [{"de": "…", "a": "…"}]}, …]}
+
+Los nombres de la 1.21 se aceptan en la entrada y se escriben con los nuevos (1.22): «en_corto» vale como «estatus» y
+«panorama» como «estatus_area»; el bloque Estatus sustituye en su sitio a un «En corto» o un «Panorama» que haya, y en
+un área sin ninguno de los dos se crea antes de «Proyectos». Una entrada nueva con «Trabajamos en:», «Pendiente:» o
+«Descartamos:» se rechaza: los registros viejos se quedan como están, pero lo nuevo se escribe con «Tema:» y «Descartado:».
+Un entregable dado como {"archivo": "x.md"} se escribe en area.md como «  - x — <su aportacion> · actualizado <su fecha>»,
+leídas de su cabecera en entregables/ (o «afirma», si la cabecera aún no se migró); sin ninguna de las dos, va en «sin_match».
 
 Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
 fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
 contenedor, que van en UTC y por la tarde ya dicen mañana; una fecha distinta a propósito pasa solo con --cualquier-fecha;
 cada ruta de «otros» está dentro del área del proyecto (fuera, solo con --fuera-del-area y nunca guia.md, base/ ni
-restringido/). Con --cuenta, el Panorama lo escribe solo el dueño del área (la celda Cuenta de guia.md) y la línea del
-proyecto en area.md, el dueño o quien colabora en el área; lo que no toca va en «rechazados». Cada entrada de registro va
+restringido/). Con --cuenta, el Estatus del área lo escribe solo su responsable (la celda Cuenta de guia.md) y la línea del
+proyecto en area.md, el responsable o quien colabora en el área; lo que no toca va en «rechazados». Cada entrada de registro va
 arriba del todo, debajo del título; una igual que ya esté no se repite. Un reemplazo cuyo texto viejo no aparece
 exactamente una vez, cruza un encabezado «## » o pasa de doce líneas no se aplica y vuelve en «sin_match». Un archivo que
-encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (salvo cuando lo único que cambia es la cabecera, como añadir `afirma`) (en la
+encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (salvo cuando lo único que cambia es la cabecera, como añadir `aportacion`) (en la
 zona horaria de guia.md) en cada archivo escrito; los finales de línea se conservan como estaban.
 
 Imprime siempre un JSON: «escritos», «sin_match», «rechazados», «fallidos» (un archivo que no se pudo leer o escribir, con
@@ -57,19 +65,19 @@ CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
 PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
 LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 def cuentas(celda):
-    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
-    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
-    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    """(responsable, colaboran, aviso) de una celda Cuenta: «resp@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es responsable; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en responsable."""
     texto = (celda or "").lower()
     partes = PALABRA_COLABORA.split(texto, maxsplit=1)
     antes = set(CORREO.findall(partes[0]))
     despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
     aviso = None
     if len(antes) > 1:
-        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        aviso = "más de un correo antes de «colabora:»; nadie es responsable hasta que se corrija"
         antes = set()
     elif not antes:
-        aviso = "sin el correo del dueño"
+        aviso = "sin el correo del responsable"
     elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
         aviso = "la palabra para quien colabora va escrita «colabora:»"
     return antes, despues, aviso
@@ -216,13 +224,18 @@ def con_entrada_arriba(t, entrada):
     return t.rstrip("\n") + "\n\n" + entrada, True
 
 
-def con_bloque(t, nombre, cuerpo, antes_de=None):
-    """Reescribe entero el bloque «## nombre». Si no existe, lo crea debajo del título o, con antes_de, justo antes de
-    ese bloque (al final si tampoco está)."""
+def con_bloque(t, nombre, cuerpo, antes_de=None, alias=()):
+    """Reescribe entero el bloque «## nombre». Si no existe y hay uno con un nombre de alias (el de la 1.21), lo
+    sustituye en su sitio con el nombre nuevo. Si no hay ninguno, lo crea debajo del título o, con antes_de, justo antes
+    de ese bloque (al final si tampoco está)."""
     cuerpo = cuerpo.strip() + "\n"
     m = re.search(r"^## " + re.escape(nombre) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
     if m:
         return t[:m.start(1)] + cuerpo + "\n" + t[m.end(1):]
+    for viejo in alias:
+        m = re.search(r"^## " + re.escape(viejo) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
+        if m:
+            return t[:m.start()] + f"## {nombre}\n" + cuerpo + "\n" + t[m.end(1):]
     nuevo = f"## {nombre}\n{cuerpo}\n"
     if antes_de:
         ma = re.search(r"^## " + re.escape(antes_de) + r"\s*$", t, re.M)
@@ -244,6 +257,44 @@ def con_reemplazos(t, reemplazos, sin_match, ruta):
             sin_match.append({"ruta": ruta, "de": de[:120], "veces": n, "motivo": "cruza un encabezado o pasa de doce líneas: parte el reemplazo"}); continue
         t = t.replace(de, a)
     return t
+
+
+def clave_cabecera(texto, clave):
+    """El valor de una clave de la cabecera YAML, sin comillas; None si no está."""
+    m = re.match(r"^---\n(.*?)\n---\n", texto.replace("\r\n", "\n"), re.S)
+    if not m:
+        return None
+    v = re.search(r"^" + re.escape(clave) + r":[ \t]*(.*)$", m.group(1), re.M)
+    if not v:
+        return None
+    v = v.group(1).strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+        v = v[1:-1].replace('\\"', '"')
+    return v or None
+
+
+def lineas_entregables(pd, entregables, sin_match, rel):
+    """Las líneas de los entregables para area.md: un texto se deja tal cual; {"archivo": "x.md"} se arma con la
+    aportacion y la fecha de su cabecera (sección 2 de escribir.md: la línea es su aportacion)."""
+    fuera = []
+    for e in entregables or []:
+        if isinstance(e, str):
+            fuera.append(e); continue
+        nombre = str((e or {}).get("archivo", "")).replace("\\", "/").strip("/")
+        nombre = nombre[len("entregables/"):] if nombre.startswith("entregables/") else nombre
+        p = pd / "entregables" / nombre
+        if not nombre or ".." in nombre.split("/") or not p.is_file():
+            sin_match.append({"ruta": rel, "de": f"(entregable {nombre or '?'})", "veces": 0, "motivo": "no existe en entregables/"}); continue
+        try:
+            texto = p.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeDecodeError):
+            texto = ""
+        aporta = clave_cabecera(texto, "aportacion") or clave_cabecera(texto, "afirma")
+        fecha = clave_cabecera(texto, "actualizado")
+        if not aporta:
+            sin_match.append({"ruta": rel, "de": f"(entregable {nombre})", "veces": 0, "motivo": "no tiene aportacion en la cabecera: pásale la línea escrita"}); continue
+        fuera.append(f"  - {pathlib.PurePosixPath(nombre).stem} — {aporta}" + (f" · actualizado {fecha}" if fecha else ""))
+    return fuera
 
 
 def con_linea_proyecto(t, slug, linea, entregables):
@@ -311,7 +362,7 @@ class Cierre:
                     if not hubo or nuevo == t:
                         self.salida["sin_match"] += sin_match
                         return False
-                    # un cambio que se queda dentro de la cabecera (añadir o corregir `afirma`, por ejemplo) no mueve
+                    # un cambio que se queda dentro de la cabecera (añadir o corregir `aportacion`, por ejemplo) no mueve
                     # `actualizado`: la fecha dice cuándo cambió lo que el documento sostiene, no su cabecera (escribir.md, sección 5)
                     if not solo_cabecera(t, nuevo):
                         nuevo = cabecera_hoy(nuevo, self.hoy)
@@ -412,6 +463,12 @@ def main(argv):
                 malos.append(f"{que} lleva la fecha {f} y hoy es {hoy.isoformat()} en {getattr(tz, 'key', tz)} (la línea HOY de abrir.py): "
                              "las fechas de la carpeta van en la zona de la organización, no en la del reloj de la consola o del contenedor; "
                              "si la fecha es a propósito, --cualquier-fecha")
+    # lo nuevo se escribe con los nombres de la 1.22; los registros viejos no se tocan
+    if ses and re.search(r"^(Trabajamos en|Pendiente)\s*:", ses, re.M):
+        malos.append("«sesion» va con «Tema:» y sin «Pendiente:» (lo que sigue va en «Siguiente» del Estatus)")
+    for d in cambios.get("decisiones") or []:
+        if re.search(r"^Descartamos\s*:", d, re.M):
+            malos.append("una decisión lleva «Descartado:», no «Descartamos:»")
     otros = []
     for o in cambios.get("otros") or []:
         r = str(o.get("ruta", "")).replace("\\", "/").strip("/")
@@ -428,7 +485,7 @@ def main(argv):
     cuenta = (opciones["--cuenta"] or "").strip().lower()
     duenos, colaboran = celda_cuenta(raiz, area) if cuenta else (set(), set())
     puede_area = not cuenta or cuenta in duenos | colaboran
-    puede_panorama = not cuenta or cuenta in duenos
+    puede_estatus_area = not cuenta or cuenta in duenos
     limpiar_temporales(pd, pa)
 
     # 2. sesiones.md
@@ -442,34 +499,36 @@ def main(argv):
                 t, h = con_entrada_arriba(t, d); hubo = hubo or h
             return t, hubo
         c.cambiar(pd / "decisiones.md", f_dec)
-    # 4. proyecto.md: En corto entero y reemplazos exactos en lo demás
+    # 4. proyecto.md: Estatus entero (sustituye a «En corto» si la raíz no se migró) y reemplazos exactos en lo demás
     pr = cambios.get("proyecto") or {}
-    if pr.get("en_corto") or pr.get("reemplazos"):
+    estatus = pr.get("estatus") or pr.get("en_corto")
+    if estatus or pr.get("reemplazos"):
         def f_pro(t, sm):
             t0 = t
             t = con_reemplazos(t, pr.get("reemplazos"), sm, c.rel(pd / "proyecto.md"))
-            if pr.get("en_corto"):
-                t = con_bloque(t, "En corto", pr["en_corto"])
+            if estatus:
+                t = con_bloque(t, "Estatus", estatus, alias=("En corto",))
             return t, t != t0
         c.cambiar(pd / "proyecto.md", f_pro)
-    # 5 y 10. area.md: la línea del proyecto y el Panorama
+    # 5 y 10. area.md: la línea del proyecto (con las de sus entregables) y el Estatus del área
     ar = cambios.get("area") or {}
     if ar.get("linea") and not puede_area:
-        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el dueño del área o quien colabora en ella; {cuenta} no está en su celda Cuenta: pásasela al dueño"})
+        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el responsable del área o quien colabora en ella; {cuenta} no está en su celda Cuenta: pásasela al responsable"})
         ar = {}
-    pan = cambios.get("panorama")
-    if pan and not puede_panorama:
-        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"el Panorama lo escribe solo el dueño del área; {cuenta} no lo es"})
-        pan = None
-    if ar.get("linea") or pan:
+    est_area = cambios.get("estatus_area") or cambios.get("panorama")
+    if est_area and not puede_estatus_area:
+        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"el Estatus del área lo escribe solo su responsable; {cuenta} no lo es"})
+        est_area = None
+    if ar.get("linea") or est_area:
         def f_area(t, sm):
             t0 = t
             if ar.get("linea"):
-                t, ok = con_linea_proyecto(t, slug, ar["linea"], ar.get("entregables"))
+                lineas = lineas_entregables(pd, ar.get("entregables"), sm, c.rel(pa))
+                t, ok = con_linea_proyecto(t, slug, ar["linea"], lineas)
                 if not ok:
                     sm.append({"ruta": c.rel(pa), "de": "(bloque Proyectos)", "veces": 0, "motivo": "area.md no tiene bloque «## Proyectos»: la línea no se escribió"})
-            if pan:
-                t = con_bloque(t, "Panorama", pan, antes_de="Quién participa")
+            if est_area:
+                t = con_bloque(t, "Estatus", est_area, antes_de="Proyectos", alias=("Panorama",))
             return t, t != t0
         c.cambiar(pa, f_area)
     # otros archivos del área, por reemplazos exactos

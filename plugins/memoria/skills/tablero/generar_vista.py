@@ -39,19 +39,19 @@ CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
 PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
 LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
 def cuentas(celda):
-    """(dueño, colaboran, aviso) de una celda Cuenta: «dueno@x · colabora: a@x, b@x». Falla cerrado:
-    con más de un correo antes de la palabra, o ninguno, nadie es dueño; cualquier palabra que empiece por
-    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en dueño."""
+    """(responsable, colaboran, aviso) de una celda Cuenta: «resp@x · colabora: a@x, b@x». Falla cerrado:
+    con más de un correo antes de la palabra, o ninguno, nadie es responsable; cualquier palabra que empiece por
+    «colabor» separa, para que «colaboradora:» o «colabora» sin dos puntos no conviertan a nadie en responsable."""
     texto = (celda or "").lower()
     partes = PALABRA_COLABORA.split(texto, maxsplit=1)
     antes = set(CORREO.findall(partes[0]))
     despues = set(CORREO.findall(partes[1])) if len(partes) > 1 else set()
     aviso = None
     if len(antes) > 1:
-        aviso = "más de un correo antes de «colabora:»; nadie es dueño hasta que se corrija"
+        aviso = "más de un correo antes de «colabora:»; nadie es responsable hasta que se corrija"
         antes = set()
     elif not antes:
-        aviso = "sin el correo del dueño"
+        aviso = "sin el correo del responsable"
     elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
         aviso = "la palabra para quien colabora va escrita «colabora:»"
     return antes, despues, aviso
