@@ -6,6 +6,7 @@ Copia la raíz a una carpeta temporal con fechas de archivo fijas (todo del 2026
 como probar.sh del tablero, y comprueba lo que sale y, sobre todo, lo que no debe salir.
 """
 import os, pathlib, re, shutil, subprocess, sys, tempfile, time
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
 ABRIR = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "abrir.py"
@@ -187,20 +188,32 @@ for f_ in ("ventas/cuentas/sesiones (1).md", "ventas/area [Conflict].md", "venta
     (R / f_).unlink()
 print("La guia.md de la 1.22: «Responsable» y la columna «Acceso»")
 g = R / "guia.md"; g_viejo = g.read_text(encoding="utf-8")
-nueva = (g_viejo.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|")
-         .replace("| Todo el equipo |\n", "| Todo el equipo | Abierta |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo, nada restringido | Abierta |")
-         .replace("| Restringida: dirección |", "| Dirección | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana Prueba y Beto Prueba | Restringida |"))
+nueva = guia_122(g_viejo)
 g.write_text(nueva, encoding="utf-8")
 c, o = abrir("--cuenta", "ana@ejemplo.test")
 ok(c == 0 and "personas/ · restringida a Dirección" in o and "nomina" not in o and "futura/ · es de esta cuenta" in o, "con «Acceso», lo restringido sale por esa columna y «Quién la lee» dice a quiénes")
 ok("(aviso: la fila" not in o and "ana@ejemplo.test: escribe en ventas (responsable)" in o, "las filas de seis columnas se leen y «Responsable» vale como «Dueño»")
-ok("Veredicto: ANTERIOR en ventas, operacion, archivo\n" in o, "con guia.md al día, la estructura anterior se dice solo por las áreas")
+ok("Veredicto: ANTERIOR en ventas, operacion, archivo · se pregunta" in o, "con guia.md al día, la estructura anterior se dice solo por las áreas (y, sin ser responsable de contexto, solo las suyas)")
 g.write_text(nueva.replace("| Dirección | Restringida |", "| Restringida: dirección |  |"), encoding="utf-8")
 c, o = abrir("--cuenta", "carla@ejemplo.test", "--minima")
 ok("personas/ · restringida" in o and "nomina" not in o, "una celda «Acceso» vacía no abre el área: vale la regla de «Quién la lee»")
 g.write_text(g_viejo, encoding="utf-8")
 c, o = abrir("--minima")
 ok("Veredicto: SIN CUENTA" in o, "sin --cuenta no se ofrece migrar")
+print("En una raíz migrada, la apertura mínima no baja a los proyectos (1.22.1)")
+RM, _ = raiz_migrada()
+_cod = (
+    "import sys, runpy\n"
+    "n = [0]\n"
+    "def h(ev, args):\n"
+    "    if ev == 'open' and str(args[0]).endswith('proyecto.md'): n[0] += 1\n"
+    "sys.addaudithook(h)\n"
+    "sys.argv = [sys.argv[1], sys.argv[2], '--minima', '--cuenta', 'ana@ejemplo.test']\n"
+    "try:\n    runpy.run_path(sys.argv[0], run_name='__main__')\n"
+    "except SystemExit: pass\n"
+    "print('LEIDOS', n[0])\n")
+o = subprocess.run([sys.executable, "-c", _cod, str(ABRIR), str(RM)], capture_output=True, text=True).stdout
+ok("Veredicto: AL DIA" in o and "LEIDOS 0" in o, "AL DIA sin abrir ningún proyecto.md, también en un área migrada sin Estatus (archivo/)" + ("" if "LEIDOS 0" in o else f" ({o.splitlines()[-1:]})"))
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

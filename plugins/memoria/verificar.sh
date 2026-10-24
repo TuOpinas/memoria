@@ -44,7 +44,7 @@ PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
 hallazgos = set()
 sin_afirma = []   # entregables y taller sin «aportacion:» (o «afirma:», su nombre hasta la 1.21): se cuentan, no bloquean
 sin_basado = []   # taller sin «basado_en»: se cuenta, no bloquea (obligatoria desde la 1.22 en lo que se crea)
-anterior = []     # lo que sigue con la estructura de la 1.21: se cuenta, no bloquea; lo migra la apertura de su responsable
+anterior = []     # lo que sigue con la estructura de la 1.21: se cuenta, no bloquea; lo migra la apertura de su responsable o la del responsable de contexto
 sin_charset = []  # .html sin <meta charset="utf-8">: abiertos desde la carpeta salen con los acentos rotos
 SUELTOS_OK = {"guia.md", "metodo.md", "desktop.ini", "Icon\r"}
 ROTADO = re.compile(r"^(sesiones|decisiones)-\d{4}(-\d+)?\.md$")   # el registro que se rota por año
@@ -338,7 +338,7 @@ def nota_afirma():
     if sin_basado:
         print("\nNota: %d archivo%s de taller/ sin `basado_en`. No bloquea en lo que ya existía; lo que se crea desde la 1.22 la lleva (`[]` si no se usó nada)." % (len(sin_basado), "" if len(sin_basado) == 1 else "s"))
     if anterior:
-        print("\nNota: %d archivo%s con la estructura de la 1.21 (En corto, Panorama, Dueño, afirma, enlaces.md…). No bloquea: la raíz funciona mezclada, y cada responsable lo migra al abrir sesión con el plugin 1.22: %s" % (len(anterior), "" if len(anterior) == 1 else "s", ", ".join(anterior[:5]) + (" …" if len(anterior) > 5 else "")))
+        print("\nNota: %d archivo%s con la estructura de la 1.21 (En corto, Panorama, Dueño, afirma, enlaces.md…). No bloquea: la raíz funciona mezclada, y lo migra la apertura de su responsable, o la del responsable de contexto, con el plugin 1.22: %s" % (len(anterior), "" if len(anterior) == 1 else "s", ", ".join(anterior[:5]) + (" …" if len(anterior) > 5 else "")))
 
 if not hallazgos:
     print("La raíz cumple el contrato.")

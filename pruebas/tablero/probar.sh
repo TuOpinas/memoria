@@ -64,6 +64,7 @@ python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 # el barrido de lo que las sesiones olvidaron y las propuestas que deja en la cola
 python3 "$AQUI/probar_barrido.py"
 python3 "$AQUI/probar_plan.py"
+python3 "$AQUI/probar_que_hay.py"
 # la apertura de sesión en una llamada (skill sesion, abrir.py), contra la misma raíz inventada
 python3 "$AQUI/../sesion/probar_abrir.py"
 python3 "$AQUI/../sesion/probar_cuentas.py"

@@ -4,6 +4,7 @@
 Uso: python3 pruebas/verificar/probar_verificar.py
 """
 import pathlib, re, shutil, subprocess, sys, tempfile
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import guia_122
 
 AQUI = pathlib.Path(__file__).resolve().parent
 VER = AQUI.parent.parent / "plugins" / "memoria" / "verificar.sh"
@@ -72,7 +73,7 @@ g = R / "guia.md"; gt = g.read_text(encoding="utf-8")
 g.write_text(gt.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|"), encoding="utf-8")
 r2 = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
 ok("columnas de menos" in r2.stdout and "hacen falta 6" in r2.stdout, "con «Acceso» en el encabezado, una fila de cinco columnas se marca")
-g.write_text(gt.replace("| Área | Qué es | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|", "| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |\n|---|---|---|---|---|---|").replace("| Todo el equipo |\n", "| Todo el equipo | Quizá |\n").replace("| Todo el equipo, nada restringido |", "| Todo el equipo | Abierta |").replace("| Restringida: dirección |", "| Dirección | Restringida |").replace("| Restringida: Ana Prueba y Beto Prueba |", "| Ana y Beto | Restringida |"), encoding="utf-8")
+g.write_text(guia_122(gt, legal="Ana y Beto").replace("| Todo el equipo | Abierta |\n", "| Todo el equipo | Quizá |\n", 1), encoding="utf-8")
 r3 = subprocess.run(["bash", str(VER), str(R)], capture_output=True, text=True)
 ok("columna Acceso sin «Abierta» ni «Restringida»" in r3.stdout and "guia.md (columnas" not in r3.stdout and "columnas de menos" not in r3.stdout, "un valor que no es Abierta ni Restringida se marca; guia.md ya no cuenta como anterior")
 g.write_text(gt, encoding="utf-8")

@@ -283,9 +283,10 @@ def comprobacion(nombre):
 
 @comprobacion("recuadro")
 def _(ctx, arg):
-    """La primera respuesta lleva el recuadro «Memoria activa»."""
+    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»)."""
     t = texto_de(ctx["turnos"][0])
-    return "Memoria activa" in t, "en la primera respuesta" if "Memoria activa" in t else "no está en la primera respuesta"
+    hay = "Memoria de trabajo ·" in t
+    return hay, "en la primera respuesta" if hay else "no está en la primera respuesta"
 
 
 @comprobacion("sin-escrituras")
@@ -447,8 +448,19 @@ def _(ctx, arg):
     """La primera respuesta pregunta si se colocan los archivos de «Claude outputs» (AskUserQuestion o texto)."""
     t = ctx["turnos"][0]
     pregunta = any(h["nombre"] == "AskUserQuestion" and "Claude outputs" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
-    pregunta = pregunta or re.search(r"coloco|colocar", texto_de(t), re.I) is not None and "Claude outputs" in texto_de(t)
+    pregunta = pregunta or re.search(r"coloco|colocar|(los|las) (pongo|ordeno|muevo)", texto_de(t), re.I) is not None and "Claude outputs" in texto_de(t)
     return pregunta, "pregunta por Claude outputs" if pregunta else "no pregunta por Claude outputs"
+
+
+@comprobacion("pregunta-antes")
+def _(ctx, arg):
+    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22») y la respuesta a lo
+    pedido espera: no propone focos de trabajo en ese turno (1.22.1, la pregunta bloqueante)."""
+    t = ctx["turnos"][int(arg or 1) - 1]
+    preg = any(h["nombre"] == "AskUserQuestion" and "1.22" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
+    preg = preg or ("1.22" in texto_de(t) and "?" in texto_de(t))
+    espera = not re.search(r"por cu[aá]l empezamos", texto_de(t), re.I)      # los focos, que cierran la apertura completa
+    return preg and espera, ("pregunta y espera" if preg and espera else "no pregunta por la migración" if not preg else "pregunta, pero ya propone focos en el mismo turno")
 
 
 @comprobacion("contiene")
@@ -539,7 +551,7 @@ def _(ctx, arg):
 @comprobacion("palabras-maximo")
 def _(ctx, arg):
     """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
-    recuadro «Memoria activa». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
+    recuadro «Memoria de trabajo». Mide que la conversación va al grano: la norma es la del hook («sobra toda palabra que se
     pueda borrar») y la skill estilo; el tope lo fija cada escenario según lo que pregunta."""
     n, _, t = arg.partition("@")
     turnos = [ctx["turnos"][int(t) - 1]] if t else ctx["turnos"]

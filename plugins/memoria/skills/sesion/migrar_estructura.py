@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Migra una raíz del método a la estructura de la 1.22, solo en lo que escribe la cuenta (skill sesion).
+"""Migra una raíz del método a la estructura de la 1.22, en lo que escribe la cuenta (skill sesion).
 
 Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--nombre "Nombre Apellido"] [--sin-consola]
 
 Lo ofrece la apertura cuando abrir.py dice «ESTRUCTURA: ANTERIOR»; con el sí de la persona se corre una vez, sin --plan.
-Con --plan no escribe nada y dice qué haría. Toca solo las áreas de las que la cuenta es responsable (la celda Cuenta de
-guia.md, antes de «colabora:») y guia.md si la cuenta es la del responsable de contexto; las áreas de otras cuentas
-esperan a que su responsable abra sesión con el plugin 1.22, y una raíz mezclada funciona porque scripts y skills leen
-los dos nombres durante la 1.22. Sin consola (la carpeta no está montada en la computadora) se corre en el contenedor sobre
-la copia que arma «espejo.py migracion», con --sin-consola (la entrada de la bitácora lleva la marca), y lo que cambia se
-devuelve con espejo.py; los renombrados de archivo los hace después el conector de Drive (skill sesion, migracion.md).
+Con --plan no escribe nada y dice qué haría. Toca las áreas de las que la cuenta es responsable (la celda Cuenta de
+guia.md, antes de «colabora:»); si es la del responsable de contexto, además guia.md y todas las demás áreas con carpeta,
+restringidas incluidas (desde la 1.22.1: es quien administra la carpeta y su dueño en Drive, y así una raíz no queda a
+medias por un responsable que no abre sesión), con la entrada de la bitácora de esos proyectos diciendo por quién. Lo
+que no migra (un área sin carpeta) va a «pendientes» con su motivo. Cualquier otra cuenta deja las
+áreas ajenas para su responsable, y una raíz mezclada funciona porque scripts y skills leen los dos nombres durante la 1.22.
+Sin consola (la carpeta no está montada en la computadora) se corre en el contenedor sobre la copia que arma «espejo.py
+migracion», con --sin-consola (la entrada de la bitácora lleva la marca), y lo que cambia se devuelve con espejo.py;
+los renombrados de archivo los hace después el conector de Drive (skill sesion, migracion.md).
 
 Lo que renombra (contrato, escribir.md, secciones 2, 3, 4 y 5), sin perder nada:
   guia.md       en la primera tabla de «## Áreas», la columna «Dueño» pasa a «Responsable» y se añade «Acceso»
@@ -35,13 +38,16 @@ Lo que renombra (contrato, escribir.md, secciones 2, 3, 4 y 5), sin perder nada:
   archivos      fuentes/enlaces.md y restringido/enlaces.md pasan a inventario.md (si ya existe uno, no se pisa: se dice).
   sesiones.md   una entrada «## AAAA-MM-DD (migracion)» arriba en cada proyecto migrado, de una frase.
 
-Cómo escribe: primero los archivos nuevos del taller y, solo si cada uno quedó escrito, su proyecto.md; cada archivo se
+Cómo escribe: primero los archivos nuevos del taller y, solo si cada uno quedó escrito, su proyecto.md; la entrada de la
+bitácora solo si su proyecto.md quedó escrito, y area.md al final, solo si todos los proyecto.md del área quedaron escritos
+(la apertura da un área por migrada por su area.md: un fallo deja la pregunta en pie, y repetir el script lo completa); cada archivo se
 relee y se vuelve a transformar en el momento de escribirlo, bajo un cerrojo por archivo, como cerrar.py, para no pisar
 un cierre que llegue entre medias. No toca decisiones.md, las entradas ya escritas de sesiones.md, base/ ni lo que hay
 dentro de fuentes/ y restringido/ salvo su inventario. La fecha es la del día en la zona horaria de guia.md. Repetirlo
 no hace nada. Imprime un JSON compacto con, primero, lo que hay que mirar: «conflictos» (un inventario.md o un
 estado-anterior.md que ya existían), «fallidos», «entradas» (los sesiones.md donde dejó su entrada, o la dejaría con
---plan), «resumen» (cuántos archivos por tipo de cambio), «areas», «guia», «pendientes» (áreas de otras cuentas), «nuevos»
+--plan), «resumen» (cuántos archivos por tipo de cambio), «areas», «ajenas» (las de otros responsables que migra el de
+contexto), «guia», «pendientes» (las áreas de otras cuentas que no migra, con su motivo), «nuevos»
 (los archivos del taller que crea), «renombrados» y, al final, «archivos» (ruta: cambios).
 """
 import datetime, hashlib, json, os, pathlib, re, sys, tempfile
@@ -613,10 +619,15 @@ def main(argv):
         if col is None:
             cc = columnas(c)
             col = {"resp": cc["resp"] if cc["resp"] is not None else 2, "cuenta": cc["cuenta"] if cc["cuenta"] is not None else 3}
+            lee_, acc_ = cc["lee"] if cc["lee"] is not None else 4, cc["acc"]
             continue
         if len(c) > max(col.values()):
+            # restringida como la lee abrir.py: «Acceso» si la hay; si no, o si no dice Abierta ni Restringida, «Quién la lee»
+            v_acc = c[acc_] if acc_ is not None and acc_ < len(c) else ""
+            restr = (True if re.match(r"^[\W_]*restringid[oa]s?\b", v_acc, re.I) else False if re.match(r"^[\W_]*abiert[oa]s?\b", v_acc, re.I)
+                     else restringida_celda(c[lee_] if lee_ < len(c) else ""))
             areas.append({"slug": c[0].strip("`").rstrip("/"), "nombre": re.sub(r"\s*\([^)]*\)", "", c[col["resp"]]).strip(),
-                          "responsables": cuentas(c[col["cuenta"]])[0]})
+                          "responsables": cuentas(c[col["cuenta"]])[0], "colaboran": cuentas(c[col["cuenta"]])[1], "restringida": restr})
     ctx = ""
     for l in (re.search(r"^##\s+Quién responde por qué\s*\n(.*?)(?=^##\s|\Z)", guia, re.M | re.S) or [None, ""])[1].split("\n"):
         if l.strip().lower().lstrip("-* ").startswith("contexto común"):
@@ -625,10 +636,17 @@ def main(argv):
     cuenta_ctx = set(CORREO.findall(ctx.lower()))
     nombre_ctx = re.sub(r"\s*\([^)]*\)", "", ctx.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
     es_resp = cuenta in cuenta_ctx or (not cuenta_ctx and bool(nombre_ctx) and any(cuenta in a["responsables"] and a["nombre"].lower() == nombre_ctx for a in areas))
-    mias = [a for a in areas if cuenta in a["responsables"]]
-    nombre = op("--nombre") or (mias[0]["nombre"] if mias else cuenta)
+    propias = [a for a in areas if cuenta in a["responsables"]]
+    nombre = op("--nombre") or (propias[0]["nombre"] if propias else cuenta)
+    # el responsable de contexto migra todas las áreas con carpeta, también las de otros responsables y las restringidas
+    # (1.22.1): es quien administra la carpeta y su dueño en Drive, y lo peor que puede pasar es que algo se quede sin migrar
+    def motivo_ajena(a):
+        return "sin carpeta en esta computadora" if not (raiz / a["slug"]).is_dir() else None
+    mias = [a for a in areas if (cuenta in a["responsables"] and (raiz / a["slug"]).is_dir()) or (es_resp and cuenta not in a["responsables"] and not motivo_ajena(a))]
     salida = {"plan": plan, "hoy": hoy, "conflictos": [], "fallidos": [], "entradas": [], "resumen": {},
-              "areas": [a["slug"] for a in mias], "guia": False, "pendientes": [a["slug"] for a in areas if cuenta not in a["responsables"]],
+              "areas": [a["slug"] for a in mias], "ajenas": [a["slug"] for a in mias if cuenta not in a["responsables"]],
+              "guia": False, "pendientes": [{"area": a["slug"], "motivo": motivo_ajena(a) if es_resp else "de otra cuenta: la migra su responsable"}
+                                           for a in areas if a not in mias and cuenta not in a["responsables"]],
               "nuevos": [], "renombrados": [], "archivos": {}}
     # lo que se va a escribir: cada entrada es (ruta relativa, función texto→texto nuevo, o texto entero si es nuevo)
     # el orden importa: taller antes que proyecto.md, y la entrada de la bitácora al final
@@ -659,7 +677,7 @@ def main(argv):
         except (OSError, UnicodeDecodeError):
             ta0 = ""
         restringidos = set(re.findall(r"^- `([^`/]+)/?`\s*[—–:-]?\s*[\W_]*restringid[oa]\b", sec(partir(ta0)[2], "Proyectos") or "", re.M | re.I))
-        frases = []
+        frases, proy_area = [], []
         for d in proyectos:
             rel_p = d.relative_to(raiz).as_posix()
             hecho = []
@@ -682,6 +700,7 @@ def main(argv):
                     taller_rel = rel_p + "/taller/estado-anterior.md"
                     tareas.append((taller_rel, archivo_taller(rel_p, titulo, act, aparte, "proyecto.md"))); salida["nuevos"].append(taller_rel)
                 tareas.append((rel_p + "/proyecto.md", (lambda mv: (lambda t: migrar_proyecto(t, [], mover_estado=mv)[0]))(mover), taller_rel))
+                proy_area.append(rel_p + "/proyecto.md")
             if not cerrado_en(tp) and d.name not in restringidos:
                 fr = frase_proyecto(nuevo)
                 if fr:
@@ -712,8 +731,10 @@ def main(argv):
                 entrada = (f"## {hoy} (migracion)\nTema: la estructura del método pasa a la de la 1.22.\n"
                            f"Avances: secciones, claves y archivos renombrados por el plugin, sin cambiar contenido"
                            + ("; lo que salió de proyecto.md quedó en taller/estado-anterior.md" if any(k == rel_p + "/taller/estado-anterior.md" for k, *_ in tareas) else "")
-                           + f".\nSesión de: {nombre} · plugin {version}" + (" · sin consola" if "--sin-consola" in argv else ""))
-                tareas.append((rel_p + "/sesiones.md#entrada", entrada))
+                           + f".\nSesión de: {nombre}" + ("" if cuenta in a["responsables"] else f", responsable de contexto, por {a['nombre'] or 'el responsable del área'}")
+                           + f" · plugin {version}" + (" · sin consola" if "--sin-consola" in argv else ""))
+                # la entrada dice que se migró: solo si proyecto.md quedó escrito (si no, no se migró y no se registra)
+                tareas.append((rel_p + "/sesiones.md#entrada", entrada, [rel_p + "/proyecto.md"] if rel_p + "/proyecto.md" in salida["archivos"] else None))
         pa = carpeta / "area.md"
         if pa.is_file():
             try:
@@ -736,7 +757,9 @@ def main(argv):
                             tareas.append((taller_rel, archivo_taller(a["slug"], a["slug"], clave_cabecera(ta, "actualizado") or hoy, [("## Estatus del área que no ganó al fundir", aparte)], "area.md"))); salida["nuevos"].append(taller_rel)
                     else:
                         salida["conflictos"].append({"ruta": a["slug"] + "/area.md", "motivo": "había dos bloques de estatus y el área no tiene proyectos donde guardar el que no ganó"})
-                tareas.append((a["slug"] + "/area.md", (lambda cp, fr: (lambda t: migrar_area(t, cp, [], fr)[0]))(carpeta, frases), taller_rel))
+                # area.md, que la apertura usa para dar el área por migrada, va al final y solo si todos sus proyectos
+                # quedaron escritos: un proyecto que falló deja el área en la estructura anterior y la pregunta vuelve
+                tareas.append((a["slug"] + "/area.md", (lambda cp, fr: (lambda t: migrar_area(t, cp, [], fr)[0]))(carpeta, frases), ([taller_rel] if taller_rel else []) + proy_area))
 
     resumen = {}
     for cambios in salida["archivos"].values():
@@ -751,8 +774,10 @@ def main(argv):
         for tarea in tareas:
             rel, que = tarea[0], tarea[1]
             depende = tarea[2] if len(tarea) > 2 else None
-            if depende and depende not in escritos_ok:
-                salida["fallidos"].append({"ruta": rel, "motivo": f"no se escribió porque falló {depende}; nada se perdió"})
+            depende = [depende] if isinstance(depende, str) else (depende or [])
+            falta = [x for x in depende if x not in escritos_ok]
+            if falta:
+                salida["fallidos"].append({"ruta": rel.split("#")[0], "motivo": f"no se escribió porque falló {', '.join(falta)}; nada se perdió, y repetir la migración lo completa"})
                 salida["archivos"].pop(rel, None)
                 continue
             try:

@@ -7,25 +7,25 @@ La cola ("cambios" en la base de la página) trae seis tipos:
   quitar el paso, contar qué pasó en sesiones.md y a veces una decisión. Se reporta.
 - nota: algo anotado para la próxima sesión. NO se aplica. Se reporta.
 - prioridad: una prioridad del área marcada como cumplida o retirada. NO se aplica: area.md lo reescribe
-  la sesión del dueño del área. Se reporta.
+  la sesión del responsable del área. Se reporta.
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
 - propuesta: algo que el barrido de la puesta al día (`barrido.py`) vio que una sesión olvidó. NO se aplica nunca aquí:
-  la memoria propone y solo su dueño decide, en una sesión. Se reporta aparte, en "propuestas", como lo que se queda
+  la memoria propone y solo su responsable decide, en una sesión. Se reporta aparte, en "propuestas", como lo que se queda
   en la cola a propósito. Una que no cumple la forma (id de proyecto, línea única) va a "rechazados" y se borra.
 
 Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> --cuenta <correo> [--dry-run]
-Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo, como dueño o tras
+Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo, como responsable o tras
 «colabora:», y los proyectos cuya línea «Colabora:» de «Quién participa» lo lleva: la puesta al día corre con la
 cuenta de quien la lanza y nadie escribe en el área de otro (contrato, prohibición 4). Las prioridades del área
-son solo de su dueño: las que marca quien colabora se quedan para él.
+son solo de su responsable: las que marca quien colabora se quedan para él.
 Sin --cuenta no se aplica nada.
 Salida: JSON por stdout con "aplicados" (ids que ya están en la carpeta y se pueden borrar
 de la cola), "sin_match" (fechas cuyo paso ya no existe tal cual: se quedan para la sesión), "rechazados" (lo que no
 cumple la forma: se borra de la cola y se dice en el resumen), "errores" (no se pudo escribir:
 se quedan en la cola y se reintentan en la próxima corrida), "para_sesion" (lo que no es una fecha,
-de las áreas y proyectos donde la cuenta es dueña o colabora) y "para_su_dueno" (lo demás: se queda en la cola
-hasta que su dueño ponga al día su tablero o cierre una sesión; no se toca).
+de las áreas y proyectos donde la cuenta es responsable o colabora) y "para_su_dueno" (lo demás: se queda en la cola
+hasta que su responsable ponga al día su tablero o cierre una sesión; no se toca).
 Una fecha aplicada no toca la fecha «actualizado» de la cabecera: es un cambio mecánico, no trabajo
 sobre el proyecto, y moverla escondería en el tablero los plazos vencidos de los demás pasos.
 La cola la escribe cualquier contribuidor del tablero, así que nada de ella se toma por bueno: el id del
@@ -69,7 +69,7 @@ def colaboran_en(quien):
 # --- fin de quién escribe ---
 
 def mis_areas():
-    """(áreas de las que la cuenta es dueña, áreas en las que colabora), según la columna Cuenta de guia.md."""
+    """(áreas de las que la cuenta es responsable, áreas en las que colabora), según la columna Cuenta de guia.md."""
     try:
         guia = (RAIZ / "guia.md").read_text(encoding="utf-8-sig")
     except OSError:
@@ -105,7 +105,7 @@ def colabora_en_proyecto(area, slug):
     return CUENTA in colaboran_en(m.group(1) if m else "")
 
 def puede(t, c, area):
-    """Las prioridades del área son de su dueño; lo demás lo escribe también quien colabora en el área o en el proyecto."""
+    """Las prioridades del área son de su responsable; lo demás lo escribe también quien colabora en el área o en el proyecto."""
     if not CUENTA or not area:
         return bool(CUENTA)
     if area in MIAS:
@@ -224,7 +224,7 @@ for c in cargar():
     t = c.get("tipo")
     area = partes(c)[0] or (c.get("area") if nombre_ok(c.get("area")) else "") or ""
     if t == "propuesta":
-        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún dueño; se cuentan aparte
+        # las escribe el barrido del plugin, no un contribuidor: no se aplican, no esperan a ningún responsable; se cuentan aparte
         if not partes(c)[0] or not texto_de_una_linea(c.get("texto")) or \
            any(c.get(k) not in (None, "") and not texto_de_una_linea(c.get(k)) for k in ("por_que", "clase", "ruta", "afirma")) or \
            (c.get("rutas") is not None and not (isinstance(c["rutas"], list) and c["rutas"] and all(texto_de_una_linea(r) for r in c["rutas"]))):

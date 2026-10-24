@@ -42,6 +42,8 @@ grep -q 'si ninguna carpeta lo es' "$tmp/out"; ok $? "y deja seguir sin más si 
 corre "$tmp/casa-memoria" "$(conv e "$pregunta" "$apertura_txt" "$respuesta")"; calla; ok $? "con una apertura ya hecha no dice nada"
 corre "$tmp/casa-memoria" "$(conv e2 "$pregunta" "$apertura_lista" "$respuesta")"; calla; ok $? "también con el resultado en forma de lista"
 corre "$tmp/casa-memoria" "$(conv e3 "$pregunta" "$respuesta")" false "Memoria activa · TuOpinas · método 1.18.2"; calla; ok $? "la respuesta que termina ya abrió, aunque el registro vaya con retraso"
+corre "$tmp/casa-memoria" "$(conv e4 "$pregunta" "$respuesta")" false "Memoria de trabajo · TuOpinas · v1.22.1"; calla; ok $? "también con la cabecera de la 1.22.1, «Memoria de trabajo»"
+corre "$tmp/casa-memoria" "$(conv e5 "$pregunta" "$respuesta")" false 'Memoria de trabajo \u00b7 TuOpinas \u00b7 v1.22.1'; calla; ok $? "y con el «·» escapado como lo escribe json.dumps"
 f="$(conv f "$pregunta" "$respuesta")"; corre "$tmp/casa-memoria" "$f"; corre "$tmp/casa-memoria" "$f"; calla; ok $? "recuerda una sola vez por conversación"
 corre "$tmp/casa-memoria" "$(conv g "$pregunta" "$escribe_marca" "$codigo" "$editado" "$respuesta")"; recuerda; ok $? "mostrar, escribir o editar el código del plugin no cuenta como apertura ni como recordatorio"
 corre "$tmp/casa-memoria" "$(conv t "$enlazada" "$tarea" "$respuesta")"; calla; ok $? "en la puesta al día del tablero no dice nada, aunque antes llegue el aviso de computadora enlazada"

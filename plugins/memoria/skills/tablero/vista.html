@@ -583,7 +583,7 @@ p.ar-ln{margin:0 0 6px;font-size:14.5px}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.22.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.22.1"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -659,7 +659,7 @@ async function corregir(p, s, propuesta){
   render();
 }
 const isDone = (p, s) => !!pend(p.id, s.texto).hecho;
-// lo que la cola trae de un proyecto o un área que este tablero no muestra no se enseña ni se cuenta a quien no es el dueño
+// lo que la cola trae de un proyecto o un área que este tablero no muestra no se enseña ni se cuenta a quien no montó el tablero
 const cambiosVis = () => OWNER ? CAMBIOS : CAMBIOS.filter(c => c.area && !c.proyecto ? (areaBy[c.area] && areaBy[c.area].legible!==false) : (byId[c.proyecto] && !byId[c.proyecto].restringido));
 const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s)));
@@ -804,7 +804,7 @@ afectan = _memo1("afectan", afectan);
 mtDatos = _memo1("mt", mtDatos);
 entIdx = _memo1("ents", entIdx);
 // por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14; «restringido» cuando la carpeta
-// lo declara, 1.18.1); sin motivo, se supone restringido. Del dueño, solo el nombre: se quitan las notas entre paréntesis
+// lo declara, 1.18.1); sin motivo, se supone restringido. Del responsable, solo el nombre: se quitan las notas entre paréntesis
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
 const soloNombre = d => (d||"").replace(/\s*\((?=[a-záéíóúñ`])[^)]*\)/g,"").trim();
 // a quiénes se lee, de la celda «Quién la lee»: «Restringida: Ana y Beto», «Restringida a dirección», «Restringida (dirección)»
@@ -941,7 +941,7 @@ function regNecesita(p){
   return {total: live.length, raros: raros.map(k=>pl(k,by[k])), nRaros: raros.reduce((n,k)=>n+by[k],0)};
 }
 // lo que alguien marcó aquí en un proyecto cuya área no es de quien montó el tablero: su puesta al día no lo escribe,
-// y el dueño no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
+// y su responsable no lee esta cola; se dice a quién hay que pasárselo en lugar de dejarlo esperando para siempre
 function ajenaAviso(p){
   const aj = new Set((META && META.cola_ajena) || []), n = CAMBIOS.filter(c => c.proyecto === p.id && aj.has(c.id)).length;
   return n ? `<p class="hint">${n===1?"Hay 1 cosa marcada":`Hay ${n} cosas marcadas`} aquí que no se escriben solas: el área de este proyecto es de ${esc(((AREAS||[]).find(a=>a.slug===p.area)||{}).dueno||p.dueno||"otra persona")}, y su puesta al día no lee este tablero. Díselo, o pídele que lo marque en el suyo.</p>` : "";
@@ -1608,7 +1608,7 @@ function ayudaArts(){
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
       <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta. Conéctala en el proyecto, no en una conversación suelta, y cuando Claude pida permiso para usarla, deja que lo haga siempre.</span></li>
       <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced, y entre tus plugins Memoria tiene que estar encendido: en algunas versiones se instala apagado. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
-      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria activa», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
+      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria de trabajo», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
       <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
     <dl class="hc-def">
@@ -1704,7 +1704,7 @@ function ayudaArts(){
   {g:"Cada día", id:"si-algo-falla", t:"Si algo falla", h:`
     <dl class="hc-qa">
       <dt>Claude dice que no ve la carpeta.</dt><dd>Añádela a la conversación con «+». Si ya estaba, comprueba que está sincronizada en tu computadora y que la app de Claude está abierta.</dd>
-      <dt>Al abrir sesión no aparece el recuadro «Memoria activa».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
+      <dt>Al abrir sesión no aparece el recuadro «Memoria de trabajo».</dt><dd>Claude no encontró la carpeta o el plugin no está activo. Revisa que la conversación está dentro de tu proyecto, que es de Cowork si tu versión separa Chat y Cowork, que la carpeta está conectada al proyecto y que el plugin está encendido. Más en <button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>.</dd>
       <dt>Claude me pregunta dónde escribir.</dt><dd>Tu cuenta no está en el mapa de <code>guia.md</code>, ni como responsable ni como colaborador, ni en el proyecto donde trabajas. Dile en qué área trabajas para seguir hoy, y pide a ${CTX} que añada tu cuenta en <code>guia.md</code>.</dd>
       <dt>Dice que la carpeta usa una versión del método más nueva que la mía.</dt><dd>Tu plugin se quedó atrás. En Customize › Plugins, Add › Manage marketplaces, sincroniza <code>memoria</code>; con Sync automatically encendido no vuelve a pasar.</dd>
       <dt>El tablero sale vacío o le faltan áreas.</dt><dd>Los archivos de la carpeta siguen solo en la nube. Marca la carpeta «Disponible sin conexión» en el Finder o en el Explorador de archivos, espera a que se descarguen y pulsa «Sincronizar ahora».</dd>
