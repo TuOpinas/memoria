@@ -164,6 +164,11 @@ def preparar_plugin(origen, trabajo):
     con una versión mayor que cualquier otra copia instalada, para que la elija; y metodo.md regenerado con ella."""
     instaladas = [v for p in PLUGINS_INSTALADOS.glob("*/*/memoria*") for v in [version_de(p)] if v and ".trash" not in str(p)]
     version = version_de(origen) or "0.0.0"
+    # una rama de versión declara ya en el contrato su mayor.menor (1.22) antes de que release.sh suba plugin.json:
+    # la copia del eval lleva al menos esa, para que build-metodo.sh no la rechace
+    mc = re.search(r"Versión del método: \*\*(\d+)\.(\d+)\*\*", (origen / "skills/convenciones/SKILL.md").read_text(encoding="utf-8"))
+    if mc and not mayor(version, f"{mc.group(1)}.{mc.group(2)}.0") and version != f"{mc.group(1)}.{mc.group(2)}.0":
+        version = f"{mc.group(1)}.{mc.group(2)}.0"
     while any(not mayor(version, v) for v in instaladas):
         a, b, c = version.split("."); version = f"{a}.{b}.{int(c) + 1}"
     # restos de una corrida anterior que murió a medias (una copia con versión inventada que la siguiente sesión real
