@@ -7,7 +7,11 @@ colección «cambios» del tablero, donde cada propuesta es un documento de tipo
 su dueño decide: una propuesta no cambia ningún archivo; la sesión que el dueño abre la enseña y el cierre escribe
 lo que él acepta.
 
-Uso:  barrido.py <copia> <salida> [--cola <volcado de «cambios»>] [--hoy AAAA-MM-DD]
+Uso:  barrido.py <copia> <salida> [--cola <volcado de «cambios»>] [--base <volcado de la base>] [--hoy AAAA-MM-DD] [--cuenta <correo>]
+          con --base lee `juzgado` de su meta/estado: lo que el modelo ya vio en corridas anteriores y no dio propuesta
+          (extractos que no eran decisión, piezas sin `afirma` que no se pudo decir, conjuntos ya contrastados) no se vuelve a pedir
+          con --cuenta solo barre las áreas donde la cuenta es dueña o colabora (y los proyectos ajenos que la nombran en
+          «Colabora:»): la memoria propone a quien puede escribir, y lo de otra área lo barre el tablero de su dueño.
           «hoy» es, si no se da, el `snapshot` de <salida>/meta/estado.json (el día en la zona de la organización, que
           el generador ya puso ahí) y, si tampoco está, el de esta máquina, que va en UTC: no es una fecha para escribir.
       barrido.py --cola-pendiente <volcado de «cambios»>   → imprime cuántos cambios de la cola NO son propuestas
@@ -29,8 +33,8 @@ y deja para el modelo lo que solo un modelo puede decidir:
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
   para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 6 por corrida; entregables antes
                 que taller, vigentes antes que borradores), con su título y, en los entregables, el arranque de su cuerpo,
-                para que el modelo escriba la línea que dice qué sostienen. Del taller la copia solo tiene la cabecera
-                (la dejó el generador en <salida>/detalle): «leer_en_computadora» pide leer su arranque allí, en una llamada.
+                para que el modelo escriba la línea que dice qué sostienen. Del taller solo hay título y cabecera (la copia
+                no trae su cuerpo, que es privado del área): si con eso no se puede decir qué sostiene, se salta.
   para_contraste los proyectos (hasta 5) con dos o más piezas con `afirma`, con esas líneas: el modelo dice qué piezas
                 del taller podrían alimentar un entregable que no existe (candidatos) y qué dos piezas sostienen cosas
                 incompatibles (contradicciones). Solo las líneas «afirma», nunca los cuerpos.
@@ -50,6 +54,7 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
 LIMITE_LINEAS = 1500
 MAX_AFIRMA = 6
+DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
 
@@ -143,10 +148,61 @@ def cargar_cola(carpeta):
     return docs
 
 
-def proyectos_de(copia):
+CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
+PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
+LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
+
+
+def areas_de_la_cuenta(copia, cuenta):
+    """Las áreas donde la cuenta es dueña o colabora, por la columna Cuenta de guia.md (como aplicar_cambios.py); None sin cuenta."""
+    if not cuenta:
+        return None
+    guia = leer(copia / "guia.md")
+    m = re.search(r"^## Áreas\s*\n(.*?)(?=^## |\Z)", guia, re.S | re.M)
+    out, primera = set(), True
+    for l in (m.group(1).split("\n") if m else []):
+        if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
+            continue
+        if primera:
+            primera = False; continue
+        celdas = [c.strip() for c in l.strip().strip("|").split("|")]
+        if len(celdas) >= 5:
+            partes = PALABRA_COLABORA.split(celdas[3].lower(), maxsplit=1)
+            if cuenta in set(CORREO.findall(partes[0])) | (set(CORREO.findall(partes[1])) if len(partes) > 1 else set()):
+                out.add(celdas[0].strip("`").rstrip("/"))
+    return out
+
+
+def colabora_en(proy, cuenta):
+    tp = leer(proy / "proyecto.md")
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", tp, re.S | re.M)
+    return bool(cuenta) and any(cuenta in CORREO.findall(l.lower()) for l in (m.group(1) if m else "").split("\n") if LINEA_COLABORA.match(l))
+
+
+def proyectos_de(copia, cuenta=None):
+    """Los proyectos que el barrido mira: con --cuenta, solo los de las áreas donde es dueña o colabora, y los proyectos
+    ajenos donde su «Colabora:» la nombra. La memoria propone a quien puede escribir; lo de otra área lo barre su dueño."""
+    mias = areas_de_la_cuenta(copia, cuenta)
     for area in sorted(p for p in copia.iterdir() if p.is_dir() and (p / "area.md").exists()):
         for proy in sorted(p for p in area.iterdir() if p.is_dir() and (p / "proyecto.md").exists()):
+            if mias is not None and area.name not in mias and not colabora_en(proy, cuenta):
+                continue
             yield area.name, proy
+
+
+def juzgado_de(base):
+    """Lo que el modelo ya juzgó sin hallazgo, guardado en meta/estado por plan_subida.py: {"ids": [...], "contraste": [...]}."""
+    try:
+        d = json.loads((pathlib.Path(base) / "meta" / "estado.json").read_text(encoding="utf-8")) if base else {}
+        d = d.get("data", d) if isinstance(d, dict) and "data" in d else d
+        j = (d or {}).get("juzgado") or {}
+        return {"ids": set(j.get("ids") or []), "contraste": set(j.get("contraste") or [])}
+    except (OSError, ValueError):
+        return {"ids": set(), "contraste": set()}
+
+
+def id_contraste(pid, rutas):
+    return id_juicio("contraste", pid, "contraste|" + "|".join(sorted(rutas)))
 
 
 def piezas_de(salida, pid):
@@ -158,10 +214,12 @@ def piezas_de(salida, pid):
         return []
 
 
-def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: []):
+def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: [], cuenta=None, juzgado=None):
+    juzgado = juzgado or {"ids": set(), "contraste": set()}
+    visto = lambda i: hay_propuesta(i) or i in juzgado["ids"]      # ya propuesto, o ya juzgado sin hallazgo
     """(propuestas, para_juicio, para_afirma, para_contraste, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
     props, juicio, afirma, contraste, vistos, validas = [], [], [], [], [], set()
-    for area, proy in proyectos_de(copia):
+    for area, proy in proyectos_de(copia, cuenta):
         pid = f"{area}--{proy.name}"
         vistos.append(pid)
         tp = leer(proy / "proyecto.md")
@@ -212,7 +270,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         for e in reales[:3]:
             if e[0] >= limite and e[0] not in fechas_dec:
                 texto = " ".join(campo(e[2], k) for k in ("Trabajamos en", "Avances"))
-                if DECIDIO.search(texto) and not hay_propuesta(id_juicio("decision-sin-registrar", pid, "decision|" + e[0])):
+                if DECIDIO.search(texto) and not visto(id_juicio("decision-sin-registrar", pid, "decision|" + e[0])):
                     juicio.append({"proyecto": pid, "fecha": e[0], "extracto": una_linea(texto, 600)})
         # entregables que no dicen qué sostienen
         for f in sorted((proy / "entregables").glob("*.md")) if (proy / "entregables").is_dir() else []:
@@ -222,7 +280,7 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                 continue
             ruta = f"{area}/{proy.name}/entregables/{f.name}"
             validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
-            if not hay_propuesta(id_juicio("afirma", pid, "afirma|" + ruta)):
+            if not visto(id_juicio("afirma", pid, "afirma|" + ruta)):
                 cuerpo = re.sub(r"^---\s*\n.*?\n---\s*\n", "", ft, count=1, flags=re.S)
                 titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
                 arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
@@ -239,11 +297,12 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
             if pz.get("tipo") != "taller" or not str(pz.get("archivo", "")).endswith(".md") or pz.get("estado") == "reemplazado" or pz.get("afirma"):
                 continue
             validas.add(id_juicio("afirma", pid, "afirma|" + ruta))
-            if not hay_propuesta(id_juicio("afirma", pid, "afirma|" + ruta)):
+            if not visto(id_juicio("afirma", pid, "afirma|" + ruta)):
                 afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(pz.get("titulo") or pz.get("nombre") or "", 120),
-                               "arranque": None, "leer_en_computadora": True, "_vigente": pz.get("estado") == "vigente", "_taller": True})
+                               "arranque": None, "_vigente": pz.get("estado") == "vigente", "_taller": True})
         # candidatos a entregable y contradicciones: solo un modelo los ve, sobre las líneas «afirma» (nunca los cuerpos)
-        if len(con_afirma) >= 2 and len(contraste) < MAX_CONTRASTE:
+        # el contraste se pide una vez por conjunto de piezas: si ese conjunto ya se juzgó (con o sin hallazgo), no se repite
+        if len(con_afirma) >= 2 and len(contraste) < MAX_CONTRASTE and id_contraste(pid, [x["ruta"] for x in con_afirma[:20]]) not in juzgado["contraste"]:
             contraste.append({"proyecto": pid, "piezas": con_afirma[:20]})
         # una propuesta de candidato o de contradicción sigue valiendo mientras existan todas las piezas que nombra
         for d in en_cola(pid):
@@ -260,6 +319,10 @@ def sumar_juicio(salida, juicio, cola):
     bar = json.loads((salida / "barrido.json").read_text(encoding="utf-8"))
     if isinstance(juicio, list):
         juicio = {"decisiones": juicio}
+    # todo lo que se puso delante del modelo queda juzgado, haya hallazgo o no: no se vuelve a pedir (plan_subida lo lleva a meta/estado)
+    bar["juzgado"] = {"ids": sorted({id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"]) for j in bar.get("para_juicio", [])}
+                                    | {id_juicio("afirma", j["proyecto"], "afirma|" + j["ruta"]) for j in bar.get("para_afirma", [])}),
+                      "contraste": sorted(id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", []))}
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
@@ -288,6 +351,8 @@ def sumar_juicio(salida, juicio, cola):
         if not isinstance(j, dict) or j.get("ruta") not in pedido_afirma:
             continue
         linea = una_linea(str(j.get("afirma") or "").replace('"', "'"), 200)
+        if DATO_PERSONAL.search(linea):
+            continue      # un correo, un RFC o CURP, una cuenta o un número largo no van a una línea que lee todo el que lee el área
         proy = pedido_afirma[j["ruta"]]
         pid = id_juicio("afirma", proy, "afirma|" + j["ruta"])
         if not linea or pid in ya:
@@ -349,7 +414,8 @@ def main():
     por_proyecto = {}
     for d in existentes:
         por_proyecto.setdefault(d["data"].get("proyecto"), []).append(d)
-    props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []))
+    props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []),
+                                                              (opt("--cuenta") or "").strip().lower() or None, juzgado_de(opt("--base")))
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = datetime.datetime.now().astimezone().isoformat(timespec="minutes")
     (salida / "cambios").mkdir(parents=True, exist_ok=True)

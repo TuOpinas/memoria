@@ -143,7 +143,20 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sc), "--hoy", "2026-10-23"], capture_output=True, text=True)
     bc = json.loads((sc / "barrido.json").read_text(encoding="utf-8"))
     pa = [x["ruta"] for x in bc["para_afirma"]]
-    ok(pa[-1] == "ventas/limpio/taller/sin-afirma.md" and pa[0].startswith("ventas/limpio/entregables/") and bc["para_afirma"][-1].get("leer_en_computadora") is True and bc["para_afirma"][-1]["arranque"] is None, f"pide afirma del taller después de los entregables, sin arranque y marcado para leer en la computadora ({pa})")
+    ok(pa[-1] == "ventas/limpio/taller/sin-afirma.md" and pa[0].startswith("ventas/limpio/entregables/") and "leer_en_computadora" not in bc["para_afirma"][-1] and bc["para_afirma"][-1]["arranque"] is None and bc["para_afirma"][-1]["titulo"] == "Sin afirma", f"pide afirma del taller después de los entregables, solo con título y cabecera, nunca su cuerpo ({pa})")
+    # con --cuenta, solo las áreas de la cuenta (y los proyectos ajenos que la nombran en «Colabora:»)
+    raiz2 = tmp / "raiz-cuenta"; shutil.copytree(raiz, raiz2)
+    guia_ = raiz2 / "guia.md"
+    escribir(guia_, "# Prueba · guía\n\n## Áreas\n\n| Área | Qué | Dueño | Cuenta | Quién la lee |\n|---|---|---|---|---|\n| `ventas/` | v | Ana | ana@ejemplo.test · colabora: carla@ejemplo.test | Todo el equipo |\n| `otra/` | o | Beto | beto@ejemplo.test | Todo el equipo |\n")
+    proyecto(raiz2, "otra", "cosa", "2026-09-01", ["Llamar"], sesion("2026-10-10", "x", "Se habló."))
+    so = tmp / "so"; so.mkdir()
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz2), str(so), "--hoy", "2026-10-23", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True)
+    vistos_ = json.loads((so / "barrido.json").read_text())["proyectos"]
+    ok(vistos_ and all(v.startswith("ventas--") for v in vistos_), f"con --cuenta no barre las áreas de otra cuenta ({[v for v in vistos_ if not v.startswith('ventas--')]})")
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz2), str(tmp / "so2"), "--hoy", "2026-10-23", "--cuenta", "carla@ejemplo.test"], capture_output=True, text=True)
+    ok("ventas--viejo" in json.loads((tmp / "so2" / "barrido.json").read_text())["proyectos"], "quien colabora en el área también barre")
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz2), str(tmp / "so3"), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    ok("otra--cosa" in json.loads((tmp / "so3" / "barrido.json").read_text())["proyectos"], "sin --cuenta barre todo (las pruebas y el montaje)")
     ok(len(bc["para_contraste"]) == 1 and bc["para_contraste"][0]["proyecto"] == "ventas--limpio" and {x["ruta"] for x in bc["para_contraste"][0]["piezas"]} == {"ventas/limpio/entregables/con.md", "ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/nota-b.md"}, "pone a contraste solo las piezas con afirma, del proyecto que tiene dos o más")
     escribir(tmp / "juicio3.json", json.dumps({
         "candidatos": [{"proyecto": "ventas--limpio", "rutas": ["ventas/limpio/taller/nota-a.md", "ventas/limpio/taller/nota-b.md"], "entregable": "Una política de compras recurrentes"},
@@ -168,6 +181,29 @@ try:
     escribir(s4 / "detalle/ventas--limpio.json", json.dumps(det))
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(s4), "--cola", str(cola4), "--hoy", "2026-10-23"], capture_output=True, text=True)
     ok(sorted(x["id"] for x in json.loads((s4 / "barrido.json").read_text())["borrar"]) == sorted(nuevas), "si una de las piezas desaparece, se retiran")
+
+    print("lo juzgado no se vuelve a pedir")
+    sj2 = tmp / "sj2"; shutil.copytree(sc / "detalle", sj2 / "detalle")
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sj2), "--hoy", "2026-10-23"], capture_output=True, text=True)
+    b0 = json.loads((sj2 / "barrido.json").read_text())
+    ok(b0["para_juicio"] and b0["para_afirma"] and b0["para_contraste"], "antes de juzgar se pide todo")
+    escribir(tmp / "vacio.json", json.dumps({"decisiones": [], "afirma": [{"ruta": b0["para_afirma"][0]["ruta"], "afirma": "Escríbele a juan.perez@ejemplo.test o al RFC PEJJ800101AB1."}], "candidatos": [], "contradicciones": []}))
+    r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj2), str(tmp / "vacio.json")], capture_output=True, text=True)
+    bj2 = json.loads((sj2 / "barrido.json").read_text())
+    ok(json.loads(r.stdout)["propuestas_afirma"] == 0 and not any(x["id"].startswith("prop-afirma-") for x in bj2["anadir"]), "una línea afirma con un correo o un RFC no entra en la cola")
+    ok(len(bj2["juzgado"]["ids"]) == len(b0["para_juicio"]) + len(b0["para_afirma"]) and len(bj2["juzgado"]["contraste"]) == len(b0["para_contraste"]), "todo lo que se puso delante del modelo queda apuntado como juzgado")
+    # plan_subida lo lleva a meta/estado, y el barrido siguiente lo lee de la base
+    (sj2 / "meta").mkdir(); escribir(sj2 / "meta/estado.json", '{"zona": "America/Mexico_City"}')
+    escribir(sj2 / "indice.json", json.dumps([{"coleccion": "meta", "doc_id": "estado", "archivo": "meta/estado.json", "bytes": 7, "huella": "h"}]))
+    base_j = tmp / "base-j"; (base_j / "meta").mkdir(parents=True); escribir(base_j / "meta/estado.json", json.dumps({"data": {"juzgado": {"ids": ["prop-viejo-1"], "contraste": []}}, "version": 2}))
+    r = subprocess.run([sys.executable, str(TABLERO / "plan_subida.py"), str(sj2), str(base_j)], capture_output=True, text=True)
+    meta_j = json.loads((sj2 / "meta/estado.json").read_text())["juzgado"]
+    ok("prop-viejo-1" in meta_j["ids"] and set(bj2["juzgado"]["ids"]) <= set(meta_j["ids"]) and meta_j["contraste"] == bj2["juzgado"]["contraste"], "plan_subida suma lo juzgado a lo que ya tenía la base en meta/estado")
+    base_j2 = tmp / "base-j2"; (base_j2 / "meta").mkdir(parents=True); escribir(base_j2 / "meta/estado.json", json.dumps({"data": {"juzgado": meta_j}, "version": 3}))
+    sj3 = tmp / "sj3"; shutil.copytree(sc / "detalle", sj3 / "detalle")
+    r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sj3), "--hoy", "2026-10-23", "--base", str(base_j2)], capture_output=True, text=True)
+    b3 = json.loads((sj3 / "barrido.json").read_text())
+    ok(not b3["para_juicio"] and not b3["para_afirma"] and not b3["para_contraste"], f"con la base, nada de lo juzgado se vuelve a pedir ({len(b3['para_juicio'])}, {len(b3['para_afirma'])}, {len(b3['para_contraste'])})")
 
     print("aplicar_cambios.py y las propuestas")
     guia = raiz / "guia.md"

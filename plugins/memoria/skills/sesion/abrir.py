@@ -33,6 +33,7 @@ REGISTROS solo da el tamaño.
 import datetime, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+RAIZ_RESUELTA = False
 if RAIZ is not None and not (RAIZ / "guia.md").is_file():
     # la ruta que da get_device_info (/Users/…/Carpeta) no existe en esta consola, donde la carpeta cuelga de $HOME/mnt con
     # su último tramo como nombre: se resuelve aquí para que un error de ruta no cueste dos llamadas más
@@ -40,7 +41,7 @@ if RAIZ is not None and not (RAIZ / "guia.md").is_file():
     _raices = [d for d in (sorted(_mnt.glob("*")) if _mnt.is_dir() else []) if (d / "guia.md").is_file() and (d / "metodo.md").is_file()]
     _cand = [d for d in _raices if d.name == RAIZ.name or d.name.endswith("--" + RAIZ.name)] or (_raices if len(_raices) == 1 else [])
     if _cand:
-        sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]
+        sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]; RAIZ_RESUELTA = True
     elif len(_raices) > 1:
         sys.exit("Esa ruta no existe en esta consola y hay varias raíces bajo $HOME/mnt: " + ", ".join(d.name for d in _raices) + ". Pasa la de $HOME/mnt/<nombre>.")
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
@@ -222,7 +223,7 @@ except OSError:
 guia = leer(RAIZ / "guia.md") or ""
 print("=== METODO (primera línea)")
 print(linea_metodo)
-if not SIN_FECHAS:
+if RAIZ_RESUELTA:   # se pasó la ruta de la computadora: se dice cuál es la de la consola, que es la que vale para leer y escribir
     print(f"RAIZ: {RAIZ} · la carpeta en esta consola; todo lo que se lea o escriba aquí va con esta ruta, nunca con la de get_device_info")
 print(f"HOY: {HOY.isoformat()} · zona {getattr(TZ, 'key', TZ)} · la fecha de todo lo que se escribe hoy en la carpeta; no la del reloj de la consola ni del contenedor, que van en UTC")
 

@@ -116,7 +116,8 @@ def extras_cierre(sincronizado, zona):
         t_sinc = datetime.datetime.fromisoformat(sincronizado) if sincronizado else None
     except ValueError:
         t_sinc = None
-    for p in sorted(d.glob("*.json")) if d and d.is_dir() else []:
+    # la herramienta deja cada documento en <out_dir>/<colección>/<id>.json: se baja un nivel, como cargar_cola en barrido.py
+    for p in sorted(d.rglob("*.json")) if d and d.is_dir() else []:
         raw = _json(p)
         dd = _datos(raw)
         try:
@@ -173,6 +174,11 @@ def huella_en_base(col, doc):
 _meta_p = SALIDA / "meta" / "estado.json"
 _meta_d = _json(_meta_p) or {}
 _campos, _borrar_cierres = extras_cierre(_meta_d.get("sincronizado"), _meta_d.get("zona"))
+# lo que el modelo ya juzgó sin hallazgo (barrido.py --sumar-juicio lo deja en barrido.json) se suma a lo de la base, acotado
+_bar_j = (_json(SALIDA / "barrido.json") or {}).get("juzgado") or {}
+_base_j = (_datos(_json(VOLCADO / "meta" / "estado.json") or {}).get("juzgado")) or {}
+if _bar_j or _base_j:
+    _campos["juzgado"] = {k: (list(dict.fromkeys(list(_base_j.get(k) or []) + list(_bar_j.get(k) or []))))[-600:] for k in ("ids", "contraste")}
 if _campos:
     _meta_d.update(_campos)
     _meta_p.write_text(json.dumps(_meta_d, ensure_ascii=False, indent=1), encoding="utf-8")

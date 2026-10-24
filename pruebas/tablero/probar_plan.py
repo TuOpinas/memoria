@@ -26,14 +26,14 @@ try:
 
     print("plan_subida.py --cierre: la corrida al día")
     base = tmp / "base"; escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huellas": ["a"]}, "version": 4}))
-    cierres = tmp / "cierres"
+    cierres = tmp / "cierres" / "cierres"      # como lo deja ArtifactData con out_dir: <out_dir>/<colección>/<id>.json
     sinc = "2026-09-01T18:30-06:00"
     escribir(cierres / "c-vieja.json", json.dumps({"data": {"hora": "2026-09-01T18:00-06:00"}, "version": 1}))
     escribir(cierres / "c-igual.json", json.dumps({"data": {"hora": "2026-09-02T00:30:00Z"}, "version": 2}))     # el mismo instante, en otra zona
     escribir(cierres / "c-nueva.json", json.dumps({"data": {"hora": "2026-09-01T18:45-06:00"}, "version": 3}))   # posterior: se queda
     escribir(cierres / "c-futura.json", json.dumps({"data": {"hora": "2099-01-01T00:00-06:00"}, "version": 5}))  # mal puesta
     escribir(tmp / "ret.json", '["c9"]'); escribir(tmp / "aj.json", "[]")
-    rc, out, err = corre(PLAN, "--cierre", base, tmp / "salida", "--sincronizado", sinc, "--cierres", cierres, "--inicio", trab / "inicio.json",
+    rc, out, err = corre(PLAN, "--cierre", base, tmp / "salida", "--sincronizado", sinc, "--cierres", cierres.parent, "--inicio", trab / "inicio.json",
                          "--llamadas", "9", "--retenidos", tmp / "ret.json", "--ajenos", tmp / "aj.json", "--pagina", '{"version": "1.21.0", "fecha": "2026-10-23", "desde": "1.20.1"}', "--tarea-desfasada", "false")
     res = json.loads(out) if rc == 0 else {}
     lote = (res.get("lotes") or [[]])[0]
@@ -52,7 +52,7 @@ try:
     escribir(sal / "meta" / "enfoque-candidatos.json", json.dumps({"huella": "cand-nueva", "grupos": []}))
     escribir(sal / "indice.json", json.dumps([{"coleccion": "meta", "doc_id": "estado", "archivo": "meta/estado.json", "bytes": 10, "huella": "h"}]))
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-vieja"}, "version": 4}))
-    rc, out, err = corre(PLAN, sal, base, "--cierres", cierres, "--inicio", trab / "inicio.json", "--llamadas", "14", "--pagina", '{"version": "1.21.0"}')
+    rc, out, err = corre(PLAN, sal, base, "--cierres", cierres.parent, "--inicio", trab / "inicio.json", "--llamadas", "14", "--pagina", '{"version": "1.21.0"}')
     res = json.loads(out) if rc == 0 else {}
     ult = (res.get("lotes") or [[]])[-1]
     meta = json.loads((sal / "meta" / "estado.json").read_text(encoding="utf-8"))
