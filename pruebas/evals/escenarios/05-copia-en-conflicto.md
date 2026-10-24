@@ -4,6 +4,7 @@ cuenta: ana@ejemplo.test
 consola: si
 max_turnos: 40
 preparar:
+  - "migrar"
   - "copia-en-conflicto ventas/cuentas/sesiones.md"
 turnos:
   - "Abre sesión en ventas/cuentas."

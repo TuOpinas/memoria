@@ -3,6 +3,8 @@ raiz: raiz
 cuenta: ana@ejemplo.test
 consola: no
 max_turnos: 60
+preparar:                       # la raíz ya en la 1.22: sin migrar, la pregunta bloqueante ocuparía el turno 1 (eval 10)
+  - "migrar"
 turnos:
   - "Abre sesión en ventas/cuentas. Hoy llamé a Cliente Uno y confirmaron que firman la semana que viene; quita el paso de llamarlos."
   - "Cierra la sesión."

@@ -108,7 +108,7 @@ ok("bytes (sin consola" in a_copia and not re.search(r"proyecto\.md: 20\d\d-", a
 import datetime as _dt
 _lst = tmp / "listado.json"
 _ahora = int(_dt.datetime.now().timestamp() * 1000); _viejo = 1_600_000_000_000
-_lst.write_text(json.dumps({"entries": [{"name": "entregables", "type": "dir"}, {"name": "entregables/nuevo.md", "type": "file", "size": 9, "mtimeMs": _ahora},
+_lst.write_text(json.dumps({"entries": [{"name": "proyecto.md", "type": "file", "size": 9, "mtimeMs": _viejo}, {"name": "entregables", "type": "dir"}, {"name": "entregables/nuevo.md", "type": "file", "size": 9, "mtimeMs": _ahora},
                                          {"name": "taller/viejo.md", "type": "file", "size": 9, "mtimeMs": _viejo},
                                          {"name": "restringido/oculto.md", "type": "file", "size": 9, "mtimeMs": _ahora},
                                          {"name": "decisiones.md", "type": "file", "size": 9, "mtimeMs": _ahora}]}), encoding="utf-8")
@@ -116,6 +116,11 @@ rc, a_lst, err = corre(ABRIR, C, ACTIVO, "--cuenta", "ana@ejemplo.com", "--sin-f
 av = a_lst.split("=== AVISOS")[1] if "=== AVISOS" in a_lst else ""
 ok(rc == 0 and "Trabajo sin sesión por fecha de archivo" in av and "entregables/nuevo.md (" in av and "decisiones.md (" in av and "taller/viejo.md" not in av and "oculto" not in av and "mtimeMs" not in av,
    "con --listado, el trabajo sin sesión sale calculado, con fecha y hora, sin restringido/ ni lo de antes" + (f": {err[-200:]}" if rc else ""))
+for malo, que in (({"entries": [{"name": "entregables/nuevo.md", "type": "file", "mtimeMs": _ahora}]}, "sin proyecto.md: es el listado de otra carpeta"),
+                  ({"entries": [{"name": "proyecto.md", "type": "file", "mtimeMs": _viejo}], "truncated": True}, "truncado")):
+    _lst.write_text(json.dumps(malo), encoding="utf-8")
+    _, a_m, _ = corre(ABRIR, C, ACTIVO, "--cuenta", "ana@ejemplo.com", "--sin-fechas", "--listado", _lst)
+    ok("El listado no sirve" in a_m and "mtimeMs mayor o igual que" in a_m, f"un listado que no sirve ({que}) no calla: se mira a mano")
 
 print("Sin consola: el inventario del tablero sin fechas")
 T = tmp / "tablero"

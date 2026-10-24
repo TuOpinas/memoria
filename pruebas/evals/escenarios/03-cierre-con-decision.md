@@ -3,6 +3,8 @@ raiz: raiz
 cuenta: ana@ejemplo.test
 consola: si
 max_turnos: 40
+preparar:                       # la raíz ya en la 1.22: sin migrar, la pregunta bloqueante ocuparía el turno 1 (eval 10)
+  - "migrar"
 turnos:
   - "Abre sesión en ventas/cuentas. Hoy hablé con Cliente Uno: aceptan la propuesta si el soporte responde en menos de 24 horas. Decidimos que sí, que el soporte de Cliente Uno responde en menos de 24 horas, porque es la condición para firmar y soporte ya lo atiende en copia. Cierra la sesión."
   - "Sí, regístrala así."
@@ -13,7 +15,7 @@ comprobar:
   - nada-hasta-el-turno 2 metodo.md
   - decision-registrada ventas/cuentas
   - entrada-sesion ventas/cuentas
-  - en-corto ventas/cuentas
+  - estatus ventas/cuentas
   - cierre-con-script
   - cambia ventas/area.md
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md

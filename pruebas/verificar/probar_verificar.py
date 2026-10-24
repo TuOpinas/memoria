@@ -4,7 +4,7 @@
 Uso: python3 pruebas/verificar/probar_verificar.py
 """
 import pathlib, re, shutil, subprocess, sys, tempfile
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import guia_122
 
 AQUI = pathlib.Path(__file__).resolve().parent
 VER = AQUI.parent.parent / "plugins" / "memoria" / "verificar.sh"

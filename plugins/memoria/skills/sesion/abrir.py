@@ -32,7 +32,7 @@ REGISTROS solo da el tamaño. Con --listado <archivo> (el resultado de device_li
 proyecto, guardado tal cual en un archivo del contenedor) calcula él el aviso de trabajo sin sesión, con fecha y hora en la
 zona de la organización, como en la computadora: nadie compara milisegundos a mano.
 """
-import datetime, os, pathlib, re, sys
+import datetime, json, os, pathlib, re, sys
 
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 RAIZ_RESUELTA = False
@@ -320,15 +320,18 @@ if not areas:
 # como el tablero: la línea que empieza por «Contexto común», cortada por su primer «:» (la plantilla de `nuevo` escribe
 # «Contexto común (`guia.md` y `base/`): Nombre (correo).»); sin correo, la cuenta del responsable es la de las áreas
 # de las que es responsable
-resp_contexto = ""
+resp_contexto, administra_nombre = "", None
 for l in seccion(guia, "Quién responde por qué").split("\n"):
-    if l.strip().lower().startswith("contexto común"):
+    if l.strip().lower().lstrip("-* ").startswith("contexto común"):
         resp_contexto = l.split(":", 1)[-1].strip().rstrip(".").strip()
+    if l.strip().lower().lstrip("-* ").startswith("administra la carpeta"):
+        administra_nombre = re.sub(r"\s*\([^)]*\)", "", l.split(":", 1)[-1]).strip().rstrip(".").strip().lower()
 # la cuenta del responsable va entre paréntesis en esa misma línea («Contexto común: Nombre (correo)»); sin ella,
 # como antes, es la de las áreas de las que esa persona es responsable
 cuenta_resp = set(CORREO.findall(resp_contexto.lower()))
 resp_contexto = re.sub(r"\s*\([^)]*\)", "", resp_contexto).strip()
-es_resp = bool(CUENTA) and (CUENTA in cuenta_resp or (bool(resp_contexto) and not cuenta_resp and any(CUENTA in a["cuentas_dueno"] and a["dueno"].strip().lower() == resp_contexto.lower() for a in areas)))
+# el nombre de la celda sin lo que va entre paréntesis, como migrar_estructura.py: los dos tienen que reconocer a la misma persona
+es_resp = bool(CUENTA) and (CUENTA in cuenta_resp or (bool(resp_contexto) and not cuenta_resp and any(CUENTA in a["cuentas_dueno"] and re.sub(r"\s*\([^)]*\)", "", a["dueno"]).strip().lower() == resp_contexto.lower() for a in areas)))
 
 premisas = []
 for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
@@ -389,14 +392,15 @@ ARCHIVOS_ANTERIORES = ("fuentes/enlaces.md", "restringido/enlaces.md")
 
 def area_anterior(slug):
     """Cierto si el área (su area.md, o algún proyecto con proyecto.md dentro) tiene todavía la estructura de la 1.21.
-    Un area.md con «## Estatus» y «Responsable:» en «Quién participa», sin ninguna marca vieja, se da por migrada sin
-    bajar a sus proyectos: la migración pasa el área entera de una vez, y así la apertura no lee todos los proyecto.md
-    de una raíz ya migrada (1.22.1). Con «Estatus» solo no basta: un cierre 1.22 lo escribe también en un área sin migrar."""
+    Un area.md con «Responsable:» en «Quién participa» y ninguna marca vieja se da por migrada sin bajar a sus proyectos:
+    solo la migración o un área creada con la 1.22 lo escriben, y la migración escribe area.md la última, solo si todos
+    sus proyectos quedaron migrados. Así la apertura no lee todos los proyecto.md de una raíz migrada (1.22.1). Con
+    «Estatus» no basta: un cierre 1.22 lo escribe también en un área sin migrar."""
     t = leer(RAIZ / slug / "area.md")
     cuerpo = cabecera(t)[1] if t else ""
     if t and marcas_anteriores(cuerpo, "area"):
         return True
-    if t and re.search(r"^## Estatus\s*$", cuerpo, re.M) and re.search(r"^\s*[-*]?\s*\**\s*Responsable\s*\**\s*:", seccion(cuerpo, "Quién participa"), re.M):
+    if t and re.search(r"^\s*[-*]?\s*\**\s*Responsable\s*\**\s*:", seccion(cuerpo, "Quién participa"), re.M):
         return False
     try:
         proyectos = sorted(d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
@@ -414,12 +418,16 @@ if not CUENTA:
 else:
     # el responsable de contexto migra también las áreas de otros responsables (1.22.1), las que su carpeta deja leer
     propias_viejas = [a["slug"] for a in areas if CUENTA in a["cuentas_dueno"] and area_anterior(a["slug"])]
+    # la misma regla que migrar_estructura.py: con carpeta, no restringida a otros, y solo si quien responde por el
+    # contexto administra la carpeta (sin la línea, se da por hecho)
+    _administra = administra_nombre is None or (bool(resp_contexto) and administra_nombre == resp_contexto.lower())
     ajenas_viejas = [f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})" for a in areas
-                     if es_resp and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir() and area_anterior(a["slug"])]
+                     if es_resp and _administra and CUENTA not in a["cuentas_dueno"] and (RAIZ / a["slug"]).is_dir()
+                     and not (a["restringida"] and CUENTA not in a["colaboran"]) and area_anterior(a["slug"])]
     guia_vieja = es_resp and guia_anterior
     if propias_viejas or ajenas_viejas or guia_vieja:
         print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))
-              + " · se pregunta antes de responder, con la herramienta de preguntas (migracion.md, «La pregunta»)")
+              + " · se pregunta antes de responder («Puesta al día de la estructura»)")
     else:
         print("Veredicto: AL DIA")
 
@@ -488,7 +496,7 @@ def motivo_area(slug):
     """Por qué no se lee un área: restringida según guia.md (Drive no baja a la computadora lo que la cuenta no puede
     abrir, así que su carpeta tampoco está), salvo que sea de la cuenta; sin carpeta en esta computadora; o no se pudo
     leer. El mismo criterio que el tablero con --cuenta, salvo un caso: un área restringida que la cuenta lee sin ser
-    dueña ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
+    responsable ni colaborar (quien administra la carpeta) aquí sale restringida, porque lo restringido no se muestra fuera de
     su área; el tablero, que es solo de quien lo monta, la muestra entera."""
     a = next((x for x in areas if x["slug"] == slug), None)
     quien = solo_nombre(a["dueno"]) if a else "su responsable"
@@ -610,8 +618,9 @@ avisos = []
 # proyectos de un área migrada, así que se dice aquí, al abrirlo
 _marcas = marcas_anteriores(cabecera(tp)[1], "proyecto") + [f for f in ARCHIVOS_ANTERIORES if (pc / f).is_file()]
 if _marcas and not area_anterior(area_activa):
-    avisos.append(f"Estructura a medias: este proyecto conserva {', '.join('«' + m + '»' for m in _marcas)} de antes de la 1.22 aunque su área ya "
-                  f"está migrada (la migración lo dejó por un conflicto). Se resuelve en esta sesión: lo que siga valiendo de lo viejo, a su sección nueva.")
+    avisos.append(f"Estructura a medias: este proyecto conserva {', '.join('«' + m + '»' for m in _marcas)} de antes de la 1.22 y su área ya "
+                  f"está migrada. Se propone pasarlo ahora con migrar_estructura.py (migracion.md, «Con el sí»), que solo toca lo que falta; "
+                  f"si da un conflicto (un estado-anterior.md o un inventario.md que ya existía), se junta a mano en esta sesión.")
 ents = []
 d = pc / "entregables"
 try:
@@ -653,14 +662,24 @@ for n in nombres:
 # trabajo sin sesión por fechas de archivo (nunca el contenido) en entregables/, taller/ y fuentes/
 def listado_sin_sesion(ruta, desde):
     """[(fecha, hora, ruta)] de lo que el listado de device_list_dir da como cambiado desde «desde» (un datetime en la zona):
-    decisiones.md y los archivos de entregables/, taller/ y fuentes/, fuera de restringido/ y de lo que empieza por punto."""
+    decisiones.md y los archivos de entregables/, taller/ y fuentes/, fuera de restringido/ y de lo que empieza por punto.
+    None si el listado no sirve: no se lee, viene truncado o no es el de la carpeta del proyecto (no trae proyecto.md en su
+    primer nivel); entonces se mira a mano, porque un listado que no sirve no puede decir «no hay trabajo sin sesión»."""
     try:
-        d = __import__("json").loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
+        d = json.loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
+    if isinstance(d, dict) and d.get("truncated"):
+        return None
+    ents = (d.get("entries") if isinstance(d, dict) else d) or []
+    nombre = lambda e: str(e.get("name") or "").replace("\\", "/")
+    if not any(nombre(e) in ("proyecto.md", "sesiones.md") for e in ents if isinstance(e, dict)):
+        return None
     out, lim = [], desde.timestamp() * 1000
-    for e in (d.get("entries") if isinstance(d, dict) else d) or []:
-        n, ms = str(e.get("name") or ""), e.get("mtimeMs")
+    for e in ents:
+        if not isinstance(e, dict):
+            continue
+        n, ms = nombre(e), e.get("mtimeMs")
         partes = n.split("/")
         if e.get("type") != "file" or not isinstance(ms, (int, float)) or ms < lim or any(x.startswith(".") or x == "restringido" for x in partes):
             continue
@@ -670,22 +689,20 @@ def listado_sin_sesion(ruta, desde):
     return sorted(out, reverse=True)
 
 
-if SIN_FECHAS and ultima_ses and not cerrado and LISTADO:
+if SIN_FECHAS and ultima_ses and not cerrado:
+    # sin consola las fechas de verdad solo están en el listado de la computadora (device_list_dir, en milisegundos):
+    # con --listado se calculan aquí; sin él, o si no sirve, se da el instante desde el que mirarlo a mano
     _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)
-    _lista = listado_sin_sesion(LISTADO, _desde)
-    if _lista is None:
-        avisos.append(f"Trabajo sin sesión: el listado {LISTADO} no se pudo leer; se mira a mano en device_list_dir (mtimeMs desde {int(_desde.timestamp() * 1000)}).")
-    elif _lista:
+    _lista = listado_sin_sesion(LISTADO, _desde) if LISTADO else None
+    if _lista:
         avisos.append("Trabajo sin sesión por fecha de archivo, después del " + ultima_ses + ": "
                       + "; ".join(f"{a} ({f} {h})" for f, h, a in _lista[:12]) + (" …" if len(_lista) > 12 else "")
                       + ". Quién lo cambió no consta: se pregunta qué pasó y se propone registrarlo.")
-elif SIN_FECHAS and ultima_ses and not cerrado:
-    # sin consola las fechas de verdad solo están en el listado de la computadora: se da el instante, en milisegundos como
-    # los da device_list_dir, a partir del cual un archivo cuenta (el día siguiente a la última sesión, en la zona de la organización)
-    _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)
-    avisos.append(f"Trabajo sin sesión: sin consola no se calcula aquí. Con device_list_dir (recursivo) de la carpeta del proyecto, "
-                  f"cuenta los archivos de entregables/, taller/ y fuentes/ (fuera de restringido/), y decisiones.md, con mtimeMs mayor o igual que "
-                  f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
+    elif _lista is None:
+        avisos.append(("El listado no sirve (no se lee, viene truncado o no es el de la carpeta del proyecto). " if LISTADO else "")
+                      + f"Trabajo sin sesión: con device_list_dir (recursivo) de la carpeta del proyecto, "
+                      f"cuenta los archivos de entregables/, taller/ y fuentes/ (fuera de restringido/), y decisiones.md, con mtimeMs mayor o igual que "
+                      f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
 if not SIN_FECHAS and ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
     donde, lista = {}, []

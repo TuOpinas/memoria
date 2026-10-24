@@ -4,7 +4,7 @@
 Uso: python3 pruebas/sesion/probar_migrar.py
 """
 import hashlib, importlib.util, json, pathlib, shutil, subprocess, sys, tempfile, time
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
 SES = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion"
@@ -17,9 +17,11 @@ def ok(c, t):
     print(("  bien  " if c else "  FALLA ") + t); fallos += 0 if c else 1
 
 
-def raiz_nueva():
+def raiz_nueva(personas_abierta=True):
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     shutil.copytree(AQUI.parent / "tablero" / "raiz", r)
+    if personas_abierta:   # personas/, de Beto, abierta: la que el responsable de contexto migra por él
+        (r / "guia.md").write_text((r / "guia.md").read_text(encoding="utf-8").replace("| Restringida: dirección |", "| Todo el equipo |"), encoding="utf-8")
     (r / "ventas/cuentas/fuentes").mkdir(exist_ok=True)
     (r / "ventas/cuentas/fuentes/enlaces.md").write_text("---\nestado: vigente\nactualizado: 2026-09-01\n---\n\n# Enlaces\n\n| Qué es | Enlace | Qué tener presente |\n|---|---|---|\n| ERP | https://x | — |\n", encoding="utf-8")
     e = r / "ventas/cuentas/entregables/kit-cuentas.md"
@@ -58,13 +60,14 @@ print("migrar_estructura.py: la migración de la cuenta de Ana")
 dec_antes = {k: v for k, v in huellas(R).items() if k.endswith("decisiones.md") or k.startswith("base/") or k.startswith("personas/")}
 ses_antes = (R / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
 c, s = corre(R, "--cuenta", "ana@ejemplo.test", "--nombre", "Ana Prueba", "--plugin", "1.22.0")
-ok(c == 0 and s["guia"] and set(s["areas"]) == {"ventas", "operacion", "futura", "archivo", "personas", "legal"} and set(s["ajenas"]) == {"personas", "legal"} and not s["pendientes"], "sus áreas, guia.md y, porque responde por el contexto, también las de Beto")
+ok(c == 0 and s["guia"] and set(s["areas"]) == {"ventas", "operacion", "archivo", "personas"} and s["ajenas"] == ["personas"]
+   and s["pendientes"] == [{"area": "legal", "motivo": "sin carpeta en esta computadora"}], f"sus áreas con carpeta, guia.md y, porque responde por el contexto, también la de Beto; legal, sin carpeta, queda pendiente con su motivo ({s['areas']}, {s['pendientes']})")
 ok({k: v for k, v in huellas(R).items() if k in dec_antes and not k.startswith("personas/")} == {k: v for k, v in dec_antes.items() if not k.startswith("personas/")}
    and all(v == huellas(R).get(k) for k, v in dec_antes.items() if k.endswith("decisiones.md")), "no toca decisiones.md ni base/")
 sp = (R / "personas/nomina/sesiones.md").read_text(encoding="utf-8").split("\n## ")[1]
 ok("## Panorama" not in (R / "personas/area.md").read_text(encoding="utf-8") and "Sesión de: Ana Prueba, responsable de contexto, por Beto Prueba · plugin 1.22.0" in sp, "el área de Beto queda migrada, y su bitácora dice que la migró Ana por él")
 g = (R / "guia.md").read_text(encoding="utf-8")
-ok("| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |" in g and "| Restringida: dirección | Restringida |" in g and "| Todo el equipo | Abierta |" in g, "guia.md: Responsable y Acceso; «Quién la lee» se queda como estaba, para los plugins 1.21")
+ok("| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |" in g and "| Restringida: Ana Prueba y Beto Prueba | Restringida |" in g and "| Todo el equipo | Abierta |" in g, "guia.md: Responsable y Acceso; «Quién la lee» se queda como estaba, para los plugins 1.21")
 a = (R / "ventas/area.md").read_text(encoding="utf-8")
 ok("## Panorama" not in a and "## Prioridades ahora" not in a and a.index("## Estatus") < a.index("## Qué es") < a.index("## Proyectos") < a.index("## Quién participa"), "area.md: Estatus primero, sin Panorama ni Prioridades ahora")
 ok("2026-10-03 · **Ventas tiene una sola cuenta grande abierta" in a and "  - Cerrar la propuesta de Cliente Uno." in a and "Responsable: Ana Prueba" in a and "restringido: responsable Beto Prueba." in a, "el Estatus lleva la fecha y la frase del Panorama y las prioridades debajo de «Siguiente»")
@@ -112,12 +115,36 @@ a5 = am.read_text(encoding="utf-8"); p5 = pm.read_text(encoding="utf-8")
 ok(c == 0 and "## Prioridades ahora" not in a5 and "  - Ordenar los precios antes del cierre del trimestre." in a5 and "ESTATUS-NUEVO" in a5, "las prioridades que faltaban entran en «Siguiente» del Estatus que ya había")
 ok("## En corto" not in p5 and "CORTO-DE-CARLA" in p5 and "PREOCUPA-CARLA" in p5 and "ESTATUS-VIEJO" not in p5 and "ESTATUS-VIEJO" in (R5 / "ventas/precios/taller/estado-anterior.md").read_text(encoding="utf-8"), "de dos bloques se queda el más reciente, con sus viñetas, y el otro va al taller")
 
+print("migrar_estructura.py: las áreas ajenas que el responsable de contexto no migra")
+RR = raiz_nueva(personas_abierta=False)
+c, sr = corre(RR, "--cuenta", "ana@ejemplo.test", "--plan")
+ok(not sr["ajenas"] and {"area": "personas", "motivo": "restringida: la migra su responsable"} in sr["pendientes"], "un área restringida en la que no colabora espera a su responsable")
+o = subprocess.run([sys.executable, str(ABRIR), str(RR), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok("personas" not in [l for l in o.split("\n") if l.startswith("Veredicto: ANTERIOR")][0], "y abrir.py no se la ofrece")
+RA = raiz_nueva(); g_ = RA / "guia.md"; g_.write_text(g_.read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Beto Prueba"), encoding="utf-8")
+c, sa = corre(RA, "--cuenta", "ana@ejemplo.test", "--plan")
+o = subprocess.run([sys.executable, str(ABRIR), str(RA), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok(not sa["ajenas"] and any(x["area"] == "personas" and "administra" in x["motivo"] for x in sa["pendientes"]) and "personas" not in o.split("=== ESTRUCTURA")[1].split("\n")[1],
+   "si quien responde por el contexto no administra la carpeta, las ajenas esperan a su responsable (y abrir.py coincide)")
+RP = raiz_nueva(); g_ = RP / "guia.md"; g_.write_text(g_.read_text(encoding="utf-8").replace("| Ana Prueba | ana@ejemplo.test |", "| Ana Prueba (lleva varias) | ana@ejemplo.test |", 1), encoding="utf-8")
+c, sp_ = corre(RP, "--cuenta", "ana@ejemplo.test", "--plan")
+o = subprocess.run([sys.executable, str(ABRIR), str(RP), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ver_ = o.split("=== ESTRUCTURA")[1].split("\n")[1]
+ok(sp_["guia"] and "guia.md" in ver_ and sp_["ajenas"] == ["personas"] and "personas (de Beto Prueba)" in ver_, "con notas entre paréntesis en la celda, abrir.py y la migración reconocen igual al responsable de contexto")
+
 print("migrar_estructura.py: si el taller no se deja escribir, proyecto.md no se toca")
 R6 = raiz_nueva()
 (R6 / "ventas/cuentas/taller").rename(R6 / "ventas/cuentas/taller-x"); (R6 / "ventas/cuentas/taller").write_text("no soy una carpeta", encoding="utf-8")
 c, s6 = corre(R6, "--cuenta", "ana@ejemplo.test")
 p6 = (R6 / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
 ok(c == 1 and "## Estado actual" in p6 and "Segundo párrafo con detalle" in p6 and any(f["ruta"] == "ventas/cuentas/proyecto.md" and "nada se perdió" in f["motivo"] for f in s6["fallidos"]), "el Estado actual sigue en proyecto.md y fallidos lo dice")
+ok("(migracion)" not in (R6 / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") and "## Panorama" in (R6 / "ventas/area.md").read_text(encoding="utf-8"),
+   "ni la bitácora registra una migración que no se hizo, ni area.md se migra con un proyecto a medias")
+o6 = subprocess.run([sys.executable, str(ABRIR), str(R6), "--cuenta", "ana@ejemplo.test", "--minima"], capture_output=True, text=True).stdout
+ok("Veredicto: ANTERIOR en ventas" in o6, "así la apertura vuelve a preguntar")
+(R6 / "ventas/cuentas/taller").unlink(); (R6 / "ventas/cuentas/taller-x").rename(R6 / "ventas/cuentas/taller")
+c, s6b = corre(R6, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and "## Estatus" in (R6 / "ventas/area.md").read_text(encoding="utf-8") and "(migracion)" in (R6 / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8"), "y repetir el script, ya sin el fallo, lo completa")
 R7 = raiz_nueva()
 (R7 / "ventas/cuentas/taller/estado-anterior.md").write_text("ya estaba\n", encoding="utf-8")
 c, s7 = corre(R7, "--cuenta", "ana@ejemplo.test")
@@ -146,7 +173,7 @@ ok("| `vieja/` | nada | Ana Prueba | ana@ejemplo.test | Todo el equipo |" in g8t
 print("migrar_estructura.py: otra cuenta y los conflictos")
 R2 = raiz_nueva()
 c, s3 = corre(R2, "--cuenta", "beto@ejemplo.test")
-ok(c == 0 and s3["areas"] == ["personas", "legal"] and not s3["guia"] and "guia.md" not in s3["archivos"] and "Dueño" in (R2 / "guia.md").read_text(encoding="utf-8"), "quien no responde por el contexto no toca guia.md")
+ok(c == 0 and s3["areas"] == ["personas"] and not s3["guia"] and "guia.md" not in s3["archivos"] and "Dueño" in (R2 / "guia.md").read_text(encoding="utf-8"), "quien no responde por el contexto no toca guia.md")
 ok("ventas/area.md" not in s3["archivos"] and "## Panorama" in (R2 / "ventas/area.md").read_text(encoding="utf-8"), "ni las áreas de otra cuenta")
 R3 = raiz_nueva()
 (R3 / "ventas/cuentas/fuentes/inventario.md").write_text("ya estaba\n", encoding="utf-8")

@@ -30,6 +30,7 @@ print("Qué hay: qué paso nombra una pieza")
 nom = ns["nombra_pieza"]
 ok(not nom(pieza("plan.md"))("Usar la plantilla del plan de ventas."), "«plan» suelto, ni dentro de «plantilla», nombra plan.md")
 ok(nom(pieza("plan.md"))("Revisar plan.md con Ana.") and nom(pieza("plan.md"))("Revisar el «plan» con Ana."), "con su extensión o entre comillas, sí")
+ok(nom(pieza("plan.md"))("Revisar `entregables/plan.md`.") and nom(pieza("plan.md"))("Pasar a vigente ventas/cuentas/taller/plan.md") and not nom(pieza("plan.md"))("Ver otra/carpeta/plan.md"), "con su ruta de entregables/ o taller/ también, no con cualquier ruta")
 ok(nom(pieza("kit-cuentas.md"))("Actualizar el kit-cuentas antes del lunes.") and not nom(pieza("kit-cuentas.md"))("Actualizar el kit-cuentas-v2."), "un nombre compuesto, como palabra entera")
 pdoc = {"pasos": [{"texto": "Mandar la propuesta al cliente nuevo.", "naturaleza": "x"},
                   {"texto": "Decidir el precio de la fase 2.", "naturaleza": "x"}],
@@ -52,6 +53,9 @@ res, det = ns["que_hay"]({"pasos": [], "entregables": ents}, tall, [], "ventas/c
 cad = [[n["titulo"] for n in c["pasos"]] for c in det["trayectoria"]]
 ok(["Versión uno", "Versión dos", "Versión tres"] in cad, f"la cadena se arma con la ruta desde la raíz y desde el proyecto ({cad})")
 ok(["Previa", "Nota del taller"] in cad, "taller/nota.md apunta a la del taller, no al entregable del mismo nombre")
+res2, det2 = ns["que_hay"]({"pasos": [], "entregables": [pieza("v1.md", "Versión uno", estado="reemplazado", reemplazado_por="entregables/nota.md"), pieza("nota.md", "Nota entregable", estado="vigente")]},
+                           [pieza("nota.md", "Nota del taller")], [], "ventas/cuentas")
+ok([[n["titulo"] for n in c["pasos"]] for c in det2["trayectoria"]] == [["Versión uno", "Nota entregable"]], "un entregable y una nota del taller con el mismo nombre no se confunden")
 ok(res.get("reemplazos_sin_resolver") == 2, f"los de otro proyecto y el nombre ambiguo no resuelven, y se cuentan ({res.get('reemplazos_sin_resolver')})")
 
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))

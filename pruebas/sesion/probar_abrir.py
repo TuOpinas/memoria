@@ -6,7 +6,7 @@ Copia la raíz a una carpeta temporal con fechas de archivo fijas (todo del 2026
 como probar.sh del tablero, y comprueba lo que sale y, sobre todo, lo que no debe salir.
 """
 import os, pathlib, re, shutil, subprocess, sys, tempfile, time
-import sys as _s, pathlib as _p; _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import guia_122, raiz_migrada
 
 AQUI = pathlib.Path(__file__).resolve().parent
 ABRIR = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "abrir.py"
@@ -200,6 +200,20 @@ ok("personas/ · restringida" in o and "nomina" not in o, "una celda «Acceso» 
 g.write_text(g_viejo, encoding="utf-8")
 c, o = abrir("--minima")
 ok("Veredicto: SIN CUENTA" in o, "sin --cuenta no se ofrece migrar")
+print("En una raíz migrada, la apertura mínima no baja a los proyectos (1.22.1)")
+RM, _ = raiz_migrada()
+_cod = (
+    "import sys, runpy\n"
+    "n = [0]\n"
+    "def h(ev, args):\n"
+    "    if ev == 'open' and str(args[0]).endswith('proyecto.md'): n[0] += 1\n"
+    "sys.addaudithook(h)\n"
+    "sys.argv = [sys.argv[1], sys.argv[2], '--minima', '--cuenta', 'ana@ejemplo.test']\n"
+    "try:\n    runpy.run_path(sys.argv[0], run_name='__main__')\n"
+    "except SystemExit: pass\n"
+    "print('LEIDOS', n[0])\n")
+o = subprocess.run([sys.executable, "-c", _cod, str(ABRIR), str(RM)], capture_output=True, text=True).stdout
+ok("Veredicto: AL DIA" in o and "LEIDOS 0" in o, "AL DIA sin abrir ningún proyecto.md, también en un área migrada sin Estatus (archivo/)" + ("" if "LEIDOS 0" in o else f" ({o.splitlines()[-1:]})"))
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

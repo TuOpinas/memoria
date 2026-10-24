@@ -3,6 +3,8 @@ raiz: raiz
 cuenta: ana@ejemplo.test
 consola: si
 max_turnos: 20
+preparar:                       # la raíz ya en la 1.22: sin migrar, la pregunta bloqueante ocuparía el turno 1 (eval 10)
+  - "migrar"
 turnos:
   - "¿Cuántos días tiene octubre?"
   - "Después."

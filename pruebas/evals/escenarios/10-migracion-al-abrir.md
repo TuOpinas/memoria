@@ -23,5 +23,5 @@ comprobar:
   - sin-herramienta Write
   - sin-rutas-absolutas
 ---
-La raíz de prueba sigue con la estructura de la 1.21. Al abrir, `abrir.py` dice «Estructura: ANTERIOR» para las áreas de Ana, para `personas/` (de Beto) y para `guia.md` (es la responsable de contexto), y la respuesta es el recuadro y la pregunta de migrar, antes de abrir el proyecto con sus focos, sin escribir nada (turno 1).
-Con el sí (turno 2), corre `migrar_estructura.py` (primero con `--plan` y después sin él): migra las áreas de Ana, `personas/` de Beto y `guia.md`, y deja la entrada `(migracion)` en cada proyecto migrado; la de `personas/nomina` dice que la migró Ana por Beto. No escribe nada a mano.
+La raíz de prueba sigue con la estructura de la 1.21. Al abrir, `abrir.py` dice «Estructura: ANTERIOR» para las áreas de Ana, para `personas/` (de Beto) y para `guia.md` (es la responsable de contexto), y la respuesta es el recuadro y la pregunta de migrar, sin los focos del proyecto ni la pregunta de «Claude outputs», que esperan al turno siguiente, sin escribir nada (turno 1).
+Con el sí (turno 2), corre `migrar_estructura.py` una vez, sin `--plan`: migra las áreas de Ana, `personas/` de Beto y `guia.md`, y deja la entrada `(migracion)` en cada proyecto migrado; la de `personas/nomina` dice que la migró Ana por Beto. No escribe nada a mano.

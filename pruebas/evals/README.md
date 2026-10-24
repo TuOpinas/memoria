@@ -52,6 +52,8 @@ Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <
 
 ## Los escenarios
 
+Del 01 al 09 corren sobre la raíz ya migrada a la 1.22 (`preparar: migrar`): sin migrar, la pregunta bloqueante de la estructura ocupa el primer turno, y eso lo prueban el 10 y el 11.
+
 | # | Qué | Qué tiene que pasar |
 |---|---|---|
 | 01 | Pregunta ajena a la memoria | recuadro en la primera respuesta, apertura mínima, pregunta por «Claude outputs» al responsable, nada escrito salvo `metodo.md` |

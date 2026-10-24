@@ -24,7 +24,7 @@ de la superficie pública que arma espejo.py, con --sin-fechas: las fechas de ar
 no se usan. Las huellas miran el contenido en lugar de la fecha, y no hay aviso de trabajo sin sesión ni fechas de archivo.
 
 Un solo modo desde la 1.18: todo lo que la cuenta pueda leer, con las cinco sesiones más recientes enteras; lo que no
-puede leer sale como restringido, con su nombre y su dueño. El tablero es de su dueño y no se comparte. --modo se acepta
+puede leer sale como restringido, con su nombre y su responsable. El tablero es de su dueño y no se comparte. --modo se acepta
 y no se usa: las tareas montadas antes de la 1.18 lo pasan, con «publico» o «completo».
 Escribe un JSON por documento: meta/estado.json, areas/<slug>.json,
 proyectos/<area>--<slug>.json, cada uno con una huella de su contenido; un indice.json con la lista de archivos, huellas y
@@ -85,7 +85,7 @@ def zona_horaria(raiz, defecto="America/Mexico_City"):
 TZ = zona_horaria(RAIZ) or datetime.timezone.utc
 def _arg(nombre):
     return sys.argv[sys.argv.index(nombre) + 1] if nombre in sys.argv and len(sys.argv) > sys.argv.index(nombre) + 1 else None
-# --cuenta <correo>: la cuenta que genera el tablero. Si la carpeta de un área suya (dueña o colabora) no está en la
+# --cuenta <correo>: la cuenta que genera el tablero. Si la carpeta de un área suya (responsable o colabora) no está en la
 # computadora, no es que esté restringida para ella: aún no se creó o no se sincronizó (1.18.2)
 CUENTA_TABLERO = (_arg("--cuenta") or "").strip().lower()
 # Lo restringido se declara con la palabra al inicio: de la columna «Quién la lee» de guia.md, y de la línea del
@@ -153,7 +153,7 @@ SIN_CAMBIOS = {h for h in (_arg("--sin-cambios") or "").split(",") if h and h !=
 TALLER_IGUAL = dict(x.split(":", 1) for x in (_arg("--taller-igual") or "").split(",") if ":" in x)
 # --previos <volcado de la base>: de donde la generación toma los documentos que el inventario marca en «reusar»
 PREVIOS = pathlib.Path(_arg("--previos")) if _arg("--previos") else None
-# --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al dueño de otra área,
+# --cola-retenida <json>: ids de la cola que la puesta al día deja a propósito (esperan al responsable de otra área,
 # a una sesión, o no encontraron su paso); el botón no los cuenta como «hace falta sincronizar».
 # --cola-ajena <json>: de esos, los que son de un área de otra cuenta; la página dice a quién pasárselos
 _aj = _arg("--cola-ajena")
@@ -698,11 +698,14 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     # trayectoria por entregables: reemplazado_por apunta al sustituto por su ruta (1.22.1): relativa a la raíz, al
     # proyecto («entregables/x.md», «taller/x.md») o, si no hay dos piezas con ese nombre, solo el nombre; solo dentro
     # del mismo proyecto. Las que no resuelven se cuentan en el resumen.
-    por_arch = {pz["archivo"]: pz for pz in piezas}
-    por_ruta = {("entregables/" if pz["tipo"] == "entregable" else "taller/") + pz["archivo"]: pz["archivo"] for pz in piezas}
+    # la clave es la ruta en el proyecto («entregables/x.md», «taller/x.md»): un entregable y una nota del taller con el
+    # mismo nombre son dos piezas
+    clave_ = lambda pz: ("entregables/" if pz["tipo"] == "entregable" else "taller/") + pz["archivo"]
+    por_arch = {clave_(pz): pz for pz in piezas}
+    por_ruta = {clave_(pz): clave_(pz) for pz in piezas}
     nombres_ = {}
     for pz in piezas:
-        nombres_.setdefault(pz["archivo"].split("/")[-1], []).append(pz["archivo"])
+        nombres_.setdefault(pz["archivo"].split("/")[-1], []).append(clave_(pz))
     sucesor, sin_resolver = {}, 0
     for pz in piezas:
         rp = re.sub(r"^\./", "", (pz.get("reemplazado_por") or "").strip().strip("`"))
@@ -711,8 +714,8 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
         if ruta_proyecto and rp.startswith(ruta_proyecto.rstrip("/") + "/"):
             rp = rp[len(ruta_proyecto.rstrip("/")) + 1:]
         destino = por_ruta.get(rp) or (nombres_[rp][0] if "/" not in rp and len(nombres_.get(rp, [])) == 1 else None)
-        if destino and destino != pz["archivo"]:
-            sucesor[pz["archivo"]] = destino
+        if destino and destino != clave_(pz):
+            sucesor[clave_(pz)] = destino
         else:
             sin_resolver += 1
     con_sucesor = set(sucesor.values())
@@ -753,7 +756,9 @@ def nombra_pieza(pz):
     """Una función texto → si el texto nombra la pieza: su archivo con extensión, su nombre si es compuesto («kit-cuentas»),
     o su nombre suelto entre comillas o backticks, siempre como palabra entera."""
     stem = re.escape(pz["nombre"].lower()); arch = re.escape(pz["archivo"].split("/")[-1].lower())
-    pats = [r"(?<![\w/.-])" + arch + r"(?![\w-])", r"[`«\"']" + stem + r"(?:\.\w+)?[`»\"']"]
+    # con su ruta también («entregables/plan.md», «ventas/cuentas/taller/plan.md»): la barra antes del nombre vale si es
+    # la de entregables/ o taller/, que es como el método cita una pieza
+    pats = [r"(?:(?<![\w/.-])|(?<=entregables/)|(?<=taller/))" + arch + r"(?![\w-])", r"[`«\"']" + stem + r"(?:\.\w+)?[`»\"']"]
     if "-" in pz["nombre"] or "_" in pz["nombre"]:
         pats.append(r"(?<![\w-])" + stem + r"(?![\w-])")
     rx = re.compile("|".join(pats), re.I)
@@ -1041,7 +1046,7 @@ if INVENTARIO:
         # al día: la segunda línea es el instante de esta comprobación en la zona de la organización, que la puesta al día
         # deja como «sincronizado» (plan_subida.py --cierre); así ningún modelo escribe una hora
         print("AL DIA")
-        print(datetime.datetime.now(TZ).isoformat(timespec="minutes"))
+        print(inv["instante"])      # cuándo empezó a mirarse la carpeta: un cierre que llegue durante el escaneo no queda por detrás
         sys.exit(0)
     if LINEAS:
         print(json.dumps(inv, ensure_ascii=False, separators=(",", ":")))
@@ -1137,7 +1142,7 @@ for a in areas_guia:
         mia = bool(CUENTA_TABLERO) and CUENTA_TABLERO in set().union(*cuentas(a["cuenta"])[:2])
         area_doc["motivo"] = "restringido" if area_doc["restringido"] and not mia else motivo_de(carpeta / "area.md")
         if mia:
-            area_doc["mio"] = True     # la página no le dice «pregunta a» a su propio dueño
+            area_doc["mio"] = True     # la página no le dice «pregunta a» a quien lo montó
         docs["areas"][a["slug"]] = area_doc
         continue
     fm, cuerpo = frontmatter(texto)
