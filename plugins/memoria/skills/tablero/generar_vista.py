@@ -270,21 +270,31 @@ org = titulo_h1(guia).split("·")[0].strip() or NOMBRE_RAIZ
 
 areas_guia, guia_avisos = [], []
 tabla = seccion(guia, "Áreas")
-primera = True
+col = None
 for l in tabla.split("\n"):
     if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
         continue
-    if primera:   # la fila de títulos
-        primera = False; continue
     celdas = [c.strip() for c in l.strip().strip("|").split("|")]
-    if len(celdas) < 5:
+    if col is None:   # la fila de títulos: «Responsable» y «Acceso» desde la 1.22, «Dueño» sin «Acceso» hasta la 1.21
+        n_ = [re.sub(r"[*_`]", "", x).strip().lower() for x in celdas]
+        pos = lambda *ns, d=None: next((i for i, x in enumerate(n_) if x in ns), d)
+        col = {"resp": pos("responsable", "dueño", "dueno", d=2), "cuenta": pos("cuenta", d=3), "lee": pos("quién la lee", "quien la lee", d=4), "acceso": pos("acceso")}
+        continue
+    minimo = max(v for v in col.values() if v is not None) + 1
+    if len(celdas) < minimo:
         # una fila con columnas de menos no desaparece en silencio: el tablero lo dice en «La memoria al día»
-        guia_avisos.append(f"la fila «{celdas[0].strip('`')}» de la tabla de áreas tiene {len(celdas)} columnas y hacen falta 5 (área, qué es, dueño, cuenta, quién la lee)")
+        guia_avisos.append(f"la fila «{celdas[0].strip('`')}» de la tabla de áreas tiene {len(celdas)} columnas y hacen falta {minimo}")
         continue
     slug = celdas[0].strip("`").rstrip("/")
-    areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[2], "cuenta": celdas[3], "lectores": celdas[4]})
-    if cuentas(celdas[3])[2]:
-        guia_avisos.append(f"la celda Cuenta de «{slug}» en guia.md: {cuentas(celdas[3])[2]}")
+    lect = celdas[col["lee"]]
+    if col["acceso"] is not None:
+        # con «Acceso», lo restringido lo dice esa columna; para la página, que lo lee al inicio de «lectores», se antepone
+        restr = bool(RE_RESTRINGIDA.match(celdas[col["acceso"]]))
+        lect = ("Restringida: " + lect) if restr and not RE_RESTRINGIDA.match(lect) else lect
+    areas_guia.append({"slug": slug, "que": celdas[1], "dueno": celdas[col["resp"]], "cuenta": celdas[col["cuenta"]], "lectores": lect,
+                       "restringida": restr if col["acceso"] is not None else restringida_celda(lect)})
+    if cuentas(celdas[col["cuenta"]])[2]:
+        guia_avisos.append(f"la celda Cuenta de «{slug}» en guia.md: {cuentas(celdas[col['cuenta']])[2]}")
 if ZONA_AVISO:
     guia_avisos.append(ZONA_AVISO)
 if not areas_guia and guia:
@@ -315,7 +325,7 @@ for l in (leer(RAIZ / "base" / "premisas.md") or "").split("\n"):
             pr["confirmo"] = x.split(":", 1)[1].strip()
         elif re.match(r"^20\d\d-\d\d-\d\d$", x):
             pr["fecha"] = x
-        elif x.lower().startswith("reemplaza a"):
+        elif re.match(r"reemplaza\b", x, re.I):
             mr = re.search(r"P\d+", x, re.I); pr["reemplaza"] = mr.group(0).upper() if mr else ""
     premisas.append(pr)
 reemplazadas = {p_["reemplaza"] for p_ in premisas if p_["reemplaza"]}
@@ -323,6 +333,31 @@ for p_ in premisas:
     p_["vigente"] = p_["id"] not in reemplazadas
 
 # ---------- proyectos ----------
+def prioridades_area(cuerpo):
+    """Las prioridades del área, en orden: desde la 1.22, las líneas debajo de «Siguiente» de su Estatus; hasta la
+    1.21, la sección «Prioridades ahora». La cola del tablero las cita por su número."""
+    est = seccion(cuerpo, "Estatus")
+    if est:
+        out, dentro = [], False
+        for l in est.split("\n"):
+            if re.match(r"^\s*[-*]\s*\**\s*Siguiente\s*:?\s*\**\s*:?\s*(.*)$", l, re.I):
+                resto = re.sub(r"^\s*[-*]\s*\**\s*Siguiente\s*:?\s*\**\s*:?\s*", "", l, flags=re.I).strip()
+                if resto:
+                    out.append(resto)
+                dentro = True; continue
+            if dentro and re.match(r"^\s{2,}[-*]\s+", l):
+                out.append(re.sub(r"^\s+[-*]\s+", "", l).strip()); continue
+            if dentro and l.strip():
+                dentro = False
+        return out
+    return bullets(seccion(cuerpo, "Prioridades ahora"))
+
+
+def es_cerrado(cuerpo):
+    """«Proyecto terminado el AAAA-MM-DD» abre el Estatus desde la 1.22; hasta la 1.21, Estado actual (o En corto)."""
+    return any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cuerpo, n)) for n in ("Estatus", "Estado actual", "En corto"))
+
+
 def parse_decisiones(texto):
     out = []
     if not texto:
@@ -344,7 +379,7 @@ def parse_decisiones(texto):
                 actual = "decidio"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("por qué:") or low.startswith("por que:"):
                 actual = "porque"; campos[actual] = s.split(":", 1)[1].strip()
-            elif low.startswith("descartamos:"):
+            elif low.startswith("descartamos:") or low.startswith("descartado:"):
                 actual = "descartamos"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("afecta a:"):
                 actual = "afecta"; campos[actual] = s.split(":", 1)[1].strip()
@@ -404,7 +439,7 @@ def parse_sesiones(texto):
         for l in cuerpo.split("\n"):
             s = l.strip()
             low = s.lower()
-            if low.startswith("trabajamos en:"):
+            if low.startswith("trabajamos en:") or low.startswith("tema:"):
                 actual = "trabajamos"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("avances:"):
                 actual = "avances"; campos[actual] = s.split(":", 1)[1].strip()
@@ -532,8 +567,9 @@ def entregables_de(carpeta, indice):
                 ent["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
                     ent["reemplazado_por"] = fm["reemplazado_por"]
-                if isinstance(fm.get("afirma"), str) and fm["afirma"].strip():
-                    ent["afirma"] = fm["afirma"].strip()[:240]
+                _ap = fm.get("aportacion") if isinstance(fm.get("aportacion"), str) and fm["aportacion"].strip() else fm.get("afirma")
+                if isinstance(_ap, str) and _ap.strip():
+                    ent["afirma"] = _ap.strip()[:240]   # la clave de la base sigue siendo «afirma»; en la carpeta es «aportacion» desde la 1.22
         ref = indice.get(stem) or (indice.get(stem[:-3]) if stem.endswith("-en") else None)
         if ref:
             ent["descripcion"] = ref["descripcion"]
@@ -585,8 +621,9 @@ def taller_de(carpeta):
                 pz["actualizado"] = fm.get("actualizado")
                 if fm.get("reemplazado_por"):
                     pz["reemplazado_por"] = fm["reemplazado_por"]
-                if isinstance(fm.get("afirma"), str) and fm["afirma"].strip():
-                    pz["afirma"] = fm["afirma"].strip()[:240]
+                _ap = fm.get("aportacion") if isinstance(fm.get("aportacion"), str) and fm["aportacion"].strip() else fm.get("afirma")
+                if isinstance(_ap, str) and _ap.strip():
+                    pz["afirma"] = _ap.strip()[:240]
         if not pz["actualizado"]:
             f = fecha_de(p)
             if f:
@@ -877,7 +914,7 @@ if INVENTARIO:
             continue
         leer_.append(rel(carpeta / "area.md"))
         indice = parse_indice_proyectos(frontmatter(texto)[1])
-        prioridades_ = bullets(seccion(frontmatter(texto)[1], "Prioridades ahora"))
+        prioridades_ = prioridades_area(frontmatter(texto)[1])
         slugs = proyectos_de(carpeta, indice)
         inv["proyectos"][rel(carpeta)] = slugs
         for slug in slugs:
@@ -891,7 +928,7 @@ if INVENTARIO:
             ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md", suyos) else []
             _si_legible(pc / "decisiones.md", suyos)
             fm_p, cuerpo_p = frontmatter(tp)
-            cerrado = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cuerpo_p, "Estado actual")))
+            cerrado = es_cerrado(cuerpo_p)
             ss_ = sin_sesion_de(pc, ses, cerrado)
             d = pc / "entregables"
             try:
@@ -1057,7 +1094,7 @@ for a in areas_guia:
         "slug": a["slug"], "nombre": a["slug"], "que": a["que"], "dueno": a["dueno"],
         # quienes colaboran, por su cuenta: el tablero es de su dueño y no se comparte
         "colaboran": sorted(cuentas(a["cuenta"])[1]),
-        "lectores": a["lectores"], "restringido": restringida_celda(a["lectores"]), "orden": orden_area,
+        "lectores": a["lectores"], "restringido": a["restringida"], "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
     if texto is None:
@@ -1074,11 +1111,20 @@ for a in areas_guia:
     fm, cuerpo = frontmatter(texto)
     area_doc["nombre"] = titulo_h1(cuerpo) or a["slug"]
     area_doc["actualizado"] = fm.get("actualizado")
-    area_doc["prioridades"] = bullets(seccion(cuerpo, "Prioridades ahora"))
+    area_doc["prioridades"] = prioridades_area(cuerpo)
     area_doc["que_largo"] = seccion(cuerpo, "Qué es")
-    pan = seccion(cuerpo, "Panorama").strip()
-    mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*·\s*(.+)$", pan, re.S)
-    area_doc["panorama"] = {"fecha": mpan.group(1), "texto": mpan.group(2).strip()} if mpan else ({"fecha": None, "texto": pan} if pan else None)
+    est_a = seccion(cuerpo, "Estatus").strip()
+    if est_a:
+        # 1.22: el Estatus del área tiene la forma del del proyecto; la página lo pinta igual («en_corto») y el
+        # «panorama» de las listas es su fecha y su frase
+        area_doc["en_corto"] = est_a
+        mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*[·:—-]\s*(.+?)$", est_a.split("\n")[0].strip())
+        frase = re.sub(r"^\*\*|\*\*(?=\.?$)", "", (mpan.group(2) if mpan else est_a.split("\n")[0]).strip())
+        area_doc["panorama"] = {"fecha": mpan.group(1) if mpan else None, "texto": frase}
+    else:
+        pan = seccion(cuerpo, "Panorama").strip()
+        mpan = re.match(r"^(20\d\d-\d\d-\d\d)\s*·\s*(.+)$", pan, re.S)
+        area_doc["panorama"] = {"fecha": mpan.group(1), "texto": mpan.group(2).strip()} if mpan else ({"fecha": None, "texto": pan} if pan else None)
     indice = parse_indice_proyectos(cuerpo)
     slugs = proyectos_de(carpeta, indice)
     orden_p = 0
@@ -1121,16 +1167,16 @@ for a in areas_guia:
             "nombre": titulo_h1(cuerpo) or slug,
             "estado_cabecera": fm.get("estado"), "actualizado": fm.get("actualizado"),
             "objetivo": seccion(cuerpo, "Objetivo"),
-            "terminado": seccion(cuerpo, "Terminado significa"),
+            "terminado": seccion(cuerpo, "Terminado significa"),   # hasta la 1.21; desde la 1.22 es la segunda frase de Objetivo
             "alcance": seccion(cuerpo, "Alcance"),
             "quien": seccion(cuerpo, "Quién participa"),
-            "estado_actual": seccion(cuerpo, "Estado actual"),
-            "en_corto": seccion(cuerpo, "En corto"),
+            "estado_actual": seccion(cuerpo, "Estado actual"),      # hasta la 1.21; desde la 1.22 no existe
+            "en_corto": seccion(cuerpo, "Estatus") or seccion(cuerpo, "En corto"),
             "siguientes_pasos": lineas_no_vacias(seccion(cuerpo, "Siguientes pasos")),
         })
         pdoc["estado_resumen"] = primer_parrafo(pdoc["estado_actual"])
-        pdoc["cerrado"] = bool(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", pdoc["estado_actual"]))
-        mq = re.search(r"Dueño:\s*(.+)", pdoc["quien"])
+        pdoc["cerrado"] = es_cerrado(cuerpo)
+        mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
         nombres_co = []
