@@ -55,6 +55,16 @@ const path = require('path');
     await p.goto(url + '#p-ventas--cuentas-t-resumen'); await p.waitForTimeout(400);
     const donde = await p.evaluate(() => [...document.querySelectorAll('.brief p')].map(x=>x.textContent).join(' | '));
     if(!/Última sesión .*Lo último decidido/.test(donde)) errores.push(`${etiqueta}: el Resumen del proyecto no abre con «Dónde está» (${donde.slice(0,80)})`);
+    // «Qué hay» (1.21): la pestaña del proyecto con inventario, afirma, señales y trayectoria; nunca el cuerpo del taller; y la suma en el área
+    await p.goto(url + '#p-ventas--cuentas-t-quehay'); await p.waitForTimeout(600);
+    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin «afirma»/.test(t), tray: document.querySelectorAll('.qh-tray li').length, flecha: /→/.test(t), paso: /la nombra un paso/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
+    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray === 2 && qh.flecha && qh.paso && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el inventario, el afirma, las señales y la trayectoria, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
+    if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
+    await p.goto(url + '#a-ventas'); await p.waitForTimeout(400);
+    const qha = await p.evaluate(() => ({ tabla: document.querySelectorAll('.qh-sum tbody tr').length, giro: /Cliente Uno se sigue atendiendo/.test((document.querySelector('.qh-sum')||{}).textContent||'') }));
+    if(!(qha.tabla >= 2 && qha.giro)) errores.push(`${etiqueta}: el área no suma «Qué hay» de sus proyectos con el último giro (${JSON.stringify(qha)})`);
+    await p.click('.qh-sum [data-go-proj][data-tab="quehay"]'); await p.waitForTimeout(300);
+    if(!(await p.evaluate(() => /-t-quehay$/.test(location.hash)))) errores.push(`${etiqueta}: la fila de «Qué hay» del área no abre la pestaña del proyecto`);
     await p.goto(url + '#p-operacion--soporte-t-resumen'); await p.waitForTimeout(400);
     const corto = await p.evaluate(() => ({ t: (document.querySelector('.corto .corto-t')||{}).textContent || '', n: document.querySelectorAll('.corto .corto-l li').length, detalle: !!document.querySelector('[data-est-full]'), dos: [...document.querySelectorAll('.corto .corto-l li')].some(x=>/Beto las prueba el 24/.test(x.textContent)) }));
     if(!(corto.t.startsWith('Terminamos la lista') && corto.n === 3 && corto.detalle && corto.dos)) errores.push(`${etiqueta}: un proyecto con «En corto» no abre con «Cómo va» y el detalle plegado (${JSON.stringify(corto)})`);

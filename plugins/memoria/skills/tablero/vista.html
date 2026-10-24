@@ -115,6 +115,19 @@ body.modal-open{overflow:hidden}
 .modal-s h3 .c{font:500 12px var(--f-mono);color:var(--muted)}
 .modal-f{padding:14px 22px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface)}
 .ents{display:grid;gap:4px}
+/* Qué hay: el inventario de piezas, la trayectoria y la suma por área */
+.qh-tray{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.qh-tray li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px}
+.qh-tray .de{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;min-width:88px}
+.qh-tray .nodo{display:inline-flex;gap:6px;align-items:baseline}.qh-tray .nodo time{color:var(--muted);font-size:12.5px}
+.qh-tray .fl{color:var(--muted)}
+.qh-pz{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--rule-soft)}
+.qh-pz:first-child{border-top:none}.qh-pz b{font-weight:600}.qh-pz .f{color:var(--muted);font-size:13px;white-space:nowrap}
+.qh-pz .af{grid-column:1/-1;font-size:13.5px;color:var(--ink-soft);font-style:italic}.qh-pz .af.no{font-style:normal;color:var(--muted)}
+.qh-pz .sg{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12.5px}.qh-pz .sg span{color:var(--muted)}.qh-pz .sg span+span::before{content:"· ";}
+.qh-sum{width:100%;border-collapse:collapse;font-size:13.5px}.qh-sum th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px 6px 0;border-bottom:1px solid var(--rule)}
+.qh-sum td{padding:8px 8px 8px 0;border-bottom:1px solid var(--rule-soft);vertical-align:top}.qh-sum td.n{white-space:nowrap;color:var(--ink-soft)}.qh-sum .giro{color:var(--ink-soft)}.qh-sum .giro time{color:var(--muted);font-size:12px}
+@media (max-width:640px){.qh-sum th:nth-child(4),.qh-sum td:nth-child(4){display:none}}
 .ent{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--rule-soft)}
 .ent:first-child{border-top:none}
 .ent b{font-weight:600}
@@ -1125,6 +1138,45 @@ document.addEventListener("click", e => {
 let ENT_OPEN = null;
 const entPath = (p, e) => `${p.area}/${p.slug}/entregables/${e.archivo}`;
 function entIdx(){ const m = {}; for(const p of PROJ){ if(p.restringido) continue; for(const e of (p.entregables||[])) m[entPath(p,e)] = {p, e}; } return m; }
+// ---- Qué hay: la capa calculada (decisión 2026-10-23). Las piezas y la trayectoria vienen del detalle; el resumen, con el proyecto
+function queHayDe(p){ const r = p.que_hay || null; if(!p.que_hay_aparte) return {r, d:{piezas:[], trayectoria:[]}, falta:false}; if(!TEXTOS[p.id]){ traerTextos(p.id); return {r, d:null, falta:true}; } return {r, d:(TEXTOS[p.id].que_hay)||{piezas:[], trayectoria:[]}, falta:false}; }
+const ESTADO_PILL = {vigente:["ok","Vigente"], borrador:["draft","Borrador"], reemplazado:["closed","Reemplazado"]};
+const cuentaTxt = c => c ? [c.borrador?`${c.borrador} en borrador`:"", c.vigente?`${c.vigente} vigente${c.vigente===1?"":"s"}`:"", c.reemplazado?`${c.reemplazado} reemplazad${c.reemplazado===1?"o":"os"}`:"", c.otros?`${c.otros} sin cabecera`:""].filter(Boolean).join(" · ") : "";
+function piezaFila(p, z){
+  const est = ESTADO_PILL[z.estado]; const pill = est ? `<span class="pill ${est[0]}">${est[1]}</span>` : z.formato && z.formato!=="md" ? `<span class="pill none">${esc(z.formato.toUpperCase())}</span>` : `<span class="pill none">Sin cabecera</span>`;
+  const nombre = z.tipo==="entregable" ? entBtn(p, z) : `<span>${inline(z.titulo||z.nombre)}</span>`;
+  const sg = [];
+  if(z.decisiones_despues) sg.push(`<span>${z.decisiones_despues} decisi${z.decisiones_despues===1?"ón":"ones"} después de su última actualización (la última, el ${fmtD(z.ultima_decision_despues)})</span>`);
+  if(z.estado==="borrador" && z.dias>30) sg.push(`<span>en borrador desde hace ${z.dias} días</span>`);
+  for(const t of (z.pasos||[])) sg.push(`<span>la nombra un paso: «${inline(t)}»</span>`);
+  if(z.tipo==="taller" && z.estado!=="reemplazado" && z.citada===false && z.formato==="md") sg.push(`<span>ningún entregable la cita</span>`);
+  return `<div class="qh-pz"><b>${nombre}</b><span class="f">${pill}${z.actualizado?` · ${fmtD(z.actualizado)}`:""}</span>${z.formato==="md"&&z.estado!=="reemplazado" ? (z.afirma ? `<span class="af">${inline(z.afirma)}</span>` : `<span class="af no">Sin «afirma»: la cabecera no dice qué sostiene.</span>`) : ""}${sg.length?`<span class="sg">${sg.join("")}</span>`:""}</div>`;
+}
+function trayHtml(tr){ if(!tr || !tr.length) return `<p class="empty">Sin cadenas de reemplazo todavía: la trayectoria aparece cuando una decisión reemplaza a otra («Reemplaza:») o un entregable pasa a reemplazado.</p>`;
+  return `<ul class="qh-tray">${tr.map(c=>`<li><span class="de">${c.de==="decisiones"?"Decisiones":"Entregables"}</span>${c.pasos.map((n,i)=>`${i?`<span class="fl" aria-hidden="true">→</span>`:""}<span class="nodo">${inline(n.titulo)}${n.fecha?`<time>${fmtD(n.fecha)}</time>`:""}</span>`).join("")}</li>`).join("")}</ul>`; }
+function queHayTab(p){
+  const Q = queHayDe(p), r = Q.r;
+  if(!r) return `<div class="card"><p class="empty">Este proyecto aún no tiene «Qué hay»: aparece al sincronizar el tablero con esta versión.</p></div>`;
+  const tal = r.taller, ent = r.entregables;
+  const linea = [ent?`<b>Entregables</b>: ${cuentaTxt(ent)||"ninguno"}`:"", tal===null?`<b>Taller</b>: sin inventariar (la copia sin consola no lo trae)`:tal?`<b>Taller</b>: ${cuentaTxt(tal)||"vacío"}`:"", `<b>Decisiones</b>: ${r.decisiones||0}`].filter(Boolean).join(" · ");
+  const d = Q.d;
+  const piezas = d ? d.piezas : [];
+  const grupo = (t, list, nota) => `<section class="card"><h3>${t} <span class="c">${list.length}</span></h3>${nota?`<p class="sub" style="font-size:13px">${nota}</p>`:""}${list.length ? `<div>${list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("")}</div>` : `<p class="empty">Nada todavía.</p>`}</section>`;
+  return `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un proyecto")}</h2><p class="sub" style="font-size:13.5px">${linea}</p>
+    ${r.sin_afirma?`<p class="more">${r.sin_afirma} pieza${r.sin_afirma===1?"":"s"} sin «afirma»: la puesta al día propone la línea y la sesión la acepta.</p>`:""}</section>
+    <section class="card"><h3>Trayectoria</h3><p class="sub" style="font-size:13px">De dónde viene: lo que cada decisión o entregable reemplazó, de lo más viejo a lo más nuevo. Lo calcula el tablero; nadie lo escribe.</p>${Q.falta?CARGANDO:sinDetalle(p)?SIN_DETALLE:trayHtml(d.trayectoria)}</section>
+    ${Q.falta?`<section class="card">${CARGANDO}</section>`:sinDetalle(p)?"":grupo("Entregables", piezas.filter(z=>z.tipo==="entregable"), "Lo que el proyecto publica o prepara para publicar, con lo que cada pieza sostiene.")+(tal===null?"":grupo("Taller", piezas.filter(z=>z.tipo==="taller"), "Trabajo en curso. El cuerpo es privado del área; aquí solo su inventario: qué hay, en qué estado y qué sostiene."))}`;
+}
+function queHayArea(a, ps){
+  const filas = ps.filter(p=>!p.restringido && p.que_hay).map(p=>({p, r:p.que_hay}));
+  if(!filas.length) return "";
+  const tot = {piezas:0, dec:0, desf:0, bloq:0};
+  const fila = ({p,r}) => { const nT = r.taller ? Object.values(r.taller).reduce((x,y)=>x+y,0) : 0, nE = r.entregables ? Object.values(r.entregables).reduce((x,y)=>x+y,0) : 0; tot.piezas += nT+nE; tot.dec += r.decisiones||0; tot.desf += r.desfasadas||0; tot.bloq += r.bloqueadas||0;
+    return `<tr><td><button type="button" class="lnk" data-go-proj="${esc(p.id)}" data-tab="quehay">${esc(p.nombre)}</button></td><td class="n">${r.taller===null?"—":nT} / ${nE}${r.entregables&&r.entregables.vigente?` <span class="pill ok">${r.entregables.vigente}</span>`:""}</td><td class="n">${r.decisiones||0}</td><td class="n">${r.desfasadas||0}${r.bloqueadas?` · ${r.bloqueadas} con paso`:""}</td><td class="giro">${r.ultimo_giro?`${inline(r.ultimo_giro.titulo)} <time>${fmtD(r.ultimo_giro.fecha)}</time>`:`<span class="more">—</span>`}</td></tr>`; };
+  const cuerpo = filas.sort((x,y)=>((y.r.ultimo_giro||{}).fecha||"").localeCompare((x.r.ultimo_giro||{}).fecha||"")).map(fila).join("");
+  return `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un área")}</h2><p class="sub" style="font-size:13.5px">${tot.piezas} pieza${tot.piezas===1?"":"s"} en taller y entregables, ${tot.dec} decisiones; ${tot.desf} pieza${tot.desf===1?"":"s"} con decisiones posteriores a su última actualización. Cada fila abre el detalle del proyecto.</p>
+    <div style="overflow-x:auto"><table class="qh-sum"><thead><tr><th>Proyecto</th><th>Taller / entregables</th><th>Decisiones</th><th>Por revisar</th><th>Último giro</th></tr></thead><tbody>${cuerpo}</tbody></table></div></section>`;
+}
 const entBtn = (p, e) => `<button type="button" class="ent-t" data-ent-open="${esc(entPath(p,e))}">${inline(e.titulo||e.nombre)}</button>`;
 function origen(ruta, idx){
   const r = ruta.replace(/^\.?\//, ""), x = idx[r];
@@ -1666,6 +1718,7 @@ function ayudaArts(){
       <dt>Inicio</dt><dd><b>Por dónde empezar</b> (grupos de pasos que avanzan varias cosas a la vez), lo que cambió desde tu última visita, lo que tiene fecha y lo que la memoria tiene flojo. Junto a cada cosa hay un botón para copiar la frase que abre la sesión: la pegas en tu proyecto y empiezas.</dd>
       <dt>Lo que explica</dt><dd>Inicio empieza como lo contaría un director: un párrafo de cómo va la organización en las últimas cuatro semanas (sesiones, decisiones, documentos publicados, cuestionamientos que esperan), y después cada área con lo que dice su director (o, si aún no tiene panorama, una línea de estado que calcula el tablero) y su primera prioridad. Cada proyecto abre por su Resumen, con «Cómo va» arriba: lo que se completó, lo que sigue y con quién, y lo que falta decidir. Entregables reúne todo lo publicado.</dd>
       <dt>Dos voces</dt><dd>La línea de estado de un proyecto, y la de un área que aún no tiene panorama, la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el panorama, que escribe el director del área al cerrar sesión; cuando el área lo tiene, es lo único que se muestra de ella. Las barras pequeñas junto a cada área son sus sesiones por semana, las últimas ocho.</dd>
+      <dt>Qué hay</dt><dd>La pestaña «Qué hay» de cada proyecto, y su suma en el área, enseñan el cuerpo del trabajo que el resumen no cuenta: cada pieza del taller y de los entregables con su estado, su fecha y la línea «afirma» de su cabecera (qué sostiene), cuántas decisiones del proyecto son posteriores a su última actualización, qué paso de «Siguientes pasos» la nombra y, en el taller, si algún entregable la cita. La trayectoria sale de las cadenas de reemplazo («Reemplaza:» en las decisiones, «reemplazado_por» en los archivos). Del taller solo se enseña el inventario de cabeceras: su cuerpo sigue siendo privado del área. Nada de esto se escribe a mano.</dd>
       <dt>Quién hizo qué</dt><dd>Cada entrada de la bitácora dice quién cerró esa sesión, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo (la fecha y la hora del archivo), pero no quién: la carpeta no lo guarda y Drive no se lo da al plugin. Por eso cerrar la sesión importa: es lo único que deja escrito quién trabajó.</dd>
       <dt>Áreas y proyectos</dt><dd>En el índice de la izquierda. Cada proyecto tiene su resumen, lo que toca ahora, sus acciones, sus entregables, sus decisiones y su bitácora.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
@@ -1755,6 +1808,7 @@ function ayudaArts(){
   {g:"El tablero", id:"que-ve-cada-quien", t:"Qué ve cada quien", h:`
     <dl class="hc-def">
       <dt>Tu tablero</dt><dd>Todo lo que tu cuenta puede leer en la carpeta, incluido lo restringido y las cinco sesiones más recientes de cada proyecto enteras. Cada persona ve en el suyo lo que su cuenta lee: por eso no se comparte, y quien quiera uno lo monta con ${F("monta el tablero")}.</dd>
+      <dt>El taller</dt><dd>El cuerpo de lo que hay en <code>taller/</code> es privado del área: ni el tablero ni otras áreas lo leen. Su inventario sí se enseña en «Qué hay» a quien lee el área: el nombre, el estado, la fecha y la línea «afirma» de cada pieza, que por eso no lleva nada restringido ni personal.</dd>
       <dt>Restringido</dt><dd>Lo que la cuenta que genera el tablero no puede leer en la carpeta: sale con su nombre y su dueño, y nada más. Si lo necesitas, pide acceso a quien administra la carpeta. Si en vez de «Restringido» ves «Sin carpeta» o «Sin leer», la carpeta no estaba en la computadora al generar el tablero: no es un permiso.</dd>
     </dl>`},
   {g:"Para empezar", id:"permisos", t:"Los permisos de Drive", h:`
@@ -1874,7 +1928,7 @@ function ayudaToc(arts, cur){
   return grupos.map(g => `<div class="hc-g"><span class="eyebrow">${esc(g)}</span>${vis.filter(a=>a.g===g).map(a=>`<button type="button" class="hc-i" data-help="${a.id}"${a.id===cur?' aria-current="page"':""}>${esc(a.t)}</button>`).join("")}</div>`).join("");
 }
 // artículos fundidos en 1.14.11: sus enlaces viejos siguen llevando a donde está ahora su texto
-const AYUDA_ALIAS = {necesitas:"conectarte", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
+const AYUDA_ALIAS = {necesitas:"conectarte", "que-hay":"tablero", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
 // La ayuda es un solo documento (1.19): todos los artículos seguidos, con el índice al lado para saltar a cada uno y la
 // sección actual marcada mientras se baja; cada sección se sigue enlazando sola (#ayuda-<id>) desde los «?» del tablero.
 let HC_CUR = null;
@@ -2133,7 +2187,8 @@ function renderArea(a){
       <div class="plist">${ps.slice().sort((a,b)=>estRank(a)-estRank(b)).map(projRow).join("")}</div></section>
     <section class="card"><h2>Documentos publicados</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p>
       <div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>
-    <section class="card"><h2>Decidido en el último mes</h2>${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Ninguna decisión en los últimos 30 días.</p>`}</section>`;
+    <section class="card"><h2>Decidido en el último mes</h2>${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Ninguna decisión en los últimos 30 días.</p>`}</section>
+    ${queHayArea(a, ps)}`;
 }
 // ---- proyecto ----
 let tab = "resumen", EST_FULL = new Set(), AF_ALL = new Set();
@@ -2160,7 +2215,8 @@ function renderProj(p){
   const nP = stepsLive(p).length;
   const nV = p.entregables_vigentes||0;
   const nQ = (p.decisiones||[]).filter(d=>d.tipo==="cuestionamiento").length;
-  const tabs = [["resumen","Resumen",""],["estado","Ahora",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones",nQ&&!nD?"Cuestionamientos":"Decisiones",nD+nQ],["bitacora","Bitácora",p.sesiones_registro||nS]];
+  const nZ = p.que_hay ? Object.values(p.que_hay.taller||{}).reduce((x,y)=>x+y,0) + Object.values(p.que_hay.entregables||{}).reduce((x,y)=>x+y,0) : 0;
+  const tabs = [["resumen","Resumen",""],["quehay","Qué hay",nZ||""],["estado","Ahora",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones",nQ&&!nD?"Cuestionamientos":"Decisiones",nD+nQ],["bitacora","Bitácora",p.sesiones_registro||nS]];
   let body = "";
   if(tab==="resumen"){
     const vigs = (p.entregables||[]).filter(e=>e.estado==="vigente").sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||""));
@@ -2173,6 +2229,8 @@ function renderProj(p){
       ${cortoPartes(p) ? `<div class="card"><h3>En detalle</h3>${EST_FULL.has(p.id) ? `<div class="md">${(e=>e===null?CARGANDO:e===false?SIN_DETALLE:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div><button type="button" class="leer" data-est-full="${esc(p.id)}">Ver menos</button>` : `<p class="more">El estado completo del proyecto, para quien trabaja en él.</p><button type="button" class="leer" data-est-full="${esc(p.id)}">Leer el detalle</button>`}</div>` : `<div class="card"><h3>En qué está</h3><div class="md">${(e=>e===null?CARGANDO:e===false?SIN_DETALLE:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div></div>`}
       <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada publicado todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
       <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
+  } else if(tab==="quehay"){
+    body = queHayTab(p);
   } else if(tab==="estado"){
     const live = stepsLive(p), nx = mainStep(p), tday = today();
     const nLate = live.filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length;
@@ -2235,7 +2293,7 @@ function _render(){
   const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
   const sb = document.getElementById("stale"); if(sb) sb.innerHTML = staleBanner();
   const f = document.getElementById("foot");
-  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora y los datos de sus entregables; todo lo que tu cuenta puede leer, salvo fuentes, taller y las carpetas «restringido». La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
+  f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}. Lee de la carpeta la guía, cada área y, de cada proyecto, su ficha, sus decisiones, su bitácora, los datos de sus entregables y las cabeceras de su taller; todo lo que tu cuenta puede leer, salvo fuentes, el cuerpo del taller y las carpetas «restringido». La carpeta manda: lo que marcas aquí queda apuntado hasta que la sincronización lo pasa a la carpeta.`) : "";
 }
 (async ()=>{
   render();

@@ -10,6 +10,7 @@ Decidió: Ana Prueba
 Por qué: la cuenta es una sola relación; soporte entra en las incidencias sin partir la cuenta.
 Descartamos: pasar la cuenta a soporte.
 Responde a: operacion/soporte#2026-09-25
+Reemplaza: 2026-09-20 · Cliente Uno se atiende desde ventas
 Afecta a: operacion/soporte (recibe copia de las incidencias de Cliente Uno)
 
 ## 2026-09-21 · El anexo de Cliente Uno se manda después de la propuesta
