@@ -244,6 +244,10 @@ def primer_parrafo(texto):
         return b
     return texto.strip().split("\n")[0] if texto.strip() else ""
 
+def una_linea_(texto, n):
+    t = re.sub(r"\s+", " ", texto or "").strip()
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
 def fechas_en(texto):
     return re.findall(r"\b(20\d\d-\d\d-\d\d)\b", texto)
 
@@ -1278,7 +1282,13 @@ for a in areas_guia:
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
-        pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]   # la entrada de la migración no es una sesión y no viaja a la página
+        pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
+        # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
+        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada: fecha, título, Tema y quién.
+        _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
+        pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
+                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220)}.items() if v}
+                                      for s_ in ses if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -1364,6 +1374,10 @@ docs["meta"]["estado"] = {
     "fuera": [f for f in (fuera or []) if not f.get("guia")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
+# qué es la organización: el primer párrafo de guia.md bajo su título, para la banda de Inicio (1.22.3)
+_que_es = primer_parrafo(re.sub(r"^\s*#[^\n]*\n", "", frontmatter(guia)[1] if guia.startswith("---") else guia, count=1))
+if _que_es and not _que_es.lstrip().startswith(("#", ">", "|", "-", "*")):
+    docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes
 _est_previo = _de_la_base("meta", "estado") if PREVIOS else None
@@ -1383,6 +1397,35 @@ if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 if COLA_AJENA is not None:
     docs["meta"]["estado"]["cola_ajena"] = sorted(str(x) for x in COLA_AJENA)
+
+# ---------- quién cita a quién (1.22.3) ----------
+# Un entregable que otro proyecto pone en su «basado_en» sostiene trabajo ajeno: cada entregable lleva cuántos proyectos lo
+# citan, y cada proyecto cuántos proyectos citan alguna de sus piezas. Las rutas de «basado_en» son desde la raíz.
+_citan = {}
+for pid, pd in docs["proyectos"].items():
+    _ents = list(pd.get("entregables") or []) + [z for z in ((pd.get("_que_hay_detalle") or {}).get("piezas") or []) if z.get("tipo") == "entregable"]
+    for e in _ents:
+        for b in e.get("basado_en") or []:
+            m = re.match(r"^([^/]+)/([^/]+)/", re.sub(r"^\./", "", str(b)))
+            if m and f"{m.group(1)}--{m.group(2)}" != pid:
+                _citan.setdefault(re.sub(r"^\./", "", str(b)), set()).add(pid)
+for pid, pd in docs["proyectos"].items():
+    _todos = set()
+    for e in pd.get("entregables") or []:
+        c_ = _citan.get(f"{pd.get('area')}/{pd.get('slug')}/entregables/{e.get('archivo')}", set())
+        if c_:
+            e["citado_por"] = len(c_)
+        else:
+            e.pop("citado_por", None)
+        _todos |= c_
+    pref = f"{pd.get('area')}/{pd.get('slug')}/"
+    for r_, c_ in _citan.items():
+        if r_.startswith(pref):
+            _todos |= c_
+    if _todos:
+        pd["citado_por"] = len(_todos)
+    else:
+        pd.pop("citado_por", None)
 
 # ---------- el detalle, aparte (1.19) ----------
 # La página carga todos los proyectos al abrirse, y casi la mitad de lo que bajaba era texto que solo se lee al entrar

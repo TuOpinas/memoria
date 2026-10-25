@@ -307,7 +307,15 @@ try:
                               "afirma": [{"ruta": "ventas/lleno/entregables/x.md", "afirma": "Dice algo."}]}), encoding="utf-8")
     r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(st), str(jl)], capture_output=True, text=True)
     rj = json.loads(r.stdout)
-    ok(rj["propuestas_nuevas_por_juicio"] == 1 and rj["propuestas_afirma"] == 0 and rj["sin_hueco"] == 1, f"al tope, la decisión entra y la aportacion espera hueco ({rj})")
+    ok(rj["propuestas_nuevas_por_juicio"] == 1 and rj["propuestas_afirma"] == 1 and rj["sin_hueco"] == 0, f"con lo mecánico al tope, la decisión entra y la aportacion también, que lleva su propio tope (1.22.3) ({rj})")
+    bl = json.loads((st / "barrido.json").read_text(encoding="utf-8"))
+    bl["pendientes"] = {**(bl.get("pendientes") or {}), "ventas--lleno|afirma": 30}
+    bl["para_afirma"] = [{"proyecto": "ventas--lleno", "ruta": "ventas/lleno/entregables/y.md", "titulo": "y", "arranque": "y"}]
+    (st / "barrido.json").write_text(json.dumps(bl), encoding="utf-8")
+    jl.write_text(json.dumps({"afirma": [{"ruta": "ventas/lleno/entregables/y.md", "afirma": "Dice otra cosa."}]}), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(st), str(jl)], capture_output=True, text=True)
+    rj = json.loads(r.stdout)
+    ok(rj["propuestas_afirma"] == 0 and rj["sin_hueco"] == 1, f"con 30 aportaciones pendientes, la siguiente espera hueco ({rj})")
 
     print("el tope de afirma, primero para lo activo (1.22.1)")
     ra = tmp / "raiz-afirma"
@@ -318,7 +326,7 @@ try:
             escribir(ra / pr / "entregables" / f"e{k}.md", f"---\nestado: vigente\nactualizado: 2026-10-01\n---\n# Pieza {k}\n\nTexto.\n")
     sa = tmp / "sa"; sa.mkdir()
     ba, _ = correr(ra, sa)
-    ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"], f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
+    ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"] * 5, f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
