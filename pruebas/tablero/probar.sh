@@ -32,6 +32,7 @@ python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/beto" --cuenta beto@ejempl
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/ana" --cuenta ana@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/eva" --cuenta eva@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/carla" --cuenta carla@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
+python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/dani" --cuenta dani@ejemplo.test --version "${VERSION:-prueba}" >/dev/null
 python3 - "$OUT" <<'PY2'
 import json, sys, os
 m = lambda d, c, i: json.load(open(os.path.join(sys.argv[1], d, c, i + ".json"), encoding="utf-8")).get("motivo")
@@ -42,6 +43,13 @@ casos = [(m("beto", "areas", "legal") == "sin-carpeta", "un área restringida de
          (m("eva", "areas", "legal") == "sin-carpeta", "quien colabora en un área restringida sin carpeta la ve «sin carpeta»"),
          (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra"),
          (m("carla", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido del área donde la cuenta solo colabora sigue restringido: lo restringido de dentro es del dueño")]
+j = lambda d, c, i: json.load(open(os.path.join(sys.argv[1], d, c, i + ".json"), encoding="utf-8"))
+casos += [(j("ana", "proyectos", "ventas--cuentas").get("escribe") is True and j("ana", "meta", "estado").get("tablero_de") == "Ana Prueba", "el tablero de Ana sabe que es suyo y que escribe en su área (1.22.3)"),
+          (j("beto", "proyectos", "ventas--cuentas").get("escribe") is False, "en un proyecto de otra área, el tablero de Beto no escribe: no acepta propuestas de ahí"),
+          ("escribe" not in j("completo", "proyectos", "ventas--cuentas"), "sin --cuenta no se sabe quién escribe, y no se dice"),
+          (j("carla", "meta", "estado").get("tablero_de") == "" and j("carla", "proyectos", "ventas--cuentas").get("escribe") is True, "quien solo colabora y no tiene nombre en la carpeta: el tablero no es de nadie más (no sale la responsable), y sí sabe dónde escribe"),
+          (j("eva", "meta", "estado").get("tablero_de") == "", "ni se cuela el responsable con su nota entre paréntesis"),
+          (j("dani", "meta", "estado").get("tablero_de") == "Dani Prueba" and j("dani", "proyectos", "operacion--soporte").get("escribe") is True, "quien colabora en un proyecto tiene el nombre que le da su línea «Colabora:»")]
 for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
 sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2

@@ -278,11 +278,16 @@ try:
     colt = tmp / "colat"; colt.mkdir()
     vieja = next(iter(dt)); dv = dict(dt[vieja], creado="2026-08-10T10:00-06:00")
     escribir(colt / f"{vieja}.json", json.dumps({"id": vieja, "data": dv, "version": 3}))
+    escribir(colt / "prop-x-aceptada.json", json.dumps({"id": "prop-x-aceptada", "data": {"tipo": "propuesta", "clase": "paso-hecho", "proyecto": "ventas--lleno", "texto": "Quitar de «Siguientes pasos»: «algo»", "estado": "aceptada", "creado": "2026-07-01T10:00-06:00"}, "version": 1}))
+    escribir(colt / "prop-x-aceptada-sin-pieza.json", json.dumps({"id": "prop-x-aceptada-sin-pieza", "data": {"tipo": "propuesta", "clase": "afirma", "proyecto": "ventas--lleno", "ruta": "ventas/lleno/entregables/z.md", "estado": "aceptada", "creado": "2026-07-01T10:00-06:00"}, "version": 1}))
     escribir(colt / "prop-x-descartada.json", json.dumps({"id": "prop-x-descartada", "data": {"tipo": "propuesta", "clase": "rotacion", "proyecto": "ventas--lleno", "estado": "descartada", "creado": "2026-08-01T10:00-06:00"}, "version": 1}))
     st2 = tmp / "st2"; st2.mkdir()
     bt2, dt2 = correr(rz, st2, colt)
     ok(vieja in {x["id"] for x in bt2["borrar"]} and "prop-x-descartada" not in bt2["juzgado"]["ids"], "la pendiente de hace más de 60 días se retira; una descartada no caduca")
     ok(vieja in bt2["juzgado"]["ids"] and vieja not in dt2, "y queda juzgada: no vuelve igual en la misma corrida")
+    ok("ventas--lleno" in bt2["proyectos"] and "prop-x-aceptada" not in bt2["juzgado"]["ids"] and "prop-x-aceptada" not in {x["id"] for x in bt2["borrar"]}, "una aceptada desde el tablero ni caduca ni se retira aunque ya no salga: la espera el próximo cierre (1.22.3)")
+    ok("prop-x-aceptada-sin-pieza" in {x["id"] for x in bt2["borrar"]} and "prop-x-aceptada-sin-pieza" not in bt2["juzgado"]["ids"], "una aportación aceptada cuya pieza ya no la necesita (o no existe) sí se retira: no hay nada que aplicar")
+    ok(not any(k.endswith("|afirma") and v for k, v in bt2["pendientes"].items() if k.startswith("ventas--lleno")), "las aceptadas no ocupan hueco en la cola")
     vol = tmp / "volt"; (vol / "meta").mkdir(parents=True)
     escribir(vol / "meta/estado.json", json.dumps({"juzgado": bt2["juzgado"]}))
     st3 = tmp / "st3"; st3.mkdir()
@@ -307,7 +312,15 @@ try:
                               "afirma": [{"ruta": "ventas/lleno/entregables/x.md", "afirma": "Dice algo."}]}), encoding="utf-8")
     r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(st), str(jl)], capture_output=True, text=True)
     rj = json.loads(r.stdout)
-    ok(rj["propuestas_nuevas_por_juicio"] == 1 and rj["propuestas_afirma"] == 0 and rj["sin_hueco"] == 1, f"al tope, la decisión entra y la aportacion espera hueco ({rj})")
+    ok(rj["propuestas_nuevas_por_juicio"] == 1 and rj["propuestas_afirma"] == 1 and rj["sin_hueco"] == 0, f"con lo mecánico al tope, la decisión entra y la aportacion también, que lleva su propio tope (1.22.3) ({rj})")
+    bl = json.loads((st / "barrido.json").read_text(encoding="utf-8"))
+    bl["pendientes"] = {**(bl.get("pendientes") or {}), "ventas--lleno|afirma": 30}
+    bl["para_afirma"] = [{"proyecto": "ventas--lleno", "ruta": "ventas/lleno/entregables/y.md", "titulo": "y", "arranque": "y"}]
+    (st / "barrido.json").write_text(json.dumps(bl), encoding="utf-8")
+    jl.write_text(json.dumps({"afirma": [{"ruta": "ventas/lleno/entregables/y.md", "afirma": "Dice otra cosa."}]}), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(st), str(jl)], capture_output=True, text=True)
+    rj = json.loads(r.stdout)
+    ok(rj["propuestas_afirma"] == 0 and rj["sin_hueco"] == 1, f"con 30 aportaciones pendientes, la siguiente espera hueco ({rj})")
 
     print("el tope de afirma, primero para lo activo (1.22.1)")
     ra = tmp / "raiz-afirma"
@@ -318,7 +331,14 @@ try:
             escribir(ra / pr / "entregables" / f"e{k}.md", f"---\nestado: vigente\nactualizado: 2026-10-01\n---\n# Pieza {k}\n\nTexto.\n")
     sa = tmp / "sa"; sa.mkdir()
     ba, _ = correr(ra, sa)
-    ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"], f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
+    ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"] * 5, f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
+    print("el tope de afirma por proyecto: solo los huecos que le quedan (1.22.3)")
+    colh = tmp / "colah"; colh.mkdir()
+    for k in range(27):
+        escribir(colh / f"prop-h{k}.json", json.dumps({"id": f"prop-h{k}", "data": {"tipo": "propuesta", "clase": "afirma", "proyecto": "zzz--activo", "ruta": f"zzz/activo/taller/h{k}.md", "estado": "pendiente", "creado": "2026-10-20T10:00-06:00"}, "version": 1}))
+    shh = tmp / "shh"; shh.mkdir()
+    bh, _ = correr(ra, shh, colh)
+    ok([x["proyecto"] for x in bh["para_afirma"]].count("zzz--activo") == 3 and [x["proyecto"] for x in bh["para_afirma"]].count("aaa--dormido") == 5, f"con 27 pendientes, el proyecto recibe solo 3 piezas para el modelo; el otro, las suyas ({[x['proyecto'] for x in bh['para_afirma']]})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

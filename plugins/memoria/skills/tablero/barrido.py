@@ -31,7 +31,7 @@ Detecta, con lo que está escrito y sin modelo:
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
-  para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 6 por corrida; primero los de
+  para_afirma   los entregables y los archivos del taller que no llevan `afirma:` (hasta 24 por corrida; primero los de
                 los proyectos con sesiones más recientes y, en cada uno, entregables antes que taller y vigentes antes que borradores), con su título y, en los entregables, el arranque de su cuerpo,
                 para que el modelo escriba la línea que dice qué sostienen. Del taller solo hay título y cabecera (la copia
                 no trae su cuerpo, que es privado del área): si con eso no se puede decir qué sostiene, se salta.
@@ -53,13 +53,17 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
            "paso pasos hacer hecho hacer queda quedó falta".split())
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
 LIMITE_LINEAS = 1500
-MAX_AFIRMA = 6
+MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
 # la cola no crece sin tope (1.22.1, hallazgo 31 de la revisión de la 1.21): como mucho tantas propuestas pendientes por
-# proyecto de las que se pueden volver a pedir (mecánicas y afirma), y una pendiente que una sesión posterior del
+# proyecto de las que se pueden volver a pedir (las mecánicas; las afirma, con su tope aparte), y una pendiente que una sesión posterior del
 # proyecto dejó sin resolver durante tantos días se retira y queda juzgada, para que no vuelva igual
 MAX_PENDIENTES = 8
+# las «aportacion» pendientes llevan su propio tope (1.22.3): son muchas, se aceptan de golpe desde Qué hay y no deben
+# quitarle hueco a lo mecánico
+MAX_PENDIENTES_AFIRMA = 30
+clave_pend = lambda proyecto, clase: f"{proyecto}|afirma" if clase == "afirma" else proyecto
 CADUCIDAD_DIAS = 60
 NIEGA = re.compile(r"\b(no|falta|faltan|pendiente|pendientes|sin|todav[ií]a|a[úu]n|hasta que|queda|quedan|sigue|siguen)\b", re.I)
 DECIDIO = re.compile(r"\b(decidimos|decidí|decidieron|se decidi[óo]|se acord[óo]|acordamos|quedó acordado|quedó decidido|elegimos|se eligi[óo]|aprobamos|se aprob[óo]|descartamos|se descart[óo])\b", re.I)
@@ -235,7 +239,7 @@ def piezas_de(salida, pid):
         return []
 
 
-def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: [], cuenta=None, juzgado=None, lleno=frozenset(), recientes=None):
+def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: [], cuenta=None, juzgado=None, lleno=frozenset(), recientes=None, hueco=None):
     juzgado = juzgado or {"ids": set(), "contraste": set()}
     visto = lambda i: hay_propuesta(i) or i in juzgado["ids"]      # ya propuesto, o ya juzgado sin hallazgo
     """(propuestas, para_juicio, para_afirma, para_contraste, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
@@ -353,7 +357,13 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
     afirma.sort(key=lambda x: x["ruta"])
     afirma.sort(key=lambda x: (x.get("_taller", False), not x["_vigente"]))
     afirma.sort(key=lambda x: x.get("_reciente") or "", reverse=True)
-    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller", "_reciente")} for x in afirma[:MAX_AFIRMA]]
+    # y a cada proyecto, como mucho los huecos que le quedan en la cola (1.22.3): lo que el tope tiraría no se juzga en balde
+    usados, cabe = {}, []
+    for x in afirma:
+        lim = (hueco or {}).get(x["proyecto"], MAX_PENDIENTES_AFIRMA)
+        if usados.get(x["proyecto"], 0) < lim:
+            usados[x["proyecto"]] = usados.get(x["proyecto"], 0) + 1; cabe.append(x)
+    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller", "_reciente")} for x in cabe[:MAX_AFIRMA]]
     return props, juicio, afirma, contraste, vistos, validas
 
 
@@ -381,10 +391,11 @@ def sumar_juicio(salida, juicio, cola):
     def guardar(pid, data):
         # el tope solo frena lo que se puede volver a pedir sin perder nada (una línea aportacion); una decisión sin
         # registrar, un candidato o una contradicción entran siempre: son pocos y se piden una vez por conjunto
-        if data["clase"] == "afirma" and pendientes.get(data["proyecto"], 0) >= MAX_PENDIENTES:
+        k = clave_pend(data["proyecto"], data["clase"])
+        if data["clase"] == "afirma" and pendientes.get(k, 0) >= MAX_PENDIENTES_AFIRMA:
             sin_hueco.add(pid)      # no entra, y se volverá a pedir cuando el proyecto tenga hueco
             return False
-        pendientes[data["proyecto"]] = pendientes.get(data["proyecto"], 0) + 1
+        pendientes[k] = pendientes.get(k, 0) + 1
         (salida / "cambios").mkdir(parents=True, exist_ok=True)
         (salida / "cambios" / f"{pid}.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         bar["anadir"].append({"id": pid, "archivo": f"cambios/{pid}.json"}); ya.add(pid)
@@ -476,37 +487,48 @@ def main():
     juz = juzgado_de(opt("--base"))
     previas = {}
     for d in existentes:
-        if d["data"].get("estado") != "descartada":
-            previas[d["data"].get("proyecto")] = previas.get(d["data"].get("proyecto"), 0) + 1
+        # las aceptadas ya no esperan juicio: no ocupan hueco en la cola (1.22.3)
+        if d["data"].get("estado") not in ("descartada", "aceptada"):
+            k = clave_pend(d["data"].get("proyecto"), d["data"].get("clase"))
+            previas[k] = previas.get(k, 0) + 1
     recientes = {}
     props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []),
                                                               (opt("--cuenta") or "").strip().lower() or None, juz,
-                                                              lleno={k for k, v in previas.items() if v >= MAX_PENDIENTES}, recientes=recientes)
+                                                              lleno={k[:-7] for k, v in previas.items() if k.endswith("|afirma") and v >= MAX_PENDIENTES_AFIRMA}, recientes=recientes,
+                                                              hueco={k[:-7]: max(0, MAX_PENDIENTES_AFIRMA - v) for k, v in previas.items() if k.endswith("|afirma")})
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = ahora_en(salida)
     # caduca una pendiente de hace más de CADUCIDAD_DIAS si su proyecto tuvo después una sesión real que no la resolvió
     # (la sesión la enseña al abrir): se retira y queda juzgada, para que no vuelva igual. Una que nadie pudo ver, porque
-    # su proyecto no tuvo sesión, no caduca.
+    # su proyecto no tuvo sesión, no caduca; una aceptada desde el tablero tampoco (1.22.3): la espera el próximo cierre.
     lim = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=CADUCIDAD_DIAS)).isoformat()
-    caducadas = {d["id"] for d in existentes if d["data"].get("estado") != "descartada" and fecha_ok(str(d["data"].get("creado") or "")[:10])
+    caducadas = {d["id"] for d in existentes if d["data"].get("estado") not in ("descartada", "aceptada") and fecha_ok(str(d["data"].get("creado") or "")[:10])
                  and str(d["data"]["creado"])[:10] < lim and recientes.get(d["data"].get("proyecto"), "") > str(d["data"]["creado"])[:10]}
     pendientes = {}
     for d in existentes:
-        if d["data"].get("estado") != "descartada" and d["id"] not in caducadas and (d["data"].get("proyecto") not in vistos or d["id"] in nuevos_ids):
-            pendientes[d["data"].get("proyecto")] = pendientes.get(d["data"].get("proyecto"), 0) + 1
+        if d["data"].get("estado") not in ("descartada", "aceptada") and d["id"] not in caducadas and (d["data"].get("proyecto") not in vistos or d["id"] in nuevos_ids):
+            k = clave_pend(d["data"].get("proyecto"), d["data"].get("clase"))
+            pendientes[k] = pendientes.get(k, 0) + 1
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
     anadir, sin_hueco = [], 0
     for p in props:
         if p["id"] in ya or p["id"] in juz["ids"]:
             continue            # ya está (pendiente o descartada), o caducó sin que nadie la resolviera: no se vuelve a proponer
-        if pendientes.get(p["data"]["proyecto"], 0) >= MAX_PENDIENTES:
+        k = clave_pend(p["data"]["proyecto"], p["data"].get("clase"))
+        if pendientes.get(k, 0) >= MAX_PENDIENTES:
             sin_hueco += 1; continue      # el proyecto ya tiene bastantes pendientes: entra cuando se resuelvan
-        pendientes[p["data"]["proyecto"]] = pendientes.get(p["data"]["proyecto"], 0) + 1
+        pendientes[k] = pendientes.get(k, 0) + 1
         p["data"]["creado"] = ahora
         (salida / "cambios" / f"{p['id']}.json").write_text(json.dumps(p["data"], ensure_ascii=False), encoding="utf-8")
         anadir.append({"id": p["id"], "archivo": f"cambios/{p['id']}.json"})
     borrar = []
     for d in existentes:
+        # una aceptada desde el tablero la espera el cierre, aunque lo mecánico deje de proponerla (1.22.3). Solo se retira la
+        # aceptada de «aportacion» cuya pieza ya la tiene (la escribió el cierre o alguien a mano): ya no hay nada que aplicar
+        if d["data"].get("estado") == "aceptada":
+            if d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
+                borrar.append({"id": d["id"], "if_version": d["version"]})
+            continue
         if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(

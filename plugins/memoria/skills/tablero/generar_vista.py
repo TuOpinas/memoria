@@ -244,6 +244,10 @@ def primer_parrafo(texto):
         return b
     return texto.strip().split("\n")[0] if texto.strip() else ""
 
+def una_linea_(texto, n):
+    t = re.sub(r"\s+", " ", texto or "").strip()
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
 def fechas_en(texto):
     return re.findall(r"\b(20\d\d-\d\d-\d\d)\b", texto)
 
@@ -310,6 +314,15 @@ for l in quien.split("\n"):
         contexto_comun = l.split(":", 1)[-1].strip().rstrip(".")
     if l.lower().startswith("administra"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
+# de qué nombre es cada cuenta, donde la carpeta lo dice junto («Nombre (correo)»): para saber de quién es el tablero (1.22.3)
+NOMBRE_DE_CUENTA = {}
+def apuntar_nombres(texto):
+    for m_ in re.finditer(r"((?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*|(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa))(?:[ \t]+(?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*|(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa))){0,7})\s*[(<]\s*([\w.+'-]+@[\w-]+(?:\.[\w-]+)*)\s*[)>]", texto or ""):
+        nombre_ = re.sub(r"^(?:Colabora[n]?|Responsable|Administra|Contexto común)\s*:?\s*", "", m_.group(1), flags=re.I).strip(" ,;·-")
+        nombre_ = re.sub(r"^(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa)\s+", "", nombre_)   # no empieza por partícula
+        if nombre_ and nombre_[0].isupper():
+            NOMBRE_DE_CUENTA.setdefault(m_.group(2).lower(), nombre_)
+apuntar_nombres(quien)
 # los nombres, sin la cuenta entre paréntesis: el tablero no lleva correos
 contexto_comun = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", contexto_comun)).strip(" .")
 administra = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", administra)).strip(" .")
@@ -1131,6 +1144,8 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
             dec_.pop("cuestionado_por", None); dec_.pop("abierto", None)
         for s_ in d_.get("pasos") or []:
             s_.pop("desbloquea", None); s_.pop("puntos", None)
+        _lim28_ = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
+        d_["sesiones_recientes"] = [x for x in d_.get("sesiones_recientes") or [] if str(x.get("fecha", "")) >= _lim28_]
         previos[pid] = d_
     est_ = _de_la_base("meta", "estado") if PREVIOS else None
     if INV.get("fuera_reusar") and not (isinstance(est_, dict) and isinstance(est_.get("fuera"), list)):
@@ -1192,9 +1207,15 @@ for a in areas_guia:
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
         if pid in previos:
-            # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy
+            # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy; quién escribe se vuelve a
+            # calcular con la celda Cuenta de hoy (1.22.3), porque guia.md puede haber cambiado sin que el proyecto cambie
             pdoc = previos[pid]
             pdoc["orden"] = orden_p
+            if CUENTA_TABLERO:
+                _ra, _ca, _ = cuentas(a["cuenta"])
+                pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or bool(pdoc.get("colabora_aqui"))
+                if pdoc.get("nombre_cuenta"):
+                    NOMBRE_DE_CUENTA.setdefault(CUENTA_TABLERO, pdoc["nombre_cuenta"])
             docs["proyectos"][pid] = pdoc
             continue
         tp = leer(pc / "proyecto.md")
@@ -1248,6 +1269,15 @@ for a in areas_guia:
         pdoc["colaboran"] = nombres_co
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
+        apuntar_nombres(pdoc["quien"])
+        if CUENTA_TABLERO:
+            # si la cuenta del tablero escribe en el proyecto (responsable o colabora en el área, o colabora en él): la
+            # página solo deja aceptar desde aquí las propuestas que su próximo cierre puede aplicar (1.22.3)
+            _ra, _ca, _ = cuentas(a["cuenta"])
+            pdoc["colabora_aqui"] = CUENTA_TABLERO in colaboran_en(pdoc["quien"])   # sin el correo: solo que esta cuenta colabora en este proyecto
+            pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or pdoc["colabora_aqui"]
+            if pdoc["escribe"] and CUENTA_TABLERO in NOMBRE_DE_CUENTA:
+                pdoc["nombre_cuenta"] = NOMBRE_DE_CUENTA[CUENTA_TABLERO]   # el nombre que su línea «Colabora:» da a la cuenta, para no perderlo al reutilizar
         pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
@@ -1278,7 +1308,13 @@ for a in areas_guia:
         # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
         _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
         pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
-        pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]   # la entrada de la migración no es una sesión y no viaja a la página
+        pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
+        # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
+        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada: fecha, título, Tema y quién.
+        _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
+        pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
+                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220)}.items() if v}
+                                      for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -1364,6 +1400,22 @@ docs["meta"]["estado"] = {
     "fuera": [f for f in (fuera or []) if not f.get("guia")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
+# qué es la organización: el primer párrafo de guia.md bajo su título, para la banda de Inicio (1.22.3)
+_que_es = primer_parrafo(re.sub(r"^\s*#[^\n]*\n", "", frontmatter(guia)[1] if guia.startswith("---") else guia, count=1))
+_que_es = re.sub(r"<!--.*?-->", "", _que_es or "", flags=re.S).strip()
+if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
+    _que_es = ""      # una tabla, una lista o el párrafo de la plantilla de «nuevo» no dicen qué es la organización
+docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/estado se sube como update, y una clave que falta dejaría la vieja
+# de quién es el tablero (1.22.3): el responsable del área cuya cuenta es la que lo genera, o el nombre que la carpeta da a
+# esa cuenta («Colabora: Nombre (correo)», «Contexto común: Nombre (correo)»). Si no se sabe, vacío: la página no
+# personaliza, en vez de enseñarle a alguien lo de otra persona
+limpio = lambda n: re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", n or "").strip(" .")
+_de = next((limpio(a["dueno"]) for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[0]), "") or (NOMBRE_DE_CUENTA.get(CUENTA_TABLERO, "") if CUENTA_TABLERO else "")
+if not _de and CUENTA_TABLERO:
+    _ep = _de_la_base("meta", "estado") if PREVIOS else None   # lo que ya sabía la base: un reúso sin el proyecto que daba el nombre no lo borra
+    if isinstance(_ep, dict) and _ep.get("tablero_de"):
+        _de = _ep["tablero_de"]
+docs["meta"]["estado"]["tablero_de"] = _de
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes
 _est_previo = _de_la_base("meta", "estado") if PREVIOS else None
@@ -1383,6 +1435,35 @@ if COLA_RETENIDA is not None:
     docs["meta"]["estado"]["cola_retenida"] = sorted(str(x) for x in COLA_RETENIDA)
 if COLA_AJENA is not None:
     docs["meta"]["estado"]["cola_ajena"] = sorted(str(x) for x in COLA_AJENA)
+
+# ---------- quién cita a quién (1.22.3) ----------
+# Un entregable que otro proyecto pone en su «basado_en» sostiene trabajo ajeno: cada entregable lleva cuántos proyectos lo
+# citan, y cada proyecto cuántos proyectos citan alguna de sus piezas. Las rutas de «basado_en» son desde la raíz.
+_citan = {}
+for pid, pd in docs["proyectos"].items():
+    _ents = list(pd.get("entregables") or []) + [z for z in ((pd.get("_que_hay_detalle") or {}).get("piezas") or []) if z.get("tipo") == "entregable"]
+    for e in _ents:
+        for b in e.get("basado_en") or []:
+            m = re.match(r"^([^/]+)/([^/]+)/", re.sub(r"^\./", "", str(b)))
+            if m and f"{m.group(1)}--{m.group(2)}" != pid:
+                _citan.setdefault(re.sub(r"^\./", "", str(b)), set()).add(pid)
+for pid, pd in docs["proyectos"].items():
+    _todos = set()
+    for e in pd.get("entregables") or []:
+        c_ = _citan.get(f"{pd.get('area')}/{pd.get('slug')}/entregables/{e.get('archivo')}", set())
+        if c_:
+            e["citado_por"] = len(c_)
+        else:
+            e.pop("citado_por", None)
+        _todos |= c_
+    pref = f"{pd.get('area')}/{pd.get('slug')}/"
+    for r_, c_ in _citan.items():
+        if r_.startswith(pref):
+            _todos |= c_
+    if _todos:
+        pd["citado_por"] = len(_todos)
+    else:
+        pd.pop("citado_por", None)
 
 # ---------- el detalle, aparte (1.19) ----------
 # La página carga todos los proyectos al abrirse, y casi la mitad de lo que bajaba era texto que solo se lee al entrar

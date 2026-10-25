@@ -3,10 +3,24 @@
 # comprueba el contrato y el README, regenera metodo.md y dice qué queda por hacer a mano.
 # Comprueba todo antes de tocar nada, y si algo falla a mitad deja los archivos como estaban.
 #
-#   ./release.sh 1.8.0
+#   ./release.sh 1.8.0 --revisada taller/revision-de-calidad-1-8-0.md
+#
+# Ninguna versión se publica sin su revisión de calidad (skill `calidad`), con el informe guardado en el `taller/` del
+# proyecto que mantiene el plugin (decisiones del 2026-10-23 y del 2026-10-24): a fondo, con las seis lentes, una versión
+# menor o mayor, o un parche grande; un parche pequeño, errores y riesgos con dos revisores sobre su diff.
 set -euo pipefail
 VERSION="${1:?Falta la versión, con el formato mayor.menor.parche}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Versión mal formada: $VERSION" >&2; exit 1; }
+REVISADA=""
+if [ "${2:-}" = "--revisada" ]; then REVISADA="${3:-}"; fi
+VER_GUION="${VERSION//./-}"
+if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VER_GUION.md" ] || [ ! -s "$REVISADA" ]; then
+  [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
+  echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
+  echo "guarda el informe como taller/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada taller/revision-de-calidad-$VER_GUION.md" >&2
+  echo "Toca a fondo (seis lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2
+  exit 1
+fi
 CONTRATO_VER="${VERSION%.*}"
 
 PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"

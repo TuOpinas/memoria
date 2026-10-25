@@ -126,6 +126,14 @@ ok(pz.get("borradores/nota-sub.md", {}).get("estado") == "borrador" and qh["tall
 ok(qh.get("entregables_en_subcarpetas") == 1, "los archivos en subcarpetas de entregables se cuentan aunque no se listen")
 tr = detq.get("trayectoria", [])
 ok([c["de"] for c in tr] == ["decisiones", "taller"] and [n["fecha"] for n in tr[0]["pasos"]] == ["2026-09-20", "2026-09-26"] and [n["titulo"] for n in tr[1]["pasos"]] == ["Primer cálculo del precio", "Precio de la fase 2"], "la trayectoria sale de «Reemplaza:» y de reemplazado_por, de vieja a nueva")
+# 1.22.3: quién cita a quién, las sesiones recientes y qué es la organización
+cu = json.load(open(os.path.join(sys.argv[1], "proyectos", "ventas--cuentas.json"), encoding="utf-8"))
+ok(cu.get("citado_por") == 1 and {e["archivo"]: e.get("citado_por") for e in cu["entregables"]}.get("propuesta-base.md") == 1, "un entregable citado desde otro proyecto lo sabe, y su proyecto también")
+so = json.load(open(os.path.join(sys.argv[1], "proyectos", "operacion--soporte.json"), encoding="utf-8"))
+ok("citado_por" not in so, "un proyecto que nadie cita no lleva la cuenta")
+ok(all(set(x) <= {"fecha", "titulo", "quien", "trabajamos"} and len(x.get("trabajamos", "")) <= 220 for x in cu.get("sesiones_recientes", [])), "las sesiones recientes viajan ligeras: fecha, título, quién y tema")
+me = json.load(open(os.path.join(sys.argv[1], "meta", "estado.json"), encoding="utf-8"))
+ok(me.get("que_es", "").startswith("Raíz inventada para probar el tablero"), "qué es la organización sale del primer párrafo de la guía")
 fuga = subprocess.run(["grep", "-rl", "TALLER-PRIVADO", sys.argv[1]], capture_output=True, text=True).stdout
 ok(not fuga, "el cuerpo del taller no sale en ningún documento")
 

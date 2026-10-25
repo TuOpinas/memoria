@@ -257,5 +257,31 @@ ok(json.loads(_r.stdout)["inventario"]["instante"] < "2099", "un instante en el 
 _r = subprocess.run([sys.executable, GEN, RAIZ, "--inventario", "--sin-fechas", "--instante", "/no/existe.json"], capture_output=True, text=True)
 ok("--instante no se pudo leer" in _r.stderr and json.loads(_r.stdout)["inventario"]["instante"], "si no se puede leer, lo dice y usa ahora")
 
+# quién escribe y de quién es el tablero sobreviven al reúso (1.22.3): el nombre de Dani sale de la línea «Colabora:» de
+# soporte, que una corrida sin cambios no vuelve a leer; y la celda Cuenta de guia.md manda aunque el proyecto no cambie
+print("Reutilizar con --cuenta")
+R5 = TRAB / "raiz-cuenta"; shutil.rmtree(R5, ignore_errors=True); shutil.copytree(RAIZ, R5)
+def _inv5(*extra): return json.loads(subprocess.run([sys.executable, GEN, R5, "--inventario", "--cuenta", "dani@ejemplo.test", *extra], capture_output=True, text=True).stdout)
+def _gen5(sal, s_, previos=None, cuenta="dani@ejemplo.test"):
+    inv_p = TRAB / "inv-cuenta.json"; inv_p.write_text(json.dumps(s_["inventario"], ensure_ascii=False), encoding="utf-8")
+    cop = TRAB / "copia-cuenta"; shutil.rmtree(cop, ignore_errors=True)
+    for r_ in s_["leer"]:
+        (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(R5 / r_, cop / r_)
+    cop.mkdir(parents=True, exist_ok=True)
+    return subprocess.run([sys.executable, GEN, cop, sal, "--desde-inventario", inv_p, "--version", "prueba", "--cuenta", cuenta, *(["--previos", previos] if previos else [])], capture_output=True, text=True)
+_j = lambda d, c, i: json.loads((TRAB / d / c / f"{i}.json").read_text(encoding="utf-8"))
+s5 = _inv5(); _gen5(TRAB / "cta0", s5)
+shutil.rmtree(TRAB / "base-cta", ignore_errors=True); shutil.copytree(TRAB / "cta0", TRAB / "base-cta", ignore=shutil.ignore_patterns("indice.json", "enfoque-candidatos.json"))
+ok(_j("cta0", "meta", "estado").get("tablero_de") == "Dani Prueba" and _j("cta0", "proyectos", "operacion--soporte").get("escribe") is True, "con --cuenta, la primera corrida sabe de quién es el tablero y dónde escribe")
+hs5 = _j("cta0", "meta", "estado").get("huellas") or []
+ses5 = R5 / "ventas" / "cuentas" / "sesiones.md"; ses5.write_text(ses5.read_text(encoding="utf-8") + "\n## 2026-08-04 · Otra\nTema: prueba.\n", encoding="utf-8")
+r5 = _gen5(TRAB / "cta1", _inv5("--sin-cambios", ",".join(hs5)), TRAB / "base-cta")
+ok(r5.returncode == 0 and _j("cta1", "meta", "estado").get("tablero_de") == "Dani Prueba" and _j("cta1", "proyectos", "operacion--soporte").get("escribe") is True, f"reutilizando soporte sin cambios, el tablero sigue siendo de Dani y sigue sabiendo que escribe ahí ({_j('cta1', 'meta', 'estado').get('tablero_de')!r})")
+g5 = R5 / "guia.md"; g5.write_text(g5.read_text(encoding="utf-8").replace("ana@ejemplo.test · colabora: carla@ejemplo.test", "ana@ejemplo.test"), encoding="utf-8")
+_gen5(TRAB / "cta2", json.loads(subprocess.run([sys.executable, GEN, R5, "--inventario", "--cuenta", "carla@ejemplo.test"], capture_output=True, text=True).stdout), None, "carla@ejemplo.test")
+shutil.rmtree(TRAB / "base-cta2", ignore_errors=True); shutil.copytree(TRAB / "cta0", TRAB / "base-cta2", ignore=shutil.ignore_patterns("indice.json", "enfoque-candidatos.json"))
+r6 = _gen5(TRAB / "cta3", json.loads(subprocess.run([sys.executable, GEN, R5, "--inventario", "--cuenta", "carla@ejemplo.test", "--sin-cambios", ",".join(hs5)], capture_output=True, text=True).stdout), TRAB / "base-cta2", "carla@ejemplo.test")
+ok(r6.returncode == 0 and _j("cta3", "proyectos", "ventas--cuentas").get("escribe") is False and _j("cta2", "proyectos", "ventas--cuentas").get("escribe") is False, "si guia.md quita a Carla del área, sus proyectos reutilizados dejan de decir que escribe ahí")
+
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
