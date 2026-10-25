@@ -848,16 +848,16 @@ const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !
 const CORR_OPC = [["rutina","Es una rutina, no un paso"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
 async function addCambio(data){
   try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"});
-    const p = data.proyecto && byId[data.proyecto];
-    if(p && p.escribe===false) flash(`Apuntado aquí, pero este proyecto no lo escribe tu puesta al día: es de ${nombreCorto(p.dueno||"otra persona")}. Díselo.`); }
+    avisoAjeno(data.proyecto && byId[data.proyecto]); }
   catch(e){ flash(e && e.code==="not_granted" ? "Solo quien puede editar este tablero puede anotar aquí." : "No se pudo guardar el cambio."); }
 }
+function avisoAjeno(p){ if(p && p.escribe===false) flash(`Apuntado aquí, pero este proyecto no lo escribe tu puesta al día: es de ${nombreCorto(p.dueno||"otra persona")}. Díselo.`); }
 async function setFecha(p, s, v){
   EDIT = null; CALM = null;
   const prev = pend(p.id, s.texto).fecha;
   try{
     if((v||null) === (s.fecha||null)){ if(prev) await DB.doc("cambios/"+prev.id).delete(); }
-    else if(prev) await DB.doc("cambios/"+prev.id).update({fecha_nueva: v||null, creado: nowISO()});
+    else if(prev){ await DB.doc("cambios/"+prev.id).update({fecha_nueva: v||null, creado: nowISO()}); avisoAjeno(p); }
     else await addCambio({tipo:"fecha", proyecto:p.id, paso:s.texto, fecha_anterior:s.fecha||null, fecha_nueva:v||null});
   }catch(e){ flash("No se pudo cambiar la fecha."); }
   render();
@@ -1445,11 +1445,15 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 let HOY_DESDE = 3, HOY_FEED_ALL = false, PARA_TI_ALL = new Set(), REG_FILTRO = "todo";
 // de quién es el tablero: lo dice el generador; vacío si la carpeta no da el nombre de la cuenta (entonces no se personaliza).
 // Con datos de antes de la 1.22.3, sin el campo, quien administra
-const VIEWER = () => META ? ("tablero_de" in META ? (META.tablero_de||"") : (META.administra||"")) : "";
+const DATOS_NUEVOS = () => !!(META && "tablero_de" in META);   // datos de la 1.22.3 o más: con los de antes no se personaliza ni se acepta nada hasta que lleguen
+const VIEWER = () => DATOS_NUEVOS() ? (META.tablero_de||"") : "";
 // un proyecto es «mío» si la cuenta escribe en él (el generador lo sabe); sin ese dato, por el nombre
 const esMio = p => p.escribe!==undefined ? p.escribe===true : (!VIEWER() || persona(p.dueno)===persona(VIEWER()) || (p.colaboran||[]).some(c=>persona(c)===persona(VIEWER())));
 // quién decide lo que «Falta decidir» dice, si nombra a alguien que no es quien mira
-function otroDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c = conocidos(); const n = md && c[md[1]] ? c[md[1]] : null; return n && nombreCorto(n)!==nombreCorto(VIEWER()) ? n : null; }
+function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c = conocidos(); return md && c[md[1]] ? c[md[1]] : null; }
+const esYo = n => !!n && !!VIEWER() && nombreCorto(n)===nombreCorto(VIEWER());
+// si no se sabe quién mira (la carpeta no da nombre a la cuenta), nada se mueve por nombre
+function otroDecide(fd){ const n = quienDecide(fd); return n && VIEWER() && !esYo(n) ? n : null; }
 const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/)[0].trim().replace(/[.;,:\s]+$/,"");
 const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...(a.colaboran||[]).map(persona)]), ...PROJ.flatMap(p=>(p.colaboran||[]).map(persona))].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
@@ -1477,7 +1481,9 @@ function diaLabel(f){ const d = diasDesde(f); if(d===0) return "Hoy"; if(d===1) 
 function paraTi(){
   const t = today(), mios = PROJ.filter(p=>activo(p) && esMio(p));
   // lo que decide otra persona, de dentro o de fuera, no te toca a ti: va a «Con otros»
-  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && !otroDecide(x.txt));
+  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && !otroDecide(x.txt))
+    // y lo que un proyecto ajeno dice que decides tú
+    .concat(PROJ.filter(p=>activo(p) && !esMio(p)).map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && esYo(quienDecide(x.txt))));
   const venc = pendientes().filter(i=>i.f && i.f<t && mios.includes(i.p)).sort((a,b)=>a.f.localeCompare(b.f));
   const afect = mios.map(p=>({p, af: afectan(p).filter(x=>x.nueva)})).filter(x=>x.af.length).sort((a,b)=>b.af.length-a.af.length);
   const viejos = mios.filter(estatusViejo).sort((a,b)=>(fechaEstatus(a)||"").localeCompare(fechaEstatus(b)||""));
@@ -1557,7 +1563,7 @@ function noCuadra(){
     for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc((q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),""));
       if(q.clase!=="afirma" && q.estado==="pendiente") out.push({id:"prop:"+q.id, p, k, t, accion:"Aceptar"});
       // aceptada y esperando: la de otra clase espera el sí en sesión; la de un proyecto donde ya no se escribe, no la aplicará nadie
-      else if(q.estado==="aceptada" && (!escribeAqui(p) || q.clase!=="afirma")) out.push({id:"prop:"+q.id, p, k: escribeAqui(p) ? k+" · aceptada" : "Aceptada sin quien la aplique", t: escribeAqui(p) ? t : `${t} Se aceptó${q.por?` (${esc(q.por)})`:""} en un proyecto donde este tablero ya no escribe.`, aceptada:true}); }
+      else if(q.estado==="aceptada" && (p.escribe===false || q.clase!=="afirma")) out.push({id:"prop:"+q.id, p, k: p.escribe===false ? "Aceptada sin quien la aplique" : k+" · aceptada", t: p.escribe===false ? `${t} Se aceptó${q.por?` (${esc(q.por)})`:""} en un proyecto donde este tablero ya no escribe.` : t, aceptada:true}); }
   }
   for(const a of AREAS){ if(a.legible===false || archivada(a)) continue;
     const ta = titArea(a), ps = (a.proyectos||[]).map(i=>byId[i]).filter(activo), mov = ps.map(p=>p.ultima_sesion).filter(Boolean).sort().pop();
@@ -1570,7 +1576,9 @@ let _CONOCIDOS = null, _CONOCIDOS_DE = null;
 function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; _CONOCIDOS_DE = PROJ; _PROPIAS = null; const full = new Set();
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     for(const txt of [p.en_corto||"", ...(p.pasos||[]).map(x=>x.texto)]){ let m; NOMBRE_RE.lastIndex = 0; while((m = NOMBRE_RE.exec(txt))){ const n = m[1].trim(); if(!PARA_NO.has(n) && !PARA_NO.has(n.split(" ")[0]) && n.split(" ").length>=2 && !n.split(" ").some(w=>palabrasPropias().has(w))) full.add(n); } } }
-  const porNombre = {}; for(const f of full){ const k = f.split(" ")[0]; if(k.length>2) porNombre[k] = porNombre[k] && porNombre[k]!==f && porNombre[k].split(" ").length>=f.split(" ").length ? porNombre[k] : f; }
+  const porNombre = {}, carpeta = escribenSet();
+  for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
+    if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
   return _CONOCIDOS = porNombre; }
 function nombresEn(txt){ const c = conocidos(), out = [], re = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\b/g; let m; while((m = re.exec(txt||""))){ const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); } return out; }
 function esperas(){
@@ -1674,13 +1682,13 @@ function conOtros(){
   const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
-    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && nombreCorto(n)!==yo;
+    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
       if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = nombresEn(s.texto).find(fuera); }
       else if(md){ lado = "debes"; n = c[md[2]] && fuera(c[md[2]]) ? c[md[2]] : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>nombreCorto(n)!==yo)) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
@@ -2091,7 +2099,9 @@ go = function(v){ if(IR_ESTATUS){ IR_ESTATUS = false; setNTAB("estatus"); if(v &
 // «Por dónde empezar» es una lista de acciones: va al final de Acciones de Inicio
 // arriba del Estatus de Inicio, una línea con lo que te toca y lo que otros hicieron desde tu última sesión (revisión 1.22.3)
 function lineaHoy(){
+  if(!DATOS_NUEVOS()) return `<p class="hoy-linea"><span class="more">Los datos son de una versión anterior del tablero: hasta la próxima puesta al día no sabe quién eres ni dónde escribes.</span></p>`;
   const pt = paraTi(), otros = otrosDatos(), partes = [];
+  if(!VIEWER()) partes.push(`<span class="more">La carpeta no dice tu nombre junto a tu cuenta, así que el tablero no sabe quién eres: pide que te pongan como «Nombre (correo)» en la línea «Colabora:» de un proyecto o en «Quién responde por qué».</span>`);
   const n = pt.decidir.length + pt.venc.length;
   partes.push(`<button type="button" class="lnk" data-ini="acciones">${n ? `Te toca: ${[pt.decidir.length?cuantos(pt.decidir.length,"por decidir","por decidir"):"", pt.venc.length?cuantos(pt.venc.length,"vencido","vencidos"):""].filter(Boolean).join(" · ")}` : "Nada te toca ahora"} ›</button>`);
   if(otros) partes.push(`<button type="button" class="lnk" data-ini="actividad">${otros.length ? `Desde tu última sesión, otros trabajaron en ${cuantos(otros.length,"proyecto tuyo","proyectos tuyos")}` : "Nadie más escribió en tus proyectos desde tu última sesión"} ›</button>`);
@@ -2111,7 +2121,7 @@ actPorProyectoArea = function(ev, ps){ const esc_ = escribenSet(); return _actPP
 // quien monta el tablero solo acepta lo que su próximo cierre puede aplicar: lo de proyectos donde escribe
 const escribeAqui = p => !!p && p.escribe===true;   // sin el dato (datos de antes de la 1.22.3) no se acepta: no se sabe si el cierre podrá aplicarlo
 function ncAcciones(x){
-  if(!x.id.startsWith("prop:") || !CAN || !OWNER) return "";
+  if(!x.id.startsWith("prop:") || !CAN || !OWNER || !DATOS_NUEVOS()) return "";
   const id = x.id.slice(5);
   if(x.aceptada) return escribeAqui(x.p) ? `<span class="nc-a more">Te la enseña la próxima sesión del proyecto, para tu sí</span>` : `<span class="nc-a"><span class="more">Pásasela a ${esc(nombreCorto(x.p.dueno||""))}</span><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">Descartar</button></span>`;
   if(!escribeAqui(x.p)) return `<span class="nc-a more">Pásaselo a ${esc(nombreCorto(x.p.dueno||""))}</span>`;
@@ -2505,7 +2515,7 @@ function ayudaArts(){
       <dt>Cambié de computadora y el botón «Sincronizar ahora» no hace nada.</dt><dd>El botón está ligado a la computadora donde montaste el tablero. En la nueva, con la carpeta conectada, dile a Claude ${F("cambié de computadora: pon al día la tarea del tablero")} y aprueba el cambio que te pide la app.</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su responsable.</dd>
-      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, en Mantenimiento de Inicio verás el aviso de que hay sesiones que aún no muestra,.</dd>
+      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, en Mantenimiento de Inicio verás el aviso de que hay sesiones que aún no muestra.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
       <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es responsable o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
     </dl>`},
@@ -2514,7 +2524,7 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas: <b>Estatus</b> (cómo va), <b>Acciones</b> (lo que espera algo de ti), <b>Actividad</b> (lo que se hizo y quién) y <b>Qué hay</b> (lo que el trabajo ha producido). En Inicio, la última es <b>Mantenimiento</b>. Al pasar de una ficha a lo que contiene se queda la pestaña que tenías; el índice de la izquierda abre siempre Estatus.</dd>
       <dt>Estatus</dt><dd>En Inicio, qué es la organización, una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
-      <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien de fuera o le debes, y <b>Por dónde empezar</b>. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
+      <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien o le debes (del equipo o de fuera, con su organización), y <b>Por dónde empezar</b>. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
       <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una aportación que propuso la memoria sale como provisional, y puedes aceptarlas todas de una vez; las escribe el próximo cierre del proyecto.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>

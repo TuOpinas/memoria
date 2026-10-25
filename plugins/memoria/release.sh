@@ -14,7 +14,8 @@ VERSION="${1:?Falta la versión, con el formato mayor.menor.parche}"
 REVISADA=""
 if [ "${2:-}" = "--revisada" ]; then REVISADA="${3:-}"; fi
 VER_GUION="${VERSION//./-}"
-if [ -z "$REVISADA" ] || [[ "$REVISADA" != *"revision-de-calidad-$VER_GUION"* ]]; then
+if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VER_GUION.md" ] || [ ! -s "$REVISADA" ]; then
+  [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
   echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
   echo "guarda el informe como taller/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada taller/revision-de-calidad-$VER_GUION.md" >&2
   echo "Toca a fondo (seis lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2

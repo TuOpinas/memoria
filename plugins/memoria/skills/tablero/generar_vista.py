@@ -317,8 +317,11 @@ for l in quien.split("\n"):
 # de qué nombre es cada cuenta, donde la carpeta lo dice junto («Nombre (correo)»): para saber de quién es el tablero (1.22.3)
 NOMBRE_DE_CUENTA = {}
 def apuntar_nombres(texto):
-    for m_ in re.finditer(r"([A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*(?:\s+[A-ZÁÉÍÓÚÑa-záéíóúñ][\wÁÉÍÓÚáéíóúñÑü.'-]*){0,3})\s*[(<]\s*([\w.+'-]+@[\w-]+(?:\.[\w-]+)*)\s*[)>]", texto or ""):
-        NOMBRE_DE_CUENTA.setdefault(m_.group(2).lower(), re.sub(r"^(?:Colabora[n]?|Responsable|Administra|Contexto común)\s*:?\s*", "", m_.group(1), flags=re.I).strip())
+    for m_ in re.finditer(r"((?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*|(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa))(?:[ \t]+(?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*|(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa))){0,7})\s*[(<]\s*([\w.+'-]+@[\w-]+(?:\.[\w-]+)*)\s*[)>]", texto or ""):
+        nombre_ = re.sub(r"^(?:Colabora[n]?|Responsable|Administra|Contexto común)\s*:?\s*", "", m_.group(1), flags=re.I).strip(" ,;·-")
+        nombre_ = re.sub(r"^(?:de|del|la|las|los|y|e|van|von|da|di|do|dos|du|le|mac|mc|san|santa)\s+", "", nombre_)   # no empieza por partícula
+        if nombre_ and nombre_[0].isupper():
+            NOMBRE_DE_CUENTA.setdefault(m_.group(2).lower(), nombre_)
 apuntar_nombres(quien)
 # los nombres, sin la cuenta entre paréntesis: el tablero no lleva correos
 contexto_comun = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", contexto_comun)).strip(" .")
@@ -1204,9 +1207,15 @@ for a in areas_guia:
         area_doc["proyectos"].append(pid)
         ref = indice.get(slug, {"descripcion": "", "entregables": {}, "notas": []})
         if pid in previos:
-            # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy
+            # no cambió desde la última puesta al día: su documento de la base, con su orden de hoy; quién escribe se vuelve a
+            # calcular con la celda Cuenta de hoy (1.22.3), porque guia.md puede haber cambiado sin que el proyecto cambie
             pdoc = previos[pid]
             pdoc["orden"] = orden_p
+            if CUENTA_TABLERO:
+                _ra, _ca, _ = cuentas(a["cuenta"])
+                pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or bool(pdoc.get("colabora_aqui"))
+                if pdoc.get("nombre_cuenta"):
+                    NOMBRE_DE_CUENTA.setdefault(CUENTA_TABLERO, pdoc["nombre_cuenta"])
             docs["proyectos"][pid] = pdoc
             continue
         tp = leer(pc / "proyecto.md")
@@ -1265,7 +1274,10 @@ for a in areas_guia:
             # si la cuenta del tablero escribe en el proyecto (responsable o colabora en el área, o colabora en él): la
             # página solo deja aceptar desde aquí las propuestas que su próximo cierre puede aplicar (1.22.3)
             _ra, _ca, _ = cuentas(a["cuenta"])
-            pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or CUENTA_TABLERO in colaboran_en(pdoc["quien"])
+            pdoc["colabora_aqui"] = CUENTA_TABLERO in colaboran_en(pdoc["quien"])   # sin el correo: solo que esta cuenta colabora en este proyecto
+            pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or pdoc["colabora_aqui"]
+            if pdoc["escribe"] and CUENTA_TABLERO in NOMBRE_DE_CUENTA:
+                pdoc["nombre_cuenta"] = NOMBRE_DE_CUENTA[CUENTA_TABLERO]   # el nombre que su línea «Colabora:» da a la cuenta, para no perderlo al reutilizar
         pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
@@ -1399,6 +1411,10 @@ docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/es
 # personaliza, en vez de enseñarle a alguien lo de otra persona
 limpio = lambda n: re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", n or "").strip(" .")
 _de = next((limpio(a["dueno"]) for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[0]), "") or (NOMBRE_DE_CUENTA.get(CUENTA_TABLERO, "") if CUENTA_TABLERO else "")
+if not _de and CUENTA_TABLERO:
+    _ep = _de_la_base("meta", "estado") if PREVIOS else None   # lo que ya sabía la base: un reúso sin el proyecto que daba el nombre no lo borra
+    if isinstance(_ep, dict) and _ep.get("tablero_de"):
+        _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes

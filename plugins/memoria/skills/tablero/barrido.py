@@ -487,7 +487,8 @@ def main():
     juz = juzgado_de(opt("--base"))
     previas = {}
     for d in existentes:
-        if d["data"].get("estado") != "descartada":
+        # las aceptadas ya no esperan juicio: no ocupan hueco en la cola (1.22.3)
+        if d["data"].get("estado") not in ("descartada", "aceptada"):
             k = clave_pend(d["data"].get("proyecto"), d["data"].get("clase"))
             previas[k] = previas.get(k, 0) + 1
     recientes = {}
@@ -505,7 +506,7 @@ def main():
                  and str(d["data"]["creado"])[:10] < lim and recientes.get(d["data"].get("proyecto"), "") > str(d["data"]["creado"])[:10]}
     pendientes = {}
     for d in existentes:
-        if d["data"].get("estado") != "descartada" and d["id"] not in caducadas and (d["data"].get("proyecto") not in vistos or d["id"] in nuevos_ids):
+        if d["data"].get("estado") not in ("descartada", "aceptada") and d["id"] not in caducadas and (d["data"].get("proyecto") not in vistos or d["id"] in nuevos_ids):
             k = clave_pend(d["data"].get("proyecto"), d["data"].get("clase"))
             pendientes[k] = pendientes.get(k, 0) + 1
     (salida / "cambios").mkdir(parents=True, exist_ok=True)
@@ -522,8 +523,13 @@ def main():
         anadir.append({"id": p["id"], "archivo": f"cambios/{p['id']}.json"})
     borrar = []
     for d in existentes:
-        # una aceptada desde el tablero no la retira el barrido aunque ya no salga: la espera el cierre (1.22.3)
-        if ((d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas) and d["data"].get("estado") != "aceptada":
+        # una aceptada desde el tablero la espera el cierre, aunque lo mecánico deje de proponerla (1.22.3). Solo se retira la
+        # aceptada de «aportacion» cuya pieza ya la tiene (la escribió el cierre o alguien a mano): ya no hay nada que aplicar
+        if d["data"].get("estado") == "aceptada":
+            if d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
+                borrar.append({"id": d["id"], "if_version": d["version"]})
+            continue
+        if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(
         {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "proyectos": vistos,
