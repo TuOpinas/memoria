@@ -389,6 +389,10 @@ def sumar_juicio(salida, juicio, cola):
                       "contraste": sorted(set(previo.get("contraste") or []) | {id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", [])}),
                       # un resumen pedido no se vuelve a pedir con la misma huella, aunque el modelo lo saltara (revisión 1.22.4)
                       "resumenes": sorted(set(previo.get("resumenes") or []) | {f"{r['proyecto']}|{r['huella']}" for r in bar.get("para_resumen", [])})}
+    # solo se guardan las huellas vigentes: la de otro «Qué hay» ya no frena nada y haría crecer meta/estado
+    _vig = {f"{p_.stem}|{(_datos_doc(p_) or {}).get('que_hay_huella')}" for p_ in (salida / "proyectos").glob("*.json")} if (salida / "proyectos").exists() else set()
+    if _vig:
+        bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x in _vig]
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}

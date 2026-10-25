@@ -1532,7 +1532,7 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
     for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
-    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
+    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
   const porNombre = {}, carpeta = escribenSet();
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
@@ -1620,9 +1620,11 @@ function bandaRaiz(){
 const RE_DEBES = /\b(mandar|mandarle|manda|enviar|enviarle|envía|avisar|avisarle|avisa|pedir|pedirle|pide|preguntar|preguntarle|pregunta|escribir|escribirle|responder|responderle|llamar|presentar|proponer|compartir|agendar|confirmar|acordar|revisar|buscar)(?:le)?\s+(?:a|con)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/;
 const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
-const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER()) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
+const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy_contexto !== undefined ? META.soy_contexto === true : !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER())) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
 // pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
-const SIN_QUIEN = () => { let n = 0; for(const p of PROJ){ if(p.restringido || p.cerrado) continue; for(const s of stepsLive(p)) if((effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !nombresEn(s.texto).length) n++; } return n; };
+const SIN_QUIEN = () => { let n = 0; for(const p of PROJ){ if(p.restringido || p.cerrado) continue; for(const s of stepsLive(p)) if((effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !fueraEn(p, s.texto) && !nombresEn(s.texto).length) n++; } return n; };
+// la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
+const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
   const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
@@ -1630,7 +1632,7 @@ function conOtros(){
     for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
-      if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = nombresEn(s.texto).find(fuera); }
+      if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
       else if(md){ lado = "debes"; n = c[md[2]] && fuera(c[md[2]]) ? c[md[2]] : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
     const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }

@@ -85,7 +85,7 @@ print("Personas de fuera, como dato (1.22.4)")
 import ast, re
 _src = GV.read_text(encoding="utf-8"); _ns = {"re": re}
 for n in ast.parse(_src).body:
-    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA") for t in getattr(n, "targets", [])):
+    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA", "NOMBRES_COMO_VERBO") for t in getattr(n, "targets", [])):
         exec(compile(ast.Module([n], []), str(GV), "exec"), _ns)
 _names = ("_PART", "PERSONA_FUERA", "NO_PERSONA")
 for n in ast.parse(_src).body:
@@ -98,6 +98,9 @@ ok(pf("Hablar con Ana María de la Fuente (Acme)") == ["Ana María de la Fuente"
 ok(pf("Revisar con Luis Romero (luis@acme.test)") == [] and pf("Cierre de Finanzas (2026-10-03)") == [], "ni una cuenta ni una fecha entre paréntesis hacen una organización")
 ok(pf("Enviar la Propuesta Técnica (Escuela Fácil)") == [] and pf("Revisar el Contrato Marco (Acme)") == [], "un documento con su cliente entre paréntesis no es una persona")
 ok(pf("Esperar de Agustín Torres (Escuela Fácil)") == ["Agustín Torres"], "un verbo delante no se pega al nombre")
+ok(pf("Pilar de la Fuente (Acme)") == ["Pilar de la Fuente"] and pf("Javier de Dios (Acme)") == ["Javier de Dios"], "un nombre que acaba como un verbo sigue siendo un nombre")
+ok(pf("Carlos Mesa (Banco Azul)") == ["Carlos Mesa"], "un apellido que también es una cosa no descarta a la persona")
+ok(pf("Esperar Visto Bueno de Juan Pérez (Acme)") == ["Juan Pérez"] and pf("Revisar el Diagrama de Flujo (Acme)") == [] and pf("La Secretaría de Hacienda (SAT)") == [], "las cosas de delante se quitan, y una cosa sola no es nadie")
 print("Nombres que se quedan al reutilizar la base (revisión 1.22.4, hallazgo 5)")
 tmp = pathlib.Path(tempfile.mkdtemp()); raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
 pp = raiz / "ventas" / "cuentas" / "proyecto.md"

@@ -310,6 +310,7 @@ quien = seccion(guia, "Quién responde por qué")
 contexto_comun = ""
 administra = ""
 for l in quien.split("\n"):
+    l = l.lstrip("-* ")   # como abrir.py: la línea puede ir como ítem de lista (revisión 1.22.4, segunda vuelta)
     if l.lower().startswith("contexto común"):
         contexto_comun = l.split(":", 1)[-1].strip().rstrip(".")
     if l.lower().startswith("administra"):
@@ -321,19 +322,29 @@ NO_PERSONA = set("""Propuesta Contrato Documento Sistema Plan Informe Reporte An
 Proyecto Programa Proceso Política Manual Guía Plantilla Formato Minuta Reunión Junta Sesión Taller Curso Piloto Diagnóstico
 Análisis Estudio Encuesta Base Modelo Tablero Sitio Portal Página Equipo Área Comité Consejo Dirección Gerencia Oficina Mesa
 Cierre Pago Orden Pedido Solicitud Respuesta Carta Correo Mensaje Llamada Revisión Versión Fase Etapa Ronda Kit Lista Agenda
-Esperar Pedir Mandar Enviar Revisar Llamar Hablar Firmar Confirmar Preparar Escribir Cerrar Abrir Agendar Validar Aprobar
-Entregar Recibir Cobrar Pagar Publicar Presentar Proponer Definir Decidir Acordar Coordinar Seguir Dar Ver Hacer""".split())
+Diagrama Matriz Hoja Caso Servidor Nube Dashboard Checklist Backlog Arquitectura Flujo Oferta Tarjeta Visto Bueno Kick Off Due
+Diligence Mapa Inventario Catálogo Licencia Cuenta Usuario Clave Acceso Permiso Integración Migración Implementación Entrega
+Prueba Pruebas Demo Prototipo Diseño Maqueta Requerimiento Requisito Especificación Alcance Cronograma Calendario Ruta Hito
+Secretaría Subsecretaría Instituto Banco Gobierno Universidad Escuela Empresa Despacho Notaría Registro Servicio Plataforma
+La El Los Las Un Una Este Esta Nuevo Nueva Primer Primera Segundo Segunda Gran Mi Su Nuestro Nuestra""".split())
+# verbos de paso: además de los infinitivos, que se reconocen por su terminación; los nombres propios que acaban como
+# un infinitivo (Javier, Pilar, Óscar…) no lo son
+NOMBRES_COMO_VERBO = set("Javier Pilar Óscar Oscar César Cesar Omar Esther Ester Edgar Baltasar Gaspar Amílcar Aimar Itziar Ainhoa Valdemar Waldemar".split())
+
 PERSONA_FUERA = re.compile(r"(?<![\wÁÉÍÓÚáéíóúñÑ])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:[ \t]+(?:" + _PART + r"[ \t]+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü-]+){1,3})[ \t]+\((?!\s*\d)([A-ZÁÉÍÓÚÑ][^()@\n]{0,60})\)")
 def persona_fuera(nombre, org):
-    """Una persona de fuera a partir de «Nombre Apellido (Organización)», o None: sin un verbo o una cosa delante
-    («Esperar de Agustín Torres» → «Agustín Torres») y con al menos nombre y apellido que no sean palabras de cosa."""
+    """Una persona de fuera a partir de «Nombre Apellido (Organización)», o None. Se quitan por delante los verbos de paso,
+    las cosas y las partículas («Esperar Carta de Agustín Torres» → «Agustín Torres»); lo que queda tiene que empezar por
+    un nombre que no sea una cosa y tener al menos dos palabras con mayúscula. Una palabra de cosa en otra posición no
+    descarta: «Carlos Mesa» es una persona (revisión 1.22.4, segunda vuelta)."""
+    if re.search(r"@|\d", org):
+        return None
     ws = nombre.split()
-    while len(ws) > 2 and (ws[0] in NO_PERSONA or re.search(r"(?:ar|er|ir)$", ws[0].lower())) and ws[1] in ("de", "del", "a", "con", "la", "y"):
-        ws = ws[2:] if ws[1] != "de" or len(ws) < 4 or ws[2] not in ("la", "los") else ws[3:]
-    while ws and ws[0] in NO_PERSONA:
+    verbo = lambda w: w not in NOMBRES_COMO_VERBO and bool(re.search(r"(?:ar|er|ir)$", w.lower()))
+    while ws and (ws[0] in NO_PERSONA or ws[0] in ("de", "del", "la", "los", "las", "a", "con", "y", "e") or (verbo(ws[0]) and len(ws) > 2)):
         ws = ws[1:]
     caps = [w for w in ws if w[:1].isupper()]
-    if len(caps) < 2 or any(w in NO_PERSONA for w in caps):
+    if len(caps) < 2 or len(caps) > 5 or not ws[0][:1].isupper():
         return None
     return {"nombre": " ".join(ws), "organizacion": org.strip()}
 
@@ -348,6 +359,7 @@ def apuntar_nombres(texto):
             NOMBRE_DE_CUENTA.setdefault(m_.group(2).lower(), nombre_)
 apuntar_nombres(quien)
 # los nombres, sin la cuenta entre paréntesis: el tablero no lleva correos
+contexto_raw = contexto_comun
 contexto_comun = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", contexto_comun)).strip(" .")
 administra = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", administra)).strip(" .")
 
@@ -1460,7 +1472,12 @@ if not _de and CUENTA_TABLERO:
     if isinstance(_ep, dict) and _ep.get("tablero_de"):
         _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
-docs["meta"]["estado"]["sin_cuenta"] = not CUENTA_TABLERO   # la puesta al día corrió sin saber la cuenta (revisión 1.22.4, hallazgo 14)
+docs["meta"]["estado"]["sin_cuenta"] = not CUENTA_TABLERO
+# si la cuenta del tablero responde por el contexto: por su correo en la línea, o por el nombre de un área que es suya; la
+# página no compara nombres (revisión 1.22.4, segunda vuelta)
+_ctx_correos = {c.lower() for c in CORREO.findall(contexto_raw or "")}
+docs["meta"]["estado"]["soy_contexto"] = bool(CUENTA_TABLERO) and (CUENTA_TABLERO in _ctx_correos or (not _ctx_correos and any(
+    limpio(a["dueno"]) == limpio(contexto_raw) and CUENTA_TABLERO in cuentas(a["cuenta"])[0] for a in areas_guia)))   # la puesta al día corrió sin saber la cuenta (revisión 1.22.4, hallazgo 14)
 # quien colabora en un área se enseña por su nombre, nunca por su correo (1.22.4): el de la carpeta junto a su cuenta
 # («Nombre (correo)») o el del área de la que es responsable; sin nombre, solo se cuenta
 _nombre_cta = {c: limpio(a_["dueno"]) for a_ in areas_guia for c in cuentas(a_["cuenta"])[0] if limpio(a_["dueno"])}
