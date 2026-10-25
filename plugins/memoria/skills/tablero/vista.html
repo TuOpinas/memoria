@@ -1460,7 +1460,7 @@ const fechaEstatus = p => { const c = cortoPartes(p); return c && c.fecha || nul
 const estatusViejo = p => { const f = fechaEstatus(p); return !f || diasDesde(f) > 14; };
 let titEstatus = p => { const c = cortoPartes(p); return c && c.tit ? c.tit : ""; };
 function titArea(a){ const l0 = (a.en_corto||"").split("\n")[0]||""; const l = /^\s*[-*]\s/.test(l0) ? "" : l0; const m = l.match(/^(20\d\d-\d\d-\d\d)\s*[·:—-]\s*(.*)$/); const full = (m?m[2]:l).replace(/\*\*/g,"").trim(); const t = (full.match(/^.+?[.!?](?=\s|$)/)||[full])[0];
-  if(!t && a.panorama && a.panorama.texto){ const pt = a.panorama.texto.replace(/\*\*/g,"").trim(); return {fecha: a.panorama.fecha||null, t: (pt.match(/^.+?[.!?](?=\s|$)/)||[pt])[0]}; }
+  if(!t && !a.en_corto && a.panorama && a.panorama.texto){ const pt = a.panorama.texto.replace(/\*\*/g,"").trim(); return {fecha: a.panorama.fecha||null, t: (pt.match(/^.+?[.!?](?=\s|$)/)||[pt])[0]}; }
   return {fecha: m?m[1]:null, t}; }
 function diaLabel(f){ const d = diasDesde(f); if(d===0) return "Hoy"; if(d===1) return "Ayer"; const s = new Date(f+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long", day:"numeric", month:"long"}); return s.charAt(0).toUpperCase()+s.slice(1); }
 
@@ -1826,8 +1826,8 @@ function sinSujeto(t, nombre, fecha){
   if(/\b(the|and|has|is|are|with)\b/i.test(s)) return s;
   const re = new RegExp("^(?:el |la |los |las )?"+nombre.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s+(?:de\\s+\\w+\\s+)?", "i");
   if(re.test(s)){ s = s.replace(re, ""); s = s.charAt(0).toUpperCase() + s.slice(1); }
-  if(fecha) s = s.replace(/\bhoy\b(?=\s*[:.,;])/gi, `el ${fmtD(fecha)}`).replace(/\bayer\b/gi, ()=>{ const d = new Date(fecha+"T12:00:00"); d.setDate(d.getDate()-1); return `el ${fmtD(d.toISOString().slice(0,10))}`; });
-  return s;
+  if(fecha) s = s.replace(/\bhoy\b(?!\s+en\s+d[ií]a)/gi, `el ${fmtD(fecha)}`).replace(/\bayer\b/gi, ()=>{ const d = new Date(fecha+"T12:00:00"); d.setDate(d.getDate()-1); return `el ${fmtD(d.toISOString().slice(0,10))}`; });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 const _titAreaBase = titArea;
 titArea = function(a){ const r = _titAreaBase(a); return {...r, t: sinSujeto(r.t, a.nombre, r.fecha)}; };
@@ -1940,7 +1940,7 @@ function estatusAreaCompleto(a){
   for(const l of (m ? ls.slice(1) : ls)){ if(/^\s{2,}-/.test(l)) sig.push(l.replace(/^\s*-\s*/,"")); else if(/^\s*-/.test(l)) items.push(l.replace(/^\s*-\s*/,"")); }
   const lis = items.filter(i=>!/^`[^`]+\/`/.test(i)).map(i=>/^\*\*Siguiente/.test(i) && sig.length ? `<li>${inline(i)}<ol>${sig.map(s=>`<li>${inline(s)}</li>`).join("")}</ol></li>` : `<li>${inline(i)}</li>`).join("");
   const selE = E ? `<div class="enf-sel"><span class="more">Voz del director:</span><button type="button" class="chip${!con?" on":""}" data-enf="${esc(a.slug)}" data-v="">Sin enfoque</button><button type="button" class="chip${con?" on":""}" data-enf="${esc(a.slug)}" data-v="1">Con enfoque</button></div>` : "";
-  if(!m && a.panorama && a.panorama.texto) return `<section class="card pan"><p class="corto-t">${panTxt(a)}</p><p class="more">Es el Panorama del área, de antes del Estatus: el próximo cierre del área lo reescribe.</p></section>`;
+  if(!m && !a.en_corto && a.panorama && a.panorama.texto) return `<section class="card pan"><p class="corto-t">${panTxt(a)}</p><p class="more">Es el Panorama del área, de antes del Estatus: el próximo cierre del área lo reescribe.</p></section>`;
   if(!m) return `<section class="card pan">${selE}<p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p>${lis?`<p class="more">Mientras tanto, lo escrito en su sección:</p><ul class="corto-l">${lis}</ul>`:""}</section>`;
   if(!tit && !lis) return `<section class="card pan">${selE}<p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p></section>`;
   return `<section class="card pan">${selE}${tit?`<p class="corto-t">${inline(tit)}</p>`:""}<ul class="corto-l">${lis}</ul>${con?`<p class="enf-l"><b>Enfoque:</b> ${esc(E.linea)}</p>`:""}${m?`<p class="more">Firmado al cerrar la sesión del ${fmtD(m[1])}.</p>`:""}</section>`;
