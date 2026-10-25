@@ -17,6 +17,26 @@ def ok(c, t):
     print(("  bien  " if c else "  FALLA ") + t); fallos += 0 if c else 1
 
 
+def dos_corridas(raiz, tmp):
+    """Como la puesta al día real: inventario y generación sobre la copia, y una segunda corrida que reutiliza la base.
+    Devuelve (primera, segunda, reutilizó algo)."""
+    def corrida(sal, previos=None, sin_cambios=None):
+        a = [sys.executable, str(GV), str(raiz), "--inventario"] + (["--sin-cambios", sin_cambios] if sin_cambios else [])
+        inv = json.loads(subprocess.run(a, capture_output=True, text=True, check=True).stdout)
+        ip = tmp / f"inv-{sal}.json"; ip.write_text(json.dumps(inv["inventario"]), encoding="utf-8")
+        cop = tmp / f"copia-{sal}"
+        for r_ in inv["leer"]:
+            (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(raiz / r_, cop / r_)
+        cop.mkdir(exist_ok=True)
+        subprocess.run([sys.executable, str(GV), str(cop), str(tmp / sal), "--desde-inventario", str(ip), "--version", "prueba"]
+                       + (["--previos", str(previos)] if previos else []), check=True, stdout=subprocess.DEVNULL)
+        return inv
+    corrida("o1")
+    est = json.loads((tmp / "o1" / "meta" / "estado.json").read_text(encoding="utf-8"))
+    inv = corrida("o2", tmp / "o1", ",".join(est.get("huellas") or []))
+    return tmp / "o1", tmp / "o2", bool(inv["inventario"].get("reusar")) and bool(inv["inventario"].get("fuera_reusar"))
+
+
 def generar(parrafo, dos_veces=False, abrir=False):
     tmp = pathlib.Path(tempfile.mkdtemp())
     raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
@@ -26,15 +46,9 @@ def generar(parrafo, dos_veces=False, abrir=False):
     (raiz / "guia.md").write_text(titulo + "\n\n" + parrafo + "\n\n" + viejo[1], encoding="utf-8")
     subprocess.run([sys.executable, str(GV), str(raiz), str(tmp / "out"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
     if dos_veces:   # la segunda corrida reutiliza la base: «fuera» viene de meta/estado (revisión 1.22.4, hallazgo 1)
-        est = json.loads((tmp / "out" / "meta" / "estado.json").read_text(encoding="utf-8"))
-        inv = json.loads(subprocess.run([sys.executable, str(GV), str(raiz), "--inventario", "--sin-cambios", ",".join(est.get("huellas") or [])], capture_output=True, text=True, check=True).stdout)
-        (tmp / "inv.json").write_text(json.dumps(inv["inventario"]), encoding="utf-8")
-        cop = tmp / "copia"
-        for r_ in inv["leer"]:
-            (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(raiz / r_, cop / r_)
-        cop.mkdir(exist_ok=True)
-        subprocess.run([sys.executable, str(GV), str(cop), str(tmp / "out2"), "--desde-inventario", str(tmp / "inv.json"), "--previos", str(tmp / "out"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
-        m = json.loads((tmp / "out2" / "meta" / "estado.json").read_text(encoding="utf-8"))
+        _, o2, reuso = dos_corridas(raiz, tmp)
+        m = json.loads((o2 / "meta" / "estado.json").read_text(encoding="utf-8")); m["_reuso"] = reuso
+        if not reuso: m["fuera"] = m.get("fuera", []) + [{"que_es": True}] * 9   # sin reutilizar, la prueba no prueba nada: falla
     else:
         m = json.loads((tmp / "out" / "meta" / "estado.json").read_text(encoding="utf-8"))
     if abrir:
@@ -90,14 +104,8 @@ pp = raiz / "ventas" / "cuentas" / "proyecto.md"
 t = pp.read_text(encoding="utf-8").replace("Dueño: Ana Prueba\n", "Dueño: Ana Prueba\nColabora: Carla Prueba (carla@ejemplo.test)\n")
 t = t.replace("## Siguientes pasos\n", "## Siguientes pasos\n- Esperar la firma de Agustín Torres (Escuela Fácil) para cerrar el piloto.\n")
 pp.write_text(t, encoding="utf-8")
-subprocess.run([sys.executable, str(GV), str(raiz), str(tmp / "o1"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
-est = json.loads((tmp / "o1" / "meta" / "estado.json").read_text(encoding="utf-8"))
-inv = json.loads(subprocess.run([sys.executable, str(GV), str(raiz), "--inventario", "--sin-cambios", ",".join(est.get("huellas") or [])], capture_output=True, text=True, check=True).stdout)
-(tmp / "inv.json").write_text(json.dumps(inv["inventario"]), encoding="utf-8")
-cop = tmp / "copia"
-for r_ in inv["leer"]:
-    (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(raiz / r_, cop / r_)
-subprocess.run([sys.executable, str(GV), str(cop), str(tmp / "o2"), "--desde-inventario", str(tmp / "inv.json"), "--previos", str(tmp / "o1"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
+_o1, _o2, reuso = dos_corridas(raiz, tmp)
+ok(reuso, "la segunda corrida reutiliza de verdad proyectos y «fuera»")
 a1 = json.loads((tmp / "o1" / "areas" / "ventas.json").read_text(encoding="utf-8")); a2 = json.loads((tmp / "o2" / "areas" / "ventas.json").read_text(encoding="utf-8"))
 ok(a1.get("colaboran_ver") == ["Carla Prueba"] and a2.get("colaboran_ver") == ["Carla Prueba"], f"quien colabora conserva su nombre al reutilizar ({a1.get('colaboran_ver')} → {a2.get('colaboran_ver')})")
 pc = json.loads((tmp / "o1" / "proyectos" / "ventas--cuentas.json").read_text(encoding="utf-8"))
