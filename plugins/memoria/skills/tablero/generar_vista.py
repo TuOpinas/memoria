@@ -314,6 +314,12 @@ for l in quien.split("\n"):
         contexto_comun = l.split(":", 1)[-1].strip().rstrip(".")
     if l.lower().startswith("administra"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
+# de qué nombre es cada cuenta, donde la carpeta lo dice junto («Nombre (correo)»): para saber de quién es el tablero (1.22.3)
+NOMBRE_DE_CUENTA = {}
+def apuntar_nombres(texto):
+    for m_ in re.finditer(r"([A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑü.'-]*(?:\s+[A-ZÁÉÍÓÚÑa-záéíóúñ][\wÁÉÍÓÚáéíóúñÑü.'-]*){0,3})\s*[(<]\s*([\w.+'-]+@[\w-]+(?:\.[\w-]+)*)\s*[)>]", texto or ""):
+        NOMBRE_DE_CUENTA.setdefault(m_.group(2).lower(), re.sub(r"^(?:Colabora[n]?|Responsable|Administra|Contexto común)\s*:?\s*", "", m_.group(1), flags=re.I).strip())
+apuntar_nombres(quien)
 # los nombres, sin la cuenta entre paréntesis: el tablero no lleva correos
 contexto_comun = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", contexto_comun)).strip(" .")
 administra = CORREO.sub("", re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", administra)).strip(" .")
@@ -1254,6 +1260,7 @@ for a in areas_guia:
         pdoc["colaboran"] = nombres_co
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
+        apuntar_nombres(pdoc["quien"])
         if CUENTA_TABLERO:
             # si la cuenta del tablero escribe en el proyecto (responsable o colabora en el área, o colabora en él): la
             # página solo deja aceptar desde aquí las propuestas que su próximo cierre puede aplicar (1.22.3)
@@ -1387,8 +1394,11 @@ _que_es = re.sub(r"<!--.*?-->", "", _que_es or "", flags=re.S).strip()
 if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
     _que_es = ""      # una tabla, una lista o el párrafo de la plantilla de «nuevo» no dicen qué es la organización
 docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/estado se sube como update, y una clave que falta dejaría la vieja
-# de quién es el tablero: el responsable del área cuya cuenta es la que lo genera; si no, quien administra
-_de = next((a["dueno"] for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[0]), "") or next((a["dueno"] for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[1]), "")
+# de quién es el tablero (1.22.3): el responsable del área cuya cuenta es la que lo genera, o el nombre que la carpeta da a
+# esa cuenta («Colabora: Nombre (correo)», «Contexto común: Nombre (correo)»). Si no se sabe, vacío: la página no
+# personaliza, en vez de enseñarle a alguien lo de otra persona
+limpio = lambda n: re.sub(r"\s*(\([^)]*\)|<[^>]*>)", "", n or "").strip(" .")
+_de = next((limpio(a["dueno"]) for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[0]), "") or (NOMBRE_DE_CUENTA.get(CUENTA_TABLERO, "") if CUENTA_TABLERO else "")
 docs["meta"]["estado"]["tablero_de"] = _de
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes

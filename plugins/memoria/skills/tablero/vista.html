@@ -742,6 +742,8 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 @media (max-width:480px){ .ini-tabs .tab,.tabs .tab{padding-left:6px;padding-right:6px;font-size:13.5px} .qh-sum th:nth-child(5),.qh-sum td:nth-child(5){display:none} }
 
 
+.hoy-linea{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:0 0 14px;font-size:14.5px}
+.hoy-linea .sep{color:var(--muted)}
 </style>
 
 <div class="app">
@@ -845,7 +847,9 @@ const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).so
 const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s)));
 const CORR_OPC = [["rutina","Es una rutina, no un paso"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
 async function addCambio(data){
-  try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"}); }
+  try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"});
+    const p = data.proyecto && byId[data.proyecto];
+    if(p && p.escribe===false) flash(`Apuntado aquí, pero este proyecto no lo escribe tu puesta al día: es de ${nombreCorto(p.dueno||"otra persona")}. Díselo.`); }
   catch(e){ flash(e && e.code==="not_granted" ? "Solo quien puede editar este tablero puede anotar aquí." : "No se pudo guardar el cambio."); }
 }
 async function setFecha(p, s, v){
@@ -1439,7 +1443,13 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 // ===================== Inicio, área y proyecto en cuatro pestañas (1.22.3) =====================
 // Tres preguntas: qué me espera, qué cambió desde que vine, hacia dónde va. Lo demás, un clic abajo.
 let HOY_DESDE = 3, HOY_FEED_ALL = false, PARA_TI_ALL = new Set(), REG_FILTRO = "todo";
-const VIEWER = () => (META && (META.tablero_de || META.administra)) || "";
+// de quién es el tablero: lo dice el generador; vacío si la carpeta no da el nombre de la cuenta (entonces no se personaliza).
+// Con datos de antes de la 1.22.3, sin el campo, quien administra
+const VIEWER = () => META ? ("tablero_de" in META ? (META.tablero_de||"") : (META.administra||"")) : "";
+// un proyecto es «mío» si la cuenta escribe en él (el generador lo sabe); sin ese dato, por el nombre
+const esMio = p => p.escribe!==undefined ? p.escribe===true : (!VIEWER() || persona(p.dueno)===persona(VIEWER()) || (p.colaboran||[]).some(c=>persona(c)===persona(VIEWER())));
+// quién decide lo que «Falta decidir» dice, si nombra a alguien que no es quien mira
+function otroDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c = conocidos(); const n = md && c[md[1]] ? c[md[1]] : null; return n && nombreCorto(n)!==nombreCorto(VIEWER()) ? n : null; }
 const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/)[0].trim().replace(/[.;,:\s]+$/,"");
 const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...(a.colaboran||[]).map(persona)]), ...PROJ.flatMap(p=>(p.colaboran||[]).map(persona))].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
@@ -1465,8 +1475,9 @@ function titArea(a){ const l0 = (a.en_corto||"").split("\n")[0]||""; const l = /
 function diaLabel(f){ const d = diasDesde(f); if(d===0) return "Hoy"; if(d===1) return "Ayer"; const s = new Date(f+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long", day:"numeric", month:"long"}); return s.charAt(0).toUpperCase()+s.slice(1); }
 
 function paraTi(){
-  const yo = VIEWER(), t = today(), mios = PROJ.filter(p=>activo(p) && (!yo || persona(p.dueno)===persona(yo) || (p.colaboran||[]).some(c=>persona(c)===persona(yo))));
-  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt);
+  const t = today(), mios = PROJ.filter(p=>activo(p) && esMio(p));
+  // lo que decide otra persona, de dentro o de fuera, no te toca a ti: va a «Con otros»
+  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && !otroDecide(x.txt));
   const venc = pendientes().filter(i=>i.f && i.f<t && mios.includes(i.p)).sort((a,b)=>a.f.localeCompare(b.f));
   const afect = mios.map(p=>({p, af: afectan(p).filter(x=>x.nueva)})).filter(x=>x.af.length).sort((a,b)=>b.af.length-a.af.length);
   const viejos = mios.filter(estatusViejo).sort((a,b)=>(fechaEstatus(a)||"").localeCompare(fechaEstatus(b)||""));
@@ -1519,7 +1530,7 @@ function renderProj(p){
   } else if(tab==="quehay"){
     body = p.que_hay ? renderProjOld(p, "quehay") : renderProjOld(p, "entregables");
   } else if(tab==="pasos"){
-    body = renderProjOld(p, "pasos");
+    body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + renderProjOld(p, "pasos");
   } else body = registroTab(p);
   const nP = stepsLive(p).length, nV = p.entregables_vigentes||0, nR = (p.decisiones_total||0) + (p.sesiones_total||0);
   const tabs = [["estatus","Estatus",""],["pasos","Acciones",p.cerrado?"":(nP||"")],["registro","Actividad",""],["quehay","Qué hay",""]];
@@ -1543,12 +1554,15 @@ function noCuadra(){
     if(fd){ const dec = decisionesTodas(p).filter(d=>fe && d.fecha > fe); if(dec.length) out.push({id:"fd:"+p.id, p, k:"Decidido después", t:`«Falta decidir» dice: ${esc(fd.slice(0,120))}${fd.length>120?"…":""}; después hay ${dec.length} decisi${dec.length===1?"ón":"ones"} (${fmtD(dec[0].fecha)}). Puede estar resuelto.`, accion:"Confirmar"}); }
     const viejos = stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && diasDesde(f) > 30; });
     if(viejos.length) out.push({id:"venc:"+p.id, p, row:key(p.id, viejos[0].texto), k:"Vencido y nadie lo movió", t:`${viejos.length} paso${viejos.length===1?"":"s"} con fecha de hace más de un mes: ${inline(viejos[0].texto.slice(0,90))}${viejos[0].texto.length>90?"…":""}`, accion:"Fechar o quitar"});
-    for(const q of propsDe(p.id)) if(q.clase!=="afirma" && q.estado==="pendiente"){ const k = CLASE_PROP[q.clase]||q.clase; out.push({id:"prop:"+q.id, p, k, t:esc((q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),"")), accion:"Aceptar"}); }
+    for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc((q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),""));
+      if(q.clase!=="afirma" && q.estado==="pendiente") out.push({id:"prop:"+q.id, p, k, t, accion:"Aceptar"});
+      // aceptada y esperando: la de otra clase espera el sí en sesión; la de un proyecto donde ya no se escribe, no la aplicará nadie
+      else if(q.estado==="aceptada" && (!escribeAqui(p) || q.clase!=="afirma")) out.push({id:"prop:"+q.id, p, k: escribeAqui(p) ? k+" · aceptada" : "Aceptada sin quien la aplique", t: escribeAqui(p) ? t : `${t} Se aceptó${q.por?` (${esc(q.por)})`:""} en un proyecto donde este tablero ya no escribe.`, aceptada:true}); }
   }
   for(const a of AREAS){ if(a.legible===false || archivada(a)) continue;
     const ta = titArea(a), ps = (a.proyectos||[]).map(i=>byId[i]).filter(activo), mov = ps.map(p=>p.ultima_sesion).filter(Boolean).sort().pop();
     if(ta.fecha && mov && mov > ta.fecha && diasDesde(ta.fecha) > 7) out.push({id:"area:"+a.slug, a, k:"Estatus del área viejo", t:`El Estatus de ${esc(a.nombre)} es del ${fmtD(ta.fecha)} y sus proyectos se movieron hasta el ${fmtD(mov)}.`, accion:"Reescribir"});
-    const pr = (a.prioridades||[]); if(pr.length && ta.fecha && diasDesde(ta.fecha) > 14) out.push({id:"prio:"+a.slug, a, k:"Prioridades sin revisar", t:`Las ${pr.length} prioridades de ${esc(a.nombre)} no se tocan desde el ${fmtD(ta.fecha)}: «${inline(pr[0].slice(0,80))}…»`, accion:"Revisar"});
+    const pr = (a.prioridades||[]); if(pr.length && ta.fecha && diasDesde(ta.fecha) > 14) out.push({id:"prio:"+a.slug, a, k:"Prioridades sin revisar", t:`${pr.length===1?"La prioridad":`Las ${pr.length} prioridades`} de ${esc(a.nombre)} no se ${pr.length===1?"toca":"tocan"} desde el ${fmtD(ta.fecha)}: «${inline(pr[0].slice(0,80))}…»`, accion:"Revisar"});
   }
   return out;
 }
@@ -1618,7 +1632,7 @@ function tabMant(){
   const filaNC = x => { const destino = x.p ? (x.id.startsWith("venc:") ? {tab:"pasos", foco:{row:x.row, edit:x.row}} : x.id.startsWith("prop:") && /Quitar de/.test(x.t) ? {tab:"pasos", foco:{sel:".step", texto:(x.t.match(/«([^»]{20,40})/)||[])[1]||""}} : x.id.startsWith("fd:") ? {tab:"estatus", foco:{sel:".corto-l li", texto:"Falta decidir"}} : {tab:"estatus", foco:{sel:".corto"}}) : null;
     return `<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}" data-tab="${destino.tab}" ${focoAttr(destino.foco)}>${esc(x.p.nombre)} ›</button> · ${esc(areaBy[x.p.area]?.nombre||"")}`:`<button type="button" class="lnk" data-go-area="${esc(x.a.slug)}" data-atab="${x.id.startsWith("prio:")?"acciones":"estatus"}" ${focoAttr({sel:x.id.startsWith("prio:")?".prios":".pan"})}>${esc(x.a.nombre)} ›</button>`}</span>${ncAcciones(x)}</div>`; };
   const html = `<section class="due"><div class="top"><h2>Avisos de la herramienta</h2><span class="c">${nAv}</span><span class="c" style="margin-left:auto">Versiones, sincronización y lo que el tablero todavía no muestra</span></div>${av ? `<div class="mt-list">${av}</div>` : `<p class="empty">Sin avisos: tablero, página y carpeta en la misma versión.</p>`}</section>
-    <section class="due"><div class="top"><h2>Lo que no cuadra</h2><span class="c">${nc.length}</span><span class="c" style="margin-left:auto">Lo que se ve desde fuera de las sesiones. Las propuestas que aceptes las aplica el próximo cierre; lo demás se arregla en su sitio</span></div>${nc.length?`<div class="nc">${nc.map(filaNC).join("")}</div>`:`<p class="empty">Todo cuadra.</p>`}
+    <section class="due"><div class="top"><h2>Lo que no cuadra</h2><span class="c">${nc.length}</span><span class="c" style="margin-left:auto">Lo que se ve desde fuera de las sesiones. Las propuestas que aceptes las aplica el próximo cierre; lo demás se arregla en su sitio</span></div>${nc.length?`<div class="nc">${nc.slice(0, NC_N).map(filaNC).join("")}</div>${nc.length>5?`<button type="button" class="pg-more" data-nc-mas>${NC_N>5?"Ver menos":`Ver las ${nc.length-5} restantes`}</button>`:""}`:`<p class="empty">Todo cuadra.</p>`}
       ${viejos.length?`<h3 class="sub-h">Estatus por reescribir</h3>${viejos.map(p=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="estatus" ${focoAttr({sel:".corto"})}><span class="pill closed">Viejo</span><span class="t">${fechaEstatus(p)?`Estatus del ${fmtD(fechaEstatus(p))}, hace ${diasDesde(fechaEstatus(p))} días`:"Sin Estatus todavía"}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span></button>`).join("")}`:""}</section>
     <details class="card mas-c"><summary><h2 style="display:inline">Por poner al día, proyecto por proyecto</h2><span class="more"> · el detalle de cada proyecto y la frase para arreglarlo en sesión</span></summary>${memoriaAlDia()}</details>`;
   return {n: nAv + nc.length, html};
@@ -1660,16 +1674,19 @@ function conOtros(){
   const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
-    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && nombreCorto(n)!==yo && !esc_.has(persona(n));
+    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && nombreCorto(n)!==yo;
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
       if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = nombresEn(s.texto).find(fuera); }
       else if(md){ lado = "debes"; n = c[md[2]] && fuera(c[md[2]]) ? c[md[2]] : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>nombreCorto(n)!==yo && !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>nombreCorto(n)!==yo)) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
-  return Object.values(por).map(g=>({...g, total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
+  return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
+let OTROS_N = 5, NC_N = 5;
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-otros-mas],[data-nc-mas]"); if(!b) return;
+  if(b.hasAttribute("data-otros-mas")) OTROS_N = OTROS_N>5 ? 5 : Infinity; else NC_N = NC_N>5 ? 5 : Infinity; render(); });
 function tabAcciones(){
   const pt = paraTi(), gs = conOtros(), t = today();
   const fila = (pill, t_, p, tab, extra, foco) => `<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="${tab}" ${focoAttr(foco)}><span class="pill ${pill[1]}">${pill[0]}</span><span class="t">${t_}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}${extra?` · ${extra}`:""}</span></button>`;
@@ -1679,13 +1696,13 @@ function tabAcciones(){
   ].join("");
   const it = x => { const fut = x.f && x.f>=t; return `<button type="button" class="esp-i" data-go-proj="${esc(x.p.id)}" data-tab="${x.tab}" ${focoAttr(x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}><span class="t">${inline(corta(x.t))}</span><span class="w">${esc(x.p.nombre)}${x.f?` · ${fut?`para el ${fmtD(x.f)}`:`desde el ${fmtD(x.f)}`}`:""}</span></button>`; };
   const tarjeta = g => { const ctx = [...new Set([...g.deben,...g.debes].map(x=>contextoDe(x.p)))];
-    return `<article class="per-ext"><header><b>${esc(g.n)}</b><span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
+    return `<article class="per-ext"><header><b>${esc(g.n)}</b>${g.dentro?` <span class="pill none">del equipo</span>`:""}<span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
       <div class="dd"><div><h4>Te debe <span class="c">${g.deben.length}</span></h4>${g.deben.map(it).join("") || `<p class="more">Nada.</p>`}</div><div><h4>Le debes <span class="c">${g.debes.length}</span></h4>${g.debes.map(it).join("") || `<p class="more">Nada.</p>`}</div></div></article>`; };
   const nDeben = gs.reduce((n,g)=>n+g.deben.length,0), nDebes = gs.reduce((n,g)=>n+g.debes.length,0);
-  return {n: pt.decidir.length + pt.venc.length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2><span class="c">${esc(nombreCorto(VIEWER()))}</span><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos()}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
-    <section class="due"><div class="top"><h2>Con otros</h2><span class="c">${cuantos(gs.length,"persona","personas")} · te deben ${nDeben} · les debes ${nDebes}</span><span class="c" style="margin-left:auto">Externos, con su organización</span></div>
+  return {n: pt.decidir.length + pt.venc.length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos()}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
+    <section class="due"><div class="top"><h2>Con otros</h2><span class="c">${cuantos(gs.length,"persona","personas")} · te deben ${nDeben} · les debes ${nDebes}</span><span class="c" style="margin-left:auto">Del equipo y de fuera, con su organización</span></div>
     <p class="more">El nombre y el lado salen del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes.</p>
-    <div class="per-grid">${gs.map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie de fuera.</p>`}</div></section>`};
+    <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie.</p>`}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>`};
 }
 
 
@@ -1733,7 +1750,7 @@ document.addEventListener("click", async e => { const b = e.target.closest && e.
   const p = byId[b.dataset.provOk]; if(!escribeAqui(p)) return;
   const _p = p, d = (TEXTOS[p.id] && TEXTOS[p.id].que_hay) || {piezas:[]};
   const qs = d.piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
-  try{ for(const q of qs) await DB.doc("cambios/"+q.id).update({estado:"aceptada", aceptada: nowISO()}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
+  try{ for(const q of qs) await DB.doc("cambios/"+q.id).update({estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
   render(); });
 
 // ===================== Ronda 7: pestaña Actividad (por área, por proyecto, por persona) =====================
@@ -1784,15 +1801,20 @@ function actPersonas(ev){
     ${sinNombre?`<p class="more">${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró (son de antes de que el cierre lo apuntara); no se atribuyen a nadie.</p>`:""}
     ${lista.length===1?`<p class="more">Aquí escribe una sola persona. Con varias, esta tarjeta las pone lado a lado, en orden alfabético.</p>`:""}</section>`;
 }
-function otrosDesdeTi(){
+function otrosDatos(){
   // lo que otros cerraron o decidieron en cada proyecto después de tu última sesión en él; sale de la carpeta, no del navegador
   const yo = persona(VIEWER()), esc_ = escribenSet(), out = [];
-  if(!yo) return "";
+  if(!yo) return null;
   for(const p of PROJ){ if(p.restringido) continue;
     const mias = sesionesTodas(p).filter(s=>persona(quienSes(p,s))===yo).map(s=>s.fecha).sort(), ult = mias[mias.length-1] || addDays(-ACT_DIAS);
     const evs = eventos(ult).filter(e=>e.p.id===p.id && e.q && e.q!==yo && esc_.has(e.q) && e.f>=ult);
     if(evs.length) out.push({p, evs, ult: mias.length?ult:null});
   }
+  return out;
+}
+function otrosDesdeTi(){
+  const out = otrosDatos();
+  if(!out) return "";
   if(!out.length) return `<p class="more act-solo">Nadie más ha escrito en tus proyectos desde tu última sesión en cada uno. Con más personas en la carpeta, aquí sale lo que cerraron o decidieron después de ti, proyecto por proyecto.</p>`;
   return `<section class="due"><div class="top"><h2>Lo que otros hicieron desde tu última sesión</h2><span class="c">${out.length}</span></div>${out.map(({p,evs,ult})=>`<div class="pt-g"><h3>${esc(p.nombre)} <span class="c">${ult?`tu última sesión, ${fmtD(ult)}`:"nunca has cerrado sesión aquí"}</span></h3><div class="due-list">${evs.slice(0,5).map(e=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="registro"><span class="pill ${e.k==="dec"?"ok":e.k==="pub"?"closed":"none"}">${e.k==="dec"?"Decisión":e.k==="pub"?"Publicado":"Sesión"}</span><span class="t">${inline(e.t)}</span><span class="w">${esc(nombreCorto(e.q))} · ${fmtD(e.f)}</span></button>`).join("")}</div></div>`).join("")}</section>`;
 }
@@ -2067,7 +2089,15 @@ document.addEventListener("click", e => { if(e.target.closest && e.target.closes
 const _goR9 = go;
 go = function(v){ if(IR_ESTATUS){ IR_ESTATUS = false; setNTAB("estatus"); if(v && v.lvl==="proj") v = {...v, tab:"estatus"}; } _goR9(v); };
 // «Por dónde empezar» es una lista de acciones: va al final de Acciones de Inicio
-tabEstatus = function(){ return {n: 0, html: `<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${premisasCard()}`}; };
+// arriba del Estatus de Inicio, una línea con lo que te toca y lo que otros hicieron desde tu última sesión (revisión 1.22.3)
+function lineaHoy(){
+  const pt = paraTi(), otros = otrosDatos(), partes = [];
+  const n = pt.decidir.length + pt.venc.length;
+  partes.push(`<button type="button" class="lnk" data-ini="acciones">${n ? `Te toca: ${[pt.decidir.length?cuantos(pt.decidir.length,"por decidir","por decidir"):"", pt.venc.length?cuantos(pt.venc.length,"vencido","vencidos"):""].filter(Boolean).join(" · ")}` : "Nada te toca ahora"} ›</button>`);
+  if(otros) partes.push(`<button type="button" class="lnk" data-ini="actividad">${otros.length ? `Desde tu última sesión, otros trabajaron en ${cuantos(otros.length,"proyecto tuyo","proyectos tuyos")}` : "Nadie más escribió en tus proyectos desde tu última sesión"} ›</button>`);
+  return `<p class="hoy-linea">${partes.join('<span class="sep">·</span>')}</p>`;
+}
+tabEstatus = function(){ return {n: 0, html: `${lineaHoy()}<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${premisasCard()}`}; };
 const _tabAccR9 = tabAcciones;
 tabAcciones = function(){ const r = _tabAccR9(); return {n: r.n, html: r.html + enfoque2()}; };
 // Mantenimiento: sin el título repetido dentro del desplegable
@@ -2079,17 +2109,19 @@ actPorProyectoArea = function(ev, ps){ const esc_ = escribenSet(); return _actPP
 
 // ---- lo que no cuadra: una propuesta de la cola se acepta o se descarta aquí; lo demás se arregla en su sitio ----
 // quien monta el tablero solo acepta lo que su próximo cierre puede aplicar: lo de proyectos donde escribe
-const escribeAqui = p => !!p && (p.escribe===true || (p.escribe===undefined && !!VIEWER() && persona(p.dueno)===persona(VIEWER())));
+const escribeAqui = p => !!p && p.escribe===true;   // sin el dato (datos de antes de la 1.22.3) no se acepta: no se sabe si el cierre podrá aplicarlo
 function ncAcciones(x){
   if(!x.id.startsWith("prop:") || !CAN || !OWNER) return "";
-  if(!escribeAqui(x.p)) return `<span class="nc-a more">Pásaselo a ${esc(nombreCorto(x.p.dueno||""))}</span>`;
   const id = x.id.slice(5);
+  if(x.aceptada) return escribeAqui(x.p) ? `<span class="nc-a more">Te la enseña la próxima sesión del proyecto, para tu sí</span>` : `<span class="nc-a"><span class="more">Pásasela a ${esc(nombreCorto(x.p.dueno||""))}</span><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">Descartar</button></span>`;
+  if(!escribeAqui(x.p)) return `<span class="nc-a more">Pásaselo a ${esc(nombreCorto(x.p.dueno||""))}</span>`;
   return `<span class="nc-a"><button type="button" class="chip" data-nc="${esc(id)}" data-v="aceptada">${esc(x.accion)}</button><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">No</button></span>`;
 }
 document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !OWNER || !DB) return;
   n.disabled = true;
-  try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO()} : {estado:"descartada", descartada: nowISO()});
-    flash(n.dataset.v==="aceptada" ? "Aceptada: la escribe el próximo cierre del proyecto." : "Descartada: no se vuelve a proponer igual."); }
+  const q = PROPUESTAS.find(c=>c.id===n.dataset.nc);
+  try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null} : {estado:"descartada", descartada: nowISO()});
+    flash(n.dataset.v!=="aceptada" ? "Descartada: no se vuelve a proponer igual." : q && q.clase==="afirma" ? "Aceptada: la escribe el próximo cierre del proyecto." : "Aceptada: la próxima sesión del proyecto te la enseña con su texto, para tu sí."); }
   catch(x){ n.disabled = false; flash("No se pudo guardar. Vuelve a intentarlo."); }
 });
 // ---- el detalle de un proyecto llega al pedirlo: Qué hay y Actividad lo piden al abrirse ----
@@ -2473,7 +2505,7 @@ function ayudaArts(){
       <dt>Cambié de computadora y el botón «Sincronizar ahora» no hace nada.</dt><dd>El botón está ligado a la computadora donde montaste el tablero. En la nueva, con la carpeta conectada, dile a Claude ${F("cambié de computadora: pon al día la tarea del tablero")} y aprueba el cambio que te pide la app.</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su responsable.</dd>
-      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, en Mantenimiento de Inicio verás el aviso de que hay sesiones que aún no muestra, con su número en la pestaña.</dd>
+      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, en Mantenimiento de Inicio verás el aviso de que hay sesiones que aún no muestra,.</dd>
       <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
       <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es responsable o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
     </dl>`},
@@ -2507,7 +2539,7 @@ function ayudaArts(){
       <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
     </figure>
     <dl class="hc-def">
-      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, la pestaña Mantenimiento de Inicio lleva su número y te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
+      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, la pestaña Mantenimiento de Inicio te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
       <dt>Lo que escriben otras personas</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Para traerlo, el botón «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o dile a Claude ${F("sincroniza el tablero")}. El botón no corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Mantenimiento lo avisa una semana.</dd>
@@ -2560,7 +2592,7 @@ function ayudaArts(){
     <h3 class="hc-h">Por dónde empezar</h3>
     <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de pasos de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige con tres criterios: que esté entre las prioridades del área, que toque a un cliente, una firma o dinero, y que desbloquee otros proyectos. Que un paso esté vencido no lo hace más importante. Es una sugerencia: la sesión decide.</p>
     <h3 class="hc-h">Mantenimiento</h3>
-    <p>Arriba, «Lo que no cuadra»: lo que se ve desde fuera de las sesiones (un Estatus más viejo que la última sesión, algo decidido después de lo que «Falta decidir» dice, pasos vencidos hace más de un mes que nadie movió) y las propuestas de la memoria, que aceptas o descartas ahí mismo; lo demás se arregla en su sitio, con el enlace de cada línea. Después, «Estatus por reescribir», y plegado, «Por poner al día, proyecto por proyecto»: lo que la memoria tiene flojo, cada cosa con la frase para arreglarla en una sesión. Cuenta como flojo:</p>
+    <p>Después de los avisos de la herramienta, «Lo que no cuadra»: lo que se ve desde fuera de las sesiones (un Estatus más viejo que la última sesión, algo decidido después de lo que «Falta decidir» dice, pasos vencidos hace más de un mes que nadie movió) y las propuestas de la memoria, que aceptas o descartas ahí mismo; lo demás se arregla en su sitio, con el enlace de cada línea. Después, «Estatus por reescribir»; plegados, «Por poner al día, proyecto por proyecto» y «Por registrar en la carpeta» (lo que tocaste aquí y aún no está escrito). «Por poner al día» es lo que la memoria tiene flojo, cada cosa con la frase para arreglarla en una sesión. Cuenta como flojo:</p>
     <ul class="hc-l">
       <li>Archivos que cambiaron después de la última sesión registrada: hubo trabajo que nadie cerró.</li>
       <li>Pasos abiertos sin fecha, o mezclados con rutinas y esperas.</li>

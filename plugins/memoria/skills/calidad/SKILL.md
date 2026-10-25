@@ -1,6 +1,6 @@
 ---
 name: calidad
-description: Revision de calidad a fondo de algo que se esta construyendo - el contenido de un proyecto, un entregable, un desarrollo o plugin, o la carpeta entera (auditoria) - contra su objetivo, con revisores independientes, para encontrar errores, inconsistencias, riesgos, oportunidades y lo que cuesta de mas (tiempo, llamadas, tokens). Usala cuando digan 'revision de calidad', 'revisa a fondo...', 'audita la carpeta', 'que no cuadra en...', 'revisalo todo contra el objetivo' o cuando toque la revision periodica de un proyecto.
+description: Revision de calidad a fondo de algo que se esta construyendo - el contenido de un proyecto, un entregable, un desarrollo o plugin, o la carpeta entera (auditoria) - contra su objetivo, con revisores independientes, para encontrar errores, inconsistencias, riesgos, oportunidades y lo que cuesta de mas (tiempo, llamadas, tokens). Usala cuando digan 'revision de calidad', 'revisa a fondo...', 'audita la carpeta', 'que no cuadra en...', 'revisalo todo contra el objetivo', cuando toque la revision periodica de un proyecto, y siempre antes de publicar una version de un desarrollo o plugin o abrir su pull request, o cuando haya que revisar un cambio con revisores independientes: no se montan revisores a mano.
 ---
 
 # Revisión de calidad
@@ -11,7 +11,7 @@ No es `revisar`. `revisar` comprueba que un entregable puede publicarse y lo pub
 
 ## Cuándo
 
-«Revisión de calidad de X», «revisa a fondo el plugin», «audita la carpeta», «¿qué no cuadra en este proyecto?», «revísalo todo contra el objetivo». También cuando un proyecto tiene en sus siguientes pasos una revisión periódica y le tocó.
+«Revisión de calidad de X», «revisa a fondo el plugin», «audita la carpeta», «¿qué no cuadra en este proyecto?», «revísalo todo contra el objetivo». También cuando un proyecto tiene en sus siguientes pasos una revisión periódica y le tocó, y siempre antes de publicar una versión de un desarrollo o un plugin o de abrir su pull request: si el trabajo va hacia publicar, esta skill se invoca sin que nadie la nombre, y cualquier revisión con revisores independientes pasa por ella, nunca por agentes montados a mano. En el plugin `memoria`, `release.sh` no publica sin el informe.
 
 ## Paso 1 · Acordar el alcance
 

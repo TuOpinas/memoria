@@ -284,7 +284,7 @@ try:
     bt2, dt2 = correr(rz, st2, colt)
     ok(vieja in {x["id"] for x in bt2["borrar"]} and "prop-x-descartada" not in bt2["juzgado"]["ids"], "la pendiente de hace más de 60 días se retira; una descartada no caduca")
     ok(vieja in bt2["juzgado"]["ids"] and vieja not in dt2, "y queda juzgada: no vuelve igual en la misma corrida")
-    ok("prop-x-aceptada" not in bt2["juzgado"]["ids"], "una aceptada desde el tablero no caduca: la espera el próximo cierre (1.22.3)")
+    ok("ventas--lleno" in bt2["proyectos"] and "prop-x-aceptada" not in bt2["juzgado"]["ids"] and "prop-x-aceptada" not in {x["id"] for x in bt2["borrar"]}, "una aceptada desde el tablero ni caduca ni se retira aunque ya no salga: la espera el próximo cierre (1.22.3)")
     vol = tmp / "volt"; (vol / "meta").mkdir(parents=True)
     escribir(vol / "meta/estado.json", json.dumps({"juzgado": bt2["juzgado"]}))
     st3 = tmp / "st3"; st3.mkdir()
@@ -329,6 +329,13 @@ try:
     sa = tmp / "sa"; sa.mkdir()
     ba, _ = correr(ra, sa)
     ok([x["proyecto"] for x in ba["para_afirma"]] == ["zzz--activo"] * 5 + ["aaa--dormido"] * 5, f"las cinco del proyecto con la sesión más reciente van antes que las del dormido, aunque este vaya antes por nombre ({[x['proyecto'] for x in ba['para_afirma']]})")
+    print("el tope de afirma por proyecto: solo los huecos que le quedan (1.22.3)")
+    colh = tmp / "colah"; colh.mkdir()
+    for k in range(27):
+        escribir(colh / f"prop-h{k}.json", json.dumps({"id": f"prop-h{k}", "data": {"tipo": "propuesta", "clase": "afirma", "proyecto": "zzz--activo", "ruta": f"zzz/activo/taller/h{k}.md", "estado": "pendiente", "creado": "2026-10-20T10:00-06:00"}, "version": 1}))
+    shh = tmp / "shh"; shh.mkdir()
+    bh, _ = correr(ra, shh, colh)
+    ok([x["proyecto"] for x in bh["para_afirma"]].count("zzz--activo") == 3 and [x["proyecto"] for x in bh["para_afirma"]].count("aaa--dormido") == 5, f"con 27 pendientes, el proyecto recibe solo 3 piezas para el modelo; el otro, las suyas ({[x['proyecto'] for x in bh['para_afirma']]})")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

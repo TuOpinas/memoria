@@ -239,7 +239,7 @@ def piezas_de(salida, pid):
         return []
 
 
-def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: [], cuenta=None, juzgado=None, lleno=frozenset(), recientes=None):
+def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambda pid: [], cuenta=None, juzgado=None, lleno=frozenset(), recientes=None, hueco=None):
     juzgado = juzgado or {"ids": set(), "contraste": set()}
     visto = lambda i: hay_propuesta(i) or i in juzgado["ids"]      # ya propuesto, o ya juzgado sin hallazgo
     """(propuestas, para_juicio, para_afirma, para_contraste, vistos, ids de las propuestas de juicio que siguen siendo ciertas)."""
@@ -357,7 +357,13 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
     afirma.sort(key=lambda x: x["ruta"])
     afirma.sort(key=lambda x: (x.get("_taller", False), not x["_vigente"]))
     afirma.sort(key=lambda x: x.get("_reciente") or "", reverse=True)
-    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller", "_reciente")} for x in afirma[:MAX_AFIRMA]]
+    # y a cada proyecto, como mucho los huecos que le quedan en la cola (1.22.3): lo que el tope tiraría no se juzga en balde
+    usados, cabe = {}, []
+    for x in afirma:
+        lim = (hueco or {}).get(x["proyecto"], MAX_PENDIENTES_AFIRMA)
+        if usados.get(x["proyecto"], 0) < lim:
+            usados[x["proyecto"]] = usados.get(x["proyecto"], 0) + 1; cabe.append(x)
+    afirma = [{k: v for k, v in x.items() if k not in ("_vigente", "_taller", "_reciente")} for x in cabe[:MAX_AFIRMA]]
     return props, juicio, afirma, contraste, vistos, validas
 
 
@@ -487,7 +493,8 @@ def main():
     recientes = {}
     props, juicio, afirma, contraste, vistos, validas = barrer(copia, hoy, lambda i: i in ya, salida, lambda pid: por_proyecto.get(pid, []),
                                                               (opt("--cuenta") or "").strip().lower() or None, juz,
-                                                              lleno={k[:-7] for k, v in previas.items() if k.endswith("|afirma") and v >= MAX_PENDIENTES_AFIRMA}, recientes=recientes)
+                                                              lleno={k[:-7] for k, v in previas.items() if k.endswith("|afirma") and v >= MAX_PENDIENTES_AFIRMA}, recientes=recientes,
+                                                              hueco={k[:-7]: max(0, MAX_PENDIENTES_AFIRMA - v) for k, v in previas.items() if k.endswith("|afirma")})
     nuevos_ids = {p["id"] for p in props} | validas      # las de juicio siguen valiendo mientras lo mecánico lo diga
     ahora = ahora_en(salida)
     # caduca una pendiente de hace más de CADUCIDAD_DIAS si su proyecto tuvo después una sesión real que no la resolvió
@@ -515,7 +522,8 @@ def main():
         anadir.append({"id": p["id"], "archivo": f"cambios/{p['id']}.json"})
     borrar = []
     for d in existentes:
-        if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:
+        # una aceptada desde el tablero no la retira el barrido aunque ya no salga: la espera el cierre (1.22.3)
+        if ((d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas) and d["data"].get("estado") != "aceptada":
             borrar.append({"id": d["id"], "if_version": d["version"]})
     (salida / "barrido.json").write_text(json.dumps(
         {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "proyectos": vistos,
