@@ -73,6 +73,8 @@ python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 python3 "$AQUI/probar_barrido.py"
 python3 "$AQUI/probar_plan.py"
 python3 "$AQUI/probar_que_hay.py"
+python3 "$AQUI/probar_que_es.py"
+python3 "$AQUI/probar_resumenes.py"
 # la apertura de sesión en una llamada (skill sesion, abrir.py), contra la misma raíz inventada
 python3 "$AQUI/../sesion/probar_abrir.py"
 python3 "$AQUI/../sesion/probar_cuentas.py"

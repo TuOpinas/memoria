@@ -55,7 +55,7 @@ Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está 
 
 ## Las cuatro preguntas
 
-1. ¿Cómo se llama la organización?
+1. ¿Cómo se llama la organización, y a qué se dedica y para quién, en una o dos frases?
 2. ¿Quién mantiene el contexto común, la parte de quién sois y qué usáis? Por defecto, quien abre la sesión
 3. ¿Qué sistemas usáis a diario? Nombre y para qué, aunque sea una lista rápida
 4. ¿Hay ya una primera área con la que empezar, y de quién es?
@@ -64,15 +64,16 @@ Y una más, que se pregunta siempre porque de ella cuelga todo lo restringido: �
 
 ## Qué escribo y dónde
 
-**1. `guia.md`.** Es lo único de la raíz que es de la organización, y cabe en una pantalla. No lleva cabecera de método y no repite nada de `metodo.md`:
+**1. `guia.md`.** Es lo único de la raíz que es de la organización, y cabe en una pantalla. No lleva cabecera de método y no repite nada de `metodo.md`. Su primer párrafo dice qué es la organización y no habla de la carpeta: es lo que el tablero enseña arriba de Inicio, y si sigue con el hueco de la plantilla, el tablero no lo enseña y lo pide en Mantenimiento:
 
 ```markdown
 # [Organización] · esta carpeta
 
-Esta carpeta es la memoria de trabajo de [organización]: cada área documenta aquí sus
-proyectos, y la IA la lee antes de ayudar a cualquiera. Cómo se trabaja está en
-`metodo.md`, que no hace falta leer: lo aplica el plugin `memoria` cuando trabajas
-con Claude. Aquí solo está lo nuestro.
+[Organización] es [a qué se dedica y para quién, en una o dos frases].
+
+Esta carpeta es su memoria de trabajo: cada área documenta aquí sus proyectos, y la IA
+la lee antes de ayudar a cualquiera. Cómo se trabaja está en `metodo.md`, que no hace
+falta leer: lo aplica el plugin `memoria` cuando trabajas con Claude. Aquí solo está lo nuestro.
 
 ## Áreas
 
