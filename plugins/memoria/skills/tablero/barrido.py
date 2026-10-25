@@ -492,9 +492,9 @@ def main():
     ahora = ahora_en(salida)
     # caduca una pendiente de hace más de CADUCIDAD_DIAS si su proyecto tuvo después una sesión real que no la resolvió
     # (la sesión la enseña al abrir): se retira y queda juzgada, para que no vuelva igual. Una que nadie pudo ver, porque
-    # su proyecto no tuvo sesión, no caduca.
+    # su proyecto no tuvo sesión, no caduca; una aceptada desde el tablero tampoco (1.22.3): la espera el próximo cierre.
     lim = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=CADUCIDAD_DIAS)).isoformat()
-    caducadas = {d["id"] for d in existentes if d["data"].get("estado") != "descartada" and fecha_ok(str(d["data"].get("creado") or "")[:10])
+    caducadas = {d["id"] for d in existentes if d["data"].get("estado") not in ("descartada", "aceptada") and fecha_ok(str(d["data"].get("creado") or "")[:10])
                  and str(d["data"]["creado"])[:10] < lim and recientes.get(d["data"].get("proyecto"), "") > str(d["data"]["creado"])[:10]}
     pendientes = {}
     for d in existentes:

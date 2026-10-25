@@ -42,6 +42,10 @@ casos = [(m("beto", "areas", "legal") == "sin-carpeta", "un área restringida de
          (m("eva", "areas", "legal") == "sin-carpeta", "quien colabora en un área restringida sin carpeta la ve «sin carpeta»"),
          (m("eva", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido de un área ajena sigue restringido para quien colabora en otra"),
          (m("carla", "proyectos", "ventas--ronda") == "restringido", "un proyecto restringido del área donde la cuenta solo colabora sigue restringido: lo restringido de dentro es del dueño")]
+j = lambda d, c, i: json.load(open(os.path.join(sys.argv[1], d, c, i + ".json"), encoding="utf-8"))
+casos += [(j("ana", "proyectos", "ventas--cuentas").get("escribe") is True and j("ana", "meta", "estado").get("tablero_de") == "Ana Prueba", "el tablero de Ana sabe que es suyo y que escribe en su área (1.22.3)"),
+          (j("beto", "proyectos", "ventas--cuentas").get("escribe") is False, "en un proyecto de otra área, el tablero de Beto no escribe: no acepta propuestas de ahí"),
+          ("escribe" not in j("completo", "proyectos", "ventas--cuentas"), "sin --cuenta no se sabe quién escribe, y no se dice")]
 for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
 sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2

@@ -1135,6 +1135,8 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
             dec_.pop("cuestionado_por", None); dec_.pop("abierto", None)
         for s_ in d_.get("pasos") or []:
             s_.pop("desbloquea", None); s_.pop("puntos", None)
+        _lim28_ = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
+        d_["sesiones_recientes"] = [x for x in d_.get("sesiones_recientes") or [] if str(x.get("fecha", "")) >= _lim28_]
         previos[pid] = d_
     est_ = _de_la_base("meta", "estado") if PREVIOS else None
     if INV.get("fuera_reusar") and not (isinstance(est_, dict) and isinstance(est_.get("fuera"), list)):
@@ -1252,6 +1254,11 @@ for a in areas_guia:
         pdoc["colaboran"] = nombres_co
         mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
         pdoc["consumen"] = mc.group(1).strip() if mc else ""
+        if CUENTA_TABLERO:
+            # si la cuenta del tablero escribe en el proyecto (responsable o colabora en el área, o colabora en él): la
+            # página solo deja aceptar desde aquí las propuestas que su próximo cierre puede aplicar (1.22.3)
+            _ra, _ca, _ = cuentas(a["cuenta"])
+            pdoc["escribe"] = CUENTA_TABLERO in (_ra | _ca) or CUENTA_TABLERO in colaboran_en(pdoc["quien"])
         pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
         ses = parse_sesiones(leer(pc / "sesiones.md"))
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
@@ -1288,7 +1295,7 @@ for a in areas_guia:
         _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
         pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
                                        "trabajamos": una_linea_(s_.get("trabajamos") or "", 220)}.items() if v}
-                                      for s_ in ses if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
+                                      for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
@@ -1376,8 +1383,13 @@ docs["meta"]["estado"] = {
 }
 # qué es la organización: el primer párrafo de guia.md bajo su título, para la banda de Inicio (1.22.3)
 _que_es = primer_parrafo(re.sub(r"^\s*#[^\n]*\n", "", frontmatter(guia)[1] if guia.startswith("---") else guia, count=1))
-if _que_es and not _que_es.lstrip().startswith(("#", ">", "|", "-", "*")):
-    docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)
+_que_es = re.sub(r"<!--.*?-->", "", _que_es or "", flags=re.S).strip()
+if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
+    _que_es = ""      # una tabla, una lista o el párrafo de la plantilla de «nuevo» no dicen qué es la organización
+docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/estado se sube como update, y una clave que falta dejaría la vieja
+# de quién es el tablero: el responsable del área cuya cuenta es la que lo genera; si no, quien administra
+_de = next((a["dueno"] for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[0]), "") or next((a["dueno"] for a in areas_guia if CUENTA_TABLERO and CUENTA_TABLERO in cuentas(a["cuenta"])[1]), "")
+docs["meta"]["estado"]["tablero_de"] = _de
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes
 _est_previo = _de_la_base("meta", "estado") if PREVIOS else None

@@ -1439,7 +1439,7 @@ function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.ries
 // ===================== Inicio, área y proyecto en cuatro pestañas (1.22.3) =====================
 // Tres preguntas: qué me espera, qué cambió desde que vine, hacia dónde va. Lo demás, un clic abajo.
 let HOY_DESDE = 3, HOY_FEED_ALL = false, PARA_TI_ALL = new Set(), REG_FILTRO = "todo";
-const VIEWER = () => (META && META.administra) || "";
+const VIEWER = () => (META && (META.tablero_de || META.administra)) || "";
 const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/)[0].trim().replace(/[.;,:\s]+$/,"");
 const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...(a.colaboran||[]).map(persona)]), ...PROJ.flatMap(p=>(p.colaboran||[]).map(persona))].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
@@ -1524,7 +1524,7 @@ function renderProj(p){
   const nP = stepsLive(p).length, nV = p.entregables_vigentes||0, nR = (p.decisiones_total||0) + (p.sesiones_total||0);
   const tabs = [["estatus","Estatus",""],["pasos","Acciones",p.cerrado?"":(nP||"")],["registro","Actividad",""],["quehay","Qué hay",""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
-  main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); renderProj(p); });
+  main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); });
 }
 
 // ---- lo que no cuadra, y los nombres de personas en los pasos ----
@@ -1540,15 +1540,15 @@ function noCuadra(){
     const fe = fechaEstatus(p);
     if(fe && p.ultima_sesion && p.ultima_sesion > fe && !propsDe(p.id).some(q=>q.clase==="estado-desfasado" && q.estado==="pendiente")) out.push({id:"est:"+p.id, p, k:"Estatus viejo", t:`El Estatus es del ${fmtD(fe)} y hubo sesión el ${fmtD(p.ultima_sesion)}: cuenta algo que ya cambió.`, accion:"Reescribir al cerrar"});
     const fd = faltaDecidir(p);
-    if(fd){ const dec = decisionesTodas(p).filter(d=>fe && d.fecha > fe); if(dec.length) out.push({id:"fd:"+p.id, p, k:"Decidido después", t:`«Falta decidir» dice: ${fd.slice(0,120)}${fd.length>120?"…":""}; después hay ${dec.length} decisi${dec.length===1?"ón":"ones"} (${fmtD(dec[0].fecha)}). Puede estar resuelto.`, accion:"Confirmar"}); }
+    if(fd){ const dec = decisionesTodas(p).filter(d=>fe && d.fecha > fe); if(dec.length) out.push({id:"fd:"+p.id, p, k:"Decidido después", t:`«Falta decidir» dice: ${esc(fd.slice(0,120))}${fd.length>120?"…":""}; después hay ${dec.length} decisi${dec.length===1?"ón":"ones"} (${fmtD(dec[0].fecha)}). Puede estar resuelto.`, accion:"Confirmar"}); }
     const viejos = stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && diasDesde(f) > 30; });
     if(viejos.length) out.push({id:"venc:"+p.id, p, row:key(p.id, viejos[0].texto), k:"Vencido y nadie lo movió", t:`${viejos.length} paso${viejos.length===1?"":"s"} con fecha de hace más de un mes: ${inline(viejos[0].texto.slice(0,90))}${viejos[0].texto.length>90?"…":""}`, accion:"Fechar o quitar"});
-    for(const q of propsDe(p.id)) if(q.clase!=="afirma" && q.estado==="pendiente"){ const k = CLASE_PROP[q.clase]||q.clase; out.push({id:"prop:"+q.id, p, k, t:(q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),""), accion:"Aceptar"}); }
+    for(const q of propsDe(p.id)) if(q.clase!=="afirma" && q.estado==="pendiente"){ const k = CLASE_PROP[q.clase]||q.clase; out.push({id:"prop:"+q.id, p, k, t:esc((q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),"")), accion:"Aceptar"}); }
   }
   for(const a of AREAS){ if(a.legible===false || archivada(a)) continue;
     const ta = titArea(a), ps = (a.proyectos||[]).map(i=>byId[i]).filter(activo), mov = ps.map(p=>p.ultima_sesion).filter(Boolean).sort().pop();
-    if(ta.fecha && mov && mov > ta.fecha && diasDesde(ta.fecha) > 7) out.push({id:"area:"+a.slug, a, k:"Estatus del área viejo", t:`El Estatus de ${a.nombre} es del ${fmtD(ta.fecha)} y sus proyectos se movieron hasta el ${fmtD(mov)}.`, accion:"Reescribir"});
-    const pr = (a.prioridades||[]); if(pr.length && ta.fecha && diasDesde(ta.fecha) > 14) out.push({id:"prio:"+a.slug, a, k:"Prioridades sin revisar", t:`Las ${pr.length} prioridades de ${a.nombre} no se tocan desde el ${fmtD(ta.fecha)}: «${inline(pr[0].slice(0,80))}…»`, accion:"Revisar"});
+    if(ta.fecha && mov && mov > ta.fecha && diasDesde(ta.fecha) > 7) out.push({id:"area:"+a.slug, a, k:"Estatus del área viejo", t:`El Estatus de ${esc(a.nombre)} es del ${fmtD(ta.fecha)} y sus proyectos se movieron hasta el ${fmtD(mov)}.`, accion:"Reescribir"});
+    const pr = (a.prioridades||[]); if(pr.length && ta.fecha && diasDesde(ta.fecha) > 14) out.push({id:"prio:"+a.slug, a, k:"Prioridades sin revisar", t:`Las ${pr.length} prioridades de ${esc(a.nombre)} no se tocan desde el ${fmtD(ta.fecha)}: «${inline(pr[0].slice(0,80))}…»`, accion:"Revisar"});
   }
   return out;
 }
@@ -1644,7 +1644,7 @@ function cabeceraRaiz(){
 function bandaRaiz(){
   const act = PROJ.filter(activo), sem = PROJ.filter(p=>p.ultima_sesion && diasDesde(p.ultima_sesion) <= 6).length, ult = PROJ.map(p=>p.ultima_sesion).filter(Boolean).sort().pop();
   return `<div class="org-band">${META && META.que_es ? `<p class="org-q">${inline(META.que_es)}</p>` : ""}
-    <div class="org-k"><span><b>${areasVis().filter(a=>!archivada(a)).length}</b> áreas</span><span><b>${act.length}</b> proyectos activos</span><span><b>${sem}</b> con sesión esta semana</span>${ult?`<span>última sesión <b>${fmtD(ult)}</b></span>`:""}</div></div>`;
+    <div class="org-k"><span><b>${areasVis().filter(a=>a.legible!==false && !archivada(a)).length}</b> áreas</span><span><b>${act.length}</b> proyectos activos</span><span><b>${sem}</b> con sesión esta semana</span>${ult?`<span>última sesión <b>${fmtD(ult)}</b></span>`:""}</div></div>`;
 }
 function cambios(){
   const pt = paraTi();
@@ -1682,7 +1682,7 @@ function tabAcciones(){
     return `<article class="per-ext"><header><b>${esc(g.n)}</b><span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
       <div class="dd"><div><h4>Te debe <span class="c">${g.deben.length}</span></h4>${g.deben.map(it).join("") || `<p class="more">Nada.</p>`}</div><div><h4>Le debes <span class="c">${g.debes.length}</span></h4>${g.debes.map(it).join("") || `<p class="more">Nada.</p>`}</div></div></article>`; };
   const nDeben = gs.reduce((n,g)=>n+g.deben.length,0), nDebes = gs.reduce((n,g)=>n+g.debes.length,0);
-  return {n: pt.decidir.length + pt.venc.length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2><span class="c">${esc(nombreCorto(VIEWER()))}</span><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos()}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section>
+  return {n: pt.decidir.length + pt.venc.length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2><span class="c">${esc(nombreCorto(VIEWER()))}</span><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos()}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
     <section class="due"><div class="top"><h2>Con otros</h2><span class="c">${cuantos(gs.length,"persona","personas")} · te deben ${nDeben} · les debes ${nDebes}</span><span class="c" style="margin-left:auto">Externos, con su organización</span></div>
     <p class="more">El nombre y el lado salen del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes.</p>
     <div class="per-grid">${gs.map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie de fuera.</p>`}</div></section>`};
@@ -1717,18 +1717,21 @@ function indicadores(p, piezas){
 }
 function queHayTab(p){
   const Q = queHayDe(p), d = Q.d || {piezas:[]}, piezas = d.piezas || [];
+  if(Q.falta) return `<section class="card">${CARGANDO}</section>`;
+  if(sinDetalle(p)) return `<section class="card">${SIN_DETALLE}</section>`;
   const R = RESUMEN_QH[p.id];
   const pend = piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
   const resumen = (t, txt, demo) => `<div class="qh-res"><h3>${t}</h3>${txt?`<p>${esc(txt)}</p>`:`<p class="more">Sin resumen todavía: lo escribe la puesta al día cuando cambie lo de dentro.</p>`}</div>`;
   const top = `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un proyecto")}</h2>${indicadores(p, piezas)}
     <div class="qh-res2">${resumen("Lo publicado", R&&R.ent, true)}${resumen("En el taller", R&&R.tal, true)}</div>
-    ${pend.length?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una aportación provisional, escrita por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
+    ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una aportación provisional, escrita por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
   const grupo = (t, list) => `<section class="card"><h3>${t} <span class="c">${list.length}</span></h3>${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</section>`;
   return top + grupo("Entregables", piezas.filter(z=>z.tipo==="entregable")) + grupo("Taller", piezas.filter(z=>z.tipo==="taller"))
     + `<section class="card"><h3>Trayectoria</h3>${trayHtml(d.trayectoria)}</section>`;
 }
-document.addEventListener("click", async e => { const b = e.target.closest && e.target.closest("[data-prov-ok]"); if(!b || !CAN) return;
-  const p = byId[b.dataset.provOk], d = (TEXTOS[p.id] && TEXTOS[p.id].que_hay) || {piezas:[]};
+document.addEventListener("click", async e => { const b = e.target.closest && e.target.closest("[data-prov-ok]"); if(!b || !CAN || !OWNER) return;
+  const p = byId[b.dataset.provOk]; if(!escribeAqui(p)) return;
+  const _p = p, d = (TEXTOS[p.id] && TEXTOS[p.id].que_hay) || {piezas:[]};
   const qs = d.piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
   try{ for(const q of qs) await DB.doc("cambios/"+q.id).update({estado:"aceptada", aceptada: nowISO()}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
   render(); });
@@ -1822,7 +1825,7 @@ function renderRoot(){
 // ---- Voz: la primera frase no empieza por el nombre del área o del proyecto, ni dice «hoy» ----
 // En pantalla se corrige el texto ya escrito; la regla de verdad va en escribir.md y la aplica el cierre.
 function sinSujeto(t, nombre, fecha){
-  let s = (t||"").trim();
+  let s = (t||"").trim(); nombre = nombre || ""; if(!nombre) return s;
   if(/\b(the|and|has|is|are|with)\b/i.test(s)) return s;
   const re = new RegExp("^(?:el |la |los |las )?"+nombre.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s+(?:de\\s+\\w+\\s+)?", "i");
   if(re.test(s)){ s = s.replace(re, ""); s = s.charAt(0).toUpperCase() + s.slice(1); }
@@ -1850,7 +1853,7 @@ function seccionAfecta(){
     ${gs.length ? `<div class="due-list">${(PARA_TI_ALL.has("pt-afect")?gs:gs.slice(0,5)).map(fila).join("")}</div>${gs.length>5?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="pt-afect">${PARA_TI_ALL.has("pt-afect")?"Ver menos":`Ver las ${gs.length}`}</button>`:""}` : `<p class="empty">Ninguna decisión de otra persona nombra tus proyectos desde tu última sesión en ellos.</p>`}</section>`;
 }
 const _tabAccionesBase = tabAcciones;
-tabAcciones = function(){ const r = _tabAccionesBase(); const i = r.html.indexOf("</section>") + 10; return {n: r.n + afectaDeOtros().length, html: r.html.slice(0,i) + seccionAfecta() + r.html.slice(i)}; };
+tabAcciones = function(){ const r = _tabAccionesBase(); const m_ = r.html.indexOf("<!--/te-toca-->"), i = m_ >= 0 ? m_ : r.html.indexOf("</section>") + 10; return {n: r.n + afectaDeOtros().length, html: r.html.slice(0,i) + seccionAfecta() + r.html.slice(i)}; };
 tabEstatus = function(){ return {n: 0, html: `<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${enfoque2()}${premisasCard()}`}; };
 
 // ---- Qué hay: resumen escrito por la puesta al día (RESUMEN_QH, por proyecto) y, si falta, uno calculado desde las piezas ----
@@ -2075,12 +2078,15 @@ const _actPPA = actPorProyectoArea;
 actPorProyectoArea = function(ev, ps){ const esc_ = escribenSet(); return _actPPA(ev.map(e=>esc_.has(e.q) ? e : {...e, q:""}), ps); };
 
 // ---- lo que no cuadra: una propuesta de la cola se acepta o se descarta aquí; lo demás se arregla en su sitio ----
+// quien monta el tablero solo acepta lo que su próximo cierre puede aplicar: lo de proyectos donde escribe
+const escribeAqui = p => !!p && (p.escribe===true || (p.escribe===undefined && !!VIEWER() && persona(p.dueno)===persona(VIEWER())));
 function ncAcciones(x){
-  if(!x.id.startsWith("prop:") || !CAN) return "";
+  if(!x.id.startsWith("prop:") || !CAN || !OWNER) return "";
+  if(!escribeAqui(x.p)) return `<span class="nc-a more">Pásaselo a ${esc(nombreCorto(x.p.dueno||""))}</span>`;
   const id = x.id.slice(5);
   return `<span class="nc-a"><button type="button" class="chip" data-nc="${esc(id)}" data-v="aceptada">${esc(x.accion)}</button><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">No</button></span>`;
 }
-document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !DB) return;
+document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !OWNER || !DB) return;
   n.disabled = true;
   try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO()} : {estado:"descartada", descartada: nowISO()});
     flash(n.dataset.v==="aceptada" ? "Aceptada: la escribe el próximo cierre del proyecto." : "Descartada: no se vuelve a proponer igual."); }
@@ -2089,7 +2095,10 @@ document.addEventListener("click", async e => { const n = e.target.closest && e.
 // ---- el detalle de un proyecto llega al pedirlo: Qué hay y Actividad lo piden al abrirse ----
 // ---- los permisos de Drive: arriba si algo no cuadra, y la línea de «coinciden» al final de Mantenimiento ----
 const _tabMantReal = tabMant;
-tabMant = function(){ const r = _tabMantReal(); return {n: r.n, html: r.html + permisosLinea()}; };
+tabMant = function(){ const r = _tabMantReal(), n = cambiosVis().length;
+  // lo tocado aquí que la carpeta aún no refleja: fechas, hechos, notas y correcciones, con su «Deshacer»
+  const cola = n ? `<details class="card mas-c"><summary><h2 style="display:inline">Por registrar en la carpeta</h2><span class="more"> · ${n} · lo tocado aquí que la carpeta aún no refleja</span></summary><div class="due-list" style="margin-top:10px">${colaRows()}</div></details>` : "";
+  return {n: r.n, html: r.html + cola + permisosLinea()}; };
 const _renderRootReal = renderRoot;
 renderRoot = function(){ _renderRootReal(); const main = document.getElementById("main"), pc = ready.a && ready.p ? permisosCard() : ""; if(pc && main) main.insertAdjacentHTML("afterbegin", pc); };
 // ---- el estado completo, plegado bajo el Estatus del proyecto ----
