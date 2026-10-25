@@ -885,7 +885,8 @@ let view = {lvl:"root"};
 function parseHash(){
   const h = (location.hash||"").slice(1);
   if(h.startsWith("a-") && areaBy[h.slice(2)]) return {lvl:"area", id:h.slice(2)};
-  if(h.startsWith("p-")){ const [id, t] = h.slice(2).split("-t-"); if(byId[id]){ if(t) tab = t; return {lvl:"proj", id, tab: t}; } }
+  // llegar por un enlace o recargar fija también la pestaña que se recuerda al navegar (revisión 1.22.4, hallazgo 9)
+  if(h.startsWith("p-")){ const [id, t] = h.slice(2).split("-t-"); if(byId[id]){ if(t){ tab = t; NTAB = DE_PROY[TABMAP[t]||t] || "estatus"; } return {lvl:"proj", id, tab: t}; } }
   if(h==="pendientes") return {lvl:"pend"};
   if(h==="decisiones") return {lvl:"dec"};
   if(h==="entregables") return {lvl:"ent"};
@@ -1278,7 +1279,7 @@ function mtModal(){
     if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Se construyen sobre otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
     if(x.k==="bor") return `<h3>Borradores de más de 30 días <span class="c">${x.bor.length}</span></h3><ul class="ent-l">${x.bor.map(e=>`<li>${entBtn(p,e)} <span class="more">· sin tocar desde hace ${diasDesde(e.actualizado)} días</span></li>`).join("")}</ul>`;
     if(x.k==="afe") return `<h3>Decisiones de otros proyectos que le afectan <span class="c">${x.afe.length}</span></h3><p class="more" style="margin:0">Las registraron después de la última sesión de este proyecto y lo citan en «Afecta a».</p><div class="dl">${x.afe.map(({q,d})=>decItem(d,q,true)).join("")}</div>`;
-    if(x.k==="fuera" && x.r.que_es) return `<h3>La guía no dice qué es la organización</h3><p class="more" style="margin:0">Inicio abre con una o dos frases sobre la organización: a qué se dedica y para quién. Las toma del primer párrafo de la guía de la carpeta, y ese párrafo todavía habla de la carpeta, o le falta llenar un hueco de la plantilla. Lo escribe el responsable del contexto en una sesión suya; la frase de abajo la abre. Lo de la carpeta pasa al segundo párrafo, que Inicio no enseña.</p>`;
+    if(x.k==="fuera" && x.r.que_es) return `<h3>La guía no dice qué es la organización</h3><p class="more" style="margin:0">Inicio abre con una o dos frases sobre la organización: a qué se dedica y para quién. Las toma del primer párrafo de la guía de la carpeta, y ese párrafo sigue con el texto de la plantilla, le falta llenar un hueco o queda vacío. Lo escribe el responsable del contexto en una sesión suya; la frase de abajo la abre. Lo de la carpeta pasa al segundo párrafo, que Inicio no enseña.</p>`;
     if(x.k==="fuera" && x.r.guia) return `<h3>El mapa de la carpeta tiene un hueco</h3><p class="more" style="margin:0">${esc(x.r.guia)}. Hasta que se corrija en la guía de la carpeta, esa área no se lee: nadie tiene área ni cuenta en ella. Lo corrige el responsable del contexto en una sesión suya; la frase de abajo la abre.</p>`;
     if(x.k==="fuera"){ const r = x.r, rango = r.primero && r.primero!==r.ultimo ? `del ${fmtD(r.primero)} al ${fmtD(r.ultimo)}` : `del ${fmtD(r.ultimo)}`;
       const intro = r.de_claude ? `La app de Claude guarda en la carpeta «Claude outputs» lo que produce cuando no se le dice dónde. Ahí no es de ningún proyecto: nadie lo encuentra, no aparece en este tablero y se pierde de vista. Hay ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}. La frase de abajo abre una sesión que propone a qué proyecto va cada uno y los mueve cuando lo confirmas; lo de áreas que no son tuyas se queda para su responsable.` : `La carpeta «${esc(r.carpeta)}» está en la raíz pero no es de ningún área de la guía. Tiene ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}.`;
@@ -1525,10 +1526,13 @@ function noCuadra(){
   return out;
 }
 let _CONOCIDOS = null, _CONOCIDOS_DE = null;
+// la organización de cada persona de fuera, de «Nombre Apellido (Organización)» en pasos y decisiones (revisión 1.22.4)
+const ORG_DE = {};
 function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; _CONOCIDOS_DE = PROJ; const full = new Set();
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
-    for(const n of (p.personas_fuera||[])) full.add(n); }
+    for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
+    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
   const porNombre = {}, carpeta = escribenSet();
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
@@ -1615,6 +1619,10 @@ function bandaRaiz(){
 // ---- Acciones: te toca a ti, y con otros (te deben / les debes) ----
 const RE_DEBES = /\b(mandar|mandarle|manda|enviar|enviarle|envía|avisar|avisarle|avisa|pedir|pedirle|pide|preguntar|preguntarle|pregunta|escribir|escribirle|responder|responderle|llamar|presentar|proponer|compartir|agendar|confirmar|acordar|revisar|buscar)(?:le)?\s+(?:a|con)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/;
 const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
+// un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
+const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER()) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
+// pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
+const SIN_QUIEN = () => { let n = 0; for(const p of PROJ){ if(p.restringido || p.cerrado) continue; for(const s of stepsLive(p)) if((effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !nombresEn(s.texto).length) n++; } return n; };
 function conOtros(){
   const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
@@ -1641,13 +1649,13 @@ function tabAcciones(){
   ].join("");
   const it = x => { const fut = x.f && x.f>=t; return `<button type="button" class="esp-i" data-go-proj="${esc(x.p.id)}" data-tab="${x.tab}" ${focoAttr(x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}><span class="t">${inline(corta(x.t))}</span><span class="w">${esc(x.p.nombre)}${x.f?` · ${fut?`para el ${fmtD(x.f)}`:`desde el ${fmtD(x.f)}`}`:""}</span></button>`; };
   const tarjeta = g => { const ctx = [...new Set([...g.deben,...g.debes].map(x=>contextoDe(x.p)))];
-    return `<article class="per-ext"><header><b>${esc(g.n)}</b>${g.dentro?` <span class="pill none">del equipo</span>`:""}<span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
+    return `<article class="per-ext"><header><b>${esc(g.n)}</b>${g.dentro?` <span class="pill none">del equipo</span>`:ORG_DE[g.n]?` <span class="pill none">${esc(ORG_DE[g.n])}</span>`:""}<span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
       <div class="dd"><div><h4>Te debe <span class="c">${g.deben.length}</span></h4>${g.deben.map(it).join("") || `<p class="more">Nada.</p>`}</div><div><h4>Le debes <span class="c">${g.debes.length}</span></h4>${g.debes.map(it).join("") || `<p class="more">Nada.</p>`}</div></div></article>`; };
   const nDeben = gs.reduce((n,g)=>n+g.deben.length,0), nDebes = gs.reduce((n,g)=>n+g.debes.length,0);
-  // el número cuenta también los cuestionamientos abiertos, que la pestaña enseña primero (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + ((META && META.cuestionamientos) || []).filter(c=>c.abierto).length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos()}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
+  // el número cuenta también los cuestionamientos que esperan al lector, que la pestaña enseña primero (1.22.4)
+  return {n: pt.decidir.length + pt.venc.length + ((META && META.cuestionamientos) || []).filter(cuestMio).length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
     <section class="due"><div class="top"><h2>Con otros</h2><span class="c">${cuantos(gs.length,"persona","personas")} · te deben ${nDeben} · les debes ${nDebes}</span><span class="c" style="margin-left:auto">Del equipo y de fuera, con su organización</span></div>
-    <p class="more">El nombre y el lado salen del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes.</p>
+    <p class="more">El lado sale del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes. Alguien de fuera sale aquí cuando el paso lo escribe como «Nombre Apellido (Organización)».${SIN_QUIEN() ? ` ${cuantos(SIN_QUIEN(),"paso espera","pasos esperan")} a alguien que el tablero no reconoce: en su sesión, escríbelo así.` : ""}</p>
     <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie.</p>`}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>`};
 }
 
@@ -1861,7 +1869,7 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
   else if(b.dataset.tab && b.classList.contains("tab")) setNTAB(DE_PROY[b.dataset.tab] || "estatus"); }, true);
 // bajar a un proyecto sin pestaña explícita abre la misma pregunta
 const _goBase = go;
-go = function(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: PROY_DE[NTAB] || "estatus"}; else if(v && v.lvl==="proj") setNTAB(DE_PROY[TABMAP[v.tab]||v.tab] || "estatus"); if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus"; _goBase(v); };
+go = function(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: PROY_DE[NTAB] || "estatus"}; if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus"; _goBase(v); };
 
 // ---- la ficha: una sola forma para área y proyecto ----
 function primerSiguiente(txt){ const m = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*[ \t]*:?[ \t]*([^\n]+)/i); if(m && m[1].trim()) return m[1].trim().split(/(?<=[.;])\s/)[0].replace(/[;,]$/,""); const n = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*\n\s+-\s*([^\n]+)/i); return n ? n[1].trim() : ""; }
@@ -1909,7 +1917,7 @@ function renderArea(a){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
   head.innerHTML = `<h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
-    <div class="meta"><span>Responsable: <b>${esc(soloNombre(a.dueno))}</b></span>${(a.colaboran||[]).length?`<span>Colabora: <b>${[...(a.colaboran_ver||[]).map(esc), ...(a.colaboran_sin_nombre ? [cuantos(a.colaboran_sin_nombre,"persona sin nombre en la carpeta","personas sin nombre en la carpeta")] : [])].join(", ") || cuantos(a.colaboran.length,"persona","personas")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span></div>`;
+    <div class="meta"><span>Responsable: <b>${esc(soloNombre(a.dueno))}</b></span>${(a.colaboran||[]).length?`<span>Colabora: <b>${[...(a.colaboran_ver||[]).map(esc), ...(a.colaboran_sin_nombre ? [cuantos(a.colaboran_sin_nombre,"colaborador sin nombre en la guía","colaboradores sin nombre en la guía")] : [])].join(", ") || cuantos(a.colaboran.length,"colaborador","colaboradores")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span></div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card">${avisoNoLeido(a, true, a.nombre)}</div>`; return; }
   const T = areaTabs(a, ps), tab = ["estatus","acciones","actividad","quehay"].includes(NTAB) ? NTAB : "estatus";
   let body = "";
@@ -2016,7 +2024,8 @@ function corta(t){ const s = (t||"").replace(/^\s*20\d\d-\d\d-\d\d(?:,[^·:]*)?\
 function lineaHoy(){
   if(!DATOS_NUEVOS()) return `<p class="hoy-linea"><span class="more">Los datos son de una versión anterior del tablero: hasta la próxima puesta al día no sabe quién eres ni dónde escribes.</span></p>`;
   const pt = paraTi(), otros = otrosDatos(), partes = [];
-  if(!VIEWER()) partes.push(`<span class="more">La carpeta no dice tu nombre junto a tu cuenta, así que el tablero no sabe quién eres: pide que te pongan como «Nombre (correo)» en la línea «Colabora:» de un proyecto o en «Quién responde por qué».</span>`);
+  if(!VIEWER() && META && META.sin_cuenta) partes.push(`<span class="more">Esta puesta al día corrió sin saber con qué cuenta trabajas, así que el tablero no sabe qué es tuyo. Vuelve a sincronizarlo desde una sesión con tu cuenta.</span>`);
+  else if(!VIEWER()) partes.push(`<span class="more">La carpeta no dice tu nombre junto a tu cuenta, así que el tablero no sabe quién eres: pide que te pongan como «Nombre (correo)» en la línea «Colabora:» de un proyecto o en «Quién responde por qué».</span>`);
   const n = pt.decidir.length + pt.venc.length;
   partes.push(`<button type="button" class="lnk" data-ini="acciones">${n ? `Te toca: ${[pt.decidir.length?cuantos(pt.decidir.length,"por decidir","por decidir"):"", pt.venc.length?cuantos(pt.venc.length,"vencido","vencidos"):""].filter(Boolean).join(" · ")}` : "Nada te toca ahora"} ›</button>`);
   if(otros) partes.push(`<button type="button" class="lnk" data-ini="actividad">${otros.length ? `Desde tu última sesión, otros trabajaron en ${cuantos(otros.length,"proyecto tuyo","proyectos tuyos")}` : "Nadie más escribió en tus proyectos desde tu última sesión"} ›</button>`);
@@ -2401,7 +2410,7 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas: <b>Estatus</b> (cómo va), <b>Acciones</b> (lo que espera algo de ti), <b>Actividad</b> (lo que se hizo y quién) y <b>Qué hay</b> (lo que el trabajo ha producido). En Inicio, la última es <b>Mantenimiento</b>. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda.</dd>
-      <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si todavía habla de la carpeta y no de la organización, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
+      <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si sigue con el texto de la plantilla o queda vacío, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. Quien colabora en el área sale por el nombre que la carpeta da a su cuenta («Nombre Apellido (correo)» en una línea «Colabora:» de un proyecto); si no lo tiene, solo se cuenta. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
       <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien o le debes (del equipo o de fuera, con su organización), y <b>Por dónde empezar</b>. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
       <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una aportación que propuso la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>

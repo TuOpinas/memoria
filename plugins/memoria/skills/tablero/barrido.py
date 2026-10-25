@@ -39,8 +39,9 @@ y deja para el modelo lo que solo un modelo puede decidir:
   para_contraste los proyectos (hasta 5) con dos o más piezas con `afirma`, con esas líneas: el modelo dice qué piezas
                 del taller podrían alimentar un entregable que no existe (candidatos) y qué dos piezas sostienen cosas
                 incompatibles (contradicciones). Solo las líneas «afirma», nunca los cuerpos.
-  para_resumen  los proyectos (hasta 6) donde escribe la cuenta cuyo «Qué hay» cambió desde su último resumen escrito,
-                o que no tienen ninguno: título, estado y aportación de cada pieza, para que el modelo escriba dos frases,
+  para_resumen  los proyectos (hasta 6, y unos 12 KB) de todo lo que lee la cuenta cuyo «Qué hay» cambió desde su
+                último resumen escrito, o que no tienen ninguno, y que no se pidieron ya con la misma huella: título,
+                estado y aportación de cada pieza, para que el modelo escriba dos frases,
                 lo publicado y lo que hay en el taller (1.22.4). Se guardan en <salida>/resumenes/, no en la cola: no
                 cambian la carpeta, solo lo que enseña la pestaña.
 
@@ -61,7 +62,8 @@ LIMITE_LINEAS = 1500
 MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
-MAX_RESUMEN = 6        # 1.22.4: los resúmenes de «Qué hay» que se piden por corrida
+MAX_RESUMEN = 6        # 1.22.4: los resúmenes de «Qué hay» que se piden por corrida, como mucho
+BYTES_RESUMEN = 12000  # y lo que pesan juntas sus piezas: el tope es lo que entra al contexto del modelo
 # la cola no crece sin tope (1.22.1, hallazgo 31 de la revisión de la 1.21): como mucho tantas propuestas pendientes por
 # proyecto de las que se pueden volver a pedir (las mecánicas; las afirma, con su tope aparte), y una pendiente que una sesión posterior del
 # proyecto dejó sin resolver durante tantos días se retira y queda juzgada, para que no vuelva igual
@@ -227,9 +229,9 @@ def juzgado_de(base):
         d = json.loads((pathlib.Path(base) / "meta" / "estado.json").read_text(encoding="utf-8")) if base else {}
         d = d.get("data", d) if isinstance(d, dict) and "data" in d else d
         j = (d or {}).get("juzgado") or {}
-        return {"ids": set(j.get("ids") or []), "contraste": set(j.get("contraste") or [])}
+        return {"ids": set(j.get("ids") or []), "contraste": set(j.get("contraste") or []), "resumenes": set(j.get("resumenes") or [])}
     except (OSError, ValueError):
-        return {"ids": set(), "contraste": set()}
+        return {"ids": set(), "contraste": set(), "resumenes": set()}
 
 
 def id_contraste(pid, rutas):
@@ -384,7 +386,9 @@ def sumar_juicio(salida, juicio, cola):
     bar["juzgado"] = {"ids": sorted(set(previo.get("ids") or [])
                                     | {id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"]) for j in bar.get("para_juicio", [])}
                                     | {id_juicio("afirma", j["proyecto"], "afirma|" + j["ruta"]) for j in bar.get("para_afirma", [])}),
-                      "contraste": sorted(set(previo.get("contraste") or []) | {id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", [])})}
+                      "contraste": sorted(set(previo.get("contraste") or []) | {id_contraste(c["proyecto"], [x["ruta"] for x in c["piezas"]]) for c in bar.get("para_contraste", [])}),
+                      # un resumen pedido no se vuelve a pedir con la misma huella, aunque el modelo lo saltara (revisión 1.22.4)
+                      "resumenes": sorted(set(previo.get("resumenes") or []) | {f"{r['proyecto']}|{r['huella']}" for r in bar.get("para_resumen", [])})}
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
@@ -457,12 +461,13 @@ def sumar_juicio(salida, juicio, cola):
                 nuevas[clave] += 1
     # los resúmenes de «Qué hay» (1.22.4): no son propuestas; van a <salida>/resumenes/ y al índice, para que la subida los lleve
     pedido_resumen = {r["proyecto"]: r["huella"] for r in bar.get("para_resumen", [])}
-    n_res = 0
+    n_res, rechazados = 0, []
     for j in juicio.get("resumenes", []) if isinstance(juicio.get("resumenes"), list) else []:
         if not isinstance(j, dict) or j.get("proyecto") not in pedido_resumen:
             continue
         ent, tal = una_linea(str(j.get("publicado") or ""), 320), una_linea(str(j.get("taller") or ""), 320)
         if not (ent or tal) or DATO_PERSONAL.search(ent + " " + tal):
+            rechazados.append(f"{j['proyecto']}: {'vacío' if not (ent or tal) else 'parece llevar un dato personal'}")
             continue
         doc = {"proyecto": j["proyecto"], "ent": ent, "tal": tal, "huella_qh": pedido_resumen[j["proyecto"]], "fecha": str(ahora)[:10]}
         doc["huella"] = hashlib.sha1(json.dumps(doc, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
@@ -482,7 +487,7 @@ def sumar_juicio(salida, juicio, cola):
     bar["juzgado"]["ids"] = [i for i in bar["juzgado"]["ids"] if i not in sin_hueco]
     (salida / "barrido.json").write_text(json.dumps(bar, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps({"sin_hueco": len(sin_hueco), "propuestas_nuevas_por_juicio": nuevas["decisiones"], "propuestas_afirma": nuevas["afirma"],
-                      "propuestas_candidatos": nuevas["candidatos"], "propuestas_contradicciones": nuevas["contradicciones"], "resumenes": n_res}, ensure_ascii=False))
+                      "propuestas_candidatos": nuevas["candidatos"], "propuestas_contradicciones": nuevas["contradicciones"], "resumenes": n_res, "resumenes_rechazados": rechazados}, ensure_ascii=False))
 
 
 def _datos_doc(p):
@@ -493,31 +498,40 @@ def _datos_doc(p):
     return d.get("data", d) if isinstance(d, dict) else None
 
 
-def para_resumen(salida, base, vistos):
-    """Los proyectos cuyo «Qué hay» necesita un resumen escrito: primero los que cambiaron en esta corrida, después los que
-    nunca lo tuvieron; solo donde la cuenta escribe (`escribe` del generador) y nunca un restringido. Con las piezas:
-    tipo, título, estado y aportación, sin cuerpos."""
-    out = []
+def para_resumen(salida, base, vistos, juz=None):
+    """Los proyectos cuyo «Qué hay» necesita un resumen escrito: todo lo que la cuenta lee, menos lo restringido y lo cerrado
+    (el resumen solo usa títulos y aportaciones, que ya lee). Lo pedido queda juzgado con su huella y no se vuelve a pedir
+    hasta que cambie, haya salido o no (revisión 1.22.4, hallazgo 4). Primero los que cambiaron en esta corrida, pero dos
+    huecos son para los que nunca tuvieron resumen; tope de MAX_RESUMEN proyectos y BYTES_RESUMEN de piezas."""
+    ya = (juz or {}).get("resumenes") or set()
+    cambiados, nunca = [], []
     docs = sorted((salida / "proyectos").glob("*.json")) if (salida / "proyectos").exists() else []
-    orden = sorted(docs, key=lambda p_: (p_.stem not in vistos, p_.stem))
-    for p_ in orden:
+    for p_ in docs:
         pd = _datos_doc(p_) or {}
         h = pd.get("que_hay_huella")
-        if not h or pd.get("restringido") or pd.get("cerrado") or pd.get("escribe") is not True:
+        if not h or pd.get("restringido") or pd.get("cerrado") or f"{p_.stem}|{h}" in ya:
             continue
         previo = _datos_doc(pathlib.Path(base) / "resumenes" / f"{p_.stem}.json") if base else None
         if previo and previo.get("huella_qh") == h:
             continue
         det = _datos_doc(salida / "detalle" / f"{p_.stem}.json") or {}
-        piezas = ((det.get("que_hay") or pd.get("que_hay") or {}).get("piezas") or []) if isinstance(det.get("que_hay") or pd.get("que_hay"), dict) else []
+        qh = det.get("que_hay") if isinstance(det.get("que_hay"), dict) else pd.get("que_hay") if isinstance(pd.get("que_hay"), dict) else {}
+        piezas = qh.get("piezas") or []
         if not piezas:
             continue
-        out.append({"proyecto": p_.stem, "huella": h, "nombre": pd.get("nombre") or p_.stem,
-                    "piezas": [{k: v for k, v in {"tipo": z.get("tipo"), "titulo": una_linea(z.get("titulo") or z.get("nombre") or "", 120),
-                                                  "estado": z.get("estado"), "aportacion": una_linea(z.get("afirma") or "", 220)}.items() if v}
-                               for z in piezas[:30]]})
-        if len(out) >= MAX_RESUMEN:
+        item = {"proyecto": p_.stem, "huella": h, "nombre": pd.get("nombre") or p_.stem,
+                "piezas": [{k: v for k, v in {"tipo": z.get("tipo"), "titulo": una_linea(z.get("titulo") or z.get("nombre") or "", 120),
+                                              "estado": z.get("estado"), "aportacion": una_linea(z.get("afirma") or "", 220)}.items() if v}
+                           for z in piezas[:30]]}
+        (cambiados if p_.stem in vistos or previo else nunca).append(item)
+    orden = cambiados[:MAX_RESUMEN - 2] + nunca[:2]
+    orden += [x for x in cambiados + nunca if x not in orden]
+    out, peso = [], 0
+    for x in orden:
+        b = len(json.dumps(x, ensure_ascii=False).encode("utf-8"))
+        if len(out) >= MAX_RESUMEN or (out and peso + b > BYTES_RESUMEN):
             break
+        out.append(x); peso += b
     return out
 
 
@@ -597,7 +611,7 @@ def main():
             continue
         if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:
             borrar.append({"id": d["id"], "if_version": d["version"]})
-    resumen = para_resumen(salida, opt("--base"), set(vistos))
+    resumen = para_resumen(salida, opt("--base"), set(vistos), juz)
     (salida / "barrido.json").write_text(json.dumps(
         {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "para_resumen": resumen, "proyectos": vistos,
          "pendientes": pendientes, "juzgado": {"ids": sorted(caducadas), "contraste": []}}, ensure_ascii=False, indent=1), encoding="utf-8")

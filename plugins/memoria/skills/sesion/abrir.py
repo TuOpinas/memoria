@@ -415,6 +415,18 @@ if CUENTA:
     if es_resp and _ver == "dos":
         print(f"(aviso para decirlo: guia.md nombra a dos personas, «{_adm}» administra la carpeta y «{_ctx}» responde por el contexto; "
               "son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».)")
+    # el primer párrafo de guia.md es lo que el tablero enseña arriba de Inicio: si sigue con la plantilla o vacío, se le dice a
+    # quien lo escribe (revisión de la 1.22.4, hallazgo 7). Las mismas reglas que generar_vista.py
+    if es_resp:
+        _cuerpo = re.sub(r"^\s*#[^\n]*\n", "", guia, count=1)
+        _p1 = next((b.strip() for b in re.split(r"\n\s*\n", _cuerpo.strip()) if b.strip() and not b.strip().startswith(("|", "- "))), "")
+        _p1 = re.sub(r"\*\*([^*]+)\*\*", r"\1", re.sub(r"<!--.*?-->", "", _p1, flags=re.S)).strip()
+        _frases = [f for f in re.split(r"(?<=[.!?])\s+", _p1) if not re.search(r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro", f)]
+        if (not _p1 or _p1.startswith(("#", ">", "*", "```")) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _p1)
+                or re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _p1) or not " ".join(_frases).strip()):
+            print("(aviso para decirlo: el primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. "
+                  "Se escribe en una o dos frases, a qué se dedica y para quién, sin hablar de la carpeta; lo de la carpeta pasa al segundo párrafo. "
+                  "Lo escribe esta cuenta, con su sí al texto.)")
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
     # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
     for a in areas:

@@ -316,7 +316,28 @@ for l in quien.split("\n"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
 # «Nombre Apellido (Organización)»: una persona de fuera de la carpeta, como la escriben «Decidió:» y los pasos (1.22.4)
 _PART = r"(?:de|del|de la|de los|y)"
+# palabras que abren un paso o nombran una cosa, no a una persona: «Enviar la Propuesta Técnica (Escuela Fácil)» no es nadie
+NO_PERSONA = set("""Propuesta Contrato Documento Sistema Plan Informe Reporte Anexo Firma Acuerdo Factura Cotización Presupuesto
+Proyecto Programa Proceso Política Manual Guía Plantilla Formato Minuta Reunión Junta Sesión Taller Curso Piloto Diagnóstico
+Análisis Estudio Encuesta Base Modelo Tablero Sitio Portal Página Equipo Área Comité Consejo Dirección Gerencia Oficina Mesa
+Cierre Pago Orden Pedido Solicitud Respuesta Carta Correo Mensaje Llamada Revisión Versión Fase Etapa Ronda Kit Lista Agenda
+Esperar Pedir Mandar Enviar Revisar Llamar Hablar Firmar Confirmar Preparar Escribir Cerrar Abrir Agendar Validar Aprobar
+Entregar Recibir Cobrar Pagar Publicar Presentar Proponer Definir Decidir Acordar Coordinar Seguir Dar Ver Hacer""".split())
 PERSONA_FUERA = re.compile(r"(?<![\wÁÉÍÓÚáéíóúñÑ])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:[ \t]+(?:" + _PART + r"[ \t]+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü-]+){1,3})[ \t]+\((?!\s*\d)([A-ZÁÉÍÓÚÑ][^()@\n]{0,60})\)")
+def persona_fuera(nombre, org):
+    """Una persona de fuera a partir de «Nombre Apellido (Organización)», o None: sin un verbo o una cosa delante
+    («Esperar de Agustín Torres» → «Agustín Torres») y con al menos nombre y apellido que no sean palabras de cosa."""
+    ws = nombre.split()
+    while len(ws) > 2 and (ws[0] in NO_PERSONA or re.search(r"(?:ar|er|ir)$", ws[0].lower())) and ws[1] in ("de", "del", "a", "con", "la", "y"):
+        ws = ws[2:] if ws[1] != "de" or len(ws) < 4 or ws[2] not in ("la", "los") else ws[3:]
+    while ws and ws[0] in NO_PERSONA:
+        ws = ws[1:]
+    caps = [w for w in ws if w[:1].isupper()]
+    if len(caps) < 2 or any(w in NO_PERSONA for w in caps):
+        return None
+    return {"nombre": " ".join(ws), "organizacion": org.strip()}
+
+
 # de qué nombre es cada cuenta, donde la carpeta lo dice junto («Nombre (correo)»): para saber de quién es el tablero (1.22.3)
 NOMBRE_DE_CUENTA = {}
 def apuntar_nombres(texto):
@@ -1402,7 +1423,7 @@ docs["meta"]["estado"] = {
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
     "version_tablero": VERSION_PLUGIN, "modo": MODO,
-    "fuera": [f for f in (fuera or []) if not f.get("guia")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
+    "fuera": [f for f in (fuera or []) if not f.get("guia") and not f.get("que_es")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }
 # qué es la organización: el primer párrafo de guia.md bajo su título, para la banda de Inicio (1.22.3)
@@ -1412,16 +1433,21 @@ _que_es = re.sub(r"<!--.*?-->", "", _que_es or "", flags=re.S).strip()
 # párrafo. No sale: una tabla o una lista, el párrafo con un hueco de la plantilla sin llenar («[…]» que no es un enlace),
 # y el de la plantilla de antes («Esta carpeta es la memoria de trabajo de…»), que habla de la carpeta y no de la
 # organización. Esos dos últimos dejan un aviso en Mantenimiento para que el responsable del contexto lo escriba.
+# Un hueco es un corchete con espacios dentro («[a qué se dedica…]») o «[Organización]», que no va seguido de «(» ni de «[»:
+# «[sic]» o un enlace no lo son. La negrita no cuenta como formato. Si el párrafo queda vacío por lo que sea (una tabla,
+# una lista, solo frases del método), también se pide (revisión de la 1.22.4, hallazgo 7).
+_que_es = re.sub(r"\*\*([^*]+)\*\*", r"\1", _que_es)
 _que_es_falta = False
 if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es):
     _que_es = ""
-elif re.search(r"\[[^\]\n]+\](?!\()", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
-    _que_es, _que_es_falta = "", True
+elif re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
+    _que_es = ""
 else:
     # las frases que hablan del método o de sus archivos son para quien mantiene la carpeta, no para quien la dirige
     _frases = re.split(r"(?<=[.!?])\s+", _que_es)
     _que_es = " ".join(f for f in _frases if not re.search(r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro", f)).strip()
-if guia.strip() and not _que_es and _que_es_falta:
+_que_es_falta = not _que_es
+if guia.strip() and _que_es_falta:
     docs["meta"]["estado"]["fuera"].append({"carpeta": "guia.md", "archivos": 0, "de_claude": False, "que_es": True})
 docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/estado se sube como update, y una clave que falta dejaría la vieja
 # de quién es el tablero (1.22.3): el responsable del área cuya cuenta es la que lo genera, o el nombre que la carpeta da a
@@ -1434,12 +1460,19 @@ if not _de and CUENTA_TABLERO:
     if isinstance(_ep, dict) and _ep.get("tablero_de"):
         _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
+docs["meta"]["estado"]["sin_cuenta"] = not CUENTA_TABLERO   # la puesta al día corrió sin saber la cuenta (revisión 1.22.4, hallazgo 14)
 # quien colabora en un área se enseña por su nombre, nunca por su correo (1.22.4): el de la carpeta junto a su cuenta
 # («Nombre (correo)») o el del área de la que es responsable; sin nombre, solo se cuenta
 _nombre_cta = {c: limpio(a_["dueno"]) for a_ in areas_guia for c in cuentas(a_["cuenta"])[0] if limpio(a_["dueno"])}
 _nombre_cta.update(NOMBRE_DE_CUENTA)
-for _a in docs["areas"].values():
+for _slug_a, _a in docs["areas"].items():
     _co = _a.get("colaboran") or []
+    # el nombre puede venir de un proyecto que hoy se reutilizó: el área de la base guarda el que se vio (revisión 1.22.4, hallazgo 5)
+    _prev_a = _de_la_base("areas", _slug_a) if PREVIOS else None
+    for c, n in ((_prev_a or {}).get("colaboran_nombres") or {}).items() if isinstance(_prev_a, dict) else []:
+        if c in _co and n:
+            _nombre_cta.setdefault(c, n)
+    _a["colaboran_nombres"] = {c: _nombre_cta[c] for c in _co if c in _nombre_cta}
     _a["colaboran_ver"] = [_nombre_cta[c] for c in _co if c in _nombre_cta]
     _a["colaboran_sin_nombre"] = sum(1 for c in _co if c not in _nombre_cta)
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
@@ -1523,8 +1556,9 @@ for pid, pd in docs["proyectos"].items():
     _txt_ = "\n".join([pd.get("en_corto") or ""] + [x.get("texto") or "" for x in pd.get("pasos") or [] if isinstance(x, dict)])
     _pf_ = []
     for m_ in PERSONA_FUERA.finditer(_txt_):
-        if m_.group(1) not in _pf_:
-            _pf_.append(m_.group(1))
+        _p_ = persona_fuera(m_.group(1), m_.group(2))
+        if _p_ and _p_["nombre"] not in [x["nombre"] for x in _pf_]:
+            _pf_.append(_p_)
     if _pf_:
         pd["personas_fuera"] = _pf_[:20]
     else:

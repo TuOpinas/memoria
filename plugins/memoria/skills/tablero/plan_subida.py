@@ -185,7 +185,7 @@ _campos, _borrar_cierres = extras_cierre(_meta_d.get("sincronizado"), _meta_d.ge
 _bar_j = (_json(SALIDA / "barrido.json") or {}).get("juzgado") or {}
 _base_j = (_datos(_json(VOLCADO / "meta" / "estado.json") or {}).get("juzgado")) or {}
 if _bar_j or _base_j:
-    _campos["juzgado"] = {k: (list(dict.fromkeys(list(_base_j.get(k) or []) + list(_bar_j.get(k) or []))))[-600:] for k in ("ids", "contraste")}
+    _campos["juzgado"] = {k: (list(dict.fromkeys(list(_base_j.get(k) or []) + list(_bar_j.get(k) or []))))[-600:] for k in ("ids", "contraste", "resumenes")}
 if _campos:
     _meta_d.update(_campos)
     _meta_p.write_text(json.dumps(_meta_d, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -222,6 +222,14 @@ for it in indice:
                        "file_path": str(SALIDA / it["archivo"]), "existe": existe, "bytes": it["bytes"]})
 
 borrar = []
+# un resumen de «Qué hay» se borra cuando su proyecto ya no sale de la raíz (revisión 1.22.4, hallazgo 11); los demás se quedan
+# aunque esta corrida no los reescriba
+_proys = {doc for col, doc in salen if col == "proyectos"}
+_dres = VOLCADO / "resumenes"
+for p in sorted(_dres.glob("*.json")) if _dres.exists() else []:
+    if p.stem not in _proys and ("resumenes", p.stem) not in salen and ID_VALIDO.match(p.stem):
+        _r = _json(p)
+        borrar.append({"op": "delete", "collection": "resumenes", "doc_id": p.stem, **({"if_version": _r["version"]} if isinstance(_r, dict) and _r.get("version") is not None else {})})
 for col in COLECCIONES:
     d = VOLCADO / col
     for p in sorted(d.glob("*.json")) if d.exists() else []:
