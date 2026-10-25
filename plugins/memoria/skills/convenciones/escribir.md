@@ -91,7 +91,7 @@ Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuest
 
 ### La voz del `Estatus`
 
-Lo lee alguien con poco tiempo que no va a abrir nada más, en el proyecto y en el área. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir un `Estatus` basta con este párrafo.
+Lo lee alguien con poco tiempo que no va a abrir nada más, en el proyecto y en el área. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. La primera frase no empieza por el nombre del área o del proyecto, que ya está en el título de todo lo que la enseña, y no dice «hoy», «ayer» ni «esta semana»: se lee días después, y la fecha ya va delante. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir un `Estatus` basta con este párrafo.
 
 ### Qué guarda el cierre y qué no
 
@@ -144,6 +144,8 @@ Cuestiona a: compras/automatizacion-ordenes#2026-08-29
 ```
 
 `Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el responsable de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
+
+Cuando decide alguien de fuera de la organización (un cliente, un proveedor, un socio), `Decidió: Nombre Apellido (Organización)`: el tablero separa a quienes deciden de dentro y de fuera, y a los de fuera los agrupa por organización.
 
 Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su responsable con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
