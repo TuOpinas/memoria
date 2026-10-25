@@ -314,6 +314,9 @@ for l in quien.split("\n"):
         contexto_comun = l.split(":", 1)[-1].strip().rstrip(".")
     if l.lower().startswith("administra"):
         administra = l.split(":", 1)[-1].strip().rstrip(".")
+# «Nombre Apellido (Organización)»: una persona de fuera de la carpeta, como la escriben «Decidió:» y los pasos (1.22.4)
+_PART = r"(?:de|del|de la|de los|y)"
+PERSONA_FUERA = re.compile(r"(?<![\wÁÉÍÓÚáéíóúñÑ])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:[ \t]+(?:" + _PART + r"[ \t]+)?[A-ZÁÉÍÓÚÑ][a-záéíóúñü-]+){1,3})[ \t]+\((?!\s*\d)([A-ZÁÉÍÓÚÑ][^()@\n]{0,60})\)")
 # de qué nombre es cada cuenta, donde la carpeta lo dice junto («Nombre (correo)»): para saber de quién es el tablero (1.22.3)
 NOMBRE_DE_CUENTA = {}
 def apuntar_nombres(texto):
@@ -1145,7 +1148,9 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
         for s_ in d_.get("pasos") or []:
             s_.pop("desbloquea", None); s_.pop("puntos", None)
         _lim28_ = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
-        d_["sesiones_recientes"] = [x for x in d_.get("sesiones_recientes") or [] if str(x.get("fecha", "")) >= _lim28_]
+        _rec_ = [x for x in d_.get("sesiones_recientes") or [] if str(x.get("fecha", "")) >= _lim28_]
+        if _rec_: d_["sesiones_recientes"] = _rec_
+        else: d_.pop("sesiones_recientes", None)   # como sale al generar: sin la clave si no queda ninguna (1.22.4)
         previos[pid] = d_
     est_ = _de_la_base("meta", "estado") if PREVIOS else None
     if INV.get("fuera_reusar") and not (isinstance(est_, dict) and isinstance(est_.get("fuera"), list)):
@@ -1403,8 +1408,21 @@ docs["meta"]["estado"] = {
 # qué es la organización: el primer párrafo de guia.md bajo su título, para la banda de Inicio (1.22.3)
 _que_es = primer_parrafo(re.sub(r"^\s*#[^\n]*\n", "", frontmatter(guia)[1] if guia.startswith("---") else guia, count=1))
 _que_es = re.sub(r"<!--.*?-->", "", _que_es or "", flags=re.S).strip()
-if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
-    _que_es = ""      # una tabla, una lista o el párrafo de la plantilla de «nuevo» no dicen qué es la organización
+# Desde la 1.22.4 la plantilla de «nuevo» abre la guía con «[Organización] es …», y lo de la carpeta va en el segundo
+# párrafo. No sale: una tabla o una lista, el párrafo con un hueco de la plantilla sin llenar («[…]» que no es un enlace),
+# y el de la plantilla de antes («Esta carpeta es la memoria de trabajo de…»), que habla de la carpeta y no de la
+# organización. Esos dos últimos dejan un aviso en Mantenimiento para que el responsable del contexto lo escriba.
+_que_es_falta = False
+if not _que_es or _que_es.startswith(("#", ">", "|", "-", "*", "```")) or re.match(r"^\d+[.)]\s", _que_es):
+    _que_es = ""
+elif re.search(r"\[[^\]\n]+\](?!\()", _que_es) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _que_es):
+    _que_es, _que_es_falta = "", True
+else:
+    # las frases que hablan del método o de sus archivos son para quien mantiene la carpeta, no para quien la dirige
+    _frases = re.split(r"(?<=[.!?])\s+", _que_es)
+    _que_es = " ".join(f for f in _frases if not re.search(r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro", f)).strip()
+if guia.strip() and not _que_es and _que_es_falta:
+    docs["meta"]["estado"]["fuera"].append({"carpeta": "guia.md", "archivos": 0, "de_claude": False, "que_es": True})
 docs["meta"]["estado"]["que_es"] = una_linea_(_que_es, 600)   # siempre: meta/estado se sube como update, y una clave que falta dejaría la vieja
 # de quién es el tablero (1.22.3): el responsable del área cuya cuenta es la que lo genera, o el nombre que la carpeta da a
 # esa cuenta («Colabora: Nombre (correo)», «Contexto común: Nombre (correo)»). Si no se sabe, vacío: la página no
@@ -1416,6 +1434,14 @@ if not _de and CUENTA_TABLERO:
     if isinstance(_ep, dict) and _ep.get("tablero_de"):
         _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
+# quien colabora en un área se enseña por su nombre, nunca por su correo (1.22.4): el de la carpeta junto a su cuenta
+# («Nombre (correo)») o el del área de la que es responsable; sin nombre, solo se cuenta
+_nombre_cta = {c: limpio(a_["dueno"]) for a_ in areas_guia for c in cuentas(a_["cuenta"])[0] if limpio(a_["dueno"])}
+_nombre_cta.update(NOMBRE_DE_CUENTA)
+for _a in docs["areas"].values():
+    _co = _a.get("colaboran") or []
+    _a["colaboran_ver"] = [_nombre_cta[c] for c in _co if c in _nombre_cta]
+    _a["colaboran_sin_nombre"] = sum(1 for c in _co if c not in _nombre_cta)
 # un tablero que era público pasa hoy a mostrarlo todo (1.18): la página lo avisa una semana. Solo se escribe el día del
 # cambio; la subida de meta/estado es un update, así que la fecha se conserva en las puestas al día siguientes
 _est_previo = _de_la_base("meta", "estado") if PREVIOS else None
@@ -1491,10 +1517,34 @@ for pid, pd in docs["proyectos"].items():
     ses_ = pd.get("sesiones") or []
     if len(ses_) > 1:
         det["sesiones"] = ses_[1:]; pd["sesiones"] = ses_[:1]; pd["sesiones_aparte"] = len(ses_) - 1
+    # personas de fuera de la carpeta que nombra el proyecto: solo las escritas como «Nombre Apellido (Organización)»,
+    # la misma forma que «Decidió:» usa para quien decide desde fuera (1.22.4). La página ya no adivina personas por las
+    # mayúsculas del texto: «Sistema Nuevo Contable» no es nadie.
+    _txt_ = "\n".join([pd.get("en_corto") or ""] + [x.get("texto") or "" for x in pd.get("pasos") or [] if isinstance(x, dict)])
+    _pf_ = []
+    for m_ in PERSONA_FUERA.finditer(_txt_):
+        if m_.group(1) not in _pf_:
+            _pf_.append(m_.group(1))
+    if _pf_:
+        pd["personas_fuera"] = _pf_[:20]
+    else:
+        pd.pop("personas_fuera", None)
+    # las recientes no repiten la que ya viaja en «sesiones»: la página junta las dos listas (1.22.4)
+    _ya = {(x.get("fecha"), x.get("titulo") or "") for x in pd.get("sesiones") or []}
+    pd["sesiones_recientes"] = [x for x in pd.get("sesiones_recientes") or [] if (x.get("fecha"), x.get("titulo") or "") not in _ya]
+    if not pd["sesiones_recientes"]:
+        pd.pop("sesiones_recientes")
     ea = (pd.get("estado_actual") or "").strip()
     if pd.get("en_corto") and len(ea) > len((pd.get("estado_resumen") or "").strip()) + 20:
         det["estado_actual"] = pd.pop("estado_actual"); pd["estado_aparte"] = True
     qh = pd.pop("_que_hay_detalle", None)
+    # la huella de lo que hay (pieza, estado, título y aportación): el resumen escrito de «Qué hay» vale mientras no cambie (1.22.4)
+    _pz = sorted((z.get("tipo") or "", z.get("archivo") or "", z.get("estado") or "", z.get("titulo") or "", z.get("afirma") or z.get("aportacion") or "")
+                 for z in ((qh or {}).get("piezas") or []))
+    if _pz:
+        pd["que_hay_huella"] = hashlib.sha1(json.dumps(_pz, ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+    else:
+        pd.pop("que_hay_huella", None)
     if qh and (qh["piezas"] or qh["trayectoria"]):
         det["que_hay"] = qh; pd["que_hay_aparte"] = True
     if det:

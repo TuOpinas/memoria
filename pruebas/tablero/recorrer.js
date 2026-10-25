@@ -84,10 +84,10 @@ const path = require('path');
     if(!(qha.tabla >= 2 && qha.giro)) errores.push(`${etiqueta}: el área no suma «Qué hay» de sus proyectos con el último cambio (${JSON.stringify(qha)})`);
     if(qha.tabla){ await p.click('.qh-sum [data-go-proj][data-tab="quehay"]'); await p.waitForTimeout(300);
       if(!(await p.evaluate(() => /-t-quehay$/.test(location.hash)))) errores.push(`${etiqueta}: la fila de «Qué hay» del área no abre la pestaña del proyecto`); }
-    // el lateral abre Estatus aunque se viniera de otra pestaña
-    await abre(p, url, '#p-ventas--cuentas-t-quehay');
+    // la pestaña elegida se queda al pasar a otro proyecto desde el lateral (1.22.4)
+    await abre(p, url, '#p-ventas--cuentas-t-estatus'); await p.click('.tab[data-tab="quehay"]').catch(() => {}); await p.waitForTimeout(200);
     if((opciones.viewport||{}).width > 760){ await p.click('#side-nav [data-go-proj="operacion--soporte"]').catch(() => {}); await p.waitForTimeout(300);
-      if(!(await p.evaluate(() => /operacion--soporte/.test(location.hash) && !!document.querySelector('.tab[data-tab="estatus"][aria-selected="true"]')))) errores.push(`${etiqueta}: un proyecto abierto desde el lateral no abre en Estatus`); }
+      if(!(await p.evaluate(() => /operacion--soporte-t-quehay$/.test(location.hash) && !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]')))) errores.push(`${etiqueta}: un proyecto abierto desde el lateral no conserva la pestaña elegida`); }
     await p.goto(url + '#p-operacion--soporte-t-estatus'); await p.waitForTimeout(400);
     const corto = await p.evaluate(() => ({ t: (document.querySelector('.corto .corto-t')||{}).textContent || '', n: document.querySelectorAll('.corto .corto-l li').length, detalle: !!document.querySelector('[data-est-full]'), dos: [...document.querySelectorAll('.corto .corto-l li')].some(x=>/Beto las prueba el 24/.test(x.textContent)) }));
     if(!(corto.t.startsWith('Terminamos la lista') && corto.n === 3 && corto.detalle && corto.dos)) errores.push(`${etiqueta}: un proyecto con Estatus no abre con su titular y el detalle plegado (${JSON.stringify(corto)})`);

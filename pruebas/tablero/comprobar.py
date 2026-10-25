@@ -132,6 +132,7 @@ ok(cu.get("citado_por") == 1 and {e["archivo"]: e.get("citado_por") for e in cu[
 so = json.load(open(os.path.join(sys.argv[1], "proyectos", "operacion--soporte.json"), encoding="utf-8"))
 ok("citado_por" not in so, "un proyecto que nadie cita no lleva la cuenta")
 ok(all(set(x) <= {"fecha", "titulo", "quien", "trabajamos"} and len(x.get("trabajamos", "")) <= 220 for x in cu.get("sesiones_recientes", [])), "las sesiones recientes viajan ligeras: fecha, título, quién y tema")
+ok(not ({(x.get("fecha"), x.get("titulo")) for x in cu.get("sesiones_recientes", [])} & {(x.get("fecha"), x.get("titulo")) for x in cu.get("sesiones", [])}), "las recientes no repiten la sesión que ya viaja en «sesiones» (1.22.4)")
 me = json.load(open(os.path.join(sys.argv[1], "meta", "estado.json"), encoding="utf-8"))
 ok(me.get("que_es", "").startswith("Raíz inventada para probar el tablero"), "qué es la organización sale del primer párrafo de la guía")
 fuga = subprocess.run(["grep", "-rl", "TALLER-PRIVADO", sys.argv[1]], capture_output=True, text=True).stdout
