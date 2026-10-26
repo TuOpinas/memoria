@@ -427,10 +427,11 @@ if CUENTA:
             for f in frases:
                 if not re.search(rx, f):
                     out.append(f); continue
-                partes = [c.strip() for c in f.split(";")]
+                partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]   # no se parte por un «;» entre paréntesis
                 quedan = [c for c in partes if c and not re.search(rx, c)]
                 if quedan and len(partes) > 1:
-                    t = "; ".join(quedan); out.append(t if t[-1] in ".!?" else t + ".")
+                    t = "; ".join(quedan); t = t[0].upper() + t[1:]
+                    out.append(t if t[-1] in ".!?" else t + ".")
             return out
         _frases = _sin_carpeta(re.split(r"(?<=[.!?])\s+", _p1))
         if (not _p1 or _p1.startswith(("#", ">", "*", "```", "|")) or re.match(r"^\d+[.)]\s", _p1) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _p1)

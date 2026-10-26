@@ -327,11 +327,13 @@ Diligence Mapa Inventario Catálogo Licencia Cuenta Usuario Clave Acceso Permiso
 Prueba Pruebas Demo Prototipo Diseño Maqueta Requerimiento Requisito Especificación Alcance Cronograma Calendario Ruta Hito
 Secretaría Subsecretaría Instituto Banco Gobierno Universidad Escuela Empresa Despacho Notaría Registro Servicio Plataforma
 La El Los Las Un Una Este Esta Nuevo Nueva Primer Primera Segundo Segunda Gran Mi Su Nuestro Nuestra""".split())
-# palabras de producto o de servicio que no son apellido: descartan en cualquier posición, porque «Configurar Salesforce
-# Service Cloud (Acme)» es una herramienta con su cliente, no una persona (revisión 1.22.4, segunda vuelta)
-COSA_SIEMPRE = set("""Cloud Service Services Suite Studio Server Online Hub Desk Workspace Analytics Manager Connect Software Data
-Labs Tech Business Enterprise Premium Pro Plus Lite App Apps Sales Marketing Commerce Center Platform Teams Office
-Drive Docs Sheets Forms Mail Pay Bank Bot Api CRM ERP Web""".split())
+# palabras de producto o de servicio: «Configurar Salesforce Service Cloud (Acme)» es una herramienta con su cliente, no una
+# persona (revisión 1.22.4, segunda vuelta). Sin diccionario de nombres, sigue siendo una heurística.
+COSA_SIEMPRE = set("""Cloud Service Services Suite Studio Server Online Hub Desk Workspace Analytics Manager Software Labs Tech
+Business Enterprise Premium Lite App Apps Marketing Commerce Center Platform Teams Office Drive Docs Sheets Forms Api CRM ERP
+Dynamics""".split())
+# las que también son apellido: descartan solo si no son la última palabra, si van con otra o justo detrás de un verbo
+COSA_O_APELLIDO = set("Sales Bot Pro Plus Pay Web Data Connect Mail Bank Sell".split())
 # verbos de paso: además de los infinitivos, que se reconocen por su terminación; los nombres propios que acaban como
 # un infinitivo (Javier, Pilar, Óscar…) no lo son
 NOMBRES_COMO_VERBO = set("Javier Pilar Óscar Oscar César Cesar Omar Esther Ester Edgar Baltasar Gaspar Amílcar Aimar Itziar Ainhoa Valdemar Waldemar".split())
@@ -346,10 +348,15 @@ def persona_fuera(nombre, org):
         return None
     ws = nombre.split()
     verbo = lambda w: w not in NOMBRES_COMO_VERBO and bool(re.search(r"(?:ar|er|ir)$", w.lower()))
+    tras_verbo = False   # el nombre va justo detrás de un verbo de paso, sin «a», «con» ni «de» por medio
     while ws and (ws[0] in NO_PERSONA or ws[0] in ("de", "del", "la", "los", "las", "a", "con", "y", "e") or (verbo(ws[0]) and len(ws) > 2)):
+        tras_verbo = verbo(ws[0]) and ws[0] not in NO_PERSONA
         ws = ws[1:]
     caps = [w for w in ws if w[:1].isupper()]
     if any(w in COSA_SIEMPRE for w in ws):
+        return None
+    cosas = [i for i, w in enumerate(ws) if w in COSA_O_APELLIDO]
+    if len(cosas) >= 2 or any(i < len(ws) - 1 for i in cosas) or (cosas and tras_verbo):
         return None
     if len(caps) < 2 or len(caps) > 5 or not ws[0][:1].isupper():
         return None
@@ -654,7 +661,9 @@ def taller_de(carpeta):
             if not isinstance(det_, dict):
                 sys.stderr.write(f"A la base le falta el detalle de {rel(carpeta)}, que el inventario pidió reutilizar para su taller: vuelve al inventario sin --taller-igual.\n")
                 sys.exit(5)
-            return [{k: v for k, v in pz.items() if k != "tipo"} for pz in ((det_.get("que_hay") or {}).get("piezas") or []) if pz.get("tipo") == "taller"]
+            # sin lo que se calcula al cruzar la pieza con los pasos y las decisiones: se vuelve a calcular (revisión 1.22.5)
+            return [{k: v for k, v in pz.items() if k not in ("tipo", "pasos", "decisiones_despues", "ultima_decision_despues", "citada")}
+                    for pz in ((det_.get("que_hay") or {}).get("piezas") or []) if pz.get("tipo") == "taller"]
         return INV.get("taller", {}).get(rel(carpeta), [])
     d = carpeta / "taller"
     out = []
@@ -785,7 +794,6 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
             c[x.get("estado") if x.get("estado") in c else "otros"] += 1
         return c
     resumen = {"taller": cuenta(taller), "entregables": cuenta(pdoc.get("entregables", [])), "decisiones": len(fechas_dec),
-               "sin_afirma": sum(1 for pz in piezas if pz.get("estado") != "reemplazado" and pz["archivo"].endswith(".md") and not pz.get("afirma")),
                "desfasadas": sum(1 for pz in piezas if pz.get("decisiones_despues")),
                "bloqueadas": sum(1 for pz in piezas if pz.get("pasos"))}
     if sin_resolver:
@@ -1455,10 +1463,11 @@ else:
         for f in frases:
             if not re.search(rx, f):
                 out.append(f); continue
-            partes = [c.strip() for c in f.split(";")]
+            partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]   # no se parte por un «;» entre paréntesis
             quedan = [c for c in partes if c and not re.search(rx, c)]
             if quedan and len(partes) > 1:
-                t = "; ".join(quedan); out.append(t if t[-1] in ".!?" else t + ".")
+                t = "; ".join(quedan); t = t[0].upper() + t[1:]
+                out.append(t if t[-1] in ".!?" else t + ".")
         return out
     _que_es = " ".join(_sin_carpeta(_frases)).strip()
 _que_es_falta = not _que_es

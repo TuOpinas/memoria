@@ -83,6 +83,13 @@ try:
     subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(s3), str(j3)], capture_output=True, text=True)
     juz3 = set(json.loads((s3 / "barrido.json").read_text(encoding="utf-8"))["juzgado"]["resumenes"])
     ok("ventas--viejo|h-ventas--viejo" in juz3, "si vuelve a fallar, queda juzgado hasta que cambie lo que hay")
+    # correr --sumar-juicio dos veces sobre la misma salida no gasta el reintento (1.22.5)
+    s4 = tmp / "s4"; shutil.copytree(sal, s4)
+    doc(s4 / "barrido.json", {"anadir": [], "borrar": [], "para_resumen": [x for x in pr if x["proyecto"] == "ventas--viejo"], "juzgado": {"ids": [], "contraste": [], "resumenes": []}})
+    for _ in range(2):
+        subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(s4), str(j3)], capture_output=True, text=True)
+    juz4 = set(json.loads((s4 / "barrido.json").read_text(encoding="utf-8"))["juzgado"]["resumenes"])
+    ok(juz4 == {"ventas--viejo|h-ventas--viejo|reintento"}, f"correr --sumar-juicio dos veces da lo mismo que una ({sorted(juz4)})")
     ok("parece llevar un dato personal" in r.stdout, "--sumar-juicio dice qué rechazó y por qué")
 
     print("La subida")

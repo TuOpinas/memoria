@@ -87,7 +87,7 @@ print("Personas de fuera, como dato (1.22.4)")
 import ast, re
 _src = GV.read_text(encoding="utf-8"); _ns = {"re": re}
 for n in ast.parse(_src).body:
-    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA", "NOMBRES_COMO_VERBO", "COSA_SIEMPRE") for t in getattr(n, "targets", [])):
+    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA", "NOMBRES_COMO_VERBO", "COSA_SIEMPRE", "COSA_O_APELLIDO") for t in getattr(n, "targets", [])):
         exec(compile(ast.Module([n], []), str(GV), "exec"), _ns)
 _names = ("_PART", "PERSONA_FUERA", "NO_PERSONA")
 for n in ast.parse(_src).body:
@@ -104,6 +104,7 @@ ok(pf("Pilar de la Fuente (Acme)") == ["Pilar de la Fuente"] and pf("Javier de D
 ok(pf("Carlos Mesa (Banco Azul)") == ["Carlos Mesa"], "un apellido que también es una cosa no descarta a la persona")
 ok(pf("Esperar Visto Bueno de Juan Pérez (Acme)") == ["Juan Pérez"] and pf("Revisar el Diagrama de Flujo (Acme)") == [] and pf("La Secretaría de Hacienda (SAT)") == [], "las cosas de delante se quitan, y una cosa sola no es nadie")
 ok(pf("Configurar Salesforce Service Cloud (Acme)") == [] and pf("Migrar a Google Workspace (Banco Azul)") == [] and pf("Esperar a Ana Centeno (Acme)") == ["Ana Centeno"], "una herramienta con su cliente entre paréntesis no es una persona (1.22.5)")
+ok(pf("Contratar Microsoft Dynamics (Acme)") == [] and pf("Instalar Zendesk Sell (Acme)") == [] and pf("Llamar a Jordi Sales (Editorial Club)") == ["Jordi Sales"] and pf("Esperar de Ana Bot (Acme)") == ["Ana Bot"], "un apellido que también es una palabra de producto sigue siendo persona, salvo justo detrás de un verbo (1.22.5)")
 print("Nombres que se quedan al reutilizar la base (revisión 1.22.4, hallazgo 5)")
 tmp = pathlib.Path(tempfile.mkdtemp()); raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
 pp = raiz / "ventas" / "cuentas" / "proyecto.md"

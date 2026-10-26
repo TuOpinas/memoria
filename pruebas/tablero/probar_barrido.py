@@ -2,7 +2,7 @@
 """Prueba el barrido (skills/tablero/barrido.py) con una raíz inventada: cada detector, la reconciliación con la cola
 (no repite, no vuelve a proponer lo descartado, borra lo que ya no es cierto, no toca lo de proyectos que no vienen)
 y que aplicar_cambios.py deja las propuestas en paz. No toca ninguna raíz real."""
-import sys, json, pathlib, subprocess, tempfile, shutil
+import os, sys, json, pathlib, subprocess, tempfile, shutil
 
 AQUI = pathlib.Path(__file__).resolve().parent
 TABLERO = AQUI.parent.parent / "plugins/memoria/skills/tablero"
@@ -123,6 +123,13 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj), str(tmp / "juicio.json")], capture_output=True, text=True)
     ok(json.loads(r.stdout)["propuestas_nuevas_por_juicio"] == 0, "repetirlo no duplica")
 
+    # lo que no cabe en la salida va a juzgar.json y se imprime su ruta (1.22.5)
+    sg = tmp / "sg"; sg.mkdir()
+    _cod = "import sys, runpy; sys.argv = sys.argv[1:]; import barrido as B; B.JUZGAR_MAX = 10; B.main()"
+    rg = subprocess.run([sys.executable, "-c", _cod, str(BARRIDO), str(raiz), str(sg), "--hoy", "2026-10-23"], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": str(BARRIDO.parent)})
+    og = json.loads(rg.stdout.strip().splitlines()[-1]) if rg.returncode == 0 else {}
+    ok("juzgar" not in og and og.get("juzgar_en") and json.loads(pathlib.Path(og["juzgar_en"]).read_text()).get("para_juicio"), "si lo que hay que juzgar no cabe, va a juzgar.json y se imprime su ruta (1.22.5)" + (f" {rg.stderr[-300:]}" if rg.returncode else ""))
+
     print("afirma")
     pa = [x["ruta"] for x in bj["para_afirma"]]
     ok(pa == ["ventas/limpio/entregables/sin.md", "ventas/limpio/entregables/borrador.md"], f"pide afirma solo de lo que no la tiene y no está reemplazado, vigentes primero ({pa})")
@@ -135,6 +142,7 @@ try:
     ok(json.loads(r.stdout)["propuestas_afirma"] == 1 and len(af) == 1, "solo entra el afirma que se pidió")
     da = json.loads((sj / af[0]["archivo"]).read_text(encoding="utf-8"))
     ok(da["clase"] == "afirma" and da["ruta"].endswith("sin.md") and '"' not in da["afirma"] and "\n" not in da["texto"], "la propuesta lleva ruta y línea, sin comillas dobles")
+    ok(da.get("titulo") and da["texto"].startswith("Frase de resumen para «") and "aportacion" not in da["texto"] and "/" not in da["texto"] and "barrido" not in da["por_que"], f"la propuesta va en lenguaje llano, con el título y sin ruta ni clave (1.22.5) ({da['texto']!r})")
     ok(json.loads(subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(sj), str(tmp / "juicio2.json")], capture_output=True, text=True).stdout)["propuestas_afirma"] == 0, "repetirlo no duplica")
     # con la propuesta ya en la cola, no se vuelve a pedir
     (tmp / "cola3").mkdir()
