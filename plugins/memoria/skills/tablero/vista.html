@@ -66,25 +66,13 @@ header{display:grid;gap:8px}
 .due-item .t{min-width:0;font-size:14px;color:var(--ink)}
 .due-item .w{grid-column:2;font-size:12.5px;color:var(--muted)}
 /* áreas en la raíz */
-.areas{display:grid;gap:14px}
 .area{background:var(--surface);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
 .area-h{all:unset;cursor:pointer;display:grid;gap:4px;width:100%;box-sizing:border-box;padding:14px 16px;border-bottom:1px solid var(--rule-soft)}
 .area-h:hover h2{text-decoration:underline;text-underline-offset:4px}
 .area-h:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
 .area-h .d{color:var(--ink-soft);font-size:14px;max-width:70ch}
 
-.prow{all:unset;cursor:pointer;display:grid;grid-template-columns:1fr;gap:8px;align-items:start;box-sizing:border-box;padding:12px 16px;border-top:1px solid var(--rule-soft)}
-.prow:first-child{border-top:none}
-.prow:hover{background:var(--ground)}
-.prow:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
-.prow .n{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;min-width:0}
-.prow .n b{font-weight:600}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
-.prow .s{min-width:0;display:grid;gap:6px}
-.prow .s .st{font-size:13.5px;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.prow .s .nx{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:baseline;font-size:13px;color:var(--ink)}
-.prow .s .nx span{min-width:0}
-.prow.closed .n b,.prow.closed .s{color:var(--muted)}
 
 /* nivel área */
 .prios{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
@@ -169,7 +157,6 @@ dl.facts dd{margin:0;min-width:0;color:var(--ink-soft)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--rule);flex:none}
 .dot.ok{background:var(--signal)}.dot.soon{background:var(--warn-fill)}.dot.late{background:var(--alert)}.dot.none{background:var(--rule);box-shadow:inset 0 0 0 1px var(--muted)}.dot.closed{background:transparent;box-shadow:inset 0 0 0 1px var(--rule)}.dot.pause{background:var(--pause)}.dot.risk{outline:2px solid var(--alert);outline-offset:1.5px}
 .pill.est{font-weight:600}
-.side-leg{grid-template-columns:1fr 1fr}.side-leg span{border-radius:3px}
 [data-tip]{border-radius:3px}
 [data-tip]:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 #tip{position:fixed;z-index:1000;background:var(--ink);color:var(--surface);font:400 12.5px/1.45 var(--f-body);letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:6px;max-width:300px;box-shadow:0 4px 14px rgba(0,0,0,.2);pointer-events:none;left:0;top:0}
@@ -256,8 +243,6 @@ body{padding-inline:0;padding-block:0}
 .side-n.late,.side-i[aria-current="page"] .side-n.late{background:var(--alert);color:var(--on-alert)}
 .side-arch{padding:10px 8px 0}
 .side-arch .lnk{font-size:12.5px;color:var(--muted)}
-.side-leg{display:grid;gap:4px;margin-top:18px;padding:10px 8px 0;border-top:1px solid var(--rule-soft);font-size:12px;color:var(--muted)}
-.side-leg span{display:inline-flex;align-items:center;gap:6px}
 .pane{min-width:0;display:grid;gap:24px;align-content:start;padding:24px clamp(16px,3vw,40px) 64px;max-width:1040px}
 .pane > #main{width:100%;max-width:none;margin:0}
 .side-toggle{display:none}
@@ -299,7 +284,6 @@ body{padding-inline:0;padding-block:0}
 .enf-mini li>span{color:var(--ink-soft)}
 .enf-mini-p{font-size:12.5px;color:var(--muted)}
 .enf-mini .chip{justify-self:start;font-size:12.5px;margin-top:2px}
-.prow .n small{font-size:12.5px;color:var(--muted)}
 
 
 
@@ -315,14 +299,11 @@ body{padding-inline:0;padding-block:0}
 .stale.info{background:var(--signal-dim);color:var(--signal);border-color:var(--signal)}
 .stale.suave{background:var(--surface);color:var(--ink-soft);border-color:var(--rule)}
 .corto .corto-aviso{margin-top:6px;font-size:13px;color:var(--warn);background:var(--warn-dim);border-radius:6px;padding:6px 10px}
-.corto .corto-calc{border-top:1px solid var(--rule-soft);padding-top:8px;margin-top:8px}
-#stale:empty{display:none}
-#stale{display:grid;gap:8px}
 footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .dec .hd .lnk{font-size:13px}
 footer{font-size:12.5px;color:var(--muted)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (prefers-reduced-motion:no-preference){.prow,.area-h,.due-item{transition:background .12s}}
+@media (prefers-reduced-motion:no-preference){.area-h,.due-item{transition:background .12s}}
 /* filas de paso compactas: etiquetas y procedencia en una sola línea; corregir en el menú «⋯» */
 .step-r{display:inline-flex;gap:4px;align-items:center}
 .step-x{all:unset;cursor:pointer;width:26px;height:26px;display:inline-grid;place-items:center;border-radius:999px;color:var(--muted);font:600 15px/1 var(--f-body);opacity:0}
@@ -380,7 +361,6 @@ footer{font-size:12.5px;color:var(--muted)}
 .mt-i .t b{font-weight:600}
 .mt-i .t span{font-size:13px;color:var(--ink-soft)}
 .mt-i .t em{font:400 13px var(--f-body);font-style:normal;color:var(--muted)}
-.nv{display:grid;gap:10px}
 .ent-t{all:unset;cursor:pointer;font-weight:600;border-radius:3px}
 .ent-t:hover{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
 .ent-t:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
@@ -394,7 +374,6 @@ button.est-btn{all:unset;cursor:pointer}
 .aviso{background:var(--warn-dim);color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13.5px}
 .aviso.suave{background:var(--rule-soft);color:var(--ink-soft)}
 .mt-i .prio-go{justify-self:end}
-.ar{display:grid}
 
 
 
@@ -433,11 +412,7 @@ button.est-btn{all:unset;cursor:pointer}
 .cq .t{font-weight:500}
 .cq .w{font-size:12.5px;color:var(--muted)}
 .cq .w .lnk{font-size:12.5px}
-.did{font:500 11px var(--f-mono);color:var(--muted)}
 
-.res-ents{display:grid;gap:6px;margin:0;padding:0;list-style:none}
-.res-ents li{display:grid;gap:2px}
-.res-ents .d{font-size:13.5px;color:var(--ink-soft)}
 /* ayuda: índice de artículos a un lado y el artículo al otro; en el teléfono, el índice arriba */
 .hq{all:unset;cursor:pointer;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--rule);color:var(--muted);font:600 11px/1 var(--f-mono);vertical-align:2px;margin-left:6px;flex:none}
 .hq:hover{color:var(--signal);border-color:var(--signal)}
@@ -613,7 +588,6 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 
 /* los avisos de la herramienta, juntos en una caja como la apertura de sesión */
 
-.mt-h{font:500 11.5px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--signal);margin-bottom:4px}
 
 
 
@@ -624,7 +598,11 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
   .mob-bar{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;z-index:30;height:calc(52px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 12px 0;background:var(--surface);border-bottom:1px solid var(--rule)}
   .side-toggle{position:static;display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:none;border-radius:10px;background:none;color:var(--ink)}
   .side-toggle:hover{background:var(--rule-soft)}
-  .mob-org{font:600 17px/1 var(--f-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mob-org{font:600 17px/1 var(--f-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  /* «Sincronizar ahora» en la barra, junto al nombre (1.22.5): el lateral, donde vive en escritorio, está escondido */
+  .mob-sync{flex:none;display:inline-flex}
+  .mob-sync .sync-ico{width:40px;height:40px}
+  .mob-sync .sync-ico svg{width:20px;height:20px}
   .side{z-index:40;padding-top:calc(68px + env(safe-area-inset-top,0px))}
   body.side-open .side-veil{display:block;position:fixed;inset:0;z-index:35;background:var(--velo,rgba(0,0,0,.35))}
   body.side-open .mob-bar{z-index:45}
@@ -670,6 +648,8 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 /* Inicio en tres pestañas */
 .ini-tabs{margin-top:-4px}
 .tab .n.warn{background:var(--warn-dim);color:var(--warn)}
+.tab .n.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:var(--alert);color:var(--on-alert);font:600 11px/1 var(--f-body);margin-left:6px}
+.tab .n.punto{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn-fill);margin-left:6px;vertical-align:middle}
 .rumbo-sec{display:flex;flex-direction:column;gap:12px}
 .org-band{background:var(--signal-dim);color:var(--ink);border:1px solid color-mix(in srgb,var(--signal) 25%,transparent);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px}
 .org-band .eyebrow{color:var(--signal-dim);opacity:.85;margin:0} .org-band h2{font:600 24px/1.2 var(--f-display);margin:2px 0 0}
@@ -693,9 +673,7 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 .foco{outline:3px solid var(--warn-fill)!important;outline-offset:4px;border-radius:6px;background:var(--warn-dim)!important;transition:background .6s}
 @media (max-width:600px){ .org-band{padding:16px} .org-band h2{font-size:20px} .per-grid{grid-template-columns:minmax(0,1fr)} }
 
-/* ronda 6 */
 .org-tit{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.tipo{font:500 12px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--signal);background:var(--signal-dim);border-radius:999px;padding:6px 10px}
 .org-q{margin:0;font-size:14px;color:var(--ink-soft);max-width:76ch}
 
  
@@ -729,19 +707,14 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 .af-q{display:block;font-size:12.5px;color:var(--muted)} .af-w{max-width:260px;text-align:right}
 @media (max-width:600px){ .af-w{max-width:none;text-align:left} }
 
-/* ronda 8 */
-#stale{display:none}
 .side-g{font:500 11px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 10px 4px}
 .filtros{display:flex;flex-direction:column;gap:6px} .filtros .chips{align-items:center} .filtros .more{min-width:44px}
 .cit{color:var(--signal)} .ent .d.prov{font-style:italic;color:var(--ink-soft)} .ent .pv{font:500 10.5px var(--f-mono);text-transform:uppercase;color:var(--warn);font-style:normal}
 
 .sep-ext{font:500 11px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 4px 0 12px;border-left:1px solid var(--rule);margin-left:4px}
 
-.mob-org .tipo{font-size:10.5px;padding:4px 8px;margin-left:6px;vertical-align:middle}
 @media (max-width:860px){ body[data-lvl="root"] .org-tit{display:none} body[data-lvl="root"] #head .meta{margin-top:0} }
 
-/* ronda 9 */
-.corto-calc{display:none}
 code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 @media (max-width:860px){ .side-org{display:none} }
 @media (max-width:480px){ .ini-tabs .tab,.tabs .tab{padding-left:6px;padding-right:6px;font-size:13.5px} .qh-sum th:nth-child(5),.qh-sum td:nth-child(5){display:none} }
@@ -752,11 +725,10 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 </style>
 
 <div class="app">
-  <div class="mob-bar"><button type="button" id="side-toggle" class="side-toggle" aria-expanded="false" aria-controls="side" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><span id="mob-org" class="mob-org"></span></div>
+  <div class="mob-bar"><button type="button" id="side-toggle" class="side-toggle" aria-expanded="false" aria-controls="side" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><span id="mob-org" class="mob-org"></span><span id="mob-sync" class="mob-sync"></span></div>
   <div class="side-veil" data-side-close></div>
   <aside id="side" class="side"><nav id="side-nav" aria-label="Índice de áreas y proyectos"></nav></aside>
   <div class="pane">
-    <div id="stale"></div>
     <nav class="crumbs" id="crumbs" aria-label="Dónde estás"></nav>
     <header id="head"></header>
     <main id="main" class="wrap" style="gap:24px"></main>
@@ -770,7 +742,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.22.4"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.22.5"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -818,7 +790,10 @@ function md(text){
 const isHeader = s => /^[A-Za-zÁÉÍÓÚáéíóúñÑ][^.]{0,30}:$/.test(s.texto.trim());
 const key = (pid, texto) => pid + "||" + texto;
 // índice de la cola por paso: se rehace solo cuando llega una cola nueva, no en cada consulta
-const CLASE_PROP = {"estado-desfasado":"Estatus viejo", "paso-hecho":"Paso hecho", "rotacion":"Archivar", "decision-sin-registrar":"Decisión sin registrar", "afirma":"Qué aporta", "candidato-entregable":"Candidato a entregable", "contradiccion":"Contradicción"};
+// los mismos nombres llanos que la apertura de sesión (sesion/SKILL.md, «Sugerencias de la memoria», 1.22.5)
+const CLASE_PROP = {"estado-desfasado":"Estatus viejo", "paso-hecho":"Paso hecho", "rotacion":"Archivar", "decision-sin-registrar":"Decisión sin registrar", "afirma":"Frase de resumen", "candidato-entregable":"Documento nuevo", "contradiccion":"No cuadra"};
+// el texto de una sugerencia en lenguaje llano; las de antes de la 1.22.5 traen ruta y clave, y se rehacen con sus campos
+const textoProp = c => c.clase==="afirma" && c.afirma ? `Frase de resumen para «${c.titulo || (c.ruta||"").split("/").pop().replace(/\.md$/,"").replace(/-/g," ")}»: «${c.afirma}»` : (c.texto||"");
 const propsDe = pid => PROPUESTAS.filter(c=>c.proyecto===pid && c.estado!=="descartada").sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 let _PEND_SRC = null, _PEND_IDX = null;
 const _PEND_VACIO = Object.freeze({fecha:null, hecho:null, corregir:null});
@@ -831,6 +806,12 @@ function pend(pid, texto){
 }
 // caché por repintado: lo que se calcula muchas veces con los mismos datos dentro de un render() se calcula una
 let _M = null;
+// sube cada vez que llegan datos de la base: lo que se calcula solo por su número se guarda hasta que cambie (1.22.5)
+let DATA_SEQ = 0;
+// lo que llega de la base se pinta junto: al abrir llegan nueve suscripciones casi a la vez, y cada una repintaba la página
+// entera (revisión 1.22.5). Con setTimeout y no requestAnimationFrame, que no corre con la página oculta
+let _PINTAR = 0;
+function datosNuevos(){ DATA_SEQ++; if(_PINTAR) return; _PINTAR = setTimeout(() => { _PINTAR = 0; render(); }, 30); }
 const _memo1 = (nombre, fn) => x => { if(!_M) return fn(x); let m = _M.get(nombre); if(!m){ m = new Map(); _M.set(nombre, m); } if(m.has(x)) return m.get(x); const r = fn(x); m.set(x, r); return r; };
 const effDate = (p, s) => { const q = pend(p.id, s.texto); if(q.corregir && q.corregir.propuesta==="sin-plazo") return null; return q.fecha ? (q.fecha.fecha_nueva||null) : (s.fecha||null); };
 const effNat = (p, s) => { const c = pend(p.id, s.texto).corregir; return c && c.propuesta!=="sin-plazo" ? c.propuesta : (s.naturaleza||"accion"); };
@@ -882,19 +863,21 @@ function flash(msg){ const f = document.getElementById("flash"); f.textContent =
 
 // ---- navegación ----
 let view = {lvl:"root"};
-function parseHash(){
+function parseHash(fijar = true){
   const h = (location.hash||"").slice(1);
   if(h.startsWith("a-") && areaBy[h.slice(2)]) return {lvl:"area", id:h.slice(2)};
-  // llegar por un enlace o recargar fija también la pestaña que se recuerda al navegar (revisión 1.22.4, hallazgo 9)
-  if(h.startsWith("p-")){ const [id, t] = h.slice(2).split("-t-"); if(byId[id]){ if(t){ tab = t; NTAB = DE_PROY[TABMAP[t]||t] || "estatus"; } return {lvl:"proj", id, tab: t}; } }
+  // llegar por un enlace o recargar fija también la pestaña que se recuerda al navegar (revisión 1.22.4, hallazgo 9); Atrás y
+  // Adelante la enseñan pero no la fijan, igual que un enlace interno: solo pulsar otra pestaña la cambia (1.22.5)
+  if(h.startsWith("p-")){ const [id, t] = h.slice(2).split("-t-"); if(byId[id]){ if(t){ tab = t; if(fijar) NTAB = DE_PROY[TABMAP[t]||t] || "estatus"; } return {lvl:"proj", id, tab: t}; } }
   if(h==="pendientes") return {lvl:"pend"};
   if(h==="decisiones") return {lvl:"dec"};
   if(h==="entregables") return {lvl:"ent"};
   if(h==="ayuda" || h.startsWith("ayuda-")) return {lvl:"ayuda", id: h.slice(6) || "empezar"};
   return {lvl:"root"};
 }
-function go(v){ const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "resumen"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="ayuda" ? "ayuda-"+(v.id||"empezar") : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
-window.addEventListener("popstate", ()=>{ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; view = parseHash(); render(); });
+function go(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: PROY_DE[NTAB] || "estatus"}; if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus";   // la pestaña elegida se conserva al bajar o pasar de un proyecto a otro
+  const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "resumen"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="ayuda" ? "ayuda-"+(v.id||"empezar") : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
+window.addEventListener("popstate", ()=>{ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; view = parseHash(false); render(); });
 document.addEventListener("click", e => {
   const t = e.target;
   if(t.closest("[data-edit-due],[data-set-due],[data-cancel-due],[data-cal-nav],[data-check],[data-hecho-save],[data-hecho-cancel],[data-undo],[data-corr],[data-corr-set],[data-corr-est],[data-corr-est-set],[data-corr-cancel],[data-sync],[data-copy],[data-prio-done],[data-prio-drop],[data-prio-toggle],[data-mt-open],[data-mt-pos],[data-ent-open],[data-mt-unpos],.due-form,.hecho-form,.anotar,.corr-form,.side-search")) return;
@@ -908,7 +891,7 @@ document.addEventListener("click", e => {
   else if(b.dataset.goArea) go({lvl:"area", id:b.dataset.goArea});
   else go({lvl:"proj", id:b.dataset.goProj, tab: b.dataset.tab || (t.closest("#view-pend, .enf, .due, .steps") ? "pasos" : undefined)});
 });
-document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".prow,.area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && (PRIO_OPEN || MT_OPEN || ENT_OPEN) && !EDIT && !HECHO){ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
+document.addEventListener("keydown", e => { const b = e.target.closest && e.target.closest(".area-h,.due-item"); if(b && b.tagName!=="INPUT" && (e.key==="Enter"||e.key===" ") && e.target===b){ e.preventDefault(); b.click(); } if(e.key==="Escape" && (PRIO_OPEN || MT_OPEN || ENT_OPEN) && !EDIT && !HECHO){ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; render(); return; } if(e.key==="Escape" && (EDIT||HECHO)){ EDIT=null; HECHO=null; CALM=null; render(); } });
 
 // ---- controles de un paso ----
 let EDIT = null, HECHO = null, CALM = null, CORR = null;
@@ -1140,7 +1123,7 @@ function regularizar(p){
   return `<p class="hint">${r.nRaros ? `Entre los ${r.total} pasos, el tablero ve ${r.raros.join(", ").replace(/, ([^,]*)$/," y $1")}: no se agendan como una acción y tapan lo importante.` : `${r.total} pasos abiertos y casi ninguno con fecha: conviene recortarlos o agendarlos.`} <code class="sr">${esc(frase)}</code><button type="button" class="lnk" data-copy="${esc(frase)}">Copiar la frase para ordenarlos en una sesión</button></p>`;
 }
 // ---- desde tu última visita: huellas en el navegador de quien mira; sin almacenamiento, no hay marcas ----
-let NOV = null, NOV_ALL = false, MT_ALL = false;
+let NOV = null, MT_ALL = false;
 function hsh(x){ let h = 5381; for(let i=0;i<x.length;i++) h = ((h<<5)+h+x.charCodeAt(i))|0; return (h>>>0).toString(36); }
 const entKey = (p, e) => p.id+"|"+e.archivo+"|"+(e.actualizado||"");
 function huellas(){
@@ -1234,7 +1217,7 @@ function mtDatos(){
     const cola = CAMBIOS.filter(c=>c.proyecto===p.id && (c.tipo==="nota" || c.tipo==="corregir" || (c.tipo==="hecho" && !c.nota)));
     if(cola.length){ it.push({k:"cola", cola, txt:`${cola.length} cosa${cola.length===1?"":"s"} marcada${cola.length===1?"":"s"} aquí espera${cola.length===1?"":"n"} sesión`}); fr.push("registra lo que se marcó en el tablero"); }
     const prop = propsDe(p.id);
-    if(prop.length){ it.push({k:"prop", prop, txt:`${prop.length} propuesta${prop.length===1?"":"s"} de la memoria espera${prop.length===1?"":"n"} tu decisión`}); fr.push("repasa las propuestas de la memoria y di cuáles aceptas y cuáles descartas"); }
+    if(prop.length){ it.push({k:"prop", prop, txt:`${prop.length} sugerencia${prop.length===1?"":"s"} de la memoria espera${prop.length===1?"":"n"} tu decisión`}); fr.push("repasa las sugerencias de la memoria y di cuáles aceptas y cuáles descartas"); }
     it.sort((a,b)=>(b.k==="sinses")-(a.k==="sinses"));
     if(it.length) filas.push({id:p.id, p, it, frase:`abre sesión en ${p.area}/${p.slug} y pon al día su memoria: ${fr.join("; ")}`});
   }
@@ -1252,7 +1235,8 @@ function memoriaAlDia(){
   const vis = MT_ALL ? activas : activas.slice(0,6);
   const fila = f => `<div class="mt-i"><span class="t"><b>${f.r ? `${f.r.que_es ? "Qué es la organización" : f.r.guia ? "El mapa de la carpeta" : f.r.de_claude ? "Archivos de Claude sin proyecto" : esc(f.r.carpeta)} <em>· ${f.r.guia || f.r.que_es ? "guia.md" : f.r.de_claude ? "carpeta «Claude outputs»" : "raíz"}</em>` : f.p ? `<button type="button" class="lnk" data-go-proj="${esc(f.p.id)}">${esc(f.p.nombre)}</button> <em>· ${esc(areaBy[f.p.area]?.nombre||"")}</em>` : `<button type="button" class="lnk" data-go-area="${esc(f.a.slug)}">${esc(f.a.nombre)}</button> <em>· área</em>`}</b><span>${f.it.map(x=>esc(x.txt)).join(" · ")}</span></span><button type="button" class="prio-go" data-mt-open="${esc(f.id)}">Revisar<span aria-hidden="true"> ›</span></button></div>`;
   const n = activas.length;
-  return `<section class="due"><div class="top"><h2>La memoria al día${hq("memoria-al-dia","La memoria al día")}</h2><span class="c">${n ? `${n} por poner al día` : "todo al día"}</span><span class="c" style="margin-left:auto">Lo que la memoria tiene flojo; revisa el detalle y decide si abres sesión</span></div>
+  // va dentro del desplegable «Por poner al día» de Mantenimiento, que ya lleva el título
+  return `<section class="due">
     ${n ? `<div class="mt">${vis.map(fila).join("")}</div>${activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":(((activas.length-6)===1)?"Ver el restante":`Ver los ${activas.length-6} restantes`)}</button>`:""}` : `<p class="empty">${nPos ? "Nada más por ahora." : "Nada flojo: pasos clasificados, objetivos confirmados, decisiones confirmadas y nada por registrar."}</p>`}
     ${nPos ? `<p class="hint">${nPos} pospuesto${nPos===1?"":"s"} con «Ahora no». <button type="button" class="lnk" data-mt-unpos>Volver a mostrarlo${nPos===1?"":"s"}</button></p>` : ""}</section>`;
 }
@@ -1284,7 +1268,7 @@ function mtModal(){
     if(x.k==="fuera"){ const r = x.r, rango = r.primero && r.primero!==r.ultimo ? `del ${fmtD(r.primero)} al ${fmtD(r.ultimo)}` : `del ${fmtD(r.ultimo)}`;
       const intro = r.de_claude ? `La app de Claude guarda en la carpeta «Claude outputs» lo que produce cuando no se le dice dónde. Ahí no es de ningún proyecto: nadie lo encuentra, no aparece en este tablero y se pierde de vista. Hay ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}. La frase de abajo abre una sesión que propone a qué proyecto va cada uno y los mueve cuando lo confirmas; lo de áreas que no son tuyas se queda para su responsable.` : `La carpeta «${esc(r.carpeta)}» está en la raíz pero no es de ningún área de la guía. Tiene ${r.archivos} archivo${r.archivos===1?"":"s"}, ${rango}.`;
       return `<h3>${r.de_claude ? "Lo que dejó Claude fuera de los proyectos" : "Carpeta fuera de las áreas"} <span class="c">${r.archivos}</span></h3><p class="more" style="margin:0">${intro}</p>${(r.nombres||[]).length ? `<ul class="ent-l">${r.nombres.slice(0,12).map(n=>`<li><code>${esc(n.nombre)}</code> <span class="more">· ${fmtD(n.fecha)}</span></li>`).join("")}</ul>${r.archivos>12?`<p class="more" style="margin:0">Y ${r.archivos-12} más.</p>`:""}` : ""}`; }
-    if(x.k==="prop") return `<h3>Propuestas de la memoria <span class="c">${x.prop.length}</span></h3><p class="more" style="margin:0">Las dejó el barrido al ponerse al día el tablero, mirando lo que cambió. No cambian nada: en la sesión del proyecto, Claude te las enseña y escribe solo las que aceptas.</p><div class="due-list">${x.prop.map(c=>`<div class="due-item static"><span class="pill soon">${esc(CLASE_PROP[c.clase]||"Propuesta")}</span><span class="t">${esc(c.texto||"")}<span class="more" style="display:block">${esc(c.por_que||"")}</span></span><span class="w">${esc((c.creado||"").slice(0,10))}</span></div>`).join("")}</div>`;
+    if(x.k==="prop") return `<h3>Sugerencias de la memoria <span class="c">${x.prop.length}</span></h3><p class="more" style="margin:0">La memoria las deja al ponerse al día el tablero, mirando lo que cambió. No cambian nada: en la sesión del proyecto, Claude te las enseña y escribe solo las que aceptas.</p><div class="due-list">${x.prop.map(c=>`<div class="due-item static"><span class="pill soon">${esc(CLASE_PROP[c.clase]||"Sugerencia")}</span><span class="t">${esc(textoProp(c))}${c.clase==="afirma"?"":`<span class="more" style="display:block">${esc(c.por_que||"")}</span>`}</span><span class="w">${esc((c.creado||"").slice(0,10))}</span></div>`).join("")}</div>`;
     if(x.k==="cola" || x.k==="prio") return `<h3>Marcado en el tablero, espera sesión <span class="c">${x.cola.length}</span></h3><div class="due-list">${x.cola.map(colaFila).join("")}</div>`;
     return "";
   };
@@ -1302,7 +1286,6 @@ document.addEventListener("click", e => {
   if(t.closest("[data-mt-unpos]")){ MT_POS = {}; try{ localStorage.removeItem(POS_KEY()); }catch(e){} render(); }
 });
 document.addEventListener("click", e => {
-  if(e.target.closest && e.target.closest("[data-nov-all]")){ NOV_ALL = !NOV_ALL; render(); return; }
   if(e.target.closest && e.target.closest("[data-mt-all]")){ MT_ALL = !MT_ALL; render(); }
 });
 // ---- detalle de un entregable: de qué sale y quién se construye encima ----
@@ -1352,12 +1335,11 @@ function entModal(){
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ent-open]"); if(!b) return; e.preventDefault(); ENT_OPEN = b.dataset.entOpen; MT_OPEN = null; PRIO_OPEN = null; render(); const m = document.querySelector(".modal"); if(m) m.focus(); });
 // ---- piezas ----
-const mainStep = p => { const live = stepsLive(p).filter(s=>["accion","decision","espera"].includes(effNat(p,s))); return live.sort((a,b)=>((b.puntos||0)-(a.puntos||0)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999")))[0] || null; };
 function crumbs(){
   const el = document.getElementById("crumbs");
   const org = META ? META.organizacion : "…";
   if(view.lvl==="root"){ el.innerHTML = ""; return; }
-  const simple = {pend:"Pendientes", dec:"Decisiones", ent:"Entregables", buscar:"Búsqueda", ayuda:"Ayuda"};
+  const simple = {pend:"Agenda", dec:"Decisiones", ent:"Entregables", buscar:"Búsqueda", ayuda:"Ayuda"};
   if(simple[view.lvl]){ el.innerHTML = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span><span>${simple[view.lvl]}</span>`; return; }
   const a = view.lvl==="area" ? areaBy[view.id] : areaBy[byId[view.id]?.area];
   let h = `<button type="button" data-go-root>${esc(org)}</button><span class="sep">/</span>`;
@@ -1393,12 +1375,10 @@ function colaRows(){
 }
 const NAT_ORD = {accion:0, decision:1, espera:2, condicional:3, rutina:4, caducidad:5};
 const stepOrder = p => (a,b) => ((b.puntos||0)-(a.puntos||0)) || ((NAT_ORD[effNat(p,a)]??9)-(NAT_ORD[effNat(p,b)]??9)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999"));
-let PEND_OPEN = new Set();
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pend-more]"); if(!b) return; const id = b.dataset.pendMore; PEND_OPEN.has(id) ? PEND_OPEN.delete(id) : PEND_OPEN.add(id); render(); });
 function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.riesgo?" risk":""}" ${tip(e.label+(e.riesgo?" · en riesgo":"")+": "+e.regla+(e.riesgo?"; "+e.riesgoRegla:"")+". "+((EST[e.k]||{}).desc||""))}></i>`; }
 // ===================== Inicio, área y proyecto en cuatro pestañas (1.22.3) =====================
 // Tres preguntas: qué me espera, qué cambió desde que vine, hacia dónde va. Lo demás, un clic abajo.
-let HOY_DESDE = 3, HOY_FEED_ALL = false, PARA_TI_ALL = new Set(), REG_FILTRO = "todo";
+let PARA_TI_ALL = new Set(), REG_FILTRO = "todo";
 // de quién es el tablero: lo dice el generador; vacío si la carpeta no da el nombre de la cuenta (entonces no se personaliza).
 // Con datos de antes de la 1.22.3, sin el campo, quien administra
 const DATOS_NUEVOS = () => !!(META && "tablero_de" in META);   // datos de la 1.22.3 o más: con los de antes no se personaliza ni se acepta nada hasta que lleguen
@@ -1429,10 +1409,13 @@ const quienSes = (p, s) => s.quien || "";
 function faltaDecidir(p){ const c = cortoPartes(p); if(!c) return null; const it = c.items.find(i=>/^\**\s*falta decidir/i.test(i)); return it ? it.replace(/^\**\s*falta decidir\s*:?\s*\**\s*:?\s*/i,"").trim() : null; }
 const fechaEstatus = p => { const c = cortoPartes(p); return c && c.fecha || null; };
 const estatusViejo = p => { const f = fechaEstatus(p); return !f || diasDesde(f) > 14; };
-let titEstatus = p => { const c = cortoPartes(p); return c && c.tit ? c.tit : ""; };
+// la primera frase sin el nombre del proyecto delante ni «hoy» (sinSujeto)
+function titEstatus(p){ const c = cortoPartes(p); return sinSujeto(c && c.tit ? c.tit : "", p.nombre, fechaEstatus(p)); }
 function titArea(a){ const l0 = (a.en_corto||"").split("\n")[0]||""; const l = /^\s*[-*]\s/.test(l0) ? "" : l0; const m = l.match(/^(20\d\d-\d\d-\d\d)\s*[·:—-]\s*(.*)$/); const full = (m?m[2]:l).replace(/\*\*/g,"").trim(); const t = (full.match(/^.+?[.!?](?=\s|$)/)||[full])[0];
-  if(!t && !a.en_corto && a.panorama && a.panorama.texto){ const pt = a.panorama.texto.replace(/\*\*/g,"").trim(); return {fecha: a.panorama.fecha||null, t: (pt.match(/^.+?[.!?](?=\s|$)/)||[pt])[0]}; }
-  return {fecha: m?m[1]:null, t}; }
+  // la primera frase sin el nombre del área delante ni «hoy» (sinSujeto)
+  const fin = r => ({...r, t: sinSujeto(r.t, a.nombre, r.fecha)});
+  if(!t && !a.en_corto && a.panorama && a.panorama.texto){ const pt = a.panorama.texto.replace(/\*\*/g,"").trim(); return fin({fecha: a.panorama.fecha||null, t: (pt.match(/^.+?[.!?](?=\s|$)/)||[pt])[0]}); }
+  return fin({fecha: m?m[1]:null, t}); }
 function diaLabel(f){ const d = diasDesde(f); if(d===0) return "Hoy"; if(d===1) return "Ayer"; const s = new Date(f+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long", day:"numeric", month:"long"}); return s.charAt(0).toUpperCase()+s.slice(1); }
 
 function paraTi(){
@@ -1452,10 +1435,8 @@ function ptGrupo(id, titulo, nota, filas){
   return `<div class="pt-g" id="${id}"><h3>${titulo} <span class="c">${filas.length}</span></h3>${nota?`<p class="pt-n">${nota}</p>`:""}<div class="due-list">${vis.join("")}</div>${filas.length>4?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="${id}">${abierto?"Ver menos":`Ver los ${filas.length} `}</button>`:""}</div>`;
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("[data-hoy-desde],[data-feed-all],[data-pt-all],[data-hoy-go],[data-reg]"); if(!t) return;
-  if(t.dataset.hoyDesde){ HOY_DESDE = +t.dataset.hoyDesde; HOY_FEED_ALL = false; render(); }
-  else if(t.hasAttribute("data-feed-all")){ HOY_FEED_ALL = !HOY_FEED_ALL; render(); }
-  else if(t.dataset.ptAll){ const k = t.dataset.ptAll; PARA_TI_ALL.has(k) ? PARA_TI_ALL.delete(k) : PARA_TI_ALL.add(k); render(); }
+  const t = e.target.closest && e.target.closest("[data-pt-all],[data-hoy-go],[data-reg]"); if(!t) return;
+  if(t.dataset.ptAll){ const k = t.dataset.ptAll; PARA_TI_ALL.has(k) ? PARA_TI_ALL.delete(k) : PARA_TI_ALL.add(k); render(); }
   else if(t.dataset.hoyGo){ e.preventDefault(); const el = document.getElementById(t.dataset.hoyGo); if(el){ el.scrollIntoView({behavior:"smooth", block:"start"}); el.classList.add("flash-sec"); setTimeout(()=>el.classList.remove("flash-sec"), 1200); } }
   else if(t.dataset.reg){ REG_FILTRO = t.dataset.reg; render(); }
 });
@@ -1482,7 +1463,8 @@ function registroTab(p){
 function renderProj(p){
   tab = TABMAP[tab] || tab; if(!["estatus","quehay","pasos","registro"].includes(tab)) tab = "estatus";
   if(p.restringido){ renderProjOld(p, "resumen"); return; }
-  if(tab==="registro") renderProjOld(p, "pasos");
+  // la cabecera la pinta renderProjOld: aquí solo hace falta en las pestañas que no lo llaman (un cerrado, en Estatus, revisión 1.22.5)
+  if(tab==="registro" || (tab==="estatus" && p.cerrado)) renderProjOld(p, "pasos");
   const main = document.getElementById("main");
   let body;
   if(tab==="estatus"){
@@ -1495,7 +1477,7 @@ function renderProj(p){
   } else if(tab==="pasos"){
     body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + renderProjOld(p, "pasos");
   } else body = registroTab(p);
-  const nP = stepsLive(p).length, nV = p.entregables_vigentes||0, nR = (p.decisiones_total||0) + (p.sesiones_total||0);
+  const nP = stepsLive(p).length;
   const tabs = [["estatus","Estatus",""],["pasos","Acciones",p.cerrado?"":(nP||"")],["registro","Actividad",""],["quehay","Qué hay",""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); });
@@ -1513,7 +1495,7 @@ function noCuadra(){
     if(fd){ const dec = decisionesTodas(p).filter(d=>fe && d.fecha > fe); if(dec.length) out.push({id:"fd:"+p.id, p, k:"Decidido después", t:`«Falta decidir» dice: ${esc(fd.slice(0,120))}${fd.length>120?"…":""}; después hay ${dec.length} decisi${dec.length===1?"ón":"ones"} (${fmtD(dec[0].fecha)}). Puede estar resuelto.`, accion:"Confirmar"}); }
     const viejos = stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && diasDesde(f) > 30; });
     if(viejos.length) out.push({id:"venc:"+p.id, p, row:key(p.id, viejos[0].texto), k:"Vencido y nadie lo movió", t:`${viejos.length} paso${viejos.length===1?"":"s"} con fecha de hace más de un mes: ${inline(viejos[0].texto.slice(0,90))}${viejos[0].texto.length>90?"…":""}`, accion:"Fechar o quitar"});
-    for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc((q.texto||"").replace(new RegExp("^"+k+"\\s*:\\s*","i"),""));
+    for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc(textoProp(q).replace(new RegExp("^"+k+"\\s*:\\s*","i"),"").replace(/^(Candidato a entregable|Contradicción)\s*:\s*/,""));
       if(q.clase!=="afirma" && q.estado==="pendiente") out.push({id:"prop:"+q.id, p, k, t, accion:"Aceptar"});
       // aceptada y esperando: la de otra clase espera el sí en sesión; la de un proyecto donde ya no se escribe, no la aplicará nadie
       else if(q.estado==="aceptada" && (p.escribe===false || q.clase!=="afirma")) out.push({id:"prop:"+q.id, p, k: p.escribe===false ? "Aceptada sin quien la aplique" : k+" · aceptada", t: p.escribe===false ? `${t} Se aceptó${q.por?` (${esc(q.por)})`:""} en un proyecto donde este tablero ya no escribe.` : t, aceptada:true}); }
@@ -1538,17 +1520,6 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
   return _CONOCIDOS = porNombre; }
 function nombresEn(txt){ const c = conocidos(), out = [], re = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\b/g; let m; while((m = re.exec(txt||""))){ const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); } return out; }
-function esperas(){
-  const yo = nombreCorto(VIEWER()), por = {};
-  const add = (n, x) => (por[n] = por[n] || {n, items:[]}).items.push(x);
-  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
-    for(const s of stepsLive(p)){ const nat = effNat(p,s); const ns = nombresEn(s.texto).filter(n=>nombreCorto(n)!==yo);
-      if(nat==="espera" || (nat==="decision" && ns.length) || /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide))\b/i.test(s.texto)){ const f = effDate(p,s); for(const n of (ns.length?ns.slice(0,1):["Sin nombre en el paso"])) add(n, {p, t:s.texto, f, tab:"pasos"}); } }
-    const fd = faltaDecidir(p); if(fd){ for(const n of nombresEn(fd).filter(n=>nombreCorto(n)!==yo).slice(0,2)) add(n, {p, t:fd, f:fechaEstatus(p), tab:"estatus"}); }
-  }
-  const esc_ = escribenSet();
-  return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), desde: g.items.map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>(a.dentro-b.dentro) || (b.items.length-a.items.length));
-}
 
 // ===================== Inicio en tres pestañas: Estatus · Con otros · Mantenimiento =====================
 let INI_TAB = "estatus";
@@ -1567,8 +1538,6 @@ function aplicarFoco(){
     if(!el && f.sel){ const cand = [...document.querySelectorAll(f.sel)]; el = f.texto ? cand.find(x=>x.textContent.includes(f.texto)) : cand[0]; if(el && f.subir) el = el.closest(f.subir) || el; }
     if(!el) return; el.scrollIntoView({behavior:"smooth", block:"center"}); el.classList.add("foco"); setTimeout(()=>el.classList.remove("foco"), 2400); });
 }
-const _renderSinFoco = render;
-render = function(){ _renderSinFoco(); if(FOCO) aplicarFoco(); };
 
 // ---- 1. Estatus ----
 function enfoque2(){
@@ -1583,26 +1552,33 @@ function contextoDe(p){ return p.area==="clientes" ? p.nombre : (areaBy[p.area]?
 
 // ---- 3. Mantenimiento: avisos de la herramienta y lo que no cuadra ----
 function tabMant(){
-  const av = staleBanner(), nAv = (av.match(/class="stale/g)||[]).length, nc = noCuadra();
+  // el número de la pestaña cuenta solo lo que pide una acción: los avisos con data-acc y lo que no cuadra; los informativos van aparte, como un punto (1.22.5)
+  const av = staleBanner(), nAv = (av.match(/class="stale/g)||[]).length, nAcc = (av.match(/ data-acc[ >]/g)||[]).length, nc = noCuadra();
   const viejos = paraTi().viejos;
   const filaNC = x => { const destino = x.p ? (x.id.startsWith("venc:") ? {tab:"pasos", foco:{row:x.row, edit:x.row}} : x.id.startsWith("prop:") && /Quitar de/.test(x.t) ? {tab:"pasos", foco:{sel:".step", texto:(x.t.match(/«([^»]{20,40})/)||[])[1]||""}} : x.id.startsWith("fd:") ? {tab:"estatus", foco:{sel:".corto-l li", texto:"Falta decidir"}} : {tab:"estatus", foco:{sel:".corto"}}) : null;
     return `<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}" data-tab="${destino.tab}" ${focoAttr(destino.foco)}>${esc(x.p.nombre)} ›</button> · ${esc(areaBy[x.p.area]?.nombre||"")}`:`<button type="button" class="lnk" data-go-area="${esc(x.a.slug)}" data-atab="${x.id.startsWith("prio:")?"acciones":"estatus"}" ${focoAttr({sel:x.id.startsWith("prio:")?".prios":".pan"})}>${esc(x.a.nombre)} ›</button>`}</span>${ncAcciones(x)}</div>`; };
   const html = `<section class="due"><div class="top"><h2>Avisos de la herramienta</h2><span class="c">${nAv}</span><span class="c" style="margin-left:auto">Versiones, sincronización y lo que el tablero todavía no muestra</span></div>${av ? `<div class="mt-list">${av}</div>` : `<p class="empty">Sin avisos: tablero, página y carpeta en la misma versión.</p>`}</section>
-    <section class="due"><div class="top"><h2>Lo que no cuadra</h2><span class="c">${nc.length}</span><span class="c" style="margin-left:auto">Lo que se ve desde fuera de las sesiones. Las propuestas que aceptes las aplica el próximo cierre; lo demás se arregla en su sitio</span></div>${nc.length?`<div class="nc">${nc.slice(0, NC_N).map(filaNC).join("")}</div>${nc.length>5?`<button type="button" class="pg-more" data-nc-mas>${NC_N>5?"Ver menos":`Ver las ${nc.length-5} restantes`}</button>`:""}`:`<p class="empty">Todo cuadra.</p>`}
+    <section class="due"><div class="top"><h2>Lo que no cuadra</h2><span class="c">${nc.length}</span><span class="c" style="margin-left:auto">Lo que se ve desde fuera de las sesiones. Las sugerencias que aceptes las aplica el próximo cierre; lo demás se arregla en su sitio</span></div>${nc.length?`<div class="nc">${nc.slice(0, NC_N).map(filaNC).join("")}</div>${nc.length>5?`<button type="button" class="pg-more" data-nc-mas>${NC_N>5?"Ver menos":`Ver las ${nc.length-5} restantes`}</button>`:""}`:`<p class="empty">Todo cuadra.</p>`}
       ${viejos.length?`<h3 class="sub-h">Estatus por reescribir</h3>${viejos.map(p=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="estatus" ${focoAttr({sel:".corto"})}><span class="pill closed">Viejo</span><span class="t">${fechaEstatus(p)?`Estatus del ${fmtD(fechaEstatus(p))}, hace ${diasDesde(fechaEstatus(p))} días`:"Sin Estatus todavía"}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span></button>`).join("")}`:""}</section>
     <details class="card mas-c"><summary><h2 style="display:inline">Por poner al día, proyecto por proyecto</h2><span class="more"> · el detalle de cada proyecto y la frase para arreglarlo en sesión</span></summary>${memoriaAlDia()}</details>`;
-  return {n: nAv + nc.length, html};
+  // lo tocado aquí que la carpeta aún no refleja: fechas, hechos, notas y correcciones, con su «Deshacer»
+  const nCola = cambiosVis().length;
+  const cola = nCola ? `<details class="card mas-c"><summary><h2 style="display:inline">Por registrar en la carpeta</h2><span class="more"> · ${nCola} · lo tocado aquí que la carpeta aún no refleja</span></summary><div class="due-list" style="margin-top:10px">${colaRows()}</div></details>` : "";
+  // lo marcado aquí que ya no coincide con la carpeta pide deshacerlo o resolverlo: cuenta como acción; lo demás que espera
+  // (la cola, lo flojo de la memoria, los Estatus por reescribir) enciende el punto si no hay acciones (revisión 1.22.5)
+  const nOrf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length;
+  const espera = (nCola - nOrf) + viejos.length + (html.includes('class="mt-i"') ? 1 : 0);
+  return {n: nAcc + nc.length + nOrf, info: (nAv - nAcc) + espera, html: html + cola + permisosLinea()};
 }
 
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ini]"); if(!b) return; INI_TAB = b.dataset.ini; render(); window.scrollTo({top:0}); });
 
-// ===================== Ronda 6: Estatus · Acciones · Mantenimiento, Estatus de la raíz, tipo, Qué hay con resumen, aportacion provisional, enfoque =====================
+// ===================== Estatus de la raíz, Qué hay con su resumen y la frase de resumen provisional, por dónde empezar =====================
 // la «aportacion» provisional de una pieza es la propuesta de clase «afirma» que el barrido dejó en la cola para ella
 const provDe = ruta => { const q = PROPUESTAS.find(c=>c.clase==="afirma" && c.ruta===ruta && c.estado!=="descartada"); return q ? q : null; };
 // ---- cabecera: tipo junto al nombre y una sola persona que administra ----
 function cabeceraRaiz(){
   const org = META ? META.organizacion : "";
-  const hoy = new Date(today()+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long", day:"numeric", month:"long"});
   const adm = META ? persona(META.administra) : "", ctx = META ? persona(META.contexto_comun) : "";
   const quien = adm && ctx && adm!==ctx ? `<span>Administra: <b>${esc(adm)}</b></span><span>Contexto: <b>${esc(ctx)}</b> <span class="pill soon" ${tip("El método pide una sola persona: administra la carpeta, responde por el contexto y es su dueña en Drive. Corrígelo en la guía de la carpeta.")}>dos personas</span></span>` : `<span>Administra: <b>${esc(adm||ctx||"—")}</b></span>`;
   return `<div class="org-tit"><h1>${esc(org||"Tablero")}</h1></div>
@@ -1655,10 +1631,11 @@ function tabAcciones(){
       <div class="dd"><div><h4>Te debe <span class="c">${g.deben.length}</span></h4>${g.deben.map(it).join("") || `<p class="more">Nada.</p>`}</div><div><h4>Le debes <span class="c">${g.debes.length}</span></h4>${g.debes.map(it).join("") || `<p class="more">Nada.</p>`}</div></div></article>`; };
   const nDeben = gs.reduce((n,g)=>n+g.deben.length,0), nDebes = gs.reduce((n,g)=>n+g.debes.length,0);
   // el número cuenta también los cuestionamientos que esperan al lector, que la pestaña enseña primero (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + ((META && META.cuestionamientos) || []).filter(cuestMio).length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section><!--/te-toca-->
+  // detrás de «Te toca a ti», las decisiones de otros que te afectan; al final, por dónde empezar
+  return {n: pt.decidir.length + pt.venc.length + ((META && META.cuestionamientos) || []).filter(cuestMio).length + afectaDeOtros().length, html: `<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section>${seccionAfecta()}
     <section class="due"><div class="top"><h2>Con otros</h2><span class="c">${cuantos(gs.length,"persona","personas")} · te deben ${nDeben} · les debes ${nDebes}</span><span class="c" style="margin-left:auto">Del equipo y de fuera, con su organización</span></div>
     <p class="more">El lado sale del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes. Alguien de fuera sale aquí cuando el paso lo escribe como «Nombre Apellido (Organización)».${SIN_QUIEN() ? ` ${cuantos(SIN_QUIEN(),"paso espera","pasos esperan")} a alguien que el tablero no reconoce: en su sesión, escríbelo así.` : ""}</p>
-    <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie.</p>`}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>`};
+    <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("") || `<p class="empty">Nada pendiente con nadie.</p>`}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>${enfoque2()}`};
 }
 
 
@@ -1692,12 +1669,13 @@ function queHayTab(p){
   const Q = queHayDe(p), d = Q.d || {piezas:[]}, piezas = d.piezas || [];
   if(Q.falta) return `<section class="card">${CARGANDO}</section>`;
   if(sinDetalle(p)) return `<section class="card">${SIN_DETALLE}</section>`;
-  const R = null;   // el resumen lo pone la versión de abajo (escrito o calculado)
+  // el resumen escrito por la puesta al día (RESUMEN_GEN, colección «resumenes», 1.22.4) si es de lo que hay ahora; si no, el calculado
+  const g0 = RESUMEN_GEN[p.id], gen = g0 && g0.huella_qh && g0.huella_qh === p.que_hay_huella ? g0 : null, R = gen || resumenCalculado(p, piezas);
+  const origen = gen ? `Resumen escrito en la puesta al día del ${fmtD(gen.fecha)}, con lo que cada pieza dice que aporta.` : "Resumen hecho con lo que cada pieza dice que aporta.";
   const pend = piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
-  const resumen = (t, txt, demo) => `<div class="qh-res"><h3>${t}</h3>${txt?`<p>${esc(txt)}</p>`:`<p class="more">Sin resumen todavía: lo escribe la puesta al día cuando cambie lo de dentro.</p>`}</div>`;
   const top = `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un proyecto")}</h2>${indicadores(p, piezas)}
-    <div class="qh-res2">${resumen("Lo publicado", R&&R.ent, true)}${resumen("En el taller", R&&R.tal, true)}</div>
-    ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una aportación provisional, escrita por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
+    <div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(R.ent)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(R.tal)}</p></div></div><p class="pt-n">${origen}</p>
+    ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una frase de resumen sugerida por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
   const grupo = (t, list) => `<section class="card"><h3>${t} <span class="c">${list.length}</span></h3>${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</section>`;
   return top + grupo("Entregables", piezas.filter(z=>z.tipo==="entregable")) + grupo("Taller", piezas.filter(z=>z.tipo==="taller"))
     + `<section class="card"><h3>Trayectoria</h3>${trayHtml(d.trayectoria)}</section>`;
@@ -1709,7 +1687,7 @@ document.addEventListener("click", async e => { const b = e.target.closest && e.
   try{ for(const q of qs) await DB.doc("cambios/"+q.id).update({estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
   render(); });
 
-// ===================== Ronda 7: pestaña Actividad (por área, por proyecto, por persona) =====================
+// ===================== Actividad: por área, por proyecto, por persona =====================
 let ACT_DIAS = 7; try{ ACT_DIAS = +(localStorage.getItem("tablero-actividad-dias")||7) || 7; }catch(e){}
 
 function eventos(desde){
@@ -1743,7 +1721,7 @@ function actPersonas(ev){
   const lista = Object.values(gente).sort((a,b)=>a.n.localeCompare(b.n,"es"));
   const n = ACT_DIAS;
   const tira = g => { let h = ""; for(let i=n-1;i>=0;i--){ const f = addDays(-i); h += `<i class="${g.dias.has(f)?"on":""}" title="${esc(fmtD(f))}"></i>`; } return `<span class="tira" style="grid-template-columns:repeat(${n},${n>14?7:12}px)" aria-label="${g.dias.size} días con sesión">${h}</span>`; };
-  return `<section class="card personas"><h2>Personas</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta: responsables y colaboradores de cada área y proyecto. Hechos, sin puntaje ni orden por volumen.</p>
+  return `<section class="card personas"><h2>Por persona</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta: responsables y colaboradores de cada área y proyecto. Hechos, sin puntaje ni orden por volumen.</p>
     ${lista.length ? lista.map(g=>`<div class="per"><div class="per-h"><b>${esc(g.n)}</b>${tira(g)}</div><div class="per-k"><span><b>${g.ses}</b> sesiones · ${g.dias.size} días</span><span><b>${g.proy.size}</b> proyectos</span><span><b>${g.dec}</b> decisiones</span><span><b>${g.pub}</b> publicados</span><span class="cruza"><b>${g.cruza}</b> decisiones que tocan otras áreas</span></div></div>`).join("") : `<p class="empty">Nadie cerró sesión en el periodo.</p>`}
     ${sinNombre?`<p class="more">${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró (son de antes de que el cierre lo apuntara); no se atribuyen a nadie.</p>`:""}
     ${lista.length===1?`<p class="more">Aquí escribe una sola persona. Con varias, esta tarjeta las pone lado a lado, en orden alfabético.</p>`:""}</section>`;
@@ -1765,11 +1743,11 @@ function otrosDesdeTi(){
   if(!out.length) return `<p class="more act-solo">Nadie más ha escrito en tus proyectos desde tu última sesión en cada uno. Con más personas en la carpeta, aquí sale lo que cerraron o decidieron después de ti, proyecto por proyecto.</p>`;
   return `<section class="due"><div class="top"><h2>Lo que otros hicieron desde tu última sesión</h2><span class="c">${out.length}</span></div>${out.map(({p,evs,ult})=>`<div class="pt-g"><h3>${esc(p.nombre)} <span class="c">${ult?`tu última sesión, ${fmtD(ult)}`:"nunca has cerrado sesión aquí"}</span></h3><div class="due-list">${evs.slice(0,5).map(e=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="registro"><span class="pill ${e.k==="dec"?"ok":e.k==="pub"?"closed":"none"}">${e.k==="dec"?"Decisión":e.k==="pub"?"Publicado":"Sesión"}</span><span class="t">${inline(e.t)}</span><span class="w">${esc(nombreCorto(e.q))} · ${fmtD(e.f)}</span></button>`).join("")}</div></div>`).join("")}</section>`;
 }
-let ACT_TODOS = false;
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-act-dias],[data-act-todos]"); if(!b) return;
-  if(b.dataset.actDias){ ACT_DIAS = +b.dataset.actDias; try{ localStorage.setItem("tablero-actividad-dias", ACT_DIAS); }catch(x){} } else ACT_TODOS = !ACT_TODOS; render(); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-act-dias]"); if(!b) return;
+  ACT_DIAS = +b.dataset.actDias; try{ localStorage.setItem("tablero-actividad-dias", ACT_DIAS); }catch(x){} render(); });
 
 // Estatus sin el feed ni Personas; Inicio con cuatro pestañas
+let _NUM_INICIO = null;
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   head.innerHTML = cabeceraRaiz();
@@ -1777,10 +1755,18 @@ function renderRoot(){
   if(INI_TAB==="otros") INI_TAB = "acciones";
   // Acciones y Mantenimiento se calculan siempre por su número; Estatus y Actividad, que no llevan número, solo si se ven (1.22.4)
   if(!["estatus","acciones","actividad","mant"].includes(INI_TAB)) INI_TAB = "estatus";
-  const T = {acciones: tabAcciones(), mant: tabMant()};
-  if(INI_TAB==="estatus") T.estatus = tabEstatus(); else if(INI_TAB==="actividad") T.actividad = tabActividad();
+  const T = {};
+  if(INI_TAB==="estatus") T.estatus = tabEstatus(); else if(INI_TAB==="actividad") T.actividad = tabActividad(); else if(INI_TAB==="acciones") T.acciones = tabAcciones(); else T.mant = tabMant();
+  // el número de la pestaña que no se ve sale de lo guardado mientras no cambien los datos, el minuto ni la sincronización (revisión 1.22.4, hallazgo 19)
+  const k_ = [DATA_SEQ, SYNC_STATE, OWNER, !!MCP, Math.floor(Date.now()/60000)].join("|");
+  if(!_NUM_INICIO || _NUM_INICIO.k !== k_) _NUM_INICIO = {k: k_};
+  for(const [t, f] of [["acciones", tabAcciones], ["mant", tabMant]]){ const x = T[t] || _NUM_INICIO[t] || f(); _NUM_INICIO[t] = {n: x.n, info: x.info}; T[t] = T[t] || _NUM_INICIO[t]; }
   const tabs = [["estatus","Estatus",0],["acciones","Acciones",T.acciones.n],["actividad","Actividad",0],["mant","Mantenimiento",T.mant.n]];
-  main.innerHTML = `<div class="tabs ini-tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-ini="${k}" aria-selected="${INI_TAB===k}">${t}${n?`<span class="n${k==="mant"?" warn":""}">${n}</span>`:""}</button>`).join("")}</div>${T[INI_TAB].html}`;
+  // Mantenimiento: número rojo con lo que pide una acción; sin eso, un punto amarillo si hay avisos que solo informan; si no, nada (1.22.5)
+  const marca = (k,n) => k==="mant" ? (n ? `<span class="n badge" aria-hidden="true">${n}</span><span class="sr">: ${n} por hacer</span>` : T.mant.info ? `<span class="n punto" aria-hidden="true"></span><span class="sr">: hay algo que revisar</span>` : "") : n ? `<span class="n">${n}</span>` : "";
+  main.innerHTML = `<div class="tabs ini-tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-ini="${k}" aria-selected="${INI_TAB===k}">${t}${marca(k,n)}</button>`).join("")}</div>${T[INI_TAB].html}`;
+  // los permisos de Drive, arriba y en ámbar solo si algo no cuadra
+  const pc = permisosCard(); if(pc) main.insertAdjacentHTML("afterbegin", pc);
 }
 
 // ---- Voz: la primera frase no empieza por el nombre del área o del proyecto, ni dice «hoy» ----
@@ -1793,10 +1779,6 @@ function sinSujeto(t, nombre, fecha){
   if(fecha) s = s.replace(/\bhoy\b(?!\s+en\s+d[ií]a)/gi, `el ${fmtD(fecha)}`).replace(/\bayer\b/gi, ()=>{ const d = new Date(fecha+"T12:00:00"); d.setDate(d.getDate()-1); return `el ${fmtD(d.toISOString().slice(0,10))}`; });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
-const _titAreaBase = titArea;
-titArea = function(a){ const r = _titAreaBase(a); return {...r, t: sinSujeto(r.t, a.nombre, r.fecha)}; };
-const _titEstatusBase = titEstatus;
-titEstatus = p => sinSujeto(_titEstatusBase(p), p.nombre, fechaEstatus(p));
 
 
 // ---- «Te afecta»: por decisión, solo de otras personas, y en Acciones (es algo a lo que reaccionar: adoptar o cuestionar) ----
@@ -1813,8 +1795,6 @@ function seccionAfecta(){
   return `<section class="due" id="pt-afect"><div class="top"><h2>Decisiones de otros que te afectan</h2><span class="c">${gs.length}</span><span class="c" style="margin-left:auto">Desde tu última sesión en cada proyecto. Se adoptan al cerrar, o se cuestionan</span></div>
     ${gs.length ? `<div class="due-list">${(PARA_TI_ALL.has("pt-afect")?gs:gs.slice(0,5)).map(fila).join("")}</div>${gs.length>5?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="pt-afect">${PARA_TI_ALL.has("pt-afect")?"Ver menos":`Ver las ${gs.length}`}</button>`:""}` : `<p class="empty">Ninguna decisión de otra persona nombra tus proyectos desde tu última sesión en ellos.</p>`}</section>`;
 }
-const _tabAccionesBase = tabAcciones;
-tabAcciones = function(){ const r = _tabAccionesBase(); const m_ = r.html.indexOf("<!--/te-toca-->"), i = m_ >= 0 ? m_ : r.html.indexOf("</section>") + 10; return {n: r.n + afectaDeOtros().length, html: r.html.slice(0,i) + seccionAfecta() + r.html.slice(i)}; };
 
 // ---- Qué hay: resumen escrito por la puesta al día (RESUMEN_GEN, por proyecto) y, si falta, uno calculado desde las piezas ----
 const RESUMEN_GEN = {};   // los párrafos escritos por la puesta al día (colección «resumenes», 1.22.4); si falta o quedó viejo, el calculado
@@ -1831,25 +1811,15 @@ function resumenCalculado(p, piezas){
   if(viejosT.length) t += ` ${cuantos(viejosT.length,"pieza es","piezas son")} anterior${viejosT.length===1?"":"es"} a decisiones que las tocan.`;
   return {ent: e, tal: t};
 }
-const _queHayTabBase = queHayTab;
-queHayTab = function(p){
-  const Q = queHayDe(p), d = Q.d || {piezas:[]}, piezas = d.piezas || [];
-  const g0 = RESUMEN_GEN[p.id], gen = g0 && g0.huella_qh && g0.huella_qh === p.que_hay_huella ? g0 : null, R = gen || resumenCalculado(p, piezas);
-  const origen = gen ? `Resumen escrito en la puesta al día del ${fmtD(gen.fecha)}, con lo que cada pieza dice que aporta.` : "Resumen hecho con lo que cada pieza dice que aporta.";
-  let html = _queHayTabBase(p);
-  html = html.replace(/<div class="qh-res2">[\s\S]*?<\/div>\s*(?=<div class="prov-bar">|<\/section>)/, `<div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(R.ent)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(R.tal)}</p></div></div><p class="pt-n">${origen}</p>`);
-  return html;
-};
 
 // ---- Inicio: Actividad sin «Por proyecto»; el área recibe «Por proyecto» como su sección de actividad. «Personas» pasa a «Quién aporta». ----
-const _actPersonasBase = actPersonas;
-actPersonas = ev => _actPersonasBase(ev).replace("<h2>Personas</h2>", "<h2>Por persona</h2>");
 const selPeriodo = (o) => `<div class="hoy-sel" role="group" aria-label="Periodo">${[[7,"Últimos 7 días"],[28,"Últimos 28 días"]].map(([d,l])=>`<button type="button" class="chip${ACT_DIAS===d?" on":""}" data-act-dias="${d}">${l}</button>`).join("")}<span class="more">del ${fmtD(addDays(-(ACT_DIAS-1)))} al ${fmtD(today())}, hoy incluido</span><span class="more" style="margin-left:auto">${kTxt(o)} · ${cuantos(o.proy.size,"proyecto","proyectos")}</span></div>`;
 function tabActividad(){
   const ev = eventos(addDays(-(ACT_DIAS-1))), o = agrega(ev);
   return {n: 0, html: selPeriodo(o) + actPorArea(ev) + otrosDesdeTi() + actPersonas(ev)};
 }
 function actPorProyectoArea(ev, ps){
+  const esc_ = escribenSet(); ev = ev.map(e=>esc_.has(e.q) ? e : {...e, q:""});   // solo quien escribe en la carpeta
   const por = {}; for(const e of ev) (por[e.p.id] = por[e.p.id] || []).push(e);
   const filas = ps.filter(p=>por[p.id]).map(p=>({p, o:agrega(por[p.id]), ult: por[p.id].filter(e=>e.k==="ses").sort((a,b)=>b.f.localeCompare(a.f))[0]})).sort((x,y)=>(y.o.ses+y.o.dec+y.o.pub)-(x.o.ses+x.o.dec+x.o.pub));
   const quietos = ps.filter(p=>activo(p) && !por[p.id]);
@@ -1857,7 +1827,7 @@ function actPorProyectoArea(ev, ps){
     ${quietos.length?`<p class="more">Sin movimiento: ${quietos.map(p=>`<button type="button" class="lnk" data-go-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join(", ")}.</p>`:""}`;
 }
 
-// ===================== Ronda 8: la misma gramática en los tres niveles =====================
+// ===================== La misma gramática en los tres niveles =====================
 // Estatus · Acciones · Actividad · Qué hay (en la raíz, «Mantenimiento»). Bajar un nivel conserva la pestaña.
 let NTAB = "estatus";
 const setNTAB = k => { NTAB = k; };
@@ -1870,8 +1840,6 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
   else if(b.dataset.atab) setNTAB(b.dataset.atab);
   else if(b.dataset.tab && b.classList.contains("tab")) setNTAB(DE_PROY[b.dataset.tab] || "estatus"); }, true);
 // bajar a un proyecto sin pestaña explícita abre la misma pregunta
-const _goBase = go;
-go = function(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: PROY_DE[NTAB] || "estatus"}; if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus"; _goBase(v); };
 
 // ---- la ficha: una sola forma para área y proyecto ----
 function primerSiguiente(txt){ const m = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*[ \t]*:?[ \t]*([^\n]+)/i); if(m && m[1].trim()) return m[1].trim().split(/(?<=[.;])\s/)[0].replace(/[;,]$/,""); const n = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*\n\s+-\s*([^\n]+)/i); return n ? n[1].trim() : ""; }
@@ -1976,7 +1944,7 @@ function renderDec(){
   all.sort((a,b)=>(b.d.fecha||"").localeCompare(a.d.fecha||""));
   const cruza = x => AREAS.some(a=>a.slug!==x.p.area && (x.d.afecta||"").includes(a.slug+"/"));
   const gente = [...new Set(all.map(x=>persona(x.d.decidio||x.d.planteo||"")).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
-  const list = all.filter(x=>(!DEC_AREA || x.p.area===DEC_AREA) && (!DEC_PER || persona(x.d.decidio||x.d.planteo||"")===DEC_PER) && (!DEC_CRUZA || cruza(x)) && (!DEC_CONF || x.d.por_confirmar));
+  const list = all.filter(x=>(!DEC_AREA || x.p.area===DEC_AREA) && (!DEC_PER || persona(x.d.decidio||x.d.planteo||"")===DEC_PER) && (!DEC_CRUZA || cruza(x)));
   head.innerHTML = `<h1>Decisiones</h1><p class="sub">Qué se decidió, quién y cuándo, en toda la carpeta. Toca una para ver el porqué y lo descartado.</p>`;
   const chips = (vals, cur, attr) => vals.map(([v,l])=>`<button type="button" class="chip${cur===v?" on":""}" ${attr}="${esc(v)}">${esc(l)}</button>`).join("");
   main.innerHTML = `<div class="filtros"><div class="chips"><span class="more">Área</span>${chips([["","Todas"],...AREAS.map(a=>[a.slug,a.nombre])], DEC_AREA, "data-dec-area")}</div>
@@ -2004,20 +1972,10 @@ function renderEnt(){
 }
 
 // ---- lateral: Consulta agrupada, «Agenda» sin badge rojo ----
-const _renderSideBase = renderSide;
-renderSide = function(){ _renderSideBase(); const el = document.getElementById("side-nav"); if(!el) return;
-  const pend = el.querySelector("[data-go-pend]"); if(pend){ pend.innerHTML = `<span>Agenda</span>`; pend.insertAdjacentHTML("beforebegin", `<div class="side-g">Consulta</div>`); }
-  const leg = el.querySelector(".side-leg"); if(leg) leg.remove(); };
-const _crumbsBase = crumbs;
-crumbs = function(){ _crumbsBase(); const el = document.getElementById("crumbs"); if(view.lvl==="pend" && el) el.innerHTML = el.innerHTML.replace("Pendientes","Agenda"); };
 
 // ---- teléfono: el nombre de la organización solo en la barra de arriba, con su tipo ----
-const _renderSideR8 = renderSide;
-renderSide = function(){ _renderSideR8(); const mo = document.getElementById("mob-org"); if(mo && META) mo.textContent = META.organizacion || ""; };
-const _renderR8 = render;
-render = function(){ document.body.dataset.lvl = view.lvl; _renderR8(); };
 
-// ===================== Ronda 9: arreglos de la revisión independiente =====================
+// ===================== Pasos, Mantenimiento y Acciones =====================
 // textos de pasos: sin la fecha inicial (ya va en la fila) y cortados
 function corta(t){ const s = (t||"").replace(/^\s*20\d\d-\d\d-\d\d(?:,[^·:]*)?\s*[·:—-]\s*/,""); return s.length>160 ? s.slice(0,157)+"…" : s; }
 // la pestaña elegida se conserva al pasar de un área o proyecto a otro, también desde el lateral y las migas (1.22.4)
@@ -2034,14 +1992,8 @@ function lineaHoy(){
   return `<p class="hoy-linea">${partes.join('<span class="sep">·</span>')}</p>`;
 }
 function tabEstatus(){ return {n: 0, html: `${lineaHoy()}<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${premisasCard()}`}; }
-const _tabAccR9 = tabAcciones;
-tabAcciones = function(){ const r = _tabAccR9(); return {n: r.n, html: r.html + enfoque2()}; };
 // Mantenimiento: sin el título repetido dentro del desplegable
-const _tabMantR9 = tabMant;
-tabMant = function(){ const r = _tabMantR9(); return {n: r.n, html: r.html.replace(/(<summary>[\s\S]*?<\/summary>)\s*<section class="due"><div class="top"><h2>La memoria al día[\s\S]*?<\/div>/, '$1<section class="due">')}; };
 // actividad del área: solo quien escribe en la carpeta
-const _actPPA = actPorProyectoArea;
-actPorProyectoArea = function(ev, ps){ const esc_ = escribenSet(); return _actPPA(ev.map(e=>esc_.has(e.q) ? e : {...e, q:""}), ps); };
 
 // ---- lo que no cuadra: una propuesta de la cola se acepta o se descarta aquí; lo demás se arregla en su sitio ----
 // quien monta el tablero solo acepta lo que su próximo cierre puede aplicar: lo de proyectos donde escribe
@@ -2062,13 +2014,6 @@ document.addEventListener("click", async e => { const n = e.target.closest && e.
 });
 // ---- el detalle de un proyecto llega al pedirlo: Qué hay y Actividad lo piden al abrirse ----
 // ---- los permisos de Drive: arriba si algo no cuadra, y la línea de «coinciden» al final de Mantenimiento ----
-const _tabMantReal = tabMant;
-tabMant = function(){ const r = _tabMantReal(), n = cambiosVis().length;
-  // lo tocado aquí que la carpeta aún no refleja: fechas, hechos, notas y correcciones, con su «Deshacer»
-  const cola = n ? `<details class="card mas-c"><summary><h2 style="display:inline">Por registrar en la carpeta</h2><span class="more"> · ${n} · lo tocado aquí que la carpeta aún no refleja</span></summary><div class="due-list" style="margin-top:10px">${colaRows()}</div></details>` : "";
-  return {n: r.n, html: r.html + cola + permisosLinea()}; };
-const _renderRootReal = renderRoot;
-renderRoot = function(){ _renderRootReal(); const main = document.getElementById("main"), pc = ready.a && ready.p ? permisosCard() : ""; if(pc && main) main.insertAdjacentHTML("afterbegin", pc); };
 // ---- el estado completo, plegado bajo el Estatus del proyecto ----
 function enDetalle(p){
   if(!cortoPartes(p)) return "";
@@ -2095,7 +2040,7 @@ function permisosLinea(){
 // ---- decisiones de toda la raíz ----
 let DEC_AREA = "", PEND_AREA = "", ENT_AREA = "";
 const areaChips = (cur, attr) => `<div class="chips">${[["","Todas"],...AREAS.map(a=>[a.slug,a.nombre])].map(([v,l])=>`<button type="button" class="chip${cur===v?" on":""}" data-${attr}="${esc(v)}">${esc(l)}</button>`).join("")}</div>`;
-let DEC_OPEN = new Set(), DEC_N = 30, DEC_CONF = false;
+let DEC_OPEN = new Set(), DEC_N = 30;
 const decKey = (p, d) => p.id+"|"+(d.fecha||"")+"|"+(d.titulo||"");
 const MES_L = _fmt({month:"long",year:"numeric"}, "Sin fecha");
 // el detalle de un proyecto llega aparte (1.19): el porqué de las decisiones viejas, la bitácora menos la última
@@ -2106,7 +2051,7 @@ function traerTextos(pid){
   TEXTOS_PIDIENDO.add(pid);
   // una sola lectura, con la misma suscripción que usa el resto de la página, y se suelta en cuanto llega
   let fin = null, listo = false;
-  const llega = s => { if(listo) return; listo = true; const d = s && s.exists !== false && s.data ? s.data() : null; TEXTOS[pid] = d || {falta:true}; TEXTOS_PIDIENDO.delete(pid); try{ fin && fin(); }catch(e){} render(); };
+  const llega = s => { if(listo) return; listo = true; const d = s && s.exists !== false && s.data ? s.data() : null; TEXTOS[pid] = d || {falta:true}; TEXTOS_PIDIENDO.delete(pid); DATA_SEQ++; try{ fin && fin(); }catch(e){} render(); };
   try{ fin = DB.doc("detalle/"+pid).onSnapshot(llega, () => llega(null)); if(listo && fin) fin(); }
   catch(e){ llega(null); }
 }
@@ -2140,7 +2085,6 @@ function decList(items, conProy, limite){
 document.addEventListener("click", e => {
   const o = e.target.closest && e.target.closest("[data-dec-open]"); if(o){ const k = o.dataset.decOpen; DEC_OPEN.has(k) ? DEC_OPEN.delete(k) : DEC_OPEN.add(k); render(); return; }
   if(e.target.closest && e.target.closest("[data-dec-more]")){ DEC_N += 30; render(); return; }
-  if(e.target.closest && e.target.closest("[data-dec-conf]")){ DEC_CONF = !DEC_CONF; DEC_N = 30; render(); }
 });
 // ---- entregables vigentes de toda la raíz ----
 // ---- búsqueda ----
@@ -2232,17 +2176,17 @@ function staleBanner(){
   // cierres de sesión que el tablero aún no muestra: se avisa y su dueño lo pone al día con el botón (1.19)
   const pc = cierresPend();
   if(pc.length && (SYNC_STATE === "corriendo" || SYNC_STATE === "lanzada")) out += `<div class="stale info"><span>Poniéndose al día: hubo <b>${pc.length} sesi${pc.length===1?"ón":"ones"}</b> desde la última sincronización (${esc(nombresCierres(pc))}). Tarda unos minutos; la página se actualiza sola al terminar.</span></div>`;
-  else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando quien lo montó lo ponga al día."}</span></div>`;
+  else if(pc.length && !SYNC_STATE) out += `<div class="stale suave"${OWNER && !syncFalta() ? " data-acc" : ""}><span>Hay <b>${pc.length} sesi${pc.length===1?"ón cerrada":"ones cerradas"}</b> que el tablero aún no muestra (${esc(nombresCierres(pc))}). ${OWNER && !syncFalta() ? `<button type="button" class="lnk" data-sync>Sincronizar ahora ›</button>` : "Se verán cuando quien lo montó lo ponga al día."}</span></div>`;
   if(view.lvl === "root" && META.pagina_actualizada && META.pagina_actualizada.desde && META.pagina_actualizada.fecha && (Date.now() - new Date(META.pagina_actualizada.fecha+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>El tablero se actualizó a la versión <b>${esc(META.pagina_actualizada.version)}</b> el ${fmtD(META.pagina_actualizada.fecha)} al ponerse al día. Nada que hacer.${verMenor(META.pagina_actualizada.desde, "1.19.0") && !verMenor(META.pagina_actualizada.version, "1.19.0") ? ` Desde la 1.19 se pone al día solo cuando lo pides: con el botón junto al nombre, o con «sincroniza el tablero»; al abrirlo te avisa de las sesiones que aún no muestra.${AREAS.length > 1 ? " Si en la carpeta escriben varias personas, puedes pedir la tarea diaria: «pon el tablero al día cada mañana»." : ""}` : ""}</span></div>`;
   // un tablero que era público pasa a mostrar todo lo que lee su cuenta (1.18): se dice una semana, con lo que implica
-  if(view.lvl === "root" && OWNER && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info"><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
-  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale"><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;
+  if(view.lvl === "root" && OWNER && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info" data-acc><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
+  if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale" data-acc><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;
   // La carpeta puede ir detrás de la página: su metodo.md lo pone al día la primera cuenta con el plugin nuevo que abre sesión o sincroniza y puede escribir en ella.
   if(view.lvl === "root" && META.version_metodo && verMenor(META.version_metodo, VERSION_TABLERO)) out += `<div class="stale suave"><span>La carpeta usa todavía la versión <b>${esc(META.version_metodo)}</b> del método. Se pone al día sola en la próxima sesión o sincronización de alguien con el plugin actualizado y permiso para escribir en ella. Mientras tanto todo funciona igual.</span></div>`;
-  if(view.lvl === "root" && META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale suave"><span>Los datos del tablero son de la versión <b>${esc(META.version_tablero)}</b> y la página es la <b>${esc(VERSION_TABLERO)}</b>. Se ponen a la par en la próxima sincronización${OWNER&&!syncFalta()?", o ya mismo con el botón junto al nombre":""}.</span></div>`;
+  if(view.lvl === "root" && META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale suave"${OWNER && !syncFalta() ? " data-acc" : ""}><span>Los datos del tablero son de la versión <b>${esc(META.version_tablero)}</b> y la página es la <b>${esc(VERSION_TABLERO)}</b>. Se ponen a la par en la próxima sincronización${OWNER&&!syncFalta()?", o ya mismo con el botón junto al nombre":""}.</span></div>`;
   // Pasar días sin ponerse al día es normal si nadie trabajó: se avisa con margen y se dice cómo traer lo de otros.
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea && !META.tarea_manual ? 2 : 7;
-  if(dias >= umbral) out += `<div class="stale"><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Si cerraste sesiones o si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
+  if(dias >= umbral) out += `<div class="stale" data-acc><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Si cerraste sesiones o si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
   return out;
 }
 // ---- ayuda: el manual y cómo funciona, como artículos con su índice ----
@@ -2415,9 +2359,9 @@ function ayudaArts(){
       <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si sigue con el texto de la plantilla o queda vacío, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. Quien colabora en el área sale por el nombre que la carpeta da a su cuenta («Nombre Apellido (correo)» en una línea «Colabora:» de un proyecto); si no lo tiene, solo se cuenta. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
       <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien o le debes (del equipo o de fuera, con su organización), y <b>Por dónde empezar</b>. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
-      <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una aportación que propuso la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>
+      <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una frase de resumen que sugirió la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
-      <dt>Mantenimiento</dt><dd>Solo en Inicio. Su número suma los avisos de la herramienta y lo que no cuadra. Primero, los avisos de la herramienta (versiones, sesiones cerradas desde la última sincronización); después, lo que no cuadra (un Estatus viejo, algo decidido después de «Falta decidir», las propuestas de la memoria, que aceptas o descartas ahí si el tablero es tuyo y escribes en su proyecto) y el detalle por proyecto de lo que hay que poner al día, con la frase para hacerlo en sesión.</dd>
+      <dt>Mantenimiento</dt><dd>Solo en Inicio. Un número en rojo cuenta lo que te pide hacer algo: sincronizar, poner al día la tarea del tablero, lo que no cuadra y lo marcado aquí que ya no coincide con la carpeta. Si no hay nada de eso pero sí algo que revisar (una versión nueva, lo que espera a la próxima sesión, lo que la memoria tiene flojo), sale un punto amarillo; si no hay nada, no sale nada. Primero, los avisos de la herramienta (versiones, sesiones cerradas desde la última sincronización); después, lo que no cuadra (un Estatus viejo, algo decidido después de «Falta decidir», las sugerencias de la memoria, que aceptas o descartas ahí si el tablero es tuyo y escribes en su proyecto) y el detalle por proyecto de lo que hay que poner al día, con la frase para hacerlo en sesión.</dd>
       <dt>Dos voces</dt><dd>La línea de estado de un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el Estatus, que se firma al cerrar sesión.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
       <dt>No se comparte</dt><dd>Muestra todo lo que tu cuenta lee, incluido lo restringido, así que es solo para ti. Quien quiera ver la carpeta así monta el suyo con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</dd>
@@ -2491,7 +2435,7 @@ function ayudaArts(){
     <h3 class="hc-h">Por dónde empezar</h3>
     <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de pasos de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige con tres criterios: que esté entre las prioridades del área, que toque a un cliente, una firma o dinero, y que desbloquee otros proyectos. Que un paso esté vencido no lo hace más importante. Es una sugerencia: la sesión decide.</p>
     <h3 class="hc-h">Mantenimiento</h3>
-    <p>Después de los avisos de la herramienta, «Lo que no cuadra»: lo que se ve desde fuera de las sesiones (un Estatus más viejo que la última sesión, algo decidido después de lo que «Falta decidir» dice, pasos vencidos hace más de un mes que nadie movió) y las propuestas de la memoria, que acepta o descarta ahí mismo el dueño del tablero en los proyectos donde escribe; lo demás se arregla en su sitio, con el enlace de cada línea. Después, «Estatus por reescribir»; plegados, «Por poner al día, proyecto por proyecto» y «Por registrar en la carpeta» (lo que tocaste aquí y aún no está escrito). «Por poner al día» es lo que la memoria tiene flojo, cada cosa con la frase para arreglarla en una sesión. Cuenta como flojo:</p>
+    <p>Después de los avisos de la herramienta, «Lo que no cuadra»: lo que se ve desde fuera de las sesiones (un Estatus más viejo que la última sesión, algo decidido después de lo que «Falta decidir» dice, pasos vencidos hace más de un mes que nadie movió) y las sugerencias de la memoria, que acepta o descarta ahí mismo el dueño del tablero en los proyectos donde escribe; lo demás se arregla en su sitio, con el enlace de cada línea. Después, «Estatus por reescribir»; plegados, «Por poner al día, proyecto por proyecto» y «Por registrar en la carpeta» (lo que tocaste aquí y aún no está escrito). «Por poner al día» es lo que la memoria tiene flojo, cada cosa con la frase para arreglarla en una sesión. Cuenta como flojo:</p>
     <ul class="hc-l">
       <li>Archivos que cambiaron después de la última sesión registrada: hubo trabajo que nadie cerró.</li>
       <li>Pasos abiertos sin fecha, o mezclados con rutinas y esperas.</li>
@@ -2757,7 +2701,7 @@ function cortoCard(p){
   const nota = !c.fecha ? `<p class="more">Lo escribe Claude al cerrar cada sesión del proyecto.</p>`
     : despues || viejo ? `<p class="corto-aviso">Escrito el ${fmtD(c.fecha)}${despues?"; la ficha cambió después, así que puede no estar al día":""}${!despues&&viejo?"; hace más de un mes":""}. Lo reescribe la siguiente sesión.</p>`
     : `<p class="more">Firmado al cerrar la sesión del ${fmtD(c.fecha)}.</p>`;
-  return `<div class="card brief corto"><h3>Estatus${hq("en-corto","Qué es el Estatus")}</h3>${c.tit?`<p class="corto-t">${inline(c.tit)}</p>`:""}${c.items.length?`<ul class="corto-l">${c.items.map(i=>`<li>${inline(i)}</li>`).join("")}</ul>`:""}${nota}<p class="more corto-calc">${projLinea(p, true)}</p></div>`;
+  return `<div class="card brief corto"><h3>Estatus${hq("en-corto","Qué es el Estatus")}</h3>${c.tit?`<p class="corto-t">${inline(c.tit)}</p>`:""}${c.items.length?`<ul class="corto-l">${c.items.map(i=>`<li>${inline(i)}</li>`).join("")}</ul>`:""}${nota}</div>`;
 }
 function projLinea(p, sinEstado){
   const est = projStatus(p), partes = [];
@@ -2809,13 +2753,13 @@ let SIDE_OPEN = false;
 function renderSide(){
   const el = document.getElementById("side-nav"); if(!el) return;
   const org = META ? META.organizacion : "Tablero";
-  const all = ready.p ? pendientes() : [], t = today(), nLate = all.filter(i=>i.f && i.f<t).length;
   const cur = (lvl, id) => view.lvl===lvl && (id===undefined || view.id===id) ? ' aria-current="page"' : "";
   const nDec = PROJ.reduce((n,p)=>n+(p.decisiones_total||0),0), nEnt = PROJ.reduce((n,p)=>n+(p.entregables_vigentes||0),0);
   let h = `<div class="side-org"><span>${esc(org)}</span>${syncBtn()}</div>
     <input type="search" id="side-q" class="search side-search" placeholder="Buscar" aria-label="Buscar en proyectos, decisiones, entregables y acciones" value="${esc(QUERY)}">
     <button type="button" class="side-i top" data-go-root${cur("root")}><span>Inicio</span></button>
-    <button type="button" class="side-i top" data-go-pend${cur("pend")}><span>Pendientes</span>${nLate?`<span class="side-n late">${nLate}</span>`:all.length?`<span class="side-n">${all.filter(i=>i.f).length}</span>`:""}</button>
+    <div class="side-g">Consulta</div>
+    <button type="button" class="side-i top" data-go-pend${cur("pend")}><span>Agenda</span></button>
     <button type="button" class="side-i top" data-go-dec${cur("dec")}><span>Decisiones</span><span class="side-n">${nDec}</span></button>
     <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Entregables</span><span class="side-n">${nEnt}</span></button>
     <button type="button" class="side-i top" data-go-help${cur("ayuda")}><span>Ayuda</span></button>`;
@@ -2826,11 +2770,12 @@ function renderSide(){
       ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span>${esc(p.nombre)}</span></button>`).join("")}</div>`;
   }).join("");
   if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
-  h += `<div class="side-leg">${["encurso","bloqueado","parado","sininiciar","cerrado"].map(k=>`<span ${tip(EST[k].desc)}><i class="dot ${EST[k].dot}"></i>${EST[k].label.toLowerCase()}</span>`).join("")}<span ${tip(RIESGO.desc)}><i class="dot ok risk"></i>en riesgo</span></div>`;
   const hadFocus = document.activeElement && document.activeElement.id==="side-q", pos = hadFocus ? document.activeElement.selectionStart : 0;
   el.innerHTML = h;
   if(hadFocus){ const q = document.getElementById("side-q"); q.focus(); try{ q.setSelectionRange(pos,pos); }catch(e){} }
-  const tog = document.getElementById("side-toggle"); if(tog){ tog.setAttribute("aria-expanded", String(SIDE_OPEN)); tog.setAttribute("aria-label", SIDE_OPEN ? "Cerrar menú" : "Abrir menú"); tog.innerHTML = SIDE_OPEN ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>` : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`; } const mo = document.getElementById("mob-org"); if(mo) mo.textContent = org;
+  // en el teléfono, el nombre de la organización y «Sincronizar ahora» van en la barra de arriba (1.22.5)
+  const ms = document.getElementById("mob-sync"); if(ms) ms.innerHTML = syncBtn();
+  const tog = document.getElementById("side-toggle"); if(tog){ tog.setAttribute("aria-expanded", String(SIDE_OPEN)); tog.setAttribute("aria-label", SIDE_OPEN ? "Cerrar menú" : "Abrir menú"); tog.innerHTML = SIDE_OPEN ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>` : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`; } const mo = document.getElementById("mob-org"); if(mo) mo.textContent = org || "";
 }
 // ---- área ----
 // ---- proyecto ----
@@ -2854,28 +2799,11 @@ function renderProjOld(p, tab){
   head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Responsable: <b>${esc(persona(p.dueno))}</b></span>${(p.colaboran||[]).length?`<span>Colabora: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
-  const nE = (p.entregables||[]).length, nD = p.decisiones_total||0, nS = p.sesiones_total||0;
-  const nP = stepsLive(p).length;
-  const nV = p.entregables_vigentes||0;
-  const nQ = (p.decisiones||[]).filter(d=>d.tipo==="cuestionamiento").length;
-  const nZ = p.que_hay ? Object.values(p.que_hay.taller||{}).reduce((x,y)=>x+y,0) + Object.values(p.que_hay.entregables||{}).reduce((x,y)=>x+y,0) : 0;
-  const tabs = [["resumen","Resumen",""],["quehay","Qué hay",nZ||""],["estado","Ahora",""],["pasos","Acciones",nP],["entregables","Entregables",nV||nE],["decisiones",nQ&&!nD?"Cuestionamientos":"Decisiones",nD+nQ],["bitacora","Bitácora",p.sesiones_registro||nS]];
   let body = "";
-  if(tab==="resumen"){
-    const vigs = (p.entregables||[]).filter(e=>e.estado==="vigente").sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||""));
-    const nBor = (p.entregables||[]).filter(e=>e.estado==="borrador").length;
-    const clave = (p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento").slice(0,3);
-    const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
-    body = `${cuest}
-      ${cortoCard(p) || `<div class="card brief"><h3>Dónde está</h3><p>${projLinea(p)}</p></div>`}
-      <div class="card"><h3>Para qué</h3><dl class="facts"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd>${p.terminado?`<dt>Terminado significa</dt><dd>${inline(p.terminado)}</dd>`:""}<dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd>${p.consumen?`<dt>Lo usan</dt><dd>${inline(p.consumen)}</dd>`:""}</dl></div>
-      ${cortoPartes(p) ? `<div class="card"><h3>En detalle</h3>${EST_FULL.has(p.id) ? `<div class="md">${(e=>e===null?CARGANDO:e===false?SIN_DETALLE:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div><button type="button" class="leer" data-est-full="${esc(p.id)}">Ver menos</button>` : `<p class="more">El estado completo del proyecto, para quien trabaja en él.</p><button type="button" class="leer" data-est-full="${esc(p.id)}">Leer el detalle</button>`}</div>` : `<div class="card"><h3>En qué está</h3><div class="md">${(e=>e===null?CARGANDO:e===false?SIN_DETALLE:md(e)||`<p class="empty">Sin estado escrito.</p>`)(estadoDe(p))}</div></div>`}
-      <div class="card"><h3>Lo que ya produjo</h3>${vigs.length?`<ul class="res-ents">${vigs.map(e=>`<li><b>${entBtn(p,e)}</b>${e.descripcion?`<span class="d">${inline(e.descripcion)}</span>`:""}</li>`).join("")}</ul>`:`<p class="empty">Nada publicado todavía.</p>`}${nBor?`<p class="more">${nBor} en borrador. <button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="entregables">Ver todos ›</button></p>`:""}</div>
-      <div class="card"><h3>Decisiones clave</h3>${clave.length?`<dl class="facts">${clave.map(d=>`<dt>${fmtD(d.fecha)} <span class="did">#${esc(d.id||"")}</span></dt><dd><b>${inline(d.titulo)}</b>${d.porque?`<br><span class="more">${inline(d.porque.split(/(?<=\.)\s/)[0])}</span>`:""}${(d.cuestionado_por||[]).some(c=>c.abierto)?` <span class="pill soon">cuestionada</span>`:""}</dd>`).join("")}</dl>`:`<p class="empty">Sin decisiones registradas.</p>`}${nD>clave.length?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ver las ${nD} decisiones ›</button>`:""}</div>`;
-  } else if(tab==="quehay"){
+  if(tab==="quehay"){
     body = queHayTab(p);
   } else if(tab==="estado"){
-    const live = stepsLive(p), nx = mainStep(p), tday = today();
+    const live = stepsLive(p), tday = today();
     const nLate = live.filter(s=>{ const f = effDate(p,s); return f && f<tday; }).length;
     const esperas = live.filter(s=>effNat(p,s)==="espera");
     const ud = (p.decisiones||[])[0];
@@ -2892,7 +2820,6 @@ function renderProjOld(p, tab){
       ue ? `<dt>Último entregable</dt><dd>${inline(ue.titulo||ue.nombre)} <span class="more">· ${esc(ESTADO_E[ue.estado]||ue.estado)}${ue.actualizado?` · ${fmtD(ue.actualizado)}`:""}</span></dd>` : "",
       nc ? `<dt>Por registrar</dt><dd><span class="pill soon">${nc}</span> marcados aquí; los recoge la siguiente sesión</dd>` : ""
     ].join("");
-    const largo = (p.estado_actual||"").trim().length > (p.estado_resumen||"").trim().length + 20, full = EST_FULL.has(p.id);
     const top = live.filter(x=>["accion","decision","espera"].includes(effNat(p,x))).sort(stepOrder(p)).slice(0,3);
     body = `<div class="card ficha"><h3>Lo siguiente</h3>${top.length ? `<div class="steps">${top.map(x=>stepRow(p,x,false)).join("")}</div>` : `<p class="empty">Ningún paso por hacer escrito.</p>`}${live.length>top.length ? ir("pasos", `Ver las ${live.length} acciones ›`) : ""}${filas.trim() ? `<dl class="facts" style="border-top:1px solid var(--rule-soft);padding-top:12px">${filas}</dl>` : ""}</div>
       `;
@@ -2910,7 +2837,7 @@ function renderProjOld(p, tab){
   }
   return body;
 }
-function render(){ _M = new Map(); try{ _render(); } finally { _M = null; } }
+function render(){ document.body.dataset.lvl = view.lvl; _M = new Map(); try{ _render(); } finally { _M = null; } if(FOCO) aplicarFoco(); }
 function _render(){
   try{
     if(ready.a && ready.p) visita();
@@ -2928,7 +2855,6 @@ function _render(){
     document.getElementById("main").innerHTML = `<p class="empty">No se pudo mostrar esta página (${esc(err && err.message || err)}). Vuelve a cargar la página; si sigue, avisa a quien administra la carpeta.</p>`;
   }
   const md = document.getElementById("modal"); if(md){ md.innerHTML = prioModal() || mtModal() || entModal(); document.body.classList.toggle("modal-open", !!(PRIO_OPEN || MT_OPEN || ENT_OPEN)); }
-  const sb = document.getElementById("stale"); if(sb) sb.innerHTML = "";
   const f = document.getElementById("foot");
   f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}${META.duracion_min != null ? ` (la puesta al día tardó ${META.duracion_min < 1 ? "menos de un minuto" : `${Math.round(META.duracion_min)} min`}${META.llamadas ? `, ${META.llamadas} llamadas` : ""})` : ""}. Lee de la carpeta la guía, cada área y, de cada proyecto, cómo va, sus decisiones, sus sesiones, sus documentos y la lista de lo que hay en preparación; todo lo que tu cuenta puede leer, salvo el material de origen, el contenido de lo que está en preparación y lo restringido. La carpeta manda: lo que marcas aquí queda apuntado hasta la siguiente puesta al día, que lo pasa a la carpeta.`) : "";
 }
@@ -2943,15 +2869,15 @@ function _render(){
   // Conector de tareas programadas: sin él no existe «Sincronizar ahora». Se carga después del usuario y se repinta.
   try{ MCP = await window.claude.use("mcp"); }catch(e){ MCP = null; }
   render();
-  db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
-  db.collection("proyectos").onSnapshot(snap=>{ const nuevos = snap.docs.map(s=>({id:s.id, ...s.data()})); olvidarTextos(nuevos); PROJ = nuevos.sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); render(); }, ()=>{ DB=false; render(); });
-  db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROPUESTAS = todo.filter(c=>c.tipo==="propuesta"); render(); }, ()=>{});   // las propuestas del barrido viven en la misma cola pero no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
+  db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); datosNuevos(); }, ()=>{ DB=false; datosNuevos(); });
+  db.collection("proyectos").onSnapshot(snap=>{ const nuevos = snap.docs.map(s=>({id:s.id, ...s.data()})); olvidarTextos(nuevos); PROJ = nuevos.sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); datosNuevos(); }, ()=>{ DB=false; datosNuevos(); });
+  db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROPUESTAS = todo.filter(c=>c.tipo==="propuesta"); datosNuevos(); }, ()=>{});   // las propuestas del barrido viven en la misma cola pero no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
   // los resúmenes de «Qué hay» que escribe la puesta al día (1.22.4); valen mientras la huella de lo que hay no cambie
-  db.collection("resumenes").onSnapshot(snap=>{ for(const k of Object.keys(RESUMEN_GEN)) delete RESUMEN_GEN[k]; for(const d of snap.docs) RESUMEN_GEN[d.id] = d.data(); render(); }, ()=>{});
-  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); render(); }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; render(); }, ()=>{});
-  db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; render(); }, ()=>{});
-  db.doc("meta/permisos").onSnapshot(s=>{ PERMISOS = s.exists ? s.data() : null; render(); }, ()=>{});
+  db.collection("resumenes").onSnapshot(snap=>{ for(const k of Object.keys(RESUMEN_GEN)) delete RESUMEN_GEN[k]; for(const d of snap.docs) RESUMEN_GEN[d.id] = d.data(); datosNuevos(); }, ()=>{});
+  db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); datosNuevos(); }, ()=>{});
+  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; datosNuevos(); }, ()=>{});
+  db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; datosNuevos(); }, ()=>{});
+  db.doc("meta/permisos").onSnapshot(s=>{ PERMISOS = s.exists ? s.data() : null; datosNuevos(); }, ()=>{});
 })();
 
 document.getElementById("side-toggle").addEventListener("click", ()=>{ SIDE_OPEN = !SIDE_OPEN; document.body.classList.toggle("side-open", SIDE_OPEN); renderSide(); });
@@ -2992,11 +2918,13 @@ document.addEventListener("input", e => { if(e.target.id==="side-q"){ QUERY = e.
   const angosta = window.matchMedia ? matchMedia("(max-width:860px)") : {matches:false};
   let y0 = window.scrollY || 0, pendiente = 0;
   const fijar = oculta => document.body.classList.toggle("bar-oculta", !!oculta);
-  window.addEventListener("scroll", () => { if(pendiente) return; pendiente = requestAnimationFrame(() => { pendiente = 0;
+  window.addEventListener("scroll", () => { if(pendiente || !angosta.matches) return; pendiente = requestAnimationFrame(() => { pendiente = 0;   // en escritorio no hay barra que esconder
     const y = window.scrollY || 0, bar = document.querySelector(".mob-bar"), alto = bar ? bar.offsetHeight : 52;
     if(!angosta.matches || y <= alto || document.body.classList.contains("side-open") || (bar && bar.contains(document.activeElement))){ fijar(false); y0 = y; return; }
     if(y - y0 > 8){ fijar(true); y0 = y; } else if(y0 - y > 4){ fijar(false); y0 = y; } }); }, {passive:true});
   document.addEventListener("focusin", e => { if(e.target.closest && e.target.closest(".mob-bar")) fijar(false); });
+  // al pasar a pantalla ancha y volver, la barra no se queda escondida
+  if(angosta.addEventListener) angosta.addEventListener("change", () => fijar(false));
 })();
 // pestañas que no caben: el lado que sigue se desvanece y la pestaña elegida queda a la vista (1.22.4)
 (function(){

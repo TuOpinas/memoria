@@ -62,7 +62,7 @@ const path = require('path');
     // las propuestas del barrido viven en la cola pero no cuentan como lo marcado aquí; salen en «la memoria al día», y las descartadas no
     const prop = await p.evaluate(async () => { const b = document.querySelector('[data-mt-open="ventas--cuentas"]'); if(!b) return null; b.click(); await new Promise(r => setTimeout(r, 250)); const m = document.querySelector('.modal'); return m ? m.textContent : ''; });
     await p.keyboard.press('Escape');
-    if(prop === null || !/Propuestas de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en «la memoria al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
+    if(prop === null || !/Sugerencias de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en «la memoria al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
     // Inicio › Acciones y Actividad
     await abre(p, url, '', '[data-ini="acciones"]');
     const acc = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { toca: /Te toca a ti/.test(t), empezar: /Por dónde empezar/.test(t) }; });
@@ -87,7 +87,13 @@ const path = require('path');
     // la pestaña elegida se queda al pasar a otro proyecto desde el lateral (1.22.4)
     await abre(p, url, '#p-ventas--cuentas-t-estatus'); await p.click('.tab[data-tab="quehay"]').catch(() => {}); await p.waitForTimeout(200);
     if((opciones.viewport||{}).width > 760){ await p.click('#side-nav [data-go-proj="operacion--soporte"]').catch(() => {}); await p.waitForTimeout(300);
-      if(!(await p.evaluate(() => /operacion--soporte-t-quehay$/.test(location.hash) && !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]')))) errores.push(`${etiqueta}: un proyecto abierto desde el lateral no conserva la pestaña elegida`); }
+      if(!(await p.evaluate(() => /operacion--soporte-t-quehay$/.test(location.hash) && !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]')))) errores.push(`${etiqueta}: un proyecto abierto desde el lateral no conserva la pestaña elegida`);
+      // Atrás enseña la pestaña de esa dirección pero no cambia la que se recuerda (1.22.5)
+      await p.evaluate(() => { history.pushState(null, '', '#p-ventas--cuentas-t-registro'); history.pushState(null, '', '#p-operacion--soporte-t-quehay'); });
+      await p.goBack(); await p.waitForTimeout(300);
+      const atras = await p.evaluate(() => location.hash);
+      await p.click('#side-nav [data-go-proj="operacion--soporte"]').catch(() => {}); await p.waitForTimeout(300);
+      if(!(atras === '#p-ventas--cuentas-t-registro' && /operacion--soporte-t-quehay$/.test(await p.evaluate(() => location.hash)))) errores.push(`${etiqueta}: Atrás cambió la pestaña que se recuerda (${atras})`); }
     await p.goto(url + '#p-operacion--soporte-t-estatus'); await p.waitForTimeout(400);
     const corto = await p.evaluate(() => ({ t: (document.querySelector('.corto .corto-t')||{}).textContent || '', n: document.querySelectorAll('.corto .corto-l li').length, detalle: !!document.querySelector('[data-est-full]'), dos: [...document.querySelectorAll('.corto .corto-l li')].some(x=>/Beto las prueba el 24/.test(x.textContent)) }));
     if(!(corto.t.startsWith('Terminamos la lista') && corto.n === 3 && corto.detalle && corto.dos)) errores.push(`${etiqueta}: un proyecto con Estatus no abre con su titular y el detalle plegado (${JSON.stringify(corto)})`);
@@ -137,6 +143,40 @@ const path = require('path');
   await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
+  // un proyecto cerrado abierto directo en Estatus pinta su propia cabecera (revisión 1.22.5)
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage();
+    const url = 'file://' + path.resolve(dir, 'completo.html');
+    await p.goto(url + '#p-ventas--cuentas-t-estatus'); await p.waitForTimeout(400);
+    await p.goto(url + '#p-archivo--historia-t-estatus'); await p.waitForTimeout(500);
+    const h = await p.evaluate(() => ({ h1: (document.querySelector('#head h1')||{}).textContent || '', nombre: (byId['archivo--historia']||{}).nombre || '' }));
+    if(!(h.nombre && h.h1 === h.nombre)) errores.push(`un proyecto cerrado en Estatus no pinta su cabecera (${JSON.stringify(h)})`);
+    await ctx.close();
+  }
+  // a 320 px: las pestañas que no caben se desvanecen por el lado que sigue; «Sincronizar ahora» va en la barra; y el número
+  // de Mantenimiento cuenta solo lo que pide una acción (1.22.5)
+  {
+    const ctx = await b.newContext({ viewport: { width: 320, height: 700 } });
+    const p = await ctx.newPage(); p.on('pageerror', e => errores.push(`320: ${e.message}`));
+    const url = 'file://' + path.resolve(dir, 'completo.html');
+    await p.goto(url + '#p-ventas--cuentas-t-estatus'); await p.waitForTimeout(500);
+    const r1 = await p.evaluate(() => { const t = document.querySelector('.tabs'); return { desborda: t.scrollWidth > t.clientWidth + 2, der: t.classList.contains('mas-der'), izq: t.classList.contains('mas-izq'), sync: !!document.querySelector('#mob-sync [data-sync]') }; });
+    await p.evaluate(() => { const t = document.querySelector('.tabs'); t.scrollLeft = t.scrollWidth; }); await p.waitForTimeout(200);
+    const r2 = await p.evaluate(() => { const t = document.querySelector('.tabs'); return { der: t.classList.contains('mas-der'), izq: t.classList.contains('mas-izq') }; });
+    if(!(r1.desborda && r1.der && !r1.izq && r2.izq && !r2.der)) errores.push(`320: las pestañas que no caben no se desvanecen por el lado que sigue (${JSON.stringify({ r1, r2 })})`);
+    if(!r1.sync) errores.push('320: «Sincronizar ahora» no está en la barra del teléfono');
+    await p.goto(url + '#'); await p.waitForTimeout(400); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
+    const m = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); const b = t.querySelector('.n.badge'); return { badge: b ? +b.textContent : 0, punto: !!t.querySelector('.n.punto'), acc: document.querySelectorAll('#main .stale[data-acc]').length + document.querySelectorAll('#main .nc .nc-i').length, info: document.querySelectorAll('#main .stale:not([data-acc])').length }; });
+    if(!(m.badge > 0 && !m.punto && m.info > 0)) errores.push(`320: el número de Mantenimiento no cuenta solo lo que pide una acción (${JSON.stringify(m)})`);
+    const m2 = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); const b = t.querySelector('.n.badge'); return { badge: b ? +b.textContent : 0, conflictos: document.querySelectorAll('#main .due-item.orf').length, nc: document.querySelectorAll('#main .nc .nc-i').length, acc: document.querySelectorAll('#main .stale[data-acc]').length }; });
+    if(!(m2.badge === m2.acc + m2.nc + m2.conflictos)) errores.push(`320: el número de Mantenimiento no cuenta lo marcado que ya no coincide (${JSON.stringify(m2)})`);
+    // sin nada que pida acción y con algo que revisar, sale el punto amarillo
+    await p.evaluate(() => { window.noCuadra = () => []; CAMBIOS = []; META = {...META, version_tablero: VERSION_TABLERO, tarea_desfasada: false, sincronizado: new Date().toISOString(), version_metodo: '1.0.0'}; DATA_SEQ++; render(); });
+    await p.waitForTimeout(200);
+    const m3 = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); return { badge: !!t.querySelector('.n.badge'), punto: !!t.querySelector('.n.punto') }; });
+    if(!(m3.punto && !m3.badge)) errores.push(`320: sin acciones y con avisos que informan no sale el punto amarillo (${JSON.stringify(m3)})`);
+    await ctx.close();
+  }
   // la raíz migrada a la 1.22: la página no da errores y el área enseña su Estatus con sus prioridades aparte
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });

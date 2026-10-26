@@ -190,7 +190,7 @@ if _bar_j or _base_j:
     _pdir = SALIDA / "proyectos"
     _vig = {f"{p_.stem}|{(_datos(_json(p_)) or {}).get('que_hay_huella')}" for p_ in _pdir.glob("*.json")} if _pdir.exists() else set()
     if _vig:
-        _campos["juzgado"]["resumenes"] = [x for x in _campos["juzgado"]["resumenes"] if x in _vig]
+        _campos["juzgado"]["resumenes"] = [x for x in _campos["juzgado"]["resumenes"] if x.removesuffix("|reintento") in _vig]
 if _campos:
     _meta_d.update(_campos)
     _meta_p.write_text(json.dumps(_meta_d, ensure_ascii=False, indent=1), encoding="utf-8")

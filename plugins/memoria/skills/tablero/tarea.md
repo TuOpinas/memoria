@@ -10,7 +10,7 @@ La carpeta vive en la computadora de quien creó esta tarea y solo se alcanza co
 SIN PEDIR NADA A NADIE
 Esta puesta al día ocurre sola: nadie la está mirando y nadie tiene que hacer nada para que funcione.
 - Nunca pidas acceso a otra carpeta que no sea la raíz, ni le pidas a nadie que añada una carpeta, conecte algo, apruebe algo o pulse algo. La única carpeta que esta puesta al día usa en la computadora es la raíz; lo demás vive en `$HOME/tablero/` de la VM (fuera de la raíz) y en el contenedor de esta sesión.
-- Nunca pases el contenido de un documento del tablero por la conversación: ni con `cat`, ni pegado en un comando, ni como `data` de ArtifactData. Los documentos se generan en el contenedor y se suben con `file_path`. Por la conversación solo pasan dos cosas pequeñas: la cola del paso 2 (`cola.md`, sin las propuestas) y el inventario del paso 1b.
+- Nunca pases el contenido de un documento del tablero por la conversación: ni con `cat`, ni pegado en un comando, ni como `data` de ArtifactData. Los documentos se generan en el contenedor y se suben con `file_path`. Por la conversación solo pasan tres cosas pequeñas: la cola del paso 2 (`cola.md`, sin las propuestas), el inventario del paso 1b y lo que hay que juzgar en el paso f2 de `regenerar.md` (`juicio.md`), con sus topes.
 - Si un paso falla después de lo que este texto permite reintentar, para ahí, sin improvisar otra vía, y di en una línea qué no se pudo hacer; la siguiente puesta al día (el botón, «sincroniza el tablero» o la tarea diaria) lo vuelve a intentar desde el principio. Lo ya escrito en la carpeta o en la base es válido aunque la corrida se corte.
 
 DÓNDE ESTÁ CADA COSA

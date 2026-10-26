@@ -62,6 +62,8 @@ LIMITE_LINEAS = 1500
 MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
+BYTES_CONTRASTE = 12000   # 1.22.5: lo que pesan juntas sus piezas, como BYTES_RESUMEN
+JUZGAR_MAX = 15000        # 1.22.5: lo que se imprime para juzgar; si pasa, va a juzgar.json y se imprime su ruta
 MAX_RESUMEN = 6        # 1.22.4: los resúmenes de «Qué hay» que se piden por corrida, como mucho
 BYTES_RESUMEN = 12000  # y lo que pesan juntas sus piezas: el tope es lo que entra al contexto del modelo
 # la cola no crece sin tope (1.22.1, hallazgo 31 de la revisión de la 1.21): como mucho tantas propuestas pendientes por
@@ -329,8 +331,8 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
             if not visto(id_juicio("afirma", pid, "afirma|" + ruta)):
                 cuerpo = re.sub(r"^---\s*\n.*?\n---\s*\n", "", ft, count=1, flags=re.S)
                 titulo = next((l[2:].strip() for l in cuerpo.split("\n") if l.startswith("# ")), f.stem)
-                arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:400]
-                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 400), "_vigente": cab.get("estado") == "vigente", "_reciente": reciente})
+                arranque = " ".join(l.strip() for l in cuerpo.split("\n") if l.strip() and not l.startswith("#"))[:250]
+                afirma.append({"proyecto": pid, "ruta": ruta, "titulo": una_linea(titulo, 120), "arranque": una_linea(arranque, 250), "_vigente": cab.get("estado") == "vigente", "_reciente": reciente})
         # el taller: sus cabeceras las dejó el generador en el detalle; su cuerpo no está en la copia ni se lee nunca
         piezas = piezas_de(salida, pid) if salida else []
         if not any(pz.get("tipo") == "taller" for pz in piezas):
@@ -354,7 +356,10 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         # candidatos a entregable y contradicciones: solo un modelo los ve, sobre las líneas «afirma» (nunca los cuerpos)
         # el contraste se pide una vez por conjunto de piezas: si ese conjunto ya se juzgó (con o sin hallazgo), no se repite
         if len(con_afirma) >= 2 and len(contraste) < MAX_CONTRASTE and id_contraste(pid, [x["ruta"] for x in con_afirma[:20]]) not in juzgado["contraste"]:
-            contraste.append({"proyecto": pid, "piezas": con_afirma[:20]})
+            item_ = {"proyecto": pid, "piezas": con_afirma[:20]}
+            # con tope de bytes, como los resúmenes: es lo que entra al contexto del modelo (revisión 1.22.5)
+            if sum(len(json.dumps(c, ensure_ascii=False).encode("utf-8")) for c in contraste + [item_]) <= BYTES_CONTRASTE:
+                contraste.append(item_)
         # una propuesta de candidato o de contradicción sigue valiendo mientras existan todas las piezas que nombra
         for d in en_cola(pid):
             if d["data"].get("clase") in ("candidato-entregable", "contradiccion") and set(d["data"].get("rutas") or []) <= rutas and d["data"].get("rutas"):
@@ -382,7 +387,11 @@ def sumar_juicio(salida, juicio, cola):
     if isinstance(juicio, list):
         juicio = {"decisiones": juicio}
     # todo lo que se puso delante del modelo queda juzgado, haya hallazgo o no: no se vuelve a pedir (plan_subida lo lleva a meta/estado)
-    previo = bar.get("juzgado") or {}      # las caducadas que el barrido ya dejó juzgadas se conservan
+    # las caducadas que el barrido ya dejó juzgadas se conservan; se parte siempre de lo que dejó el barrido, no de una pasada
+    # anterior de --sumar-juicio, para que correrlo dos veces dé lo mismo (revisión 1.22.5)
+    if "juzgado_inicial" not in bar:
+        bar["juzgado_inicial"] = bar.get("juzgado") or {}
+    previo = bar["juzgado_inicial"]
     bar["juzgado"] = {"ids": sorted(set(previo.get("ids") or [])
                                     | {id_juicio("decision-sin-registrar", j["proyecto"], "decision|" + j["fecha"]) for j in bar.get("para_juicio", [])}
                                     | {id_juicio("afirma", j["proyecto"], "afirma|" + j["ruta"]) for j in bar.get("para_afirma", [])}),
@@ -392,9 +401,10 @@ def sumar_juicio(salida, juicio, cola):
     # solo se guardan las huellas vigentes: la de otro «Qué hay» ya no frena nada y haría crecer meta/estado
     _vig = {f"{p_.stem}|{(_datos_doc(p_) or {}).get('que_hay_huella')}" for p_ in (salida / "proyectos").glob("*.json")} if (salida / "proyectos").exists() else set()
     if _vig:
-        bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x in _vig]
+        bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x.removesuffix("|reintento") in _vig]
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
+    titulo_de = {j["ruta"]: j.get("titulo") or "" for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
     ya = {d["id"] for d in cargar_cola(cola) if d["data"].get("tipo") == "propuesta"} | {x["id"] for x in bar["anadir"]}
     ahora = ahora_en(salida)
@@ -438,9 +448,11 @@ def sumar_juicio(salida, juicio, cola):
         pid = id_juicio("afirma", proy, "afirma|" + j["ruta"])
         if not linea or pid in ya:
             continue
-        ok_ = guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea,
-                      "texto": una_linea(f"Añadir a la cabecera de {j['ruta']}: aportacion: «{linea}»"),
-                      "por_que": "el inventario del tablero necesita saber qué sostiene cada pieza", "origen": "barrido",
+        # en lenguaje llano, con el título del documento: es lo que enseñan la apertura y el tablero (1.22.5)
+        tit = titulo_de.get(j["ruta"]) or j["ruta"].rsplit("/", 1)[-1].removesuffix(".md").replace("-", " ")
+        ok_ = guardar(pid, {"tipo": "propuesta", "clase": "afirma", "proyecto": proy, "ruta": j["ruta"], "afirma": linea, "titulo": tit,
+                      "texto": una_linea(f"Frase de resumen para «{tit}»: «{linea}»"),
+                      "por_que": "sale en el tablero bajo el nombre del documento, para saber de qué trata sin abrirlo", "origen": "barrido",
                       "estado": "pendiente", "creado": ahora})
         if ok_:
             nuevas["afirma"] += 1
@@ -472,6 +484,12 @@ def sumar_juicio(salida, juicio, cola):
         ent, tal = una_linea(str(j.get("publicado") or ""), 320), una_linea(str(j.get("taller") or ""), 320)
         if not (ent or tal) or DATO_PERSONAL.search(ent + " " + tal):
             rechazados.append(f"{j['proyecto']}: {'vacío' if not (ent or tal) else 'parece llevar un dato personal'}")
+            # uno rechazado por el filtro se vuelve a pedir una vez en la siguiente corrida; si vuelve a fallar, espera a que
+            # cambie lo que hay (revisión 1.22.4, segunda vuelta)
+            if ent or tal:
+                clave_ = f"{j['proyecto']}|{pedido_resumen[j['proyecto']]}"
+                if clave_ + "|reintento" not in (previo.get("resumenes") or []):
+                    bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x != clave_] + [clave_ + "|reintento"]
             continue
         doc = {"proyecto": j["proyecto"], "ent": ent, "tal": tal, "huella_qh": pedido_resumen[j["proyecto"]], "fecha": str(ahora)[:10]}
         doc["huella"] = hashlib.sha1(json.dumps(doc, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
@@ -505,8 +523,9 @@ def _datos_doc(p):
 def para_resumen(salida, base, vistos, juz=None):
     """Los proyectos cuyo «Qué hay» necesita un resumen escrito: todo lo que la cuenta lee, menos lo restringido y lo cerrado
     (el resumen solo usa títulos y aportaciones, que ya lee). Lo pedido queda juzgado con su huella y no se vuelve a pedir
-    hasta que cambie, haya salido o no (revisión 1.22.4, hallazgo 4). Primero los que cambiaron en esta corrida, pero dos
-    huecos son para los que nunca tuvieron resumen; tope de MAX_RESUMEN proyectos y BYTES_RESUMEN de piezas."""
+    hasta que cambie, haya salido o no (revisión 1.22.4, hallazgo 4), salvo uno que el filtro de datos personales rechazó,
+    que se pide una vez más (1.22.5). Van primero dos de los que nunca tuvieron resumen y después los que cambiaron; uno que
+    no cabe en BYTES_RESUMEN se salta y se prueba el siguiente; tope de MAX_RESUMEN proyectos."""
     ya = (juz or {}).get("resumenes") or set()
     cambiados, nunca = [], []
     docs = sorted((salida / "proyectos").glob("*.json")) if (salida / "proyectos").exists() else []
@@ -528,13 +547,17 @@ def para_resumen(salida, base, vistos, juz=None):
                                               "estado": z.get("estado"), "aportacion": una_linea(z.get("afirma") or "", 220)}.items() if v}
                            for z in piezas[:30]]}
         (cambiados if p_.stem in vistos or previo else nunca).append(item)
-    orden = cambiados[:MAX_RESUMEN - 2] + nunca[:2]
+    # los dos huecos de los que nunca tuvieron resumen van primero, para que los que cambiaron no llenen antes los bytes; uno
+    # que no cabe se salta y se prueba con el siguiente (revisión 1.22.4, segunda vuelta)
+    orden = nunca[:2] + cambiados[:MAX_RESUMEN - 2]
     orden += [x for x in cambiados + nunca if x not in orden]
     out, peso = [], 0
     for x in orden:
         b = len(json.dumps(x, ensure_ascii=False).encode("utf-8"))
-        if len(out) >= MAX_RESUMEN or (out and peso + b > BYTES_RESUMEN):
+        if len(out) >= MAX_RESUMEN:
             break
+        if peso + b > BYTES_RESUMEN:
+            continue
         out.append(x); peso += b
     return out
 
@@ -618,9 +641,20 @@ def main():
     resumen = para_resumen(salida, opt("--base"), set(vistos), juz)
     (salida / "barrido.json").write_text(json.dumps(
         {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "para_resumen": resumen, "proyectos": vistos,
-         "pendientes": pendientes, "juzgado": {"ids": sorted(caducadas), "contraste": []}}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "caducadas": len(caducadas), "sin_hueco": sin_hueco, "para_juicio": len(juicio),
-                      "para_afirma": len(afirma), "para_contraste": len(contraste), "para_resumen": len(resumen), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
+         "pendientes": pendientes, "juzgado": {"ids": sorted(caducadas), "contraste": [], "resumenes": sorted(x for x in juz["resumenes"] if x.endswith("|reintento"))}}, ensure_ascii=False, indent=1), encoding="utf-8")
+    cuenta = {"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "caducadas": len(caducadas), "sin_hueco": sin_hueco, "para_juicio": len(juicio),
+              "para_afirma": len(afirma), "para_contraste": len(contraste), "para_resumen": len(resumen), "proyectos_barridos": len(vistos)}
+    # lo que el modelo tiene que juzgar viaja en la misma salida: no hace falta leer barrido.json (revisión 1.22.4, hallazgo 20)
+    juzgar = {k: v for k, v in (("para_juicio", juicio), ("para_afirma", afirma), ("para_contraste", contraste), ("para_resumen", resumen)) if v}
+    if juzgar:
+        # si no cabe en la salida que ve el modelo, va a un archivo pequeño, solo con eso, y se imprime su ruta (revisión 1.22.5)
+        txt_ = json.dumps(juzgar, ensure_ascii=False)
+        if len(txt_) <= JUZGAR_MAX:
+            cuenta["juzgar"] = juzgar
+        else:
+            (salida / "juzgar.json").write_text(txt_, encoding="utf-8")
+            cuenta["juzgar_en"] = str(salida / "juzgar.json")
+    print(json.dumps(cuenta, ensure_ascii=False))
 
 
 if __name__ == "__main__":
