@@ -95,13 +95,13 @@ ok(all("huella" in d for D in (com,) for c in ("areas", "proyectos") for d in D[
 ok(not cq[("ventas--cuentas", "2026-09-20")]["abierto"], "un cuestionamiento con una decisión que lo responde se cierra")
 d0920 = next(d for d in decs if d["id"] == "2026-09-20")
 ok(d0920.get("cuestionado_por") and d0920["cuestionado_por"][0]["desde"] == "operacion--soporte", "la decisión cuestionada sabe quién la cuestionó")
-ok(com["proyectos"]["ventas--cuentas"].get("cuestionamientos_abiertos") == 1, "el proyecto cuenta sus cuestionamientos abiertos")
+ok("cuestionamientos_abiertos" not in com["proyectos"]["ventas--cuentas"], "el proyecto ya no lleva la cuenta de cuestionamientos abiertos, que la página no lee (1.22.5)")
 ok(com["proyectos"]["operacion--soporte"]["decisiones_total"] == 0, "un cuestionamiento no cuenta como decisión")
 pan = com["areas"]["ventas"].get("panorama") or {}
 ok(pan.get("fecha") == "2026-10-03" and pan.get("texto", "").startswith("Ventas tiene"), "el panorama del área se lee con su fecha")
 ok(com["areas"]["operacion"].get("panorama") is None, "un área sin panorama no inventa uno")
 
-ok(com["proyectos"]["ventas--cuentas"].get("sesiones_fechas") == ["2026-10-01", "2026-09-20"], "cada proyecto trae las fechas de sus sesiones de los últimos 90 días")
+ok(not ({"sesiones_fechas", "sesiones_registro", "consumen"} & set(com["proyectos"]["ventas--cuentas"])), "sin las fechas de sesiones, el total del registro ni «Consumen esto», que la página no lee (1.22.5)")
 
 print("Trabajo sin sesión")
 ss = com["proyectos"]["ventas--cuentas"].get("sin_sesion")
@@ -114,13 +114,13 @@ ok(com["proyectos"]["ventas--cuentas"]["sesiones"][0].get("quien") == "Ana Lópe
 print("Qué hay: inventario del taller, piezas y trayectoria")
 qh = com["proyectos"]["ventas--cuentas"].get("que_hay") or {}
 ok(qh.get("taller") == {"borrador": 2, "vigente": 0, "reemplazado": 1, "otros": 1} and qh.get("decisiones") == 4, "el resumen cuenta las piezas del taller por estado y las decisiones")
-ok(qh.get("cadenas") == 2 and (qh.get("ultimo_giro") or {}).get("fecha") == "2026-09-26", "cuenta las cadenas de reemplazo y da el último giro")
+ok("cadenas" not in qh and (qh.get("ultimo_giro") or {}).get("fecha") == "2026-09-26", "da el último giro de las cadenas de reemplazo")
 ok(com["proyectos"]["ventas--cuentas"].get("que_hay_aparte") is True, "las piezas y la trayectoria van al detalle")
 detq = json.load(open(os.path.join(sys.argv[1], "detalle", "ventas--cuentas.json"), encoding="utf-8")).get("que_hay") or {}
 pz = {x["archivo"]: x for x in detq.get("piezas", [])}
-ok(pz.get("nota-precios.md", {}).get("tipo") == "taller" and pz["nota-precios.md"].get("afirma", "").startswith("El precio de la fase 2") and pz["nota-precios.md"].get("citada") is True, "del taller viaja la cabecera: estado, afirma y si un entregable la cita")
+ok(pz.get("nota-precios.md", {}).get("tipo") == "taller" and pz["nota-precios.md"].get("afirma", "").startswith("El precio de la fase 2") and "citada" not in pz["nota-precios.md"], "del taller viaja la cabecera: estado y afirma")
 ok(pz.get("nota-precios.md", {}).get("pasos") == ["Decidir el precio de la fase 2 de Cliente Uno."] and "dias" not in pz["nota-precios.md"], "la pieza sabe qué paso la nombra; los días en borrador los calcula la página, no viajan")
-ok(pz.get("kit-cuentas.md", {}).get("decisiones_despues") == 4 and pz["kit-cuentas.md"].get("ultima_decision_despues") == "2026-09-26", "cuenta las decisiones posteriores a la última actualización de la pieza")
+ok(pz.get("kit-cuentas.md", {}).get("decisiones_despues") == 4 and "ultima_decision_despues" not in pz["kit-cuentas.md"], "cuenta las decisiones posteriores a la última actualización de la pieza")
 ok(pz.get("boceto.xlsx", {}).get("formato") == "xlsx" and "afirma" not in pz["boceto.xlsx"], "lo que no es .md entra con su nombre y su fecha, sin cabecera")
 ok(pz.get("borradores/nota-sub.md", {}).get("estado") == "borrador" and qh["taller"]["borrador"] == 2, "una pieza en una subcarpeta del taller entra con su ruta «sub/nota.md»")
 ok(qh.get("entregables_en_subcarpetas") == 1, "los archivos en subcarpetas de entregables se cuentan aunque no se listen")

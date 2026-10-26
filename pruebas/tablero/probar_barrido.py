@@ -103,6 +103,8 @@ try:
     sh = tmp / "sh"; (sh / "meta").mkdir(parents=True); escribir(sh / "meta/estado.json", '{"snapshot": "2026-10-23"}')
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sh)], capture_output=True, text=True)
     ok(r.returncode == 0 and json.loads((sh / "barrido.json").read_text())["para_juicio"][0]["fecha"] == "2026-10-22", "sin --hoy toma el snapshot de meta/estado.json")
+    _out = json.loads(r.stdout.strip().splitlines()[-1])
+    ok(_out.get("juzgar", {}).get("para_juicio") == json.loads((sh / "barrido.json").read_text())["para_juicio"], "lo que hay que juzgar sale también en la salida, para no leer barrido.json (1.22.5)")
 
     print("lo que el modelo juzga")
     sj = tmp / "sj"; sj.mkdir()

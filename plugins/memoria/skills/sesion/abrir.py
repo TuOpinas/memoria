@@ -421,7 +421,18 @@ if CUENTA:
         _cuerpo = re.sub(r"^\s*#[^\n]*\n", "", re.sub(r"\A---\n.*?\n---\n", "", guia, count=1, flags=re.S), count=1)
         _p1 = next((b.strip() for b in re.split(r"\n\s*\n", _cuerpo.strip()) if b.strip() and not b.strip().startswith(("|", "- "))), "")
         _p1 = re.sub(r"\*\*([^*]+)\*\*", r"\1", re.sub(r"<!--.*?-->", "", _p1, flags=re.S)).strip()
-        _frases = [f for f in re.split(r"(?<=[.!?])\s+", _p1) if not re.search(r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro", f)]
+        # una frase que habla de la carpeta se quita; si va unida con «;» a otra que no, se queda la otra (1.22.5)
+        def _sin_carpeta(frases, rx=r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"):
+            out = []
+            for f in frases:
+                if not re.search(rx, f):
+                    out.append(f); continue
+                partes = [c.strip() for c in f.split(";")]
+                quedan = [c for c in partes if c and not re.search(rx, c)]
+                if quedan and len(partes) > 1:
+                    t = "; ".join(quedan); out.append(t if t[-1] in ".!?" else t + ".")
+            return out
+        _frases = _sin_carpeta(re.split(r"(?<=[.!?])\s+", _p1))
         if (not _p1 or _p1.startswith(("#", ">", "*", "```", "|")) or re.match(r"^\d+[.)]\s", _p1) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _p1)
                 or re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _p1) or not " ".join(_frases).strip()):
             print("(aviso para decirlo: el primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. "

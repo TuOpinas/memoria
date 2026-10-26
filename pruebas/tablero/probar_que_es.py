@@ -66,6 +66,8 @@ q, f = generar("Esta carpeta es la memoria de trabajo de Acme, la empresa de Ana
 ok(q == "" and len(f) == 1, "el párrafo de la plantilla de antes no sale, y Mantenimiento pide escribirlo")
 q, f = generar("Acme es [a qué se dedica y para quién, en una o dos frases].")
 ok(q == "" and len(f) == 1, "con el hueco de la plantilla sin llenar, tampoco")
+q, f = generar("Acme fabrica muebles para oficinas en Monterrey; el mapa de la carpeta está en `guia.md`. Esto lo aplica el plugin `memoria`.")
+ok(q == "Acme fabrica muebles para oficinas en Monterrey." and not f, f"de una frase unida con «;» a otra sobre la carpeta se queda lo de la organización (1.22.5) ({q!r})")
 q, f = generar("Acme fabrica [muebles](https://acme.test) para oficinas en Monterrey.")
 ok(q.startswith("Acme fabrica") and not f, "un enlace no es un hueco de la plantilla")
 q, f = generar("Esta carpeta es la memoria de los asuntos de Ana: su casa y su familia. Sigue el método del plugin `memoria`, porque la ventaja es la misma. Cómo se trabaja está en `metodo.md` y no hace falta leerlo.")
@@ -85,7 +87,7 @@ print("Personas de fuera, como dato (1.22.4)")
 import ast, re
 _src = GV.read_text(encoding="utf-8"); _ns = {"re": re}
 for n in ast.parse(_src).body:
-    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA", "NOMBRES_COMO_VERBO") for t in getattr(n, "targets", [])):
+    if any(isinstance(t, ast.Name) and t.id in ("_PART", "PERSONA_FUERA", "NO_PERSONA", "NOMBRES_COMO_VERBO", "COSA_SIEMPRE") for t in getattr(n, "targets", [])):
         exec(compile(ast.Module([n], []), str(GV), "exec"), _ns)
 _names = ("_PART", "PERSONA_FUERA", "NO_PERSONA")
 for n in ast.parse(_src).body:
@@ -101,6 +103,7 @@ ok(pf("Esperar de Agustín Torres (Escuela Fácil)") == ["Agustín Torres"], "un
 ok(pf("Pilar de la Fuente (Acme)") == ["Pilar de la Fuente"] and pf("Javier de Dios (Acme)") == ["Javier de Dios"], "un nombre que acaba como un verbo sigue siendo un nombre")
 ok(pf("Carlos Mesa (Banco Azul)") == ["Carlos Mesa"], "un apellido que también es una cosa no descarta a la persona")
 ok(pf("Esperar Visto Bueno de Juan Pérez (Acme)") == ["Juan Pérez"] and pf("Revisar el Diagrama de Flujo (Acme)") == [] and pf("La Secretaría de Hacienda (SAT)") == [], "las cosas de delante se quitan, y una cosa sola no es nadie")
+ok(pf("Configurar Salesforce Service Cloud (Acme)") == [] and pf("Migrar a Google Workspace (Banco Azul)") == [] and pf("Esperar a Ana Centeno (Acme)") == ["Ana Centeno"], "una herramienta con su cliente entre paréntesis no es una persona (1.22.5)")
 print("Nombres que se quedan al reutilizar la base (revisión 1.22.4, hallazgo 5)")
 tmp = pathlib.Path(tempfile.mkdtemp()); raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
 pp = raiz / "ventas" / "cuentas" / "proyecto.md"

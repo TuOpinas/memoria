@@ -38,7 +38,18 @@ try:
     pr = B.para_resumen(sal, str(base), {"ventas--viejo"})
     ids = [x["proyecto"] for x in pr]
     print("Qué proyectos se piden")
-    ok(ids[0] == "ventas--viejo", "primero los que cambiaron en esta corrida")
+    ok(ids.index("ventas--nuevo") < ids.index("ventas--viejo"), "los que nunca tuvieron resumen van primero, para que los que cambian no llenen los bytes (1.22.5)")
+    _grande = {"tipo": "entregable", "titulo": "x" * 100, "estado": "vigente", "afirma": "y" * 200}
+    t2 = tmp / "t2"
+    for pid, n in (("a--chico", 1), ("b--grande", 60), ("c--chico", 1)):
+        doc(t2 / "proyectos" / f"{pid}.json", {"nombre": pid, "que_hay_huella": "h-" + pid, "que_hay_aparte": True})
+        doc(t2 / "detalle" / f"{pid}.json", {"que_hay": {"piezas": [_grande] * n, "trayectoria": []}})
+    _viejo_max = B.BYTES_RESUMEN; B.BYTES_RESUMEN = 1000
+    try:
+        _ids2 = [x["proyecto"] for x in B.para_resumen(t2, None, {"a--chico", "b--grande", "c--chico"})]
+    finally:
+        B.BYTES_RESUMEN = _viejo_max
+    ok(_ids2 == ["a--chico", "c--chico"], f"uno que no cabe en los bytes se salta y entra el siguiente ({_ids2})")
     ok(set(ids) == {"ventas--viejo", "ventas--nuevo", "ventas--ajeno"}, f"los que no tienen resumen o lo tienen viejo, también donde no se escribe; no el que sigue valiendo, ni uno cerrado, ni sin piezas ({ids})")
     ok(all(set(z) <= {"tipo", "titulo", "estado", "aportacion"} for x in pr for z in x["piezas"]), "de cada pieza, solo tipo, título, estado y aportación")
 
@@ -61,9 +72,17 @@ try:
     ok(not (sal / "cambios").exists() or not any((sal / "cambios").iterdir()), "un resumen no es una propuesta: no va a la cola")
     bar = json.loads((sal / "barrido.json").read_text(encoding="utf-8"))
     juz = set(bar["juzgado"].get("resumenes") or [])
-    ok({"ventas--viejo|h-ventas--viejo", "ventas--ajeno|h-ventas--ajeno"} <= juz, "lo pedido queda juzgado con su huella, haya salido o no")
+    ok("ventas--ajeno|h-ventas--ajeno" in juz, "lo pedido queda juzgado con su huella, aunque el modelo lo salte")
     pr2 = B.para_resumen(sal, str(base), set(), {"resumenes": juz})
-    ok(not ({x["proyecto"] for x in pr2} & {"ventas--viejo", "ventas--ajeno"}), "y no se vuelve a pedir mientras la huella no cambie")
+    ok("ventas--ajeno" not in {x["proyecto"] for x in pr2}, "y no se vuelve a pedir mientras la huella no cambie")
+    ok("ventas--viejo|h-ventas--viejo|reintento" in juz and "ventas--viejo" in {x["proyecto"] for x in pr2}, "uno rechazado por el filtro se vuelve a pedir una vez (1.22.5)")
+    # la segunda vez, con la marca del reintento en lo juzgado, queda juzgado aunque vuelva a fallar
+    s3 = tmp / "s3"; shutil.copytree(sal, s3)
+    doc(s3 / "barrido.json", {"anadir": [], "borrar": [], "para_resumen": [x for x in pr2 if x["proyecto"] == "ventas--viejo"], "juzgado": {"ids": [], "contraste": [], "resumenes": sorted(juz)}})
+    j3 = tmp / "juicio3.json"; j3.write_text(json.dumps({"resumenes": [{"proyecto": "ventas--viejo", "publicado": "Escribe a ana@acme.test", "taller": "x"}]}), encoding="utf-8")
+    subprocess.run([sys.executable, str(BARRIDO), "--sumar-juicio", str(s3), str(j3)], capture_output=True, text=True)
+    juz3 = set(json.loads((s3 / "barrido.json").read_text(encoding="utf-8"))["juzgado"]["resumenes"])
+    ok("ventas--viejo|h-ventas--viejo" in juz3, "si vuelve a fallar, queda juzgado hasta que cambie lo que hay")
     ok("parece llevar un dato personal" in r.stdout, "--sumar-juicio dice qué rechazó y por qué")
 
     print("La subida")

@@ -327,6 +327,11 @@ Diligence Mapa Inventario Catálogo Licencia Cuenta Usuario Clave Acceso Permiso
 Prueba Pruebas Demo Prototipo Diseño Maqueta Requerimiento Requisito Especificación Alcance Cronograma Calendario Ruta Hito
 Secretaría Subsecretaría Instituto Banco Gobierno Universidad Escuela Empresa Despacho Notaría Registro Servicio Plataforma
 La El Los Las Un Una Este Esta Nuevo Nueva Primer Primera Segundo Segunda Gran Mi Su Nuestro Nuestra""".split())
+# palabras de producto o de servicio que no son apellido: descartan en cualquier posición, porque «Configurar Salesforce
+# Service Cloud (Acme)» es una herramienta con su cliente, no una persona (revisión 1.22.4, segunda vuelta)
+COSA_SIEMPRE = set("""Cloud Service Services Suite Studio Server Online Hub Desk Workspace Analytics Manager Connect Software Data
+Labs Tech Business Enterprise Premium Pro Plus Lite App Apps Sales Marketing Commerce Center Platform Teams Office
+Drive Docs Sheets Forms Mail Pay Bank Bot Api CRM ERP Web""".split())
 # verbos de paso: además de los infinitivos, que se reconocen por su terminación; los nombres propios que acaban como
 # un infinitivo (Javier, Pilar, Óscar…) no lo son
 NOMBRES_COMO_VERBO = set("Javier Pilar Óscar Oscar César Cesar Omar Esther Ester Edgar Baltasar Gaspar Amílcar Aimar Itziar Ainhoa Valdemar Waldemar".split())
@@ -344,6 +349,8 @@ def persona_fuera(nombre, org):
     while ws and (ws[0] in NO_PERSONA or ws[0] in ("de", "del", "la", "los", "las", "a", "con", "y", "e") or (verbo(ws[0]) and len(ws) > 2)):
         ws = ws[1:]
     caps = [w for w in ws if w[:1].isupper()]
+    if any(w in COSA_SIEMPRE for w in ws):
+        return None
     if len(caps) < 2 or len(caps) > 5 or not ws[0][:1].isupper():
         return None
     return {"nombre": " ".join(ws), "organizacion": org.strip()}
@@ -704,16 +711,12 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     piezas = [dict(e, tipo="entregable") for e in pdoc.get("entregables", [])] + [dict(t, tipo="taller") for t in taller]
     fechas_dec = sorted((d_["fecha"] for d_ in dec if fecha_valida(d_["fecha"]) and d_.get("tipo") != "cuestionamiento"), reverse=True)
     pasos = [p_["texto"] for p_ in pdoc.get("pasos", []) if p_.get("naturaleza")]
-    citas = set()
-    for e in pdoc.get("entregables", []):
-        for b in e.get("basado_en") or []:
-            citas.add(b.split("/")[-1])
     for pz in piezas:
         act = pz.get("actualizado")
         if act and fecha_valida(act) and pz.get("estado") in ("vigente", "borrador"):
             desp = [f for f in fechas_dec if f > act]
             if desp:
-                pz["decisiones_despues"] = len(desp); pz["ultima_decision_despues"] = desp[0]
+                pz["decisiones_despues"] = len(desp)
         # los pasos que la nombran (1.22.1): por el nombre del archivo como palabra entera (con extensión, o compuesto con
         # guiones, o entre comillas o backticks: «plan» suelto no nombra plan.md), o por tres palabras significativas del título
         # (las dos, si el título solo tiene dos)
@@ -725,8 +728,6 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
                 bloq.append(t_[:160])
         if bloq:
             pz["pasos"] = bloq[:3]
-        if pz["tipo"] == "taller":
-            pz["citada"] = pz["archivo"] in citas
     # trayectoria por decisiones: «Reemplaza: AAAA-MM-DD · …» encadena la nueva con la vieja
     por_id = {d_["id"]: d_ for d_ in dec if d_.get("id")}
     reemplaza, reemplazada = {}, set()
@@ -786,8 +787,7 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     resumen = {"taller": cuenta(taller), "entregables": cuenta(pdoc.get("entregables", [])), "decisiones": len(fechas_dec),
                "sin_afirma": sum(1 for pz in piezas if pz.get("estado") != "reemplazado" and pz["archivo"].endswith(".md") and not pz.get("afirma")),
                "desfasadas": sum(1 for pz in piezas if pz.get("decisiones_despues")),
-               "bloqueadas": sum(1 for pz in piezas if pz.get("pasos")),
-               "cadenas": len(cadenas)}
+               "bloqueadas": sum(1 for pz in piezas if pz.get("pasos"))}
     if sin_resolver:
         resumen["reemplazos_sin_resolver"] = sin_resolver   # un reemplazado_por que no apunta a ninguna pieza de este proyecto
     if pdoc.get("_sub"):
@@ -1305,8 +1305,6 @@ for a in areas_guia:
                 resto = CORREO.sub("", re.sub(r"\([^)]*\)", "", LINEA_COLABORA.sub("", l, count=1)))
                 nombres_co += [x.strip(" *-<>") for x in resto.split(",") if x.strip(" *-<>")]
         pdoc["colaboran"] = nombres_co
-        mc = re.search(r"Consumen esto:\s*(.+)", pdoc["quien"])
-        pdoc["consumen"] = mc.group(1).strip() if mc else ""
         apuntar_nombres(pdoc["quien"])
         if CUENTA_TABLERO:
             # si la cuenta del tablero escribe en el proyecto (responsable o colabora en el área, o colabora en él): la
@@ -1342,10 +1340,6 @@ for a in areas_guia:
         pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
-        pdoc["sesiones_registro"] = len(ses)    # entradas del registro, con las «(tarea)»: lo que enseña la pestaña Bitácora
-        # fechas de las sesiones de trabajo de los últimos 90 días (sin las de tarea): para la actividad por semana del tablero
-        _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
-        pdoc["sesiones_fechas"] = sorted({s["fecha"] for s in reales if fecha_valida(s["fecha"]) and s["fecha"] >= _lim}, reverse=True)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
         # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
         # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada: fecha, título, Tema y quién.
@@ -1394,8 +1388,6 @@ for pid, pdoc in docs["proyectos"].items():
             for t in docs["proyectos"][q].get("decisiones") or []:
                 if t["id"] == i:
                     t.setdefault("cuestionado_por", []).append({k: c[k] for k in ("desde", "id", "fecha", "titulo", "planteo", "abierto")})
-            if c["abierto"]:
-                docs["proyectos"][q]["cuestionamientos_abiertos"] = docs["proyectos"][q].get("cuestionamientos_abiertos", 0) + 1
 cuestionamientos.sort(key=lambda c: c["fecha"], reverse=True)
 
 # ---------- grupos candidatos: pasos de proyectos distintos que comparten un tema ----------
@@ -1457,7 +1449,18 @@ elif re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _que_
 else:
     # las frases que hablan del método o de sus archivos son para quien mantiene la carpeta, no para quien la dirige
     _frases = re.split(r"(?<=[.!?])\s+", _que_es)
-    _que_es = " ".join(f for f in _frases if not re.search(r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro", f)).strip()
+    # una frase que habla de la carpeta se quita; si va unida con «;» a otra que no, se queda la otra (1.22.5)
+    def _sin_carpeta(frases, rx=r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"):
+        out = []
+        for f in frases:
+            if not re.search(rx, f):
+                out.append(f); continue
+            partes = [c.strip() for c in f.split(";")]
+            quedan = [c for c in partes if c and not re.search(rx, c)]
+            if quedan and len(partes) > 1:
+                t = "; ".join(quedan); out.append(t if t[-1] in ".!?" else t + ".")
+        return out
+    _que_es = " ".join(_sin_carpeta(_frases)).strip()
 _que_es_falta = not _que_es
 if guia.strip() and _que_es_falta:
     docs["meta"]["estado"]["fuera"].append({"carpeta": "guia.md", "archivos": 0, "de_claude": False, "que_es": True})

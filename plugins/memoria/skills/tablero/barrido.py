@@ -392,7 +392,7 @@ def sumar_juicio(salida, juicio, cola):
     # solo se guardan las huellas vigentes: la de otro «Qué hay» ya no frena nada y haría crecer meta/estado
     _vig = {f"{p_.stem}|{(_datos_doc(p_) or {}).get('que_hay_huella')}" for p_ in (salida / "proyectos").glob("*.json")} if (salida / "proyectos").exists() else set()
     if _vig:
-        bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x in _vig]
+        bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x.removesuffix("|reintento") in _vig]
     pedido = {(j["proyecto"], j["fecha"]) for j in bar.get("para_juicio", [])}
     pedido_afirma = {j["ruta"]: j["proyecto"] for j in bar.get("para_afirma", [])}
     pedido_contraste = {c["proyecto"]: {x["ruta"] for x in c["piezas"]} for c in bar.get("para_contraste", [])}
@@ -472,6 +472,12 @@ def sumar_juicio(salida, juicio, cola):
         ent, tal = una_linea(str(j.get("publicado") or ""), 320), una_linea(str(j.get("taller") or ""), 320)
         if not (ent or tal) or DATO_PERSONAL.search(ent + " " + tal):
             rechazados.append(f"{j['proyecto']}: {'vacío' if not (ent or tal) else 'parece llevar un dato personal'}")
+            # uno rechazado por el filtro se vuelve a pedir una vez en la siguiente corrida; si vuelve a fallar, espera a que
+            # cambie lo que hay (revisión 1.22.4, segunda vuelta)
+            if ent or tal:
+                clave_ = f"{j['proyecto']}|{pedido_resumen[j['proyecto']]}"
+                if clave_ + "|reintento" not in (previo.get("resumenes") or []):
+                    bar["juzgado"]["resumenes"] = [x for x in bar["juzgado"]["resumenes"] if x != clave_] + [clave_ + "|reintento"]
             continue
         doc = {"proyecto": j["proyecto"], "ent": ent, "tal": tal, "huella_qh": pedido_resumen[j["proyecto"]], "fecha": str(ahora)[:10]}
         doc["huella"] = hashlib.sha1(json.dumps(doc, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
@@ -528,13 +534,17 @@ def para_resumen(salida, base, vistos, juz=None):
                                               "estado": z.get("estado"), "aportacion": una_linea(z.get("afirma") or "", 220)}.items() if v}
                            for z in piezas[:30]]}
         (cambiados if p_.stem in vistos or previo else nunca).append(item)
-    orden = cambiados[:MAX_RESUMEN - 2] + nunca[:2]
+    # los dos huecos de los que nunca tuvieron resumen van primero, para que los que cambiaron no llenen antes los bytes; uno
+    # que no cabe se salta y se prueba con el siguiente (revisión 1.22.4, segunda vuelta)
+    orden = nunca[:2] + cambiados[:MAX_RESUMEN - 2]
     orden += [x for x in cambiados + nunca if x not in orden]
     out, peso = [], 0
     for x in orden:
         b = len(json.dumps(x, ensure_ascii=False).encode("utf-8"))
-        if len(out) >= MAX_RESUMEN or (out and peso + b > BYTES_RESUMEN):
+        if len(out) >= MAX_RESUMEN:
             break
+        if out and peso + b > BYTES_RESUMEN:
+            continue
         out.append(x); peso += b
     return out
 
@@ -618,9 +628,14 @@ def main():
     resumen = para_resumen(salida, opt("--base"), set(vistos), juz)
     (salida / "barrido.json").write_text(json.dumps(
         {"anadir": anadir, "borrar": borrar, "para_juicio": juicio, "para_afirma": afirma, "para_contraste": contraste, "para_resumen": resumen, "proyectos": vistos,
-         "pendientes": pendientes, "juzgado": {"ids": sorted(caducadas), "contraste": []}}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "caducadas": len(caducadas), "sin_hueco": sin_hueco, "para_juicio": len(juicio),
-                      "para_afirma": len(afirma), "para_contraste": len(contraste), "para_resumen": len(resumen), "proyectos_barridos": len(vistos)}, ensure_ascii=False))
+         "pendientes": pendientes, "juzgado": {"ids": sorted(caducadas), "contraste": [], "resumenes": sorted(x for x in juz["resumenes"] if x.endswith("|reintento"))}}, ensure_ascii=False, indent=1), encoding="utf-8")
+    cuenta = {"propuestas_nuevas": len(anadir), "propuestas_que_ya_no_valen": len(borrar), "caducadas": len(caducadas), "sin_hueco": sin_hueco, "para_juicio": len(juicio),
+              "para_afirma": len(afirma), "para_contraste": len(contraste), "para_resumen": len(resumen), "proyectos_barridos": len(vistos)}
+    # lo que el modelo tiene que juzgar viaja en la misma salida: no hace falta leer barrido.json (revisión 1.22.4, hallazgo 20)
+    juzgar = {k: v for k, v in (("para_juicio", juicio), ("para_afirma", afirma), ("para_contraste", contraste), ("para_resumen", resumen)) if v}
+    if juzgar:
+        cuenta["juzgar"] = juzgar
+    print(json.dumps(cuenta, ensure_ascii=False))
 
 
 if __name__ == "__main__":
