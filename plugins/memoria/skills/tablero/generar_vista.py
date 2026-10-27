@@ -1429,16 +1429,27 @@ for a in areas_guia:
         pdoc["pasos"] = pasos
         dec = parse_decisiones(*con_archivados(pc, "decisiones", leer(pc / "decisiones.md"), HOY[:4], leer))
         # de una decisión archivada viaja la cabecera (quién, qué, a quién afecta, qué reemplaza o responde), no su porqué:
-        # dos años de archivados no caben en la base, y el porqué está en la carpeta (revisión de la 1.23, hallazgo 6)
+        # dos años de archivados no caben en la base, y el porqué está en la carpeta (revisión de la 1.23, hallazgo 6). Un
+        # cuestionamiento se queda entero: lo que cuestiona es lo que alguien tiene que contestar.
         for d_ in dec:
-            if d_.get("archivada"):
+            if d_.get("archivada") and d_.get("tipo") != "cuestionamiento":
                 d_["porque"] = ""; d_["descartamos"] = ""
-        # y como mucho las 150 archivadas más recientes: el resto se cuenta, y sigue en la carpeta con su identificador
+        # y enteras como mucho las 150 archivadas más recientes; de las demás se queda solo lo que avisa o cierra algo (a quién
+        # afecta, qué cuestiona, a qué responde), para que los avisos y los cuestionamientos digan lo mismo que la apertura
         _arch_d = [d_ for d_ in dec if d_.get("archivada")]
         if len(_arch_d) > MAX_ARCHIVADAS:
-            _fuera_d = {id(d_) for d_ in _arch_d[MAX_ARCHIVADAS:]}   # dec ya va de la más nueva a la más vieja
+            _quedan = []
+            for d_ in _arch_d[MAX_ARCHIVADAS:]:   # dec ya va de la más nueva a la más vieja
+                if d_.get("afecta") or d_.get("cuestiona") or d_.get("responde") or d_.get("tipo") == "cuestionamiento":
+                    _quedan.append(id(d_))
+                    for k_ in ("reemplaza", "por_confirmar"):
+                        d_.pop(k_, None)
+            _fuera_d = {id(d_) for d_ in _arch_d[MAX_ARCHIVADAS:]} - set(_quedan)
             dec = [d_ for d_ in dec if id(d_) not in _fuera_d]
-            pdoc["decisiones_archivadas_fuera"] = len(_fuera_d)
+            if _fuera_d:
+                pdoc["decisiones_archivadas_fuera"] = len(_fuera_d)
+            else:
+                pdoc.pop("decisiones_archivadas_fuera", None)
         else:
             pdoc.pop("decisiones_archivadas_fuera", None)
         _rv = respuestas_viejas(pc, HOY[:4], leer)

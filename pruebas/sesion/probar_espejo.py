@@ -252,6 +252,12 @@ while rondas2 < 8:
 ok(out.strip() == "COMPLETA" and f"ventas/cuentas/decisiones-{anio}.md" in pedidas2 and "ventas/cuentas/decisiones-2019.md" not in pedidas2,
    f"una cuarta ronda trae los archivados de este año y del anterior que nombra «Archivado:», y no los viejos ({[r for r in pedidas2 if '-20' in r]})")
 o2 = subprocess.run([sys.executable, str(ABRIR), str(C2), ACTIVO, "--sin-fechas"], capture_output=True, text=True).stdout
+# con el listado de la carpeta del proyecto, también los archivados que «Archivado:» no nombra, de cualquier año
+(R2 / "ventas/cuentas/decisiones-2018.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2018-01-01 · Vieja\nDecidió: Ana\nResponde a: operacion/soporte#2018-01-01\n", encoding="utf-8")
+lst = tmp / "listado.json"
+lst.write_text(json.dumps({"entries": [{"name": n.name, "type": "file", "mtimeMs": 1} for n in (R2 / "ventas/cuentas").iterdir() if n.is_file()]}), encoding="utf-8")
+_, out4, _ = corre(ESPEJO, "rutas", C2, ACTIVO, "--listado", lst)
+ok(out4.split() == ["ventas/cuentas/decisiones-2018.md"], f"con --listado pide los archivados que faltan, de cualquier año, aunque «Archivado:» no los nombre ({out4.split()})")
 ok("(ninguna)" not in o2.split("=== DECISIONES")[1].split("=== SESIONES")[0], "y la apertura sin consola ve las decisiones archivadas")
 
 print()

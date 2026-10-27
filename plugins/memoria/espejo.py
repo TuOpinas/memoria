@@ -12,12 +12,13 @@ Devolver es lo delicado: un archivo de la copia puede estar viejo, a medias o va
 encima del de verdad. Por eso solo se devuelve lo que se registró al traerlo (con su fecha y su tamaño en la computadora) o
 lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que encoge a menos de la mitad, salvo con --forzar.
 
-  espejo.py rutas <copia> [<area>/<proyecto>]
+  espejo.py rutas <copia> [<area>/<proyecto>] [--listado <device_list_dir de la carpeta del proyecto>]
       Qué traer para abrir sesión, por rondas: imprime una ruta por línea (relativa a la raíz) de lo que falta en la copia, o
       COMPLETA. Primera ronda: guia.md, metodo.md, base/premisas.md y base/contexto.md; segunda: el area.md de cada área de la
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
       abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo; cuarta, los archivados de
-      este año y del anterior que nombra la línea «Archivado:» de esos registros (1.23). Lo que no se trajo se vuelve a
+      este año y del anterior que nombra la línea «Archivado:» de esos registros y, con --listado, todos los archivados del
+      proyecto activo que hay en la computadora (1.23). Lo que no se trajo se vuelve a
       pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
       minutos.
@@ -160,7 +161,19 @@ def huella(p):
 FRESCO = 10 * 60   # segundos: lo del proyecto que se abre, traído hace más, se vuelve a traer
 
 
-def rutas(copia, activo):
+def archivados_del_listado(ruta):
+    """Los registros archivados (`sesiones-AAAA*.md`, `decisiones-AAAA*.md`) del primer nivel de la carpeta del proyecto, de
+    cualquier año, según el resultado de device_list_dir guardado en un archivo. Vacío si no se lee."""
+    try:
+        d = json.loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return []
+    ents = (d.get("entries") if isinstance(d, dict) else d) or []
+    return sorted(str(e.get("name")) for e in ents if isinstance(e, dict) and e.get("type") == "file"
+                  and re.match(r"^(sesiones|decisiones)-20\d\d(?:-\d+)?\.md$", str(e.get("name") or "")))
+
+
+def rutas(copia, activo, listado=None):
     copia = pathlib.Path(copia)
     faltan = set(estado(copia)["faltan"])
     # en la misma conversación la copia se reutiliza: solo se pide lo que no está. Lo que dice cómo está el proyecto que se
@@ -198,6 +211,11 @@ def rutas(copia, activo):
                     for n in re.findall(r"\b(" + nombre + r"-(20\d\d)(?:-\d+)?\.md)", m.group(1) if m else ""):
                         if int(n[1]) >= anio - 1:
                             ronda.append(r.rsplit("/", 1)[0] + "/" + n[0])
+                # con el listado de la carpeta del proyecto (device_list_dir), todos sus archivados, de cualquier año: también
+                # los hechos a mano o en otra computadora, que «Archivado:» no nombra, para que la rotación no elija un nombre
+                # que ya existe y para que sus «Responde a:» cierren cuestionamientos (revisión de la 1.23, segunda vuelta)
+                if listado:
+                    ronda += [f"{activo}/{n}" for n in archivados_del_listado(listado)]
                 ronda = [r for r in dict.fromkeys(ronda) if ausente(r)]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0
@@ -475,7 +493,10 @@ def main(argv):
         return 2
     orden, copia, resto = argv[1], argv[2], argv[3:]
     if orden == "rutas":
-        return rutas(copia, resto[0].strip("/") if resto else None)
+        listado = None
+        if "--listado" in resto:
+            i = resto.index("--listado"); listado = resto[i + 1] if i + 1 < len(resto) else None; del resto[i:i + 2]
+        return rutas(copia, resto[0].strip("/") if resto else None, listado)
     if orden == "permisos":
         return permisos(copia)
     if orden == "falta":
