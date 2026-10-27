@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.22.5 · huella 0efdefa · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.23.0 · huella d4b6613 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -8,7 +8,7 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.22**
+Versión del método: **1.23**
 
 ## 1. Las tres capas de propiedad
 
@@ -234,6 +234,36 @@ Si un proyecto tiene todavía `enlaces.md`, su nombre de antes de la 1.22 (secci
 
 Un archivo vivo se reescribe y refleja el presente; un registro solo crece, con las entradas nuevas arriba, y las anteriores no se editan jamás. Los formatos de `decisiones.md` y `sesiones.md`, el identificador de una entrada, los cuestionamientos y el aviso entre áreas están en `escribir.md`.
 
+### Estructura de `guia.md`
+
+Las secciones de `guia.md` van en este orden y con estos nombres, que leen `abrir.py`, `permisos.py`, el tablero y `verificar.sh` (1.23; la plantilla con sus huecos está en la skill `nuevo`):
+
+```markdown
+# <Organización> · esta carpeta
+
+<Organización> es <a qué se dedica y para quién, en una o dos frases>.
+
+<Un párrafo sobre la carpeta: que es su memoria de trabajo y que el método está en metodo.md.>
+
+## Áreas
+| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |
+
+## Quién responde por qué
+Contexto común (`guia.md` y `base/`): Nombre Apellido (correo)
+Administra la carpeta compartida y pone o quita los accesos: Nombre Apellido
+En Drive: cuenta@claude es cuenta@drive   (solo si alguien entra a Drive con otra cuenta)
+Cada área, su responsable de la tabla de arriba.
+Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
+
+## Reglas propias de la casa      (solo si las hay)
+
+## Cómo conectarte
+
+## Versión del método
+```
+
+**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. La celda Cuenta lleva la del responsable y, después, `· colabora: ana@…, luis@…` (sección 1, «Quién colabora»). A quien colabora se le da nombre junto a su cuenta en una línea «Colabora: Nombre Apellido (correo)» de un proyecto, o se le pregunta: sin nombre, el tablero solo lo cuenta. «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»).
+
 ## 5. Cabecera
 
 Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`) y `actualizado`, y en `entregables/` y `taller/` además `aportacion` (una línea con lo que la pieza aporta) y `basado_en`, salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
@@ -241,6 +271,8 @@ Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reempl
 ## 6. Nombres
 
 Minúsculas, guiones en vez de espacios, sin acentos ni eñes, sin fechas ni números de versión, sin números de fase ni de etapa. `flujo-aprobacion.md`, no `Flujo de Aprobación v2 FINAL.md` ni `fase1-flujo-aprobacion.md`.
+
+**Un número que identifica el asunto sí entra** (1.23): el de una norma, un contrato, un pedido, un modelo o la versión de algo que no es el archivo, cuando cada archivo es un documento distinto y no una versión del mismo. `revision-de-calidad-1-22-5.md` es el informe de la revisión de la versión 1.22.5 y no cambia cuando sale la 1.22.6, que tiene su propio informe; `nom-035.md` o `contrato-4512.md` nombran su asunto. La prueba: si al salir el siguiente el anterior sigue valiendo tal cual, es otro asunto y el número va; si el nuevo sustituye al anterior, es una versión y no va: se edita el archivo o se marca `reemplazado`. Muchos archivos de un mismo tipo se agrupan en una subcarpeta (sección 2), como `taller/revisiones-de-calidad/`.
 
 El nombre de un archivo es estable durante toda su vida. El historial de versiones lo lleva la carpeta compartida (Drive, OneDrive…), el estado lo lleva la cabecera y el orden de las fases lo cuenta `proyecto.md`.
 
@@ -274,7 +306,7 @@ Lo aprendido dentro de un área restringida vuelve a la memoria común **reescri
 
 ## 8. Rotación
 
-Los registros que crecen demasiado o cambian de año se archivan con el año en el nombre: en `escribir.md`.
+Los registros que crecen demasiado (por líneas o por tamaño) o cambian de año se archivan con el año en el nombre, y la apertura y el tablero siguen leyendo los archivados de este año y del anterior junto al vivo: en `escribir.md`.
 
 ## 9. Lo que no existe en este sistema
 
@@ -302,7 +334,7 @@ El método se actualiza publicando una versión nueva del plugin, y cada raíz r
 
 ### Los nombres de antes de la 1.22
 
-Es la nota de compatibilidad del contrato, y se retira en la 1.23. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: durante la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
+Es la nota de compatibilidad del contrato, y se mantiene mientras haya raíces sin migrar. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: desde la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
 
 ## 12. Cómo se lee
 
@@ -329,7 +361,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 | `base/sistemas.md` | el trabajo toca un sistema |
 | `base/contexto.md` | la pregunta es sobre la organización, o se va a escribir algo que sale del proyecto |
 | `area.md` entero | la pregunta es sobre el área y no sobre un proyecto |
-| `decisiones.md` completo | se va a escribir o revisar un entregable |
+| `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`), completo | se va a escribir o revisar un entregable |
 | El cuerpo de un entregable | la pregunta pide su contenido y no basta con saber que existe |
 | Un archivo de `taller/` | hace falta cómo se llegó al entregable, y el entregable no basta |
 | Un archivo de `fuentes/` | el trabajo del día lo pide, por su nombre |
@@ -346,7 +378,7 @@ Se conecta la raíz completa, nunca la carpeta de un área: `guia.md`, `metodo.m
 
 ## Anexo: Escribir en la carpeta
 
-Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Si la carpeta está conectada pero el shell de la computadora no la ve, se escribe además como dice el anexo `sin-consola.md`, junto a este archivo, y se lee antes de la primera escritura. Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 7, 11, 12) son las del contrato.
+Anexo del contrato (`convenciones`). Reúne lo que hace falta para escribir en un proyecto y en su área: la estructura de `area.md` y de `proyecto.md`, los formatos de los registros, la cabecera, la rotación y las prohibiciones. Se carga antes de cualquier escritura en la carpeta. Para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con este anexo; para crear un área o un proyecto, guardar o publicar un documento, mover material, migrar o montar una raíz se carga además el contrato entero (`SKILL.md`, junto a este archivo). Si la carpeta está conectada pero el shell de la computadora no la ve, se escribe además como dice el anexo `sin-consola.md`, junto a este archivo, y se lee antes de la primera escritura. Las secciones llevan el número que tienen en el contrato, y las que se citan sin estar aquí (1, 6, 7, 11, 12) son las del contrato.
 
 **Los nombres de antes de la 1.22** (`Dueño`, `Panorama`, `En corto`, `afirma`, `enlaces.md`…) los lista el contrato, sección 11, «Los nombres de antes de la 1.22»: se leen las dos formas y se escribe solo la nueva. El cierre que escribe el `Estatus` en un área o un proyecto sin migrar retira los bloques viejos de estatus y lleva a «Siguiente» las prioridades que falten; lo demás lo renombra la migración (skill `sesion`).
 
@@ -439,6 +471,10 @@ Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuest
 
 Lo lee alguien con poco tiempo que no va a abrir nada más, en el proyecto y en el área. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. La primera frase no empieza por el nombre del área o del proyecto, que ya está en el título de todo lo que la enseña, y no dice «hoy», «ayer» ni «esta semana»: se lee días después, y la fecha ya va delante. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir un `Estatus` basta con este párrafo.
 
+#### Personas de fuera
+
+A una persona de fuera de la organización (de un cliente, un proveedor, un socio) se la escribe «Nombre Apellido (Organización)»: al menos una vez en el `Estatus` o en `Siguientes pasos` del proyecto que la nombra, y siempre en `Decidió:` cuando decide ella. Después, en el mismo texto, basta su nombre. Es la única forma en que el tablero la reconoce y la agrupa por organización en «Con otros»: no adivina personas por las mayúsculas, así que «Ana Ruiz» sin paréntesis no sale, y «Sistema Nuevo Contable» no es nadie. A quien es de la organización se la escribe con nombre y apellido, sin paréntesis; un correo nunca va en estos textos. Si su organización no consta, se pregunta: no se inventa.
+
 #### Qué guarda el cierre y qué no
 
 **Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `Estatus` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
@@ -491,7 +527,7 @@ Cuestiona a: compras/automatizacion-ordenes#2026-08-29
 
 `Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el responsable de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
 
-Cuando decide alguien de fuera de la organización (un cliente, un proveedor, un socio), `Decidió: Nombre Apellido (Organización)`: el tablero separa a quienes deciden de dentro y de fuera, y a los de fuera los agrupa por organización.
+Cuando decide alguien de fuera de la organización (un cliente, un proveedor, un socio), `Decidió: Nombre Apellido (Organización)` («Personas de fuera», sección 3): el tablero separa a quienes deciden de dentro y de fuera, y a los de fuera los agrupa por organización.
 
 Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su responsable con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
@@ -505,10 +541,12 @@ Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir n
 ## AAAA-MM-DD
 Tema: …
 Avances: …
-Sesión de: Nombre Apellido · plugin 1.22.0
+Escribió: entregables/arquitectura.md, taller/guia-fase-1.md
+Publicó: entregables/mapa-epicas.md
+Sesión de: Nombre Apellido · plugin 1.23.0
 ```
 
-`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
+`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: lo que escribieron o publicaron no se atribuye a nadie. Publicado es solo lo que una entrada dice en «Publicó:»; un entregable vigente que cambió sin que ninguna entrada lo nombre se cuenta aparte, sin suponer quién. La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
 Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`, y la migración de estructura de la 1.22, como `## AAAA-MM-DD (migracion)`: cuentan lo que hicieron, pero no son sesiones, y el tablero no las cuenta como tales.
 
@@ -567,7 +605,9 @@ Las claves van sin acentos ni eñes.
 
 ### 8. Rotación
 
-Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o cambia el año, se archiva en la misma carpeta con el año en el nombre (`sesiones-2026.md`; si en un mismo año hace falta otro, `sesiones-2026-2.md`) y se abre uno nuevo con su cabecera. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace la skill de cierre de sesión, sin preguntar.
+Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o de 100 KB, o su entrada más nueva es de un año anterior, se archiva entero en la misma carpeta con el año de su entrada más nueva en el nombre (`decisiones-2026.md`; si en un mismo año hace falta otro, `decisiones-2026-2.md`) y se abre uno nuevo con su cabecera, su título y una línea «Archivado:» con los archivados que tiene, para quien lo abra sin el plugin. El tamaño cuenta porque las entradas largas llenan un registro mucho antes de llegar a las líneas (1.23), y un registro grande es lo que más cuesta leer al abrir y al poner al día el tablero. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace `cerrar.py` antes de escribir la entrada de hoy, sin preguntar.
+
+Archivar no esconde nada: la apertura, el tablero y su barrido leen, junto al registro vivo, sus archivados de este año y del anterior, como si no se hubieran archivado. Una decisión archivada sigue avisando a quien nombra en `Afecta a`, un cuestionamiento sigue esperando respuesta y cada entrada conserva su identificador (`area/proyecto#AAAA-MM-DD-n`), que lleva el año y dice en qué archivado buscarla. Los de años anteriores no se leen enteros: lo que sostiene una decisión vieja ya está en `Alcance` o en el `Estatus`, y quien la cita la busca por su año. De ellos solo se buscan las líneas «Responde a:», que cierran cuestionamientos sin importar cuándo se respondieron. Un archivado no se edita, como el registro del que salió.
 
 ### 10. Prohibiciones
 
@@ -586,7 +626,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 11. No crear un área ni un proyecto sin responsable con nombre y apellido.
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
-14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
+14. No poner número de fase, fecha ni versión del propio archivo en el nombre de un archivo o de una carpeta. Las excepciones: el registro archivado por año (sección 8) y un número que identifica el asunto, cuando cada archivo es un documento distinto y no una versión del mismo (contrato, sección 6).
 15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md` u otro archivo de instrucciones para la IA, ni un índice a mano, ni una carpeta de borradores, ni escribir rutas absolutas en ningún archivo.
 16. No dejar dentro de la raíz el almacén de datos de una aplicación, ni apuntar una aplicación a que escriba ahí.
 17. No borrar un entregable superado. Pasa a `reemplazado` con `reemplazado_por`, porque alguien puede tenerlo citado.
@@ -807,9 +847,9 @@ Anexo de la skill `sesion`. Se lee al cerrar («cierra la sesión», «guarda lo
 
 **Las reglas del área, antes que nada.** El bloque `Proyectos` del `area.md` del proyecto (que `abrir.py` imprimió al abrir) y las reglas propias de la casa de `guia.md` pueden pedir algo al cerrar, como poner al día la fila de un pipeline o la ficha de otro proyecto del área. Se cumple en este mismo cierre, como un paso más y dentro de lo que la cuenta puede escribir; si pide escribir en un área de otra cuenta, se prepara el texto y se dice a quién pasárselo.
 
-**Cómo se escribe: todo en una llamada, con `cerrar.py`.** La sesión prepara los textos y `cerrar.py` (junto a este archivo; llegó a la computadora con `abrir.py` en la llamada 1 de abrir, y si no está, se trae igual que él) los escribe. Un `cambios.json` con la forma que dice su cabecera: la entrada de `sesiones.md` (paso 2, con el formato de `escribir.md`: `## AAAA-MM-DD` y la última línea «Sesión de»), las decisiones confirmadas (paso 3), el `Estatus` entero (`estatus`) y los reemplazos exactos de `proyecto.md` (paso 4), la línea del proyecto y las de sus entregables vigentes en `area.md` (paso 5), el `Estatus` del área (`estatus_area`, paso 10) y, si una regla del área pide tocar otro archivo del área, sus reemplazos en «otros». Con consola: el JSON con un heredoc en `$HOME/memoria/` (fuera de la raíz) y, en la misma llamada de device_bash, `cd $HOME/memoria && python3 cerrar.py "<raíz en $HOME/mnt>" <area>/<proyecto> cambios.json --cuenta <correo de la cuenta> --abierto <la hora que imprime la línea «ahora» de REGISTROS de abrir.py, solo el valor>`. Sin consola: lo mismo con Bash en el contenedor sobre la copia (`python3 <directorio de esta skill>/cerrar.py "<la copia>" … --sin-fechas`, sin `--abierto`: las fechas de la copia son las de la traída y no dicen nada), con cada archivo traído y registrado antes como dice `sin-consola.md`, y después `espejo.py devolver`; si `device_commit_files` rechaza uno por `mtime-drift`, alguien lo cambió en la computadora: se trae otra vez, se registra, se repite `cerrar.py` sobre la copia (una entrada que ya está no se repite; los reemplazos van sobre lo nuevo) y se devuelve.
+**Cómo se escribe: con `cerrar.py`, en dos llamadas: `--comprobar` antes de enseñar la entrada (paso 2) y la que escribe.** La sesión prepara los textos y `cerrar.py` (junto a este archivo; llegó a la computadora con `abrir.py` en la llamada 1 de abrir, y si no está, se trae igual que él) los escribe. Un `cambios.json` con la forma que dice su cabecera: la entrada de `sesiones.md` (paso 2, con el formato de `escribir.md`: `## AAAA-MM-DD` y la última línea «Sesión de»), los documentos que la sesión escribió y los que publicó (`escribio` y `publico`, paso 2), las decisiones confirmadas (paso 3), el `Estatus` entero (`estatus`) y los reemplazos exactos de `proyecto.md` (paso 4), la línea del proyecto y las de sus entregables vigentes en `area.md` (paso 5), el `Estatus` del área (`estatus_area`, paso 10) y, si una regla del área pide tocar otro archivo del área, sus reemplazos en «otros». Con consola: el JSON con un heredoc en `$HOME/memoria/` (fuera de la raíz) y, en la misma llamada de device_bash, `cd $HOME/memoria && python3 cerrar.py "<raíz en $HOME/mnt>" <area>/<proyecto> cambios.json --cuenta <correo de la cuenta> --abierto <la hora que imprime la línea «ahora» de REGISTROS de abrir.py, solo el valor>`. Sin consola: lo mismo con Bash en el contenedor sobre la copia (`python3 <directorio de esta skill>/cerrar.py "<la copia>" … --sin-fechas`, sin `--abierto`: las fechas de la copia son las de la traída y no dicen nada), con cada archivo traído y registrado antes como dice `sin-consola.md`, y después `espejo.py devolver`; si `device_commit_files` rechaza uno por `mtime-drift`, alguien lo cambió en la computadora: se trae otra vez, se registra, se repite `cerrar.py` sobre la copia (una entrada que ya está no se repite; los reemplazos van sobre lo nuevo) y se devuelve.
 
-De cada archivo el script hace leer → cambiar → escribir bajo un cerrojo y, justo antes de escribir, comprueba que el archivo sigue como lo leyó; si cambió entre medias, vuelve a leer y aplica lo de esta sesión sobre lo nuevo. Así dos personas que cierran a la vez sobre el mismo proyecto, o dos sesiones de una misma cuenta, no se pierden una entrada ni un paso: cada entrada va encima de lo que haya y cada reemplazo se aplica sobre lo que está en el disco. Antes de escribir nada comprueba la forma de las entradas, que su fecha sea hoy o ayer en la zona de la organización (la línea HOY de `abrir.py`, nunca el reloj de la consola; otra fecha a propósito, solo con `--cualquier-fecha`) y que «otros» no salga del área (nunca `guia.md`, `base/` ni `restringido/`), que una entrada nueva no use los nombres de antes de la 1.22 («Trabajamos en», «Pendiente», «Descartamos»), y con `--cuenta` no escribe el `Estatus` del área si la cuenta no es su responsable ni la línea de `area.md` si tampoco colabora en ella. En una raíz sin migrar, el `Estatus` ocupa el sitio de «En corto» o del «Panorama»: escribe solo los nombres nuevos. Lo que devuelve: `escritos`; `sin_match` (un reemplazo que no cuadra, porque su texto viejo no aparece exactamente una vez, cruza un encabezado o pasa de doce líneas: se relee ese archivo, se parte o ajusta el reemplazo y se repite la llamada solo con él, pasando en `--abierto` la `escrito_en` que devolvió la anterior); `rechazados` (lo que la cuenta no puede escribir o un archivo que encogería a menos de la mitad: se prepara el texto y se le pasa al responsable, o `--forzar <ruta>` solo si el recorte es a propósito); `fallidos` (un archivo que no se pudo leer o escribir, con el motivo: se dice y no se repite a ciegas); `ajenos` (archivos que alguien cambió desde la apertura o mientras este cierre escribía, con la hora en la zona de la organización: se dice en media línea al terminar, «alguien escribió proyecto.md a las 10:03; sumé lo de hoy encima»); `reintentos`; `hora` y `documento` (para la marca del tablero, paso 11); `escrito_en`. Lo que el cierre escribe pasa por el script: nunca con `Write`, `Edit`, `sed -i` ni un `cat >`, que pueden pisar lo que otra persona escribió. Vale también durante la sesión: si la persona pide quitar un paso o cambiar el estado antes de cerrar, se apunta y se escribe al cerrar; si quiere verlo escrito ya, se escribe con `cerrar.py` y solo `reemplazos` (sin entrada de bitácora), nunca a mano. Lo único que se escribe fuera de él, antes de llamarlo, es juntar una copia en conflicto (abajo) y la rotación (paso 9), que crean o funden archivos enteros como dice `escribir.md`. Esto cierra la ventana entre leer y escribir en esta computadora; lo que la otra persona escribió y Drive aún no bajó no se ve: si los dos llegan a escribir a la vez, Drive guarda las dos versiones, y la siguiente apertura las junta («Copias en conflicto»).
+De cada archivo el script hace leer → cambiar → escribir bajo un cerrojo y, justo antes de escribir, comprueba que el archivo sigue como lo leyó; si cambió entre medias, vuelve a leer y aplica lo de esta sesión sobre lo nuevo. Así dos personas que cierran a la vez sobre el mismo proyecto, o dos sesiones de una misma cuenta, no se pierden una entrada ni un paso: cada entrada va encima de lo que haya y cada reemplazo se aplica sobre lo que está en el disco. Antes de escribir nada comprueba la forma de las entradas, que su fecha sea hoy o ayer en la zona de la organización (la línea HOY de `abrir.py`, nunca el reloj de la consola; otra fecha a propósito, solo con `--cualquier-fecha`) y que «otros» no salga del área (nunca `guia.md`, `base/` ni `restringido/`), que una entrada nueva no use los nombres de antes de la 1.22 («Trabajamos en», «Pendiente», «Descartamos»), y con `--cuenta` no escribe el `Estatus` del área si la cuenta no es su responsable ni la línea de `area.md` si tampoco colabora en ella. En una raíz sin migrar, el `Estatus` ocupa el sitio de «En corto» o del «Panorama»: escribe solo los nombres nuevos. Lo que devuelve: `escritos`; `sin_match` (un reemplazo que no cuadra, porque su texto viejo no aparece exactamente una vez, cruza un encabezado o pasa de doce líneas: se relee ese archivo, se parte o ajusta el reemplazo y se repite la llamada solo con él, pasando en `--abierto` la `escrito_en` que devolvió la anterior); `rechazados` (lo que la cuenta no puede escribir o un archivo que encogería a menos de la mitad: se prepara el texto y se le pasa al responsable, o `--forzar <ruta>` solo si el recorte es a propósito); `fallidos` (un archivo que no se pudo leer o escribir, con el motivo: se dice y no se repite a ciegas); `ajenos` (archivos que alguien cambió desde la apertura o mientras este cierre escribía, con la hora en la zona de la organización: se dice en media línea al terminar, «alguien escribió proyecto.md a las 10:03; sumé lo de hoy encima»); `sin_nombrar` (con `--abierto`: documentos de `entregables/` o `taller/` que cambiaron desde la apertura y no van en `escribio` ni en `publico`; con la llamada `--comprobar` del paso 2 no debería quedar ninguno, y si queda, otra persona trabajó en el proyecto y se dice como `ajenos`; nunca se nombran en una sesión posterior, que los atribuiría a otra fecha y quizá a otra persona); `reintentos`; `hora` y `documento` (para la marca del tablero, paso 11); `escrito_en`. Lo que el cierre escribe pasa por el script: nunca con `Write`, `Edit`, `sed -i` ni un `cat >`, que pueden pisar lo que otra persona escribió. Vale también durante la sesión: si la persona pide quitar un paso o cambiar el estado antes de cerrar, se apunta y se escribe al cerrar; si quiere verlo escrito ya, se escribe con `cerrar.py` y solo `reemplazos` (sin entrada de bitácora), nunca a mano. Lo único que se escribe fuera de él, antes de llamarlo, es juntar una copia en conflicto (abajo), que funde archivos enteros como dice `escribir.md`; la rotación (paso 9) la hace el propio script. Esto cierra la ventana entre leer y escribir en esta computadora; lo que la otra persona escribió y Drive aún no bajó no se ve: si los dos llegan a escribir a la vez, Drive guarda las dos versiones, y la siguiente apertura las junta («Copias en conflicto»).
 
 **Copias en conflicto.** Cuando abrir sesión avisa de una copia en conflicto («sesiones (1).md», «proyecto [Conflict].md» junto a su original), se junta antes de cualquier otra cosa, porque hasta entonces una de las dos versiones no la lee nadie. Se leen las dos. En `sesiones.md` y `decisiones.md`, que solo crecen, se juntan las entradas de las dos, sin repetir ni editar ninguna, en el orden del archivo. En un archivo vivo (`proyecto.md`, `area.md`, `guia.md`) se le enseña a la persona lo que difiere entre las dos y se escribe lo que ella decida. Se escribe en el original, siguiendo `escribir.md`, y la copia va a la papelera con su sí: con consola, se pide el permiso de borrar; sin consola, con el conector (`sin-consola.md`). Se dice en una línea. Un archivo en conflicto de un área donde la cuenta no escribe se le dice a su responsable, y no se toca.
 
@@ -822,6 +862,8 @@ De cada archivo el script hace leer → cambiar → escribir bajo un cerrojo y, 
 **1. Lo que se hizo y aún no está en la carpeta.** Lo producido se guarda al crearlo, así que esto no debería pasar; si algo de la sesión (un documento, un PDF, un análisis) solo existe en la conversación, se guarda ahora en `entregables/` o en `taller/` como borrador, antes de registrar nada. Lo mismo con lo que la app haya dejado en «Claude outputs» durante esta sesión: se mueve a este proyecto y deja de estar ahí.
 
 **2. `sesiones.md`.** Entrada nueva arriba del todo, que se enseña junto a las decisiones y el `Estatus` antes de escribir, fechada con la línea HOY de `abrir.py`, con el formato de `escribir.md` (sección 4), sin tocar las anteriores: «Tema» y «Avances», más la de quién trabajó y con qué versión del plugin (la de `plugin.json`, la misma que la llamada 1 de abrir; quien trabaja sin el plugin escribe con qué lo hizo, por ejemplo «sin plugin, Gemini»). Lo que sigue no va aquí: va en «Siguiente» del `Estatus`. Si una sesión no cabe en esas líneas, es que hubo decisiones y esas van a su archivo.
+
+Quién escribió y quién publicó lo pone `cerrar.py`: en `escribio`, cada documento de `entregables/` o `taller/` del proyecto que la sesión creó o cambió en su contenido (no los que solo leyó, ni una `aportacion` añadida a una cabecera); en `publico`, cada entregable que la skill `revisar` pasó a `vigente` en esta sesión (el paso a `vigente` puede ir en «otros» de la misma llamada); rutas dentro del proyecto. No se teclean en el texto de la entrada: el script rechaza una «Escribió:» o «Publicó:» escrita a mano y, con cualquiera de las dos listas, una entrada sin «Sesión de: Nombre». **Antes de enseñar la entrada**, una llamada con `--comprobar` (y el mismo `--abierto`) valida sin escribir la forma de las entradas y la autoría, y devuelve la entrada tal como quedará, con sus líneas, y `sin_nombrar` (sin consola no lo hay, porque las fechas de la copia no dicen nada; los reemplazos y los permisos se comprueban en la llamada que escribe): lo que cambió desde la apertura y no va en las listas. Si es de esta sesión, se añade a `escribio`; si no, es de otra persona y se dice. Lo que se enseña para confirmar es esa `entrada`.
 
 **3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas, cada una como va a quedar escrita, y se pide confirmación explícita; la respuesta termina ahí y el cierre sigue en el turno siguiente, con el sí. También cuando la persona dictó la decisión en el mismo mensaje en que pide cerrar: dictarla no es confirmar la entrada. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. `Descartado`, `Reemplaza` y `Afecta a` van solo si hay algo que decir: nunca «no consta» ni «ninguno». Las líneas van en este orden, con `Afecta a` la última. Formato:
 
@@ -849,7 +891,7 @@ Si `Afecta a` nombra un proyecto de otra área, se dice al usuario a quién tien
 
 Si el proyecto activo lo lee todo el equipo y la decisión toca a un área o a un proyecto restringido, `Afecta a` lleva su nombre y nada más, porque ese nombre ya está listado: ni sus archivos, ni lo que contiene. Al revés, una decisión que se registra dentro de una carpeta restringida sí puede nombrar cualquier proyecto al que afecte.
 
-**4. `proyecto.md`.** Se ponen al día `Estatus` y `Siguientes pasos`. A una persona de fuera de la organización se la nombra en ellos, al menos una vez, como «Nombre Apellido (Organización)»: es como el tablero la reconoce en «Con otros» (recomendación de la 1.22.4; la regla entra al contrato en la 1.23). Es un archivo vivo: lo que deja de ser cierto se sustituye, no se acumula. `Siguientes pasos` se edita, no se vuelve a escribir entero: se quitan los pasos hechos, se añaden los nuevos y se cambian solo las frases que la sesión dejó viejas, con reemplazos exactos (los `reemplazos` de `cambios.json`). Si un texto viejo no aparece exactamente una vez (la tarea del tablero pudo poner una fecha en esa línea), `cerrar.py` lo devuelve en `sin_match`: se relee el archivo, se ajusta el reemplazo y se repite solo con él.
+**4. `proyecto.md`.** Se ponen al día `Estatus` y `Siguientes pasos`. A una persona de fuera de la organización se la nombra en ellos como dice `escribir.md` («Personas de fuera»): «Nombre Apellido (Organización)» al menos una vez. Es un archivo vivo: lo que deja de ser cierto se sustituye, no se acumula. `Siguientes pasos` se edita, no se vuelve a escribir entero: se quitan los pasos hechos, se añaden los nuevos y se cambian solo las frases que la sesión dejó viejas, con reemplazos exactos (los `reemplazos` de `cambios.json`). Si un texto viejo no aparece exactamente una vez (la tarea del tablero pudo poner una fecha en esa línea), `cerrar.py` lo devuelve en `sin_match`: se relee el archivo, se ajusta el reemplazo y se repite solo con él.
 
 El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plantilla de las cuatro preguntas (qué se completó, qué sigue, qué falta decidir, qué preocupa) y la forma y la voz que da `escribir.md` (sección 3 y «La voz del `Estatus`»); lo lee todo el equipo, en la carpeta y en el tablero de cada uno, así que nada de `restringido/` ni datos personales. **Se enseña antes de escribir**, en el mismo mensaje que la entrada de la bitácora y las decisiones, y se escribe con el sí de la persona, como ellas; si pide cambiarlo, se cambia y se vuelve a enseñar. El `Estatus` lo escribe la sesión, nunca el tablero. Si el proyecto no tenía `Estatus`, se crea debajo del título. `cerrar.py` retira un «En corto» que quede al lado. Si todavía tiene «Estado actual» o «Terminado significa» (una raíz sin migrar), no se tocan: los saca la migración de la apertura (`migracion.md`, junto a este archivo).
 
@@ -861,7 +903,7 @@ El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plan
 
 **8. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
 
-**9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o cambia el año, se archiva como dice `escribir.md`, sección 8. Sin preguntar.
+**9. Rotación.** La hace `cerrar.py` antes de escribir la entrada de hoy: si `sesiones.md` o `decisiones.md` pasa de 1.500 líneas o de 100 KB, o su entrada más nueva es de un año anterior, lo archiva entero como `<registro>-<año>.md` y abre uno nuevo con la línea «Archivado:» (`escribir.md`, sección 8), y lo devuelve en `rotados`. Se dice como una fila más del recuadro del cierre, en llano: «decisiones-2026.md · las decisiones anteriores se archivaron aquí; se siguen leyendo y citando igual». Sin consola, la apertura ya trajo todos los archivados del proyecto (`rutas --listado`), así que el nombre que elige el script no existe en la computadora; aun así, antes de declarar el archivado con `espejo.py nuevo`, `device_list_dir` de la carpeta comprueba que ese nombre (`rotados[].a`) no está. Si está, nada se devuelve: se traen otra vez ese archivado **y el registro vivo** (que en la computadora sigue entero), se registran y se repite `cerrar.py` sobre la copia, que entonces archiva con el número siguiente; nunca se trae solo el archivado, que dejaría la copia con el vivo ya encogido y sin sus entradas. Con `ya_estaba`, el archivado no se toca ni se declara: solo se devuelve el vivo. Después, `devolver` con `--forzar` para el registro vivo, que encoge a propósito.
 
 **10. El `Estatus` del área.** Se reescribe el `Estatus` de `<area>/area.md` con la forma y la voz que da `escribir.md` (sección 2, «Estructura de `area.md`»): cómo está el área después de esta sesión, con sus prioridades debajo de «Siguiente» y una línea por proyecto activo. Al cerrar no se relee el área: se parte del `Estatus` anterior del área (en un área sin migrar, de su «Panorama» y sus «Prioridades ahora», que `cerrar.py` retira al escribir el `Estatus`; las prioridades que el nuevo no traiga las añade él debajo de «Siguiente» y las devuelve en `fundidas`) y de lo que esta sesión ya leyó y escribió, y de los demás proyectos del área solo se mira, en una sola llamada, la cabecera y el `Estatus` (o «En corto», sin migrar) de los que tienen `actualizado` posterior a la fecha del `Estatus` del área, o de todos si no había uno con fecha. Las prioridades se quedan como estaban salvo que el responsable del área las cambie en esta sesión. Se enseña con el `Estatus` del proyecto y va en la misma escritura de `area.md` que el paso 5. Solo si la cuenta que cierra es la del responsable del área; si solo colabora, o el área es de otra cuenta, se salta.
 
@@ -871,7 +913,7 @@ El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plan
 
 #### Qué respondo al terminar
 
-Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más. El resumen largo ya está en los archivos.
+Lo que escribió el cierre va en el mismo recuadro que la apertura (1.23), para que todo lo que es de la memoria se vea igual: una tabla de Markdown de una columna, con la cabecera «Memoria · sesión cerrada · <n> archivos» (los `escritos` de `cerrar.py`, que ya incluyen el archivado si hubo rotación, más la copia en conflicto si se juntó una) y una fila por archivo, con su enlace (`computer://`, como cualquier archivo que se nombra en la conversación) y en pocas palabras qué cambió en él. Las celdas siguen la regla del recuadro de la apertura: sin saltos de línea ni «|». Debajo, en texto normal y solo si hay algo: qué queda para la próxima en una línea, a quién avisar de otra área, lo que quedó en `fuentes/` pendiente de decidir si es confidencial, y `ajenos` o `sin_nombrar` en llano («alguien más escribió proyecto.md a las 10:03; sumé lo de hoy encima», «taller/x.md cambió mientras trabajábamos y no lo escribió esta sesión»). Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más: el resumen largo ya está en los archivos. La cita con barra lateral se queda para lo que se enseña antes de escribir (la entrada, las decisiones y el `Estatus`), no para el resumen.
 
 ---
 
@@ -908,7 +950,8 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 > ## 2026-08-29
 > Tema: el criterio de corte por monto.
 > Avances: criterio fijado en 5.000 MXN y descartado el tope acumulado.
-> Sesión de: Ana Pérez · plugin 1.22.0
+> Escribió: entregables/flujo-aprobacion.md
+> Sesión de: Ana Pérez · plugin 1.23.0
 >
 > El estatus quedaría así:
 >
@@ -922,11 +965,14 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta al cerrar:**
 
-> Escribí la entrada en `decisiones.md`, la sesión de hoy en `sesiones.md`, actualicé el estatus y los siguientes pasos en `proyecto.md` y la línea del proyecto en `compras/area.md`. La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a», así que conviene revisarlo antes de publicarlo.
+> | Memoria · sesión cerrada · 4 archivos |
+> |---|
+> | [compras/automatizacion-ordenes/decisiones.md](computer:///…/compras/automatizacion-ordenes/decisiones.md) · el corte en 5.000 MXN |
+> | [compras/automatizacion-ordenes/sesiones.md](computer:///…/compras/automatizacion-ordenes/sesiones.md) · la sesión de hoy |
+> | [compras/automatizacion-ordenes/proyecto.md](computer:///…/compras/automatizacion-ordenes/proyecto.md) · estatus y siguientes pasos |
+> | [compras/area.md](computer:///…/compras/area.md) · la línea del proyecto |
 >
-> La decisión afecta a `finanzas/cierre-mensual`. Avísale a Luis Romero, que es el responsable de Finanzas; la carpeta no lo hace por ti.
->
-> Para la próxima queda validar el criterio con Finanzas y reanudar la revisión del mapa de proceso.
+> La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a»: conviene revisarlo antes de publicarlo. Afecta también a `finanzas/cierre-mensual`: avísale a Luis Romero, responsable de Finanzas; la carpeta no lo hace por ti. Para la próxima, validar el criterio con Finanzas y retomar el mapa de proceso.
 
 ## Premisas
 
@@ -946,7 +992,7 @@ Una premisa es algo que la dirección confirmó y sobre lo que todos construyen;
 
 **1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `inventario.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
 
-**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md`, ni siquiera de hace meses.
+**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md` ni de sus archivados de este año y del anterior, ni siquiera de hace meses.
 
 **3. Frescura.** Ningún archivo de `basado_en` tiene una fecha `actualizado` posterior a la del entregable. Si la tiene, se dice qué cambió aguas arriba.
 
