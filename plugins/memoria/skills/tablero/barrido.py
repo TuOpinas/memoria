@@ -666,7 +666,8 @@ def main():
         # una aceptada desde el tablero la espera el cierre, aunque lo mecánico deje de proponerla (1.22.3). Solo se retira la
         # aceptada de «aportacion» cuya pieza ya la tiene (la escribió el cierre o alguien a mano): ya no hay nada que aplicar
         if d["data"].get("estado") == "aceptada":
-            if d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
+            # «rotacion» ya no existe desde la 1.23 (la hace el cierre): se retira aunque esté aceptada, que nadie la aplicará
+            if (d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["data"].get("clase") == "rotacion":
                 borrar.append({"id": d["id"], "if_version": d["version"]})
             continue
         if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:

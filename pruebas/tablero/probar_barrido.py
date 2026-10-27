@@ -317,6 +317,11 @@ try:
     sq = tmp / "sq"; sq.mkdir()
     bq, _ = correr(rz, sq, colq)
     ok("prop-q" not in bq["juzgado"]["ids"], "una pendiente vieja de un proyecto sin sesión posterior no caduca")
+    colr = tmp / "colar"; colr.mkdir()
+    escribir(colr / "prop-r.json", json.dumps({"id": "prop-r", "data": {"tipo": "propuesta", "clase": "rotacion", "proyecto": "ventas--quieto", "estado": "aceptada", "creado": "2026-07-02T10:00-06:00"}, "version": 3}))
+    sr_ = tmp / "sr"; sr_.mkdir()
+    br, _ = correr(rz, sr_, colr)
+    ok(any(x["id"] == "prop-r" for x in br["borrar"]), "una «rotacion» aceptada se retira: desde la 1.23 la hace el cierre y nadie la aplicaría")
     # con el proyecto al tope, una decisión sin registrar entra igual; una línea aportacion, no
     jl = tmp / "juicio-lleno.json"
     bl = json.loads((st / "barrido.json").read_text(encoding="utf-8"))

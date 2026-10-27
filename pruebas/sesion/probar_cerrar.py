@@ -255,6 +255,25 @@ c, sd_ = corre(RD, {"sesion": SESION})
 ok(c == 0 and not (RD / "ventas/cuentas/decisiones-2026-2.md").exists() and sd_.get("rotados", [{}])[0].get("ya_estaba") and "Archivado: decisiones-2026.md." in pd_.read_text(encoding="utf-8"),
    "un decisiones.md grande se archiva en un cierre sin decisión, y si ya hay un archivado idéntico no se duplica: solo se encoge el vivo")
 ok(len(sd_["escritos"]) == len(set(sd_["escritos"])), f"«escritos» no repite archivos ({sd_['escritos']})")
+RQ = raiz_nueva()
+pq = RQ / "ventas/cuentas/decisiones.md"
+extra_q = f"## {HOY} · Una entrada que llegó después de la rotación a medias\nDecidió: Beto Prueba\nPor qué: x.\n\n"
+pq.write_text(grande.replace("# Decisiones\n\n", "# Decisiones\n\n" + extra_q, 1), encoding="utf-8")
+(RQ / "ventas/cuentas/decisiones-2026.md").write_text(grande, encoding="utf-8")   # el archivado que sí se devolvió
+c, sq = corre(RQ, {"sesion": SESION})
+vq = pq.read_text(encoding="utf-8")
+ok(not (RQ / "ventas/cuentas/decisiones-2026-2.md").exists() and "Una entrada que llegó después" in vq and vq.count("\n## ") == 1,
+   "una rotación devuelta a medias, con una entrada nueva en el vivo, no duplica: el vivo se queda solo con lo que el archivado no tiene")
+RS = raiz_nueva()
+psm = RS / "ventas/cuentas/decisiones.md"
+psm.write_text(psm.read_text(encoding="utf-8").replace("2026-", "2025-"), encoding="utf-8")
+c, ss_ = corre(RS, {"sesion": SESION})
+ok(not (RS / "ventas/cuentas/decisiones-2025.md").exists(), "un cierre sin decisión no archiva por año un decisiones.md pequeño: sus decisiones seguirían leyéndose al año siguiente")
+RU = raiz_nueva()
+pu = RU / "ventas/cuentas/decisiones.md"
+pu.write_text(grande.replace("# Decisiones\n\n", "# Decisiones\n\nArchivado: decisiones-2019.md.\n\n", 1), encoding="utf-8")
+c, su = corre(RU, {"decisiones": [DEC]})
+ok("Archivado: decisiones-2019.md, decisiones-2026.md." in pu.read_text(encoding="utf-8"), "la línea «Archivado:» conserva los que nombraba aunque no estén en la carpeta (sin consola)")
 RH = raiz_nueva()
 ph = RH / "ventas/cuentas/decisiones.md"; ph.write_text(grande.split("---\n", 2)[2], encoding="utf-8")   # sin cabecera
 (RH / "ventas/cuentas/decisiones-2025.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2025-03-01 · Vieja\nDecidió: Ana\n", encoding="utf-8")

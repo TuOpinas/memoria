@@ -1393,7 +1393,7 @@ const VIEWER = () => DATOS_NUEVOS() ? (META.tablero_de||"") : "";
 // sin saber quién lee (ni la cuenta ni el nombre), nada es suyo: el tablero no atribuye (1.22.4)
 const esMio = p => p.escribe!==undefined ? p.escribe===true : (!!VIEWER() && (persona(p.dueno)===persona(VIEWER()) || (p.colaboran||[]).some(c=>persona(c)===persona(VIEWER()))));
 // quién decide lo que «Falta decidir» dice, si nombra a alguien que no es quien mira
-function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c = conocidos(); return md && c[md[1]] ? c[md[1]] : null; }
+function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/); return md ? nombreEn(fd, md.index + md[0].length - md[1].length, md[1]) : null; }
 const esYo = n => !!n && !!VIEWER() && nombreCorto(n)===nombreCorto(VIEWER());
 // si no se sabe quién mira (la carpeta no da nombre a la cuenta), nada se mueve por nombre
 function otroDecide(fd){ const n = quienDecide(fd); return n && VIEWER() && !esYo(n) ? n : null; }
@@ -1401,7 +1401,8 @@ const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/
 // quien colabora en un área viaja por su nombre en colaboran_ver; colaboran son sus cuentas, que nunca coinciden con el nombre
 // de «Sesión de:» o «Decidió:» (1.23: antes quedaban fuera de «Por persona» y de «Con otros»)
 const colaboranArea = a => "colaboran_ver" in a ? (a.colaboran_ver||[]) : (a.colaboran||[]).filter(c=>!/@/.test(c));
-const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>(p.colaboran||[]).map(persona))].filter(Boolean));
+// los mismos que «Por persona»: también quien responde por un proyecto sin responder por su área (segunda vuelta)
+const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>[persona(p.dueno), ...(p.colaboran||[]).map(persona)])].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
 const activo = p => p && !p.restringido && !p.cerrado;
 function sesionesTodas(p){
@@ -1529,25 +1530,33 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
     for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
   const porNombre = {}, carpeta = escribenSet(), completos = {};
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
-    if(f.split(" ").length>1) (completos[k] = completos[k] || new Set()).add(f);
+    // un nombre de pila es ambiguo solo entre quienes escriben hoy en la carpeta o están nombrados hoy como de fuera, no por
+    // una decisión vieja de alguien que ya no está (revisión de la 1.23, segunda vuelta)
+    if(f.split(" ").length>1 && (carpeta.has(persona(f)) || ORG_DE[f])) (completos[k] = completos[k] || new Set()).add(f);
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
   // un nombre de pila que llevan dos personas no se atribuye por sí solo: hace falta el apellido (1.23)
   _AMBIGUOS = new Set(Object.keys(completos).filter(k=>completos[k].size>1));
   _COMPLETOS = [...full].filter(f=>f.split(" ").length>1).sort((a,b)=>b.length-a.length);
+  // una sola expresión con todos los nombres completos, de más largo a más corto: se recorre el texto una vez (segunda vuelta)
+  RE_COMPLETOS = _COMPLETOS.length ? new RegExp(`(?<![${LETRA}])(${_COMPLETOS.map(f=>f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?![${LETRA}])`, "g") : null;
   return _CONOCIDOS = porNombre; }
-let _AMBIGUOS = new Set(), _COMPLETOS = [];
+let _AMBIGUOS = new Set(), _COMPLETOS = [], RE_COMPLETOS = null;
 // una palabra con mayúscula, con fronteras que conocen los acentos: «\b» de JavaScript no los ve, y «Ángel» no casaba (1.23)
 const LETRA = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
 const RE_NOMBRE = new RegExp(`(?<![${LETRA}])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)(?![${LETRA}])`, "g");
-const conFronteras = (txt, n) => new RegExp(`(?<![${LETRA}])${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![${LETRA}])`).test(txt||"");
-function nombresEn(txt){ const c = conocidos(), out = [], conApellido = new Set();
-  for(const f of _COMPLETOS) if(conFronteras(txt, f) && !out.includes(f)){ out.push(f); conApellido.add(f.split(" ")[0]); }
-  let m; RE_NOMBRE.lastIndex = 0;
-  while((m = RE_NOMBRE.exec(txt||""))){ const k = m[1]; if(conApellido.has(k) || _AMBIGUOS.has(k)) continue; const f = c[k]; if(f && !out.includes(f)) out.push(f); }
+// los nombres completos que el texto trae, y las posiciones donde empiezan
+function completosEn(txt){ conocidos(); const out = []; if(!RE_COMPLETOS) return out; RE_COMPLETOS.lastIndex = 0; let m;
+  while((m = RE_COMPLETOS.exec(txt||""))) out.push({f:m[1], i:m.index}); return out; }
+function nombresEn(txt){ const c = conocidos(), out = [], cs = completosEn(txt), ini = new Set(cs.map(x=>x.i));
+  for(const {f} of cs) if(!out.includes(f)) out.push(f);
+  const re = new RegExp(RE_NOMBRE.source, "g"); let m;
+  while((m = re.exec(txt||""))){ if(ini.has(m.index) || _AMBIGUOS.has(m[1])) continue; const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); }
   return out; }
+// el nombre que empieza en la posición i del texto: el completo si lo trae; el de pila si no es ambiguo; si no, nadie
+function nombreEn(txt, i, pila){ const c = conocidos(), x = completosEn(txt).find(x=>x.i===i); return x ? x.f : (_AMBIGUOS.has(pila) ? null : c[pila] || null); }
 // cuántas veces el texto nombra a alguien solo por un nombre de pila que llevan dos personas
-const ambiguosEn = txt => { conocidos(); let n = 0, m; RE_NOMBRE.lastIndex = 0; const ya = new Set(_COMPLETOS.filter(f=>conFronteras(txt, f)).map(f=>f.split(" ")[0]));
-  while((m = RE_NOMBRE.exec(txt||""))) if(_AMBIGUOS.has(m[1]) && !ya.has(m[1])) n++; return n; };
+const ambiguosEn = txt => { conocidos(); if(!_AMBIGUOS.size) return 0; const ini = new Set(completosEn(txt).map(x=>x.i)), re = new RegExp(RE_NOMBRE.source, "g"); let n = 0, m;
+  while((m = re.exec(txt||""))) if(_AMBIGUOS.has(m[1]) && !ini.has(m.index)) n++; return n; };
 
 // ===================== Inicio en tres pestañas: Estatus · Con otros · Mantenimiento =====================
 let INI_TAB = "estatus";
@@ -1632,16 +1641,17 @@ const SIN_QUIEN = () => { let n = 0; for(const p of PROJ){ if(p.restringido || p
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
-  const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
+  // quién mira, por su nombre completo: con dos Anas en la carpeta, la otra no es «tú» (segunda vuelta)
+  const yo = nombreCorto(VIEWER()), yoN = persona(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
-    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)));
+    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? persona(n)!==yoN : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
       if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
-      else if(md){ lado = "debes"; n = c[md[2]] && fuera(c[md[2]]) ? c[md[2]] : null; }
+      else if(md){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = faltaDecidir(p); if(fd){ const qd = quienDecide(fd); const ns = qd ? [qd] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
@@ -1736,7 +1746,8 @@ function eventos(desde){
       ev.push({k:"ses", f:s.fecha, p, q, t:s.trabajamos||""});
       for(const r of new Set(s.escribio||[])){ nombrados.add(r); ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
       // publicado es lo que una entrada dice en «Publicó:», una vez por documento: la fecha del entregable no lo dice (1.23)
-      for(const r of new Set(s.publico||[])){ nombrados.add(r); if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:docNombre(r)}; } }
+      for(const r of new Set(s.publico||[])){ nombrados.add(r); const e = (p.entregables||[]).find(e=>"entregables/"+(e.archivo||e.nombre||"")===r);
+        if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:(e && (e.titulo||e.nombre)) || docNombre(r), doc:r}; } }
     for(const r in publicados) ev.push({k:"pub", p, ...publicados[r]});
     for(const d of decisionesTodas(p)) if(d.fecha && d.fecha>=desde && d.tipo!=="cuestionamiento") ev.push({k:"dec", f:d.fecha, p, q:persona(d.decidio||""), t:d.titulo, cruza: AREAS.some(a=>a.slug!==p.area && (d.afecta||"").includes(a.slug+"/"))});
     // un vigente que cambió en el periodo sin que ninguna entrada lo nombre: se cuenta aparte, sin suponer quién ni por qué
@@ -1746,7 +1757,7 @@ function eventos(desde){
   return ev;
 }
 const agrega = (evs) => { const o = {ses:0, dec:0, pub:0, esc:0, cambio:0, cruza:0, q:new Set(), proy:new Set(), dias:new Set()}; for(const e of evs){ o[e.k]++; if(e.cruza) o.cruza++; if(e.q) o.q.add(e.q); o.proy.add(e.p.id); if(e.k==="ses") o.dias.add(e.f); } return o; };
-const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o.dec,"decisión","decisiones"):"", o.pub?cuantos(o.pub,"publicado","publicados"):""].filter(Boolean).join(" · ") || "sin movimiento";
+const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o.dec,"decisión","decisiones"):"", o.pub?cuantos(o.pub,"publicado","publicados"):"", o.cambio?cuantos(o.cambio,"documento vigente cambió","documentos vigentes cambiaron"):""].filter(Boolean).join(" · ") || "sin movimiento";
 
 function actPorArea(ev){
   const esc_ = escribenSet();
@@ -1775,15 +1786,15 @@ function rolesEscriben(areaSlug){
   if(!areaSlug && META && META.administra){ const n = persona(META.administra); if(n && !R[n]) R[n] = {resp:[], col:[], adm:true}; }
   return R;
 }
-const rolTxt = r => r.fuera ? "cerró sesión sin estar en la guía ni en una línea «Colabora:»"
+const rolTxt = r => r.fuera ? "trabaja aquí sin figurar en la carpeta: pide a quien responde por el área que lo sume"
   : [r.adm ? "administra la carpeta" : "", r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : "", r.aqui ? "trabajó aquí" : ""].filter(Boolean).join(" · ");
 function accionesDe(areaSlug){
   // pasos abiertos de cada proyecto visible cuyo texto nombra a la persona: lo que tiene que hacer y lo que otros esperan de
   // ella; un nombre de pila que llevan dos personas, sin apellido, no se atribuye y se cuenta aparte (n_ambiguos)
-  const n = {}; let amb = 0;
+  const n = {}; let amb = 0; const ambP = new Set();
   for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug)) continue;
-    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } amb += ambiguosEn(s.texto) ? 1 : 0; } }
-  return {n, amb};
+    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } if(ambiguosEn(s.texto)){ amb++; ambP.add(p.nombre); } } }
+  return {n, amb, ambP:[...ambP]};
 }
 function actPersonas(ev, areaFija){
   const areaSel = areaFija || (ACT_AREA && areaBy[ACT_AREA] && areaBy[ACT_AREA].legible!==false ? ACT_AREA : "");
@@ -1794,7 +1805,7 @@ function actPersonas(ev, areaFija){
   for(const n of Object.keys(roles)) P(n);
   // quien cerró sesión aquí sin papel en esta área sale con el suyo y «trabajó aquí»; sin papel en ninguna, con su papel sin
   // declarar; quien solo decide desde fuera no, porque nunca cierra sesión
-  for(const e of evs) if(e.k==="ses" && e.q && !roles[e.q]){ roles[e.q] = todosRoles[e.q] ? {...todosRoles[e.q], aqui:true} : {resp:[], col:[], fuera:true}; P(e.q); }
+  for(const e of evs) if(e.q && !roles[e.q] && (e.k==="ses" || todosRoles[e.q])){ roles[e.q] = todosRoles[e.q] ? {...todosRoles[e.q], aqui:true} : {resp:[], col:[], fuera:true}; P(e.q); }
   let sinNombre = 0, escSin = 0, cambios = 0;
   for(const e of evs){
     if(e.k==="cambio"){ cambios++; continue; }
@@ -1803,7 +1814,7 @@ function actPersonas(ev, areaFija){
     if(e.k==="ses"){ g.ses++; g.dias[e.f] = (g.dias[e.f]||0) + 1; }
     else if(e.k==="dec") g.dec++;
     else if(e.k==="esc") g.esc.add(e.p.id+"/"+e.doc);
-    else if(e.k==="pub") g.pub.add(e.p.id+"/"+e.t); }
+    else if(e.k==="pub") g.pub.add(e.p.id+"/"+(e.doc||e.t)); }
   // la última sesión de cada persona, en cualquier fecha: la que da el generador sobre toda la bitácora y, si no, las que hay aquí
   const ult = {};
   for(const p of PROJ){ if(p.restringido || (areaSel && p.area!==areaSel)) continue;
@@ -1827,7 +1838,7 @@ function actPersonas(ev, areaFija){
   const notas = [sinNombre ? `${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró` : "",
     escSin ? `${cuantos(escSin,"documento escrito","documentos escritos")} en una sesión sin nombre` : "",
     cambios ? `${cuantos(cambios,"documento vigente cambió","documentos vigentes cambiaron")} sin que ninguna sesión lo nombre` : "",
-    A.amb ? `${cuantos(A.amb,"paso nombra","pasos nombran")} a alguien solo por un nombre de pila que llevan dos personas: con el apellido, cuenta` : ""].filter(Boolean);
+    A.amb ? `${cuantos(A.amb,"paso nombra","pasos nombran")} a alguien solo por un nombre de pila que llevan dos personas (en ${A.ambP.map(esc).join(", ")}): con el apellido, cuenta` : ""].filter(Boolean);
   // quien colabora en un área sin nombre junto a su cuenta no se puede listar: se cuenta (1.23)
   const sinNombreGuia = AREAS.filter(a=>a.legible!==false && !archivada(a) && (!areaSel || a.slug===areaSel)).reduce((n,a)=>n+(a.colaboran_sin_nombre||0),0);
   return `<section class="card personas"><h2>Por persona${hq("por-persona","Qué cuenta «Por persona»")}</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta. Hechos, sin puntaje ni orden por volumen.</p>
@@ -2471,7 +2482,7 @@ function ayudaArts(){
       <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si sigue con el texto de la plantilla o queda vacío, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. Quien colabora en el área sale por el nombre que la carpeta da a su cuenta («Nombre Apellido (correo)» en una línea «Colabora:» de un proyecto); si no lo tiene, solo se cuenta. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
       <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien o le debes (del equipo o de fuera, con su organización), y <b>Por dónde empezar</b>. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
-      <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no tuvo sesión en el periodo, para darle seguimiento: esos van abajo, en gris, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos y acciones planeadas. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas; las sesiones de antes de la 1.23 no lo apuntaban y sus documentos se cuentan aparte, sin atribuir. Las acciones planeadas son los pasos abiertos que nombran a la persona: lo que tiene que hacer y lo que otros esperan de ella. El calendario marca los días con sesión; al pasar por encima dice cuántas. En Inicio, la lista se puede reducir a un área.</dd>
+      <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos y acciones planeadas. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión, que las de antes de la 1.23 no tienen. Un entregable vigente que cambió sin que ninguna sesión lo nombre se cuenta aparte, en la nota. Las acciones planeadas son los pasos abiertos que nombran a la persona: lo que tiene que hacer y lo que otros esperan de ella. Un nombre de pila que llevan dos personas, sin apellido, no se le cuenta a ninguna, y la nota dice en qué proyecto está. El calendario marca los días con sesión; al pasar por encima dice cuántas. En Inicio, la lista se puede reducir a un área.</dd>
       <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una frase de resumen que sugirió la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
       <dt>Mantenimiento</dt><dd>Solo en Inicio. Un número en rojo cuenta lo que te pide hacer algo: sincronizar, poner al día la tarea del tablero, lo que no cuadra y lo marcado aquí que ya no coincide con la carpeta. Si no hay nada de eso pero sí algo que revisar (una versión nueva, lo que espera a la próxima sesión, lo que la memoria tiene flojo), sale un punto amarillo; si no hay nada, no sale nada. Primero, los avisos de la herramienta (versiones, sesiones cerradas desde la última sincronización); después, lo que no cuadra (un Estatus viejo, algo decidido después de «Falta decidir», las sugerencias de la memoria, que aceptas o descartas ahí si el tablero es tuyo y escribes en su proyecto) y el detalle por proyecto de lo que hay que poner al día, con la frase para hacerlo en sesión.</dd>

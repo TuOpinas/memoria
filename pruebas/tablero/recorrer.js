@@ -104,11 +104,12 @@ const path = require('path');
           const otros = conOtros().map(g=>({n:g.n, dentro:g.dentro}));
           ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6)));
           const tec = [...div2.querySelectorAll(".per")].map(x=>x.textContent.replace(/\s+/g," ").trim());
-          return {filas, quietas, tipBruno, nota, otros, tec, sel: !!div.querySelector("[data-act-area]")};
+          const decide = quienDecide("decide Ana si se firma");
+          return {filas, quietas, tipBruno, nota, otros, tec, decide, sel: !!div.querySelector("[data-act-area]")};
         } finally { ({AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS} = guardado); _CONOCIDOS = null; }
       });
       const fila = n => pp.filas.find(x=>x.startsWith(n)) || "", quieta = n => pp.quietas.find(x=>x.startsWith(n)) || "";
-      const bien = pp.filas.length === 4 && /cerró sesión sin estar en la guía/.test(fila("Fede")) && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
+      const bien = pp.filas.length === 4 && /sin figurar en la carpeta/.test(fila("Fede")) && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
         && /documentos: 3 escritos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 acción planeada/.test(fila("Bruno"))
         && /2 sesiones/.test(fila("Ana Lombardo")) && /documentos: 1 publicado/.test(fila("Ana Lombardo")) && !/escrito/.test(fila("Ana Lombardo")) && /0 acciones planeadas/.test(fila("Ana Lombardo"))
         && /0 sesiones/.test(fila("Carmen")) && /1 decisión/.test(fila("Carmen"))
@@ -116,6 +117,7 @@ const path = require('path');
         && /1 acción planeada/.test(quieta("Ana Ruiz")) && /última sesión el/.test(quieta("Elena"))
         && /1 sesión no dice quién/.test(pp.nota) && /1 documento vigente cambió/.test(pp.nota) && /1 paso nombra a alguien solo por un nombre de pila/.test(pp.nota) && !/de antes/.test(pp.nota)
         && pp.otros.some(g=>g.n==="Bruno Esquivel" && g.dentro) && pp.otros.some(g=>g.n==="Diego Antúnez" && g.dentro) && pp.otros.some(g=>g.n==="Ángel Ruiz" && g.dentro)
+        && pp.otros.some(g=>g.n==="Ana Ruiz" && g.dentro) && !pp.otros.some(g=>g.n==="Ana Lombardo") && pp.decide === null && /en Alfa/.test(pp.nota)
         && pp.tec.length === 3 && /^Ana Lombardo\s*responsable de operación · trabajó aquí/.test(pp.tec[0]) && pp.sel;
       if(!bien) errores.push(`${etiqueta}: «Por persona» no cuenta como debe (${JSON.stringify(pp)})`);
     }

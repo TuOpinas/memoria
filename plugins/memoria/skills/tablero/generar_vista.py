@@ -1122,7 +1122,7 @@ if INVENTARIO:
             # los archivados de este año y del anterior viajan con el proyecto: la generación los lee como si no se hubiera
             # archivado (1.23); entran en la huella, y como no cambian, no hacen volver a traer el proyecto
             # de los de antes, solo sus líneas «Responde a:» (respuestas_viejas): viajan también, sin leerlos aquí enteros
-            _arch = [n_ for r_ in ("sesiones", "decisiones") for n_ in archivados_de(pc, r_, 0)
+            _arch = [n_ for r_, desde_ in (("sesiones", HOY[:4]), ("decisiones", 0)) for n_ in archivados_de(pc, r_, desde_)
                      if (pc / n_).is_file() and os.access(pc / n_, os.R_OK) and not suyos.append(rel(pc / n_))]
             if any(n_.startswith("sesiones-") for n_ in _arch):
                 ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
