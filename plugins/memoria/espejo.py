@@ -16,7 +16,8 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       Qué traer para abrir sesión, por rondas: imprime una ruta por línea (relativa a la raíz) de lo que falta en la copia, o
       COMPLETA. Primera ronda: guia.md, metodo.md, base/premisas.md y base/contexto.md; segunda: el area.md de cada área de la
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
-      abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo. Lo que no se trajo se vuelve a
+      abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo; cuarta, los archivados de
+      este año y del anterior que nombra la línea «Archivado:» de esos registros (1.23). Lo que no se trajo se vuelve a
       pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
       minutos.
@@ -186,6 +187,18 @@ def rutas(copia, activo):
                     ronda += [f"{a}/{p}/decisiones.md" for p in proyectos_de(leer(copia / a / "area.md"))]
                 ronda += [f"{activo}/{n}" for n in ("proyecto.md", "decisiones.md", "sesiones.md")]
             ronda = [r for r in dict.fromkeys(ronda) if falta(r) and not set(r.split("/")[:-1]) & set(FUERA)]
+            # cuarta ronda, cuando ya están los registros: sus archivados de este año y del anterior, que abrir.py lee junto al
+            # vivo (1.23). Los nombra la línea «Archivado:» del registro vivo; los que no existan se apuntan con «falta»
+            if activo and not ronda:
+                anio = time.localtime().tm_year
+                vivos = [f"{a}/{p}/decisiones.md" for a in areas for p in proyectos_de(leer(copia / a / "area.md"))] + [f"{activo}/sesiones.md", f"{activo}/decisiones.md"]
+                for r in dict.fromkeys(vivos):
+                    m = re.search(r"^Archivado:(.*)$", leer(copia / r) or "", re.M)
+                    nombre = r.rsplit("/", 1)[1][:-3]
+                    for n in re.findall(r"\b(" + nombre + r"-(20\d\d)(?:-\d+)?\.md)", m.group(1) if m else ""):
+                        if int(n[1]) >= anio - 1:
+                            ronda.append(r.rsplit("/", 1)[0] + "/" + n[0])
+                ronda = [r for r in dict.fromkeys(ronda) if ausente(r)]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0
 
