@@ -600,7 +600,9 @@ class Cierre:
                     self.ajeno(rel, firma); self.vistos.add(rel)
                 n_ent = len(re.findall(r"^## ", t, re.M))
                 # el archivado lleva cabecera aunque el vivo no la tuviera: un archivado no se edita después
-                arch_txt = t if re.match(r"^---\n", t) else f"---\nestado: vigente\nactualizado: {max(re.findall(r'^## (20\d\d-\d\d-\d\d)', t, re.M))}\n---\n" + t
+                # sin barras dentro de las llaves de un f-string: Python anterior a 3.12 no lo admite (1.23.1)
+                mas_nueva = max(re.findall(r"^## (20\d\d-\d\d-\d\d)", t, re.M))
+                arch_txt = t if re.match(r"^---\n", t) else f"---\nestado: vigente\nactualizado: {mas_nueva}\n---\n" + t
                 # un archivado del mismo año cuyas entradas están todas en el vivo es una rotación que no llegó a encoger el
                 # vivo (o se devolvió a medias y después alguien escribió): no se duplica, y el vivo se queda con lo que el
                 # archivado no tiene (revisión de la 1.23, segunda vuelta)
