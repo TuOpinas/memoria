@@ -64,7 +64,7 @@ El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plan
 
 **8. Traspasos.** Si en la sesión entró algo de otra raíz, la entrada de `sesiones.md` lo dice: qué vino, de qué raíz, quién lo pidió. Lo que se quedó fuera no se nombra.
 
-**9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o cambia el año, se archiva como dice `escribir.md`, sección 8. Sin preguntar.
+**9. Rotación.** Si `sesiones.md` o `decisiones.md` supera las 1.500 líneas o los 100 KB, o cambia el año, se archiva como dice `escribir.md`, sección 8. Sin preguntar.
 
 **10. El `Estatus` del área.** Se reescribe el `Estatus` de `<area>/area.md` con la forma y la voz que da `escribir.md` (sección 2, «Estructura de `area.md`»): cómo está el área después de esta sesión, con sus prioridades debajo de «Siguiente» y una línea por proyecto activo. Al cerrar no se relee el área: se parte del `Estatus` anterior del área (en un área sin migrar, de su «Panorama» y sus «Prioridades ahora», que `cerrar.py` retira al escribir el `Estatus`; las prioridades que el nuevo no traiga las añade él debajo de «Siguiente» y las devuelve en `fundidas`) y de lo que esta sesión ya leyó y escribió, y de los demás proyectos del área solo se mira, en una sola llamada, la cabecera y el `Estatus` (o «En corto», sin migrar) de los que tienen `actualizado` posterior a la fecha del `Estatus` del área, o de todos si no había uno con fecha. Las prioridades se quedan como estaban salvo que el responsable del área las cambie en esta sesión. Se enseña con el `Estatus` del proyecto y va en la misma escritura de `area.md` que el paso 5. Solo si la cuenta que cierra es la del responsable del área; si solo colabora, o el área es de otra cuenta, se salta.
 

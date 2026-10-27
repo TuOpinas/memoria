@@ -39,6 +39,8 @@ try:
              sesion("2026-10-20", "la propuesta", "Se mandó a Cliente Uno la propuesta en una página."))
     proyecto(raiz, "ventas", "limpio", "2026-10-20", ["Revisar la plantilla"], sesion("2026-10-20", "la plantilla", "Se revisó el índice del catálogo."))
     proyecto(raiz, "ventas", "anios", "2026-10-20", ["Seguir"], sesion("2026-10-20", "x", "Avance sin más.", extra="## 2025-12-01\nTrabajamos en: y\nAvances: z\nSesión de: Ana\n"))
+    proyecto(raiz, "ventas", "pesado", "2026-10-20", ["Seguir"], sesion("2026-10-20", "x", "Avance sin más."),
+             decisiones="".join(f"## 2026-10-{1 + i % 19:02d} · Decisión larga {i}\nDecidió: Ana\nPor qué: " + "razón larga " * 200 + "\n\n" for i in range(45)))
     proyecto(raiz, "ventas", "decidimos", "2026-10-22", ["Esperar respuesta"], sesion("2026-10-22", "el precio", "Decidimos cobrar el piloto en dos pagos."),
              decisiones="## 2026-09-01 · Otra cosa\nDecidió: Ana\nPor qué: x\n")
     proyecto(raiz, "ventas", "tarea", "2026-10-05", ["Llamar"], sesion("2026-10-05", "x", "algo") + "## 2026-10-21 (tarea)\nTrabajamos en: lo marcado.\nAvances: marcado.\nSesión de: tarea del tablero\n")
@@ -58,7 +60,7 @@ try:
     ok("ventas--tarea" not in por("estado-desfasado"), "una entrada «(tarea)» no cuenta como sesión")
     ok("ventas--cerrado" not in por("estado-desfasado"), "un proyecto terminado no se propone")
     ok(por("paso-hecho") == ["ventas--hecho"] and len([d for d in docs.values() if d["clase"] == "paso-hecho"]) == 1, "paso hecho: solo el paso que la sesión cuenta, no el otro ni los de otros proyectos")
-    ok(por("rotacion") == ["ventas--anios"], "rotación: un registro que mezcla años")
+    ok(por("rotacion") == ["ventas--anios", "ventas--pesado"], f"rotación: un registro que mezcla años, y uno de pocas líneas que pasa de 100 KB (1.23) ({por('rotacion')})")
     # una frase que comparte las palabras del paso pero lo niega no lo da por hecho; fechar el paso no cambia el id
     proyecto(raiz, "ventas", "niega", "2026-10-20", ["Mandar la encuesta de satisfacción al equipo"], sesion("2026-10-20", "la encuesta", "Revisamos el borrador de la encuesta de satisfacción con el equipo; falta mandarla."))
     b2, docs2 = correr(raiz, tmp / "s1b")
@@ -74,7 +76,7 @@ try:
     ok(all("\n" not in d["texto"] and "\n" not in d["por_que"] and len(d["texto"]) <= 300 for d in docs.values()), "los textos van en una sola línea y cortos")
     ok(all(i.startswith("prop-") for i in docs), "los id son «prop-…»")
     ok(len(b["anadir"]) == len(docs) and b["borrar"] == [], "primera corrida: se añaden todas y no se borra nada")
-    ok(sorted(b["proyectos"]) == sorted(f"ventas--{n}" for n in ("viejo", "hecho", "limpio", "anios", "decidimos", "tarea", "cerrado")), "dice qué proyectos barrió")
+    ok(sorted(b["proyectos"]) == sorted(f"ventas--{n}" for n in ("viejo", "hecho", "limpio", "anios", "pesado", "decidimos", "tarea", "cerrado")), "dice qué proyectos barrió")
 
     print("reconciliación con la cola")
     cola = tmp / "cola"; cola.mkdir()

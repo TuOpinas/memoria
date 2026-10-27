@@ -27,7 +27,7 @@ Detecta, con lo que está escrito y sin modelo:
   estado-desfasado  `proyecto.md` es más viejo que la última sesión que registra `sesiones.md`.
   paso-hecho        un paso de «Siguientes pasos» cuyas palabras casi todas están en «Avances:» de una de las dos últimas
                     sesiones: el registro parece darlo por hecho y el paso sigue ahí.
-  rotacion          `sesiones.md` o `decisiones.md` pasa de 1.500 líneas, o su entrada más nueva es de otro año que la
+  rotacion          `sesiones.md` o `decisiones.md` pasa de 1.500 líneas o de 100 KB (1.23), o su entrada más nueva es de otro año que la
                     más vieja: toca archivarlo (`escribir.md`, sección 8).
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
@@ -59,6 +59,7 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
            "paso pasos hacer hecho hacer queda quedó falta".split())
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
 LIMITE_LINEAS = 1500
+LIMITE_BYTES = 100_000   # 1.23: un registro también se archiva por tamaño; las entradas largas llenan antes de las 1.500 líneas
 MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
@@ -303,8 +304,9 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         for nombre, texto, es in (("sesiones.md", ses_t, ses), ("decisiones.md", dec_t, entradas(dec_t))):
             n = texto.count("\n") + 1 if texto else 0
             anios = {e[0][:4] for e in es}
-            if n > LIMITE_LINEAS or len(anios) > 1:
-                motivo = f"pasa de {LIMITE_LINEAS} líneas" if n > LIMITE_LINEAS else "mezcla años"
+            peso = len(texto.encode("utf-8")) if texto else 0
+            if n > LIMITE_LINEAS or peso > LIMITE_BYTES or len(anios) > 1:
+                motivo = f"pasa de {LIMITE_LINEAS} líneas" if n > LIMITE_LINEAS else f"pasa de {LIMITE_BYTES // 1000} KB" if peso > LIMITE_BYTES else "mezcla años"
                 prop("rotacion", f"{nombre}|{motivo}", f"Archivar {nombre} por año: {motivo}.", "escribir.md, sección 8")
         # decisiones que se cuentan en una sesión y no están registradas
         fechas_dec = {e[0] for e in entradas(dec_t)}

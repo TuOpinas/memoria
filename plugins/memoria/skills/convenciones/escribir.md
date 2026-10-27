@@ -227,7 +227,7 @@ Las claves van sin acentos ni eñes.
 
 ## 8. Rotación
 
-Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o cambia el año, se archiva en la misma carpeta con el año en el nombre (`sesiones-2026.md`; si en un mismo año hace falta otro, `sesiones-2026-2.md`) y se abre uno nuevo con su cabecera. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace la skill de cierre de sesión, sin preguntar.
+Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o de 100 KB, o cambia el año, se archiva en la misma carpeta con el año en el nombre (`sesiones-2026.md`; si en un mismo año hace falta otro, `sesiones-2026-2.md`) y se abre uno nuevo con su cabecera. El tamaño cuenta porque las entradas largas llenan un registro mucho antes de llegar a las líneas (1.23), y un registro grande es lo que más cuesta leer al abrir y al poner al día el tablero. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace la skill de cierre de sesión, sin preguntar.
 
 ## 10. Prohibiciones
 
@@ -246,7 +246,7 @@ Valen para todas las skills y no se repiten en ninguna. Cada skill añade las su
 11. No crear un área ni un proyecto sin responsable con nombre y apellido.
 12. No rellenar un hueco con una suposición razonable. Un hueco se marca como hueco, y "no consta" es una respuesta válida.
 13. No escribir una cifra sin fecha ni fuente.
-14. No poner número de fase, fecha ni versión en el nombre de un archivo o de una carpeta. El registro archivado por año es la única excepción (sección 8).
+14. No poner número de fase, fecha ni versión del propio archivo en el nombre de un archivo o de una carpeta. Las excepciones: el registro archivado por año (sección 8) y un número que identifica el asunto, cuando cada archivo es un documento distinto y no una versión del mismo (contrato, sección 6).
 15. No crear carpetas que la estructura no contempla, ni un `AGENTS.md` u otro archivo de instrucciones para la IA, ni un índice a mano, ni una carpeta de borradores, ni escribir rutas absolutas en ningún archivo.
 16. No dejar dentro de la raíz el almacén de datos de una aplicación, ni apuntar una aplicación a que escriba ahí.
 17. No borrar un entregable superado. Pasa a `reemplazado` con `reemplazado_por`, porque alguien puede tenerlo citado.
