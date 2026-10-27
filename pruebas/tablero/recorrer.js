@@ -70,6 +70,50 @@ const path = require('path');
     await abre(p, url, '', '[data-ini="actividad"]');
     const act = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { area: /Por área/.test(t), persona: /Por persona/.test(t), dias: !!document.querySelector('[data-act-dias]') }; });
     if(!(act.area && act.persona && act.dias)) errores.push(`${etiqueta}: Inicio › Actividad no trae «Por área», «Por persona» y el periodo (${JSON.stringify(act)})`);
+    // «Por persona» (1.23) con un equipo inventado: quien colabora en un área sale; tres sesiones del mismo día son tres; un
+    // documento cuenta escrito para quien lo escribió y publicado para quien lo publicó; los que no tuvieron sesión van abajo;
+    // las acciones planeadas cuentan los pasos que los nombran; el combo de área reduce la lista; «Con otros» los ve del equipo
+    if(etiqueta === 'completo-claro'){
+      const pp = await p.evaluate(() => {
+        const guardado = {AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS};
+        try{
+          const d0 = addDays(-1), viejo = addDays(-40);
+          AREAS = [{slug:"op", nombre:"operación", dueno:"Ana Lombardo", colaboran:["bruno@x.test"], colaboran_ver:["Bruno Esquivel"]},
+                   {slug:"prod", nombre:"producto", dueno:"Carmen Oyarzún", colaboran:[], colaboran_ver:[]},
+                   {slug:"tec", nombre:"tecnología", dueno:"Elena Reyes", colaboran:["diego@x.test"], colaboran_ver:["Diego Antúnez"]}];
+          PROJ = [{id:"op--alfa", area:"op", slug:"alfa", nombre:"Alfa", dueno:"Ana Lombardo", colaboran:[],
+                   pasos:[{texto:"Esperar a que Bruno mande el informe"}, {texto:"Esta semana, revisar con Diego el servidor"}],
+                   sesiones_recientes:[{fecha:d0, titulo:d0, n:5, quien:"Ana Lombardo", publico:["entregables/x.md"]},
+                                       {fecha:d0, titulo:d0, n:4, quien:"Bruno Esquivel", escribio:["entregables/x.md", "taller/y.md"]},
+                                       {fecha:d0, titulo:d0, n:3, quien:"Bruno Esquivel"},
+                                       {fecha:d0, titulo:d0, n:2}],
+                   decisiones:[{fecha:d0, decidio:"Bruno Esquivel", titulo:"Una decisión"}],
+                   entregables:[{nombre:"x", archivo:"x.md", estado:"vigente", actualizado:d0}, {nombre:"z", archivo:"z.md", estado:"vigente", actualizado:d0}]},
+                  {id:"tec--srv", area:"tec", slug:"srv", nombre:"Servidor", dueno:"Elena Reyes", colaboran:[], pasos:[],
+                   sesiones:[{fecha:viejo, titulo:viejo, n:0, quien:"Elena Reyes"}], decisiones:[], entregables:[]}];
+          areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); byId = Object.fromEntries(PROJ.map(x=>[x.id,x]));
+          META = {...(guardado.META||{}), tablero_de:"Ana Lombardo", administra:"Ana Lombardo"}; ACT_AREA = ""; ACT_DIAS = 7;
+          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6)));
+          const filas = [...div.querySelectorAll(".per:not(.quiet)")].map(x=>x.textContent.replace(/\s+/g," ").trim());
+          const quietas = [...div.querySelectorAll(".per.quiet")].map(x=>x.textContent.replace(/\s+/g," ").trim());
+          const tipBruno = [...div.querySelectorAll(".per:not(.quiet)")].find(x=>/Bruno/.test(x.textContent)).querySelector(".tira i.on").dataset.t;
+          const nota = (div.querySelector(".nota")||{}).textContent || "";
+          const otros = conOtros().map(g=>({n:g.n, dentro:g.dentro}));
+          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6)));
+          const tec = [...div2.querySelectorAll(".per")].map(x=>x.querySelector("b").textContent);
+          return {filas, quietas, tipBruno, nota, otros, tec, sel: !!div.querySelector("[data-act-area]")};
+        } finally { ({AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS} = guardado); _CONOCIDOS = null; }
+      });
+      const fila = n => pp.filas.find(x=>x.startsWith(n)) || "", quieta = n => pp.quietas.find(x=>x.startsWith(n)) || "";
+      const bien = pp.filas.length === 2 && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
+        && /documentos: 2 escritos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 acción planeada/.test(fila("Bruno"))
+        && /1 sesión/.test(fila("Ana")) && /documentos: 1 publicado/.test(fila("Ana")) && !/escrito/.test(fila("Ana"))
+        && /· 2 sesiones/.test(pp.tipBruno) && pp.quietas.length === 3 && /1 acción planeada/.test(quieta("Diego")) && /última sesión el/.test(quieta("Elena"))
+        && /0 acciones planeadas/.test(quieta("Carmen")) && /1 sesión y 1 documento publicado/.test(pp.nota)
+        && pp.otros.some(g=>g.n==="Bruno Esquivel" && g.dentro) && pp.otros.some(g=>g.n==="Diego Antúnez" && g.dentro)
+        && pp.tec.join(",") === "Diego Antúnez,Elena Reyes" && pp.sel;
+      if(!bien) errores.push(`${etiqueta}: «Por persona» no cuenta como debe (${JSON.stringify(pp)})`);
+    }
     // el proyecto: Estatus arriba, con su titular
     await abre(p, url, '#p-ventas--cuentas-t-estatus');
     const est = await p.evaluate(() => ({ tab: !!document.querySelector('.tab[data-tab="estatus"][aria-selected="true"]'), tabs: [...document.querySelectorAll('#main .tab')].map(t => t.dataset.tab).join(','), corto: !!document.querySelector('#main .corto, #main .brief') }));

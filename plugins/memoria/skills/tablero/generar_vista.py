@@ -500,10 +500,21 @@ def parse_sesiones(texto):
         titulo = cab.strip()
         campos = {"trabajamos": "", "avances": "", "pendiente": ""}
         quien = ""
+        docs = {"escribio": [], "publico": []}
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
             low = s.lower()
+            m_doc = re.match(r"^(escribió|escribio|publicó|publico)\s*:\s*(.*)$", low)
+            if m_doc:
+                # quién escribió y quién publicó cada documento (1.23): rutas dentro del proyecto, separadas por comas
+                actual = None
+                k_ = "escribio" if m_doc.group(1).startswith("escrib") else "publico"
+                for r_ in s.split(":", 1)[1].split(","):
+                    r_ = r_.strip().strip("`").strip()
+                    if r_ and "restringido" not in r_.split("/") and r_ not in docs[k_]:
+                        docs[k_].append(r_[:160])
+                continue
             if low.startswith("trabajamos en:") or low.startswith("tema:"):
                 actual = "trabajamos"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("avances:"):
@@ -516,7 +527,12 @@ def parse_sesiones(texto):
                 quien = re.split(r"\s+[·\-–—]\s+|\s*\(", s.split(":", 1)[1].strip(), maxsplit=1)[0].strip()[:80]
             elif actual and s:
                 campos[actual] += "\n" + s
-        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {})})
+        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {}),
+                    **{k_: v_[:20] for k_, v_ in docs.items() if v_}})
+    # la posición de cada entrada contando desde la más vieja: distingue las de un mismo día, que llevan el mismo título,
+    # y no cambia cuando se añaden entradas arriba (1.23; antes se juntaban en una)
+    for i_, d_ in enumerate(out):
+        d_["n"] = len(out) - 1 - i_
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
 
@@ -1350,10 +1366,11 @@ for a in areas_guia:
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
         # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
-        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada: fecha, título, Tema y quién.
+        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada (fecha, título, Tema y quién), su posición en el archivo y qué documentos escribió y publicó (1.23).
         _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
         pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
-                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220)}.items() if v}
+                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220), "n": s_.get("n"),
+                                       "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
@@ -1593,8 +1610,8 @@ for pid, pd in docs["proyectos"].items():
     else:
         pd.pop("personas_fuera", None)
     # las recientes no repiten la que ya viaja en «sesiones»: la página junta las dos listas (1.22.4)
-    _ya = {(x.get("fecha"), x.get("titulo") or "") for x in pd.get("sesiones") or []}
-    pd["sesiones_recientes"] = [x for x in pd.get("sesiones_recientes") or [] if (x.get("fecha"), x.get("titulo") or "") not in _ya]
+    _ya = {(x.get("fecha"), x.get("titulo") or "", x.get("n")) for x in pd.get("sesiones") or []}
+    pd["sesiones_recientes"] = [x for x in pd.get("sesiones_recientes") or [] if (x.get("fecha"), x.get("titulo") or "", x.get("n")) not in _ya]
     if not pd["sesiones_recientes"]:
         pd.pop("sesiones_recientes")
     ea = (pd.get("estado_actual") or "").strip()
