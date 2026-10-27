@@ -234,6 +234,35 @@ def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
             out.append(t if t[-1] in ".!?" else t + ".")
     return out
 # --- fin del primer párrafo ---
+# --- los registros con sus archivados ---
+# La misma función en abrir.py, generar_vista.py y barrido.py (cada uno se descarga suelto); pruebas/tablero/paridad.py
+# comprueba que las tres copias son idénticas (1.23).
+ARCHIVADO = re.compile(r"^(sesiones|decisiones)-(20\d\d)(?:-(\d+))?\.md$")
+def archivados_de(carpeta, nombre, anio):
+    """Los nombres de los archivados de un registro («sesiones» o «decisiones») de este año y del anterior, del más nuevo
+    al más viejo. Los de años anteriores no se leen: lo que una decisión vieja sostiene ya está en Alcance o en el Estatus,
+    y quien la cita la busca por el año que lleva su identificador."""
+    vistos = []
+    try:
+        nombres = [x.name for x in pathlib.Path(carpeta).iterdir()]
+    except OSError:
+        nombres = []
+    for n in nombres:
+        m = ARCHIVADO.match(n)
+        if m and m.group(1) == nombre and int(m.group(2)) >= int(anio) - 1:
+            vistos.append((int(m.group(2)), int(m.group(3) or 1), n))
+    return [n for _, _, n in sorted(vistos, reverse=True)]
+def con_archivados(carpeta, nombre, vivo, anio, leer_):
+    """(texto, entradas del vivo): el registro vivo seguido de las entradas de sus archivados recientes, como si no se
+    hubiera archivado, así que los identificadores de cada decisión son los de siempre. Lo que no se deja leer se salta."""
+    partes = [vivo or ""]
+    for n in archivados_de(carpeta, nombre, anio):
+        t = leer_(pathlib.Path(carpeta) / n) or ""
+        m = re.search(r"^## ", t, re.M)
+        if m:
+            partes.append(t[m.start():])
+    return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+# --- fin de los registros ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
 # que las dos copias son idénticas. Recibe el texto de «Quién responde por qué» y {nombre en minúscula: cuentas} de la
@@ -710,8 +739,9 @@ for n_ in ("proyecto.md", "decisiones.md", "sesiones.md"):
         print(f"{n_}: {st_.isoformat(timespec='seconds')} · {os.stat(pc / n_).st_size} bytes" + (f" · hace {int((datetime.datetime.now(TZ) - st_).total_seconds() // 60)} minutos: si no fue esta cuenta, otra persona trabaja ahora en el proyecto" if (datetime.datetime.now(TZ) - st_).total_seconds() < 3600 else ""))
     except OSError:
         print(f"{n_}: no se pudo leer")
-dec_txt = leer(pc / "decisiones.md") or ""
-ses_txt = leer(pc / "sesiones.md") or ""
+# los registros con sus archivados recientes: después de archivar, el vivo puede tener una entrada o ninguna (1.23)
+dec_txt, _ = con_archivados(pc, "decisiones", leer(pc / "decisiones.md") or "", HOY.year, leer)
+ses_txt, _ = con_archivados(pc, "sesiones", leer(pc / "sesiones.md") or "", HOY.year, leer)
 titulo("DECISIONES (las 5 más recientes)")
 print("\n\n".join(e["texto"] for e in recientes(dec_txt, 5)) or "(ninguna)")
 titulo("SESIONES (las 3 más recientes)")
@@ -864,8 +894,9 @@ patron_proy = re.compile(r"(?<![\w/-])" + re.escape(ACTIVO) + r"(?![\w-])")
 # un área entera como destino: «operacion/» o «operacion/ (el área entera)», nunca «operacion/soporte»
 patron_area = re.compile(r"(?<![\w/-])" + re.escape(area_activa) + r"/(?![\w-])")
 for a_slug, slug, carpeta in proyectos_legibles():
-    t = leer(carpeta / "decisiones.md")
-    if not t:
+    # con los archivados de este año y del anterior: una decisión archivada sigue avisando y respondiendo (1.23)
+    t, _ = con_archivados(carpeta, "decisiones", leer(carpeta / "decisiones.md"), HOY.year, leer)
+    if not t.strip():
         continue
     origen = f"{a_slug}/{slug}"
     # identificador de cada entrada: fecha y -2, -3… contando desde la más antigua del mismo día (de abajo arriba)

@@ -9,7 +9,7 @@ sobre la versión que está en el disco. Lo que otra persona escribió desde que
 
 Uso:
   cerrar.py <raiz> <area>/<proyecto> <cambios.json> [--cuenta <correo>] [--abierto <hora ISO de la línea «ahora» de abrir.py>]
-            [--sin-fechas] [--forzar <ruta>]... [--fuera-del-area <ruta>]... [--cualquier-fecha]
+            [--sin-fechas] [--forzar <ruta>]... [--fuera-del-area <ruta>]... [--cualquier-fecha] [--sin-rotar]
 
 cambios.json, todo opcional:
   {"sesion": "## AAAA-MM-DD\\nTema: …\\nAvances: …\\nSesión de: Nombre · plugin X.Y.Z",
@@ -42,6 +42,11 @@ proyecto y existir; lo que se publica, en entregables/ y vigente. Con --abierto,
 documentos de entregables/ y taller/ que cambiaron desde que se abrió y no van en ninguna de las dos listas, para que la
 sesión diga si son suyos: no se atribuyen solos, porque pudo escribirlos otra persona.
 
+Antes de escribir una entrada en sesiones.md o en decisiones.md, si el registro pasa de 1.500 líneas o de 100 KB, o su
+entrada más nueva es de un año anterior, se archiva entero como «<registro>-<año>.md» (si ya existe, «-2», «-3»…) y el vivo
+queda con su cabecera, su título y la línea «Archivado:»; la entrada de hoy va en el nuevo. Vuelve en «rotados» (de, a,
+motivo, entradas). --sin-rotar lo evita. abrir.py y el tablero leen los archivados de este año y del anterior junto al vivo.
+
 Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
 fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
 contenedor, que van en UTC y por la tarde ya dicen mañana; una fecha distinta a propósito pasa solo con --cualquier-fecha;
@@ -71,6 +76,7 @@ import time
 
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
+LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (escribir.md, sección 8; por tamaño desde la 1.23)
 
 # --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
 # La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
@@ -235,7 +241,9 @@ def con_entrada_arriba(t, entrada):
             elif not prefacio.endswith("\n\n"):
                 prefacio = prefacio.rstrip("\n") + "\n\n"
             return t[:i] + prefacio + entrada + "\n" + cuerpo, True
-        return t[:i] + "\n" + entrada + ("\n" + resto.lstrip("\n") if resto.strip() else ""), True
+        # sin entradas todavía (un registro recién abierto, o recién archivado con su línea «Archivado:»): lo que haya
+        # debajo del título se queda delante de la primera entrada
+        return t[:i] + ("\n" + resto.strip("\n") + "\n" if resto.strip() else "") + "\n" + entrada, True
     return t.rstrip("\n") + "\n\n" + entrada, True
 
 
@@ -448,6 +456,39 @@ def sin_nombrar(pd, abierto, nombrados):
     return out
 
 
+def motivo_rotacion(t, hoy):
+    """Por qué hay que archivar un registro antes de escribir en él, o None: pasa de 1.500 líneas o de 100 KB, o su entrada
+    más nueva es de un año anterior al de hoy. Devuelve (motivo, año del archivado)."""
+    anios = re.findall(r"^## (20\d\d)-\d\d-\d\d", t, re.M)
+    if not anios:
+        return None
+    anio = max(anios)
+    if t.count("\n") + 1 > LIMITE_LINEAS:
+        return f"pasa de {LIMITE_LINEAS} líneas", anio
+    if len(t.encode("utf-8")) > LIMITE_BYTES:
+        return f"pasa de {LIMITE_BYTES // 1000} KB", anio
+    if anio < hoy[:4]:
+        return "cambió el año", anio
+    return None
+
+
+def nombre_archivado(carpeta, nombre, anio):
+    """«decisiones-2026.md»; si ya existe, «decisiones-2026-2.md», «-3»…"""
+    k, n = 1, f"{nombre}-{anio}.md"
+    while (carpeta / n).exists():
+        k += 1; n = f"{nombre}-{anio}-{k}.md"
+    return n
+
+
+def registro_nuevo(t, nombre, archivado, hoy):
+    """El registro vivo recién abierto: su cabecera, su título y la línea «Archivado:» con todos sus archivados, de más
+    viejo a más nuevo, para quien lo abra sin el plugin. Las entradas siguen en el archivado, con su identificador."""
+    titulo_ = (re.search(r"^# .*$", t, re.M) or [f"# {nombre.capitalize()}"])[0]
+    previos = re.findall(r"\b(" + nombre + r"-20\d\d(?:-\d+)?\.md)", (re.search(r"^Archivado:.*$", t, re.M) or [""])[0])
+    return (f"---\nestado: vigente\nactualizado: {hoy}\n---\n{titulo_}\n\n"
+            f"Archivado: {', '.join(previos + [archivado])}. Las entradas anteriores están ahí y se citan igual, con su identificador.\n")
+
+
 # ---------- un archivo ----------
 class Cierre:
     def __init__(self, raiz, tz, abierto, sin_fechas, forzar):
@@ -514,6 +555,37 @@ class Cierre:
             self.salida["fallidos"].append({"ruta": rel, "motivo": f"{type(ex).__name__}: {ex}"})
         return False
 
+    def rotar(self, p, nombre):
+        """Archiva el registro antes de escribir en él si toca (escribir.md, sección 8): lo copia entero a «<nombre>-<año>.md»
+        y deja el vivo con su cabecera, su título y la línea «Archivado:». Bajo el mismo cerrojo que las escrituras."""
+        rel = self.rel(p)
+        try:
+            # una mirada rápida, sin cerrojo: casi nunca toca, y entonces no se hace esperar a nadie
+            with open(p, "rb") as f_:
+                if not motivo_rotacion(f_.read().decode("utf-8-sig", errors="replace"), self.hoy):
+                    return
+            with Cerrojo(p):
+                t, firma, crlf = leer(p)
+                m = motivo_rotacion(t, self.hoy)
+                if not m:
+                    return
+                if rel not in self.vistos:
+                    self.ajeno(rel, firma); self.vistos.add(rel)
+                arch = nombre_archivado(p.parent, nombre, m[1])
+                n_ent = len(re.findall(r"^## ", t, re.M))
+                if not igual(p, firma):
+                    self.salida["fallidos"].append({"ruta": rel, "motivo": "cambió mientras se archivaba: se archiva en el próximo cierre"}); return
+                pa_ = p.parent / arch
+                fd = os.open(pa_, os.O_WRONLY | os.O_CREAT | os.O_EXCL)   # nunca encima de un archivado que ya existe
+                with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+                    f.write(t.replace("\n", "\r\n") if crlf else t)
+                self.propios[self.rel(pa_)] = os.stat(pa_).st_mtime_ns
+                self.propios[rel] = escribir(p, registro_nuevo(t, nombre, arch, self.hoy), crlf)
+                self.salida["escritos"] += [self.rel(pa_), rel]
+                self.salida.setdefault("rotados", []).append({"de": rel, "a": self.rel(pa_), "motivo": m[0], "entradas": n_ent})
+        except (OSError, UnicodeDecodeError) as ex:
+            self.salida["fallidos"].append({"ruta": rel, "motivo": f"al archivar: {type(ex).__name__}: {ex}"})
+
     def guardar_estado(self):
         try:
             self.estado.write_text(json.dumps(self.propios), encoding="utf-8")
@@ -540,6 +612,7 @@ def main(argv):
     opciones, args = {"--cuenta": None, "--abierto": None}, argv[4:]
     sin_fechas, forzar, fuera = "--sin-fechas" in args, set(), set()
     cualquier_fecha = "--cualquier-fecha" in args
+    sin_rotar = "--sin-rotar" in args
     i = 0
     while i < len(args):
         a = args[i]
@@ -549,7 +622,7 @@ def main(argv):
             forzar.add(args[i + 1].strip("/")); i += 2
         elif a == "--fuera-del-area" and i + 1 < len(args):
             fuera.add(args[i + 1].strip("/")); i += 2
-        elif a in ("--sin-fechas", "--cualquier-fecha"):
+        elif a in ("--sin-fechas", "--cualquier-fecha", "--sin-rotar"):
             i += 1
         else:
             print(f"No entiendo «{a}».", file=sys.stderr); return 2
@@ -629,6 +702,13 @@ def main(argv):
     puede_estatus_area = not cuenta or cuenta in duenos
     limpiar_temporales(pd, pa)
 
+    # 9. la rotación, antes de escribir: un registro que pasa de 1.500 líneas o de 100 KB, o de otro año, se archiva y la
+    # entrada de hoy abre el nuevo (1.23: antes la hacía la sesión a mano)
+    if not sin_rotar:
+        if ses and (pd / "sesiones.md").is_file():
+            c.rotar(pd / "sesiones.md", "sesiones")
+        if cambios.get("decisiones") and (pd / "decisiones.md").is_file():
+            c.rotar(pd / "decisiones.md", "decisiones")
     # 2. sesiones.md
     if ses:
         entrada = con_autoria(ses, escribio, publico)

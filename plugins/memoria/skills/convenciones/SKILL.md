@@ -305,7 +305,7 @@ Lo aprendido dentro de un área restringida vuelve a la memoria común **reescri
 
 ## 8. Rotación
 
-Los registros que crecen demasiado (por líneas o por tamaño) o cambian de año se archivan con el año en el nombre: en `escribir.md`.
+Los registros que crecen demasiado (por líneas o por tamaño) o cambian de año se archivan con el año en el nombre, y la apertura y el tablero siguen leyendo los archivados de este año y del anterior junto al vivo: en `escribir.md`.
 
 ## 9. Lo que no existe en este sistema
 
@@ -360,7 +360,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 | `base/sistemas.md` | el trabajo toca un sistema |
 | `base/contexto.md` | la pregunta es sobre la organización, o se va a escribir algo que sale del proyecto |
 | `area.md` entero | la pregunta es sobre el área y no sobre un proyecto |
-| `decisiones.md` completo | se va a escribir o revisar un entregable |
+| `decisiones.md` completo, y sus archivados del año si una referencia apunta ahí | se va a escribir o revisar un entregable |
 | El cuerpo de un entregable | la pregunta pide su contenido y no basta con saber que existe |
 | Un archivo de `taller/` | hace falta cómo se llegó al entregable, y el entregable no basta |
 | Un archivo de `fuentes/` | el trabajo del día lo pide, por su nombre |

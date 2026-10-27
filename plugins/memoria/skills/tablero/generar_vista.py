@@ -77,6 +77,35 @@ def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
             out.append(t if t[-1] in ".!?" else t + ".")
     return out
 # --- fin del primer párrafo ---
+# --- los registros con sus archivados ---
+# La misma función en abrir.py, generar_vista.py y barrido.py (cada uno se descarga suelto); pruebas/tablero/paridad.py
+# comprueba que las tres copias son idénticas (1.23).
+ARCHIVADO = re.compile(r"^(sesiones|decisiones)-(20\d\d)(?:-(\d+))?\.md$")
+def archivados_de(carpeta, nombre, anio):
+    """Los nombres de los archivados de un registro («sesiones» o «decisiones») de este año y del anterior, del más nuevo
+    al más viejo. Los de años anteriores no se leen: lo que una decisión vieja sostiene ya está en Alcance o en el Estatus,
+    y quien la cita la busca por el año que lleva su identificador."""
+    vistos = []
+    try:
+        nombres = [x.name for x in pathlib.Path(carpeta).iterdir()]
+    except OSError:
+        nombres = []
+    for n in nombres:
+        m = ARCHIVADO.match(n)
+        if m and m.group(1) == nombre and int(m.group(2)) >= int(anio) - 1:
+            vistos.append((int(m.group(2)), int(m.group(3) or 1), n))
+    return [n for _, _, n in sorted(vistos, reverse=True)]
+def con_archivados(carpeta, nombre, vivo, anio, leer_):
+    """(texto, entradas del vivo): el registro vivo seguido de las entradas de sus archivados recientes, como si no se
+    hubiera archivado, así que los identificadores de cada decisión son los de siempre. Lo que no se deja leer se salta."""
+    partes = [vivo or ""]
+    for n in archivados_de(carpeta, nombre, anio):
+        t = leer_(pathlib.Path(carpeta) / n) or ""
+        m = re.search(r"^## ", t, re.M)
+        if m:
+            partes.append(t[m.start():])
+    return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+# --- fin de los registros ---
 RAIZ = pathlib.Path(sys.argv[1])
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
@@ -441,7 +470,9 @@ def es_cerrado(cuerpo):
     return any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cuerpo, n)) for n in ("Estatus", "Estado actual", "En corto"))
 
 
-def parse_decisiones(texto):
+def parse_decisiones(texto, n_vivas=None):
+    """Las entradas de decisiones.md; con n_vivas (con_archivados), las que vienen después de esas son de un archivado y
+    llevan «archivada» (1.23)."""
     out = []
     if not texto:
         return out
@@ -487,6 +518,9 @@ def parse_decisiones(texto):
         for k in ("planteo", "cuestiona", "responde", "reemplaza"):
             if not d_[k]: del d_[k]
         out.append(d_)
+    if n_vivas is not None:
+        for d_ in out[n_vivas:]:
+            d_["archivada"] = True
     # identificador: la fecha y, si ese día hay más de una entrada, -2, -3… contando desde la de más abajo (la más antigua)
     # una entrada sin fecha válida no tiene identificador: no se puede citar
     cuenta = {}
@@ -1075,6 +1109,11 @@ if INVENTARIO:
             suyos = [rel(pc / "proyecto.md")]
             ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md", suyos) else []
             _si_legible(pc / "decisiones.md", suyos)
+            # los archivados de este año y del anterior viajan con el proyecto: la generación los lee como si no se hubiera
+            # archivado (1.23); entran en la huella, y como no cambian, no hacen volver a traer el proyecto
+            _arch = [n_ for r_ in ("sesiones", "decisiones") for n_ in archivados_de(pc, r_, HOY[:4]) if _si_legible(pc / n_, suyos)]
+            if any(n_.startswith("sesiones-") for n_ in _arch):
+                ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
             fm_p, cuerpo_p = frontmatter(tp)
             cerrado = es_cerrado(cuerpo_p)
             ss_ = sin_sesion_de(pc, ses, cerrado)
@@ -1355,7 +1394,7 @@ for a in areas_guia:
             if pdoc["escribe"] and CUENTA_TABLERO in NOMBRE_DE_CUENTA:
                 pdoc["nombre_cuenta"] = NOMBRE_DE_CUENTA[CUENTA_TABLERO]   # el nombre que su línea «Colabora:» da a la cuenta, para no perderlo al reutilizar
         pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
-        ses = parse_sesiones(leer(pc / "sesiones.md"))
+        ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
         ultima_real = reales[0]["fecha"] if reales else None
         # pasos con fecha. Una fecha es plazo solo si el texto la trata como tal («antes del», «para el», al inicio
@@ -1376,7 +1415,7 @@ for a in areas_guia:
                     p_["revisar"] = p_["fecha"]; p_["fecha"] = None
             pasos.append(p_)
         pdoc["pasos"] = pasos
-        dec = parse_decisiones(leer(pc / "decisiones.md"))
+        dec = parse_decisiones(*con_archivados(pc, "decisiones", leer(pc / "decisiones.md"), HOY[:4], leer))
         pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)

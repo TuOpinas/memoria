@@ -227,7 +227,9 @@ Las claves van sin acentos ni eñes.
 
 ## 8. Rotación
 
-Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o de 100 KB, o cambia el año, se archiva en la misma carpeta con el año en el nombre (`sesiones-2026.md`; si en un mismo año hace falta otro, `sesiones-2026-2.md`) y se abre uno nuevo con su cabecera. El tamaño cuenta porque las entradas largas llenan un registro mucho antes de llegar a las líneas (1.23), y un registro grande es lo que más cuesta leer al abrir y al poner al día el tablero. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace la skill de cierre de sesión, sin preguntar.
+Cuando `sesiones.md` o `decisiones.md` pasa de unas 1.500 líneas o de 100 KB, o su entrada más nueva es de un año anterior, se archiva entero en la misma carpeta con el año de su entrada más nueva en el nombre (`decisiones-2026.md`; si en un mismo año hace falta otro, `decisiones-2026-2.md`) y se abre uno nuevo con su cabecera, su título y una línea «Archivado:» con los archivados que tiene, para quien lo abra sin el plugin. El tamaño cuenta porque las entradas largas llenan un registro mucho antes de llegar a las líneas (1.23), y un registro grande es lo que más cuesta leer al abrir y al poner al día el tablero. Es la única excepción a los nombres sin fechas: el año es lo que distingue el registro archivado del vivo. Lo hace `cerrar.py` antes de escribir la entrada de hoy, sin preguntar.
+
+Archivar no esconde nada: la apertura, el tablero y su barrido leen, junto al registro vivo, sus archivados de este año y del anterior, como si no se hubieran archivado. Una decisión archivada sigue avisando a quien nombra en `Afecta a`, un cuestionamiento sigue esperando respuesta y cada entrada conserva su identificador (`area/proyecto#AAAA-MM-DD-n`), que lleva el año y dice en qué archivado buscarla. Los de años anteriores no se leen solos: lo que sostiene una decisión vieja ya está en `Alcance` o en el `Estatus`, y quien la cita la busca por su año. Un archivado no se edita, como el registro del que salió.
 
 ## 10. Prohibiciones
 

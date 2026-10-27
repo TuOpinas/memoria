@@ -205,6 +205,39 @@ RG = raiz_nueva()
 c, sg = corre(RG, {"sesion": SESION})
 ok(c == 0 and "Escribió:" not in (RG / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") and "sin_nombrar" not in sg, "sin documentos no hay líneas, y sin --abierto no hay sin_nombrar")
 
+print("cerrar.py: la rotación de los registros (1.23)")
+RR = raiz_nueva()
+pdec = RR / "ventas/cuentas/decisiones.md"
+viejo_dec = pdec.read_text(encoding="utf-8")
+relleno = "".join(f"## 2026-09-{1 + i % 28:02d} · Decisión de relleno {i}\nDecidió: Ana Prueba\nPor qué: " + "x " * 600 + "\n\n" for i in range(90))
+pdec.write_text(viejo_dec.replace("# Decisiones\n", "# Decisiones\n\n" + relleno, 1), encoding="utf-8")
+grande = pdec.read_text(encoding="utf-8")
+c, sr = corre(RR, {"sesion": SESION, "decisiones": [DEC]})
+anio = HOY[:4]
+arch = RR / f"ventas/cuentas/decisiones-2026.md"
+vivo = pdec.read_text(encoding="utf-8")
+ok(c == 0 and arch.is_file() and arch.read_text(encoding="utf-8") == grande, "un decisiones.md de más de 100 KB se archiva entero, tal cual, con el año de su entrada más nueva")
+ok(vivo.startswith(f"---\nestado: vigente\nactualizado: {HOY}\n---\n# ") and "Archivado: decisiones-2026.md." in vivo and vivo.count("\n## ") == 1 and f"## {HOY} · El soporte" in vivo,
+   "el vivo queda con su cabecera, su título, la línea «Archivado:» y solo la decisión de hoy")
+ok(vivo.index("Archivado:") < vivo.index(f"## {HOY}"), "la línea «Archivado:» va delante de la primera entrada, fuera de ella")
+ok([x["a"] for x in sr.get("rotados", [])] == ["ventas/cuentas/decisiones-2026.md"] and sr["rotados"][0]["motivo"] == "pasa de 100 KB" and "ventas/cuentas/decisiones-2026.md" in sr["escritos"],
+   f"vuelve en «rotados» y en «escritos» ({sr.get('rotados')})")
+ok(not (RR / "ventas/cuentas/sesiones-2026.md").exists(), "un registro pequeño no se archiva")
+pdec.write_text(vivo + relleno, encoding="utf-8")
+c, sr2 = corre(RR, {"sesion": SESION.replace("PRUEBA-CERRAR la llamada", "otra"), "decisiones": [DEC.replace("menos de 24", "menos de 12")]})
+vivo2 = pdec.read_text(encoding="utf-8")
+ok((RR / "ventas/cuentas/decisiones-2026-2.md").is_file() and "Archivado: decisiones-2026.md, decisiones-2026-2.md." in vivo2, "el segundo del mismo año es «-2», y «Archivado:» los lista a los dos")
+RY = raiz_nueva()
+pses = RY / "ventas/cuentas/sesiones.md"
+pses.write_text(pses.read_text(encoding="utf-8").replace("2026-", "2025-"), encoding="utf-8")
+c, sy = corre(RY, {"sesion": SESION})
+ok((RY / "ventas/cuentas/sesiones-2025.md").is_file() and any(x["motivo"] == "cambió el año" for x in sy.get("rotados", [])) and f"## {HOY}" in pses.read_text(encoding="utf-8"),
+   "al cambiar el año, la bitácora del año anterior se archiva con ese año y la entrada de hoy abre la nueva")
+RN = raiz_nueva()
+pn = RN / "ventas/cuentas/decisiones.md"; pn.write_text(grande, encoding="utf-8")
+c, sn = corre(RN, {"decisiones": [DEC]}, "--sin-rotar")
+ok(c == 0 and not (RN / "ventas/cuentas/decisiones-2026.md").exists() and "rotados" not in sn, "con --sin-rotar no se archiva nada")
+
 print("cerrar.py: dos cierres a la vez sobre el mismo proyecto")
 spec = importlib.util.spec_from_file_location("cerrar", CERRAR); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 R7 = raiz_nueva()

@@ -60,4 +60,9 @@ casos = [(["Acme fabrica muebles.", "Cómo se trabaja está en `metodo.md`."], [
 for entrada, sale in casos:
     bien = ns["sin_carpeta"](entrada) == sale
     print(("  bien  " if bien else "  FALLA ") + f"sin_carpeta({entrada!r})"); fallos += not bien
+# con_archivados (1.23): los registros con sus archivados, igual en la sesión, el tablero y el barrido
+bloque2 = lambda ruta: (lambda s: s[s.index("# --- los registros con sus archivados ---"):s.index("# --- fin de los registros ---")])((P / ruta).read_text(encoding="utf-8"))
+b3 = [bloque2(r_) for r_ in ("skills/sesion/abrir.py", "skills/tablero/generar_vista.py", "skills/tablero/barrido.py")]
+bien = b3[0] == b3[1] == b3[2]
+print(("  bien  " if bien else "  FALLA ") + "con_archivados es la misma en abrir.py, generar_vista.py y barrido.py"); fallos += not bien
 sys.exit(1 if fallos else 0)

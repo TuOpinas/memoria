@@ -67,5 +67,24 @@ for etiqueta, sal in (("al generar", o1), ("al reutilizar la base", o2)):
     ok("Carla Ruiz" in (a.get("colaboran_ver") or []), f"{etiqueta}: quien colabora en el área va por su nombre ({a.get('colaboran_ver')})")
 ok(reuso, "la segunda corrida reutilizó la base")
 
+# los registros archivados (1.23): la generación los lee junto al vivo, con los mismos identificadores
+print("Los registros archivados")
+def generar(r_, sal):
+    subprocess.run([sys.executable, str(GV), str(r_), str(tmp / sal), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
+    return json.loads((tmp / sal / "proyectos" / "ventas--cuentas.json").read_text(encoding="utf-8"))
+ra = tmp / "raiz-arch"; shutil.copytree(AQUI / "raiz", ra)
+antes = generar(ra, "arch-antes")
+pc_ = ra / "ventas" / "cuentas"; anio_ = hoy[:4]
+(pc_ / f"decisiones-{anio_}.md").write_text((pc_ / "decisiones.md").read_text(encoding="utf-8"), encoding="utf-8")
+(pc_ / "decisiones.md").write_text(f"---\nestado: vigente\n---\n# Decisiones\n\nArchivado: decisiones-{anio_}.md.\n\n## {hoy} · Una nueva\nDecidió: Ana López\nPor qué: x.\n", encoding="utf-8")
+(pc_ / f"sesiones-{anio_}.md").write_text((pc_ / "sesiones.md").read_text(encoding="utf-8"), encoding="utf-8")
+(pc_ / "sesiones.md").write_text(f"---\nestado: vigente\n---\n# Sesiones\n\nArchivado: sesiones-{anio_}.md.\n", encoding="utf-8")
+despues = generar(ra, "arch-despues")
+ids = lambda d: sorted((x.get("id"), x.get("titulo")) for x in d.get("decisiones") or [])
+viejas = [x for x in despues.get("decisiones") or [] if x.get("archivada")]
+ok(set(ids(antes)) <= set(ids(despues)) and len(viejas) == len(antes.get("decisiones") or []) and not any(x.get("archivada") for x in despues["decisiones"] if x.get("titulo") == "Una nueva"),
+   "las decisiones archivadas llegan con sus identificadores de siempre, marcadas «archivada»; la nueva no")
+ok(despues.get("sesiones_total") == antes.get("sesiones_total") and despues.get("ultima_sesion") == antes.get("ultima_sesion"), "las sesiones archivadas siguen contando: el total y la última sesión no cambian")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
