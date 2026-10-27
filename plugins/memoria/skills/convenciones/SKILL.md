@@ -252,7 +252,7 @@ Contexto común (`guia.md` y `base/`): Nombre Apellido (correo)
 Administra la carpeta compartida y pone o quita los accesos: Nombre Apellido
 En Drive: cuenta@claude es cuenta@drive   (solo si alguien entra a Drive con otra cuenta)
 Cada área, su responsable de la tabla de arriba.
-Zona horaria: America/Mexico_City
+Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
 
 ## Reglas propias de la casa      (solo si las hay)
 
@@ -333,7 +333,7 @@ El método se actualiza publicando una versión nueva del plugin, y cada raíz r
 
 ### Los nombres de antes de la 1.22
 
-Es la nota de compatibilidad del contrato, y se retira en la 1.23. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: durante la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
+Es la nota de compatibilidad del contrato, y se mantiene mientras haya raíces sin migrar. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: desde la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
 
 ## 12. Cómo se lee
 
@@ -360,7 +360,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 | `base/sistemas.md` | el trabajo toca un sistema |
 | `base/contexto.md` | la pregunta es sobre la organización, o se va a escribir algo que sale del proyecto |
 | `area.md` entero | la pregunta es sobre el área y no sobre un proyecto |
-| `decisiones.md` completo, y sus archivados del año si una referencia apunta ahí | se va a escribir o revisar un entregable |
+| `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`), completo | se va a escribir o revisar un entregable |
 | El cuerpo de un entregable | la pregunta pide su contenido y no basta con saber que existe |
 | Un archivo de `taller/` | hace falta cómo se llegó al entregable, y el entregable no basta |
 | Un archivo de `fuentes/` | el trabajo del día lo pide, por su nombre |

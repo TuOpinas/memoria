@@ -22,7 +22,7 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 ## Qué leo antes
 
 1. El entregable completo, con su cabecera
-2. `decisiones.md` completo del proyecto
+2. `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`) completo del proyecto
 3. Cada archivo listado en `basado_en`, con su fecha `actualizado`
 4. La skill `estilo`
 5. Si el documento sigue el brief o el comparativo, esa plantilla, que está en `plantillas/` dentro de la skill `nuevo`
@@ -31,7 +31,7 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 
 **1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `inventario.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
 
-**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md`, ni siquiera de hace meses.
+**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md` ni de sus archivados de este año y del anterior, ni siquiera de hace meses.
 
 **3. Frescura.** Ningún archivo de `basado_en` tiene una fecha `actualizado` posterior a la del entregable. Si la tiene, se dice qué cambió aguas arriba.
 
