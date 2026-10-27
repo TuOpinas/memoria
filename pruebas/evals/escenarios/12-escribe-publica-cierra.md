@@ -11,10 +11,11 @@ turnos:
 comprobar:
   - recuadro
   - apertura-completa ventas/cuentas
+  - nada-hasta-el-turno 2 metodo.md,ventas/cuentas/taller/nota-soporte.md,ventas/cuentas/entregables/borrador-viejo.md,ventas/area.md
   - entrada-sesion ventas/cuentas
   - cierre-con-script
   - contiene ventas/cuentas/sesiones.md Escribió: taller/nota-soporte.md
-  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md
+  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md,ventas/area.md
   - contiene ventas/cuentas/entregables/borrador-viejo.md estado: vigente
   - cita-antes-de-escribir
   - recuadro-cierre

@@ -138,19 +138,21 @@ El aviso del método que pide algo va como fila del recuadro «Memoria de trabaj
 
 ## Ejemplo de apertura
 
+La respuesta de Claude va aquí tal cual se escribe.
+
 **Usuario:** retomamos automatización de órdenes
 
-> El proyecto busca quitar aprobaciones manuales en compras de bajo monto. La última sesión, el 14 de agosto, terminaste las entrevistas con Ana y con Finanzas y quedó pendiente decidir el criterio de corte.
->
-> | Memoria · avisos · 2 |
-> |---|
-> | Finanzas registró el 20 de agosto que el cierre pasa al día 3 y marca este proyecto como afectado · decidió Luis Romero. |
-> | El mapa de proceso lleva 41 días en borrador, esperando a Ana. |
->
-> Tres focos posibles para hoy:
->
-> 1. Cerrar el criterio de corte por monto. Es lo que bloquea el flujo de aprobación y Finanzas está esperando.
-> 2. Revisar si el cambio de fecha de cierre toca el flujo de aprobación antes de seguir construyendo sobre él.
-> 3. Empujar la revisión del mapa de proceso, que lleva seis semanas parado.
->
-> ¿Por cuál empezamos?
+El proyecto busca quitar aprobaciones manuales en compras de bajo monto. La última sesión, el 14 de agosto, terminaste las entrevistas con Ana y con Finanzas y quedó pendiente decidir el criterio de corte.
+
+| Memoria · avisos · 2 |
+|---|
+| Finanzas registró el 20 de agosto que el cierre pasa al día 3 y marca este proyecto como afectado · decidió Luis Romero. |
+| El mapa de proceso lleva 41 días en borrador, esperando a Ana. |
+
+Tres focos posibles para hoy:
+
+1. Cerrar el criterio de corte por monto. Es lo que bloquea el flujo de aprobación y Finanzas está esperando.
+2. Revisar si el cambio de fecha de cierre toca el flujo de aprobación antes de seguir construyendo sobre él.
+3. Empujar la revisión del mapa de proceso, que lleva seis semanas parado.
+
+¿Por cuál empezamos?

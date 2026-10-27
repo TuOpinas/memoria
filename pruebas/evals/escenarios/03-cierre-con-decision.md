@@ -19,6 +19,8 @@ comprobar:
   - cierre-con-script
   - cambia ventas/area.md
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
+  - cita-antes-de-escribir decision
+  - recuadro-cierre
   - sin-rutas-absolutas
 ---
 Abrir, registrar una decisión y cerrar. La decisión se enseña antes de escribirla y se escribe solo con el sí (turno 2), aunque la persona la dicte en el mismo mensaje en que pide cerrar. El cierre escribe con `cerrar.py`.

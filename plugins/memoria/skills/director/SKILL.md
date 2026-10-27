@@ -58,7 +58,7 @@ Se dan hasta cuatro, ordenados por lo que desbloquean. Cada uno dice qué se vio
 
 Lo que otras áreas decidieron o publicaron y toca a esta: primero lo que la nombra en `Afecta a:`, después lo que trata del mismo tema según los índices. Cada cosa con su identificador o su ruta, quién la decidió y qué le cambia a esta área.
 
-Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `escribir.md` y se enseña. Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
+Si algo merece cuestionarse, se redacta el cuestionamiento con el formato de la sección 4 de `escribir.md` y se enseña en cita, tal como quedará escrito («Cómo se enseña antes de escribir» de `sesion/cerrar.md`). Se registra solo con la confirmación de la persona, en el `decisiones.md` de un proyecto suyo, dentro de una sesión de ese proyecto: si no hay una abierta, se le da la frase para abrirla. Nunca en el área de otro.
 
 ## Escribir el Estatus del área
 

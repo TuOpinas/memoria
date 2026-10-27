@@ -22,6 +22,8 @@ comprobar:
   - no-contiene ventas/area.md ## Panorama
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
   - no-menciona estructura de antes
+  - cita-antes-de-escribir decision
+  - recuadro-cierre
   - sin-rutas-absolutas
 ---
 El mismo cierre que el 03, sobre una raíz que ya pasó a la estructura de la 1.22 (la cuenta de Ana la migró antes de empezar; las áreas de Beto siguen como estaban: raíz mezclada).
