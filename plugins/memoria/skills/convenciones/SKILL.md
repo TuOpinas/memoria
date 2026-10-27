@@ -7,7 +7,7 @@ description: Contrato base del metodo de trabajo: estructura de carpetas, cabece
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.22**
+Versión del método: **1.23**
 
 ## 1. Las tres capas de propiedad
 
@@ -233,6 +233,36 @@ Si un proyecto tiene todavía `enlaces.md`, su nombre de antes de la 1.22 (secci
 
 Un archivo vivo se reescribe y refleja el presente; un registro solo crece, con las entradas nuevas arriba, y las anteriores no se editan jamás. Los formatos de `decisiones.md` y `sesiones.md`, el identificador de una entrada, los cuestionamientos y el aviso entre áreas están en `escribir.md`.
 
+### Estructura de `guia.md`
+
+Las secciones de `guia.md` van en este orden y con estos nombres, que leen `abrir.py`, `permisos.py`, el tablero y `verificar.sh` (1.23; la plantilla con sus huecos está en la skill `nuevo`):
+
+```markdown
+# <Organización> · esta carpeta
+
+<Organización> es <a qué se dedica y para quién, en una o dos frases>.
+
+<Un párrafo sobre la carpeta: que es su memoria de trabajo y que el método está en metodo.md.>
+
+## Áreas
+| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |
+
+## Quién responde por qué
+Contexto común (`guia.md` y `base/`): Nombre Apellido (correo)
+Administra la carpeta compartida y pone o quita los accesos: Nombre Apellido
+En Drive: cuenta@claude es cuenta@drive   (solo si alguien entra a Drive con otra cuenta)
+Cada área, su responsable de la tabla de arriba.
+Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
+
+## Reglas propias de la casa      (solo si las hay)
+
+## Cómo conectarte
+
+## Versión del método
+```
+
+**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. La celda Cuenta lleva la del responsable y, después, `· colabora: ana@…, luis@…` (sección 1, «Quién colabora»). A quien colabora se le da nombre junto a su cuenta en una línea «Colabora: Nombre Apellido (correo)» de un proyecto, o se le pregunta: sin nombre, el tablero solo lo cuenta. «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»).
+
 ## 5. Cabecera
 
 Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reemplazado`) y `actualizado`, y en `entregables/` y `taller/` además `aportacion` (una línea con lo que la pieza aporta) y `basado_en`, salvo `guia.md`, `metodo.md` y el contenido de `fuentes/`. Qué lleva cada archivo y qué significa cada estado está en `escribir.md`.
@@ -240,6 +270,8 @@ Todo `.md` empieza con una cabecera de `estado` (`borrador`, `vigente` o `reempl
 ## 6. Nombres
 
 Minúsculas, guiones en vez de espacios, sin acentos ni eñes, sin fechas ni números de versión, sin números de fase ni de etapa. `flujo-aprobacion.md`, no `Flujo de Aprobación v2 FINAL.md` ni `fase1-flujo-aprobacion.md`.
+
+**Un número que identifica el asunto sí entra** (1.23): el de una norma, un contrato, un pedido, un modelo o la versión de algo que no es el archivo, cuando cada archivo es un documento distinto y no una versión del mismo. `revision-de-calidad-1-22-5.md` es el informe de la revisión de la versión 1.22.5 y no cambia cuando sale la 1.22.6, que tiene su propio informe; `nom-035.md` o `contrato-4512.md` nombran su asunto. La prueba: si al salir el siguiente el anterior sigue valiendo tal cual, es otro asunto y el número va; si el nuevo sustituye al anterior, es una versión y no va: se edita el archivo o se marca `reemplazado`. Muchos archivos de un mismo tipo se agrupan en una subcarpeta (sección 2), como `taller/revisiones-de-calidad/`.
 
 El nombre de un archivo es estable durante toda su vida. El historial de versiones lo lleva la carpeta compartida (Drive, OneDrive…), el estado lo lleva la cabecera y el orden de las fases lo cuenta `proyecto.md`.
 
@@ -273,7 +305,7 @@ Lo aprendido dentro de un área restringida vuelve a la memoria común **reescri
 
 ## 8. Rotación
 
-Los registros que crecen demasiado o cambian de año se archivan con el año en el nombre: en `escribir.md`.
+Los registros que crecen demasiado (por líneas o por tamaño) o cambian de año se archivan con el año en el nombre, y la apertura y el tablero siguen leyendo los archivados de este año y del anterior junto al vivo: en `escribir.md`.
 
 ## 9. Lo que no existe en este sistema
 
@@ -301,7 +333,7 @@ El método se actualiza publicando una versión nueva del plugin, y cada raíz r
 
 ### Los nombres de antes de la 1.22
 
-Es la nota de compatibilidad del contrato, y se retira en la 1.23. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: durante la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
+Es la nota de compatibilidad del contrato, y se mantiene mientras haya raíces sin migrar. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: desde la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
 
 ## 12. Cómo se lee
 
@@ -328,7 +360,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 | `base/sistemas.md` | el trabajo toca un sistema |
 | `base/contexto.md` | la pregunta es sobre la organización, o se va a escribir algo que sale del proyecto |
 | `area.md` entero | la pregunta es sobre el área y no sobre un proyecto |
-| `decisiones.md` completo | se va a escribir o revisar un entregable |
+| `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`), completo | se va a escribir o revisar un entregable |
 | El cuerpo de un entregable | la pregunta pide su contenido y no basta con saber que existe |
 | Un archivo de `taller/` | hace falta cómo se llegó al entregable, y el entregable no basta |
 | Un archivo de `fuentes/` | el trabajo del día lo pide, por su nombre |

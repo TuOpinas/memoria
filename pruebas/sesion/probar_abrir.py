@@ -229,6 +229,29 @@ for adm_, ctx_, espera in (("Ana Prueba (lleva también ventas, personas)", "Con
     (RX / "guia.md").write_text((AQUI.parent / "tablero" / "raiz" / "guia.md").read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: " + adm_).replace("Contexto común: Ana Prueba", ctx_), encoding="utf-8")
     o = subprocess.run([sys.executable, str(ABRIR), str(RX), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
     ok(("nombra a dos personas" in o) == espera, f"«{adm_}» frente a «{ctx_.split(chr(10))[0]}»: {'dos' if espera else 'una'}")
+print("Los registros archivados (1.23)")
+RA = tmp / "raiz-archivada"
+shutil.copytree(AQUI.parent / "tablero" / "raiz", RA)
+for d, _, fs in os.walk(RA):
+    for f in fs:
+        os.utime(os.path.join(d, f), (viejo, viejo))
+pc_ = RA / "ventas/cuentas"
+anio_ = time.strftime("%Y")
+(pc_ / f"decisiones-{anio_}.md").write_text((pc_ / "decisiones.md").read_text(encoding="utf-8"), encoding="utf-8")
+(pc_ / "decisiones-2020.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2020-01-02 · DECISION-DE-2020\nDecidió: Ana Prueba\nPor qué: vieja.\nAfecta a: operacion/soporte\n", encoding="utf-8")
+(pc_ / "decisiones.md").write_text(f"---\nestado: vigente\n---\n# Decisiones\n\nArchivado: decisiones-{anio_}.md.\n", encoding="utf-8")
+for f in ("decisiones.md", f"decisiones-{anio_}.md", "decisiones-2020.md"):
+    os.utime(pc_ / f, (viejo, viejo))
+o = subprocess.run([sys.executable, str(ABRIR), str(RA), "operacion/soporte"], capture_output=True, text=True).stdout
+ok("Le afecta una decisión de ventas/cuentas" in o.split("=== AVISOS")[1] and "DECISION-DE-2020" not in o, "una decisión archivada este año sigue avisando a quien nombra en «Afecta a:»; la de hace años no se lee")
+o = subprocess.run([sys.executable, str(ABRIR), str(RA), "ventas/cuentas"], capture_output=True, text=True).stdout
+dec_ = o.split("=== DECISIONES")[1].split("=== SESIONES")[0]
+ok("(ninguna)" not in dec_ and "## 2026-" in dec_, "las decisiones más recientes salen aunque el registro vivo esté recién archivado")
+# la respuesta a un cuestionamiento, archivada hace años: el cuestionamiento sigue respondido
+(pc_ / f"decisiones-{anio_}.md").rename(pc_ / "decisiones-2019.md")
+o = subprocess.run([sys.executable, str(ABRIR), str(RA), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("operacion/soporte#2026-09-25" not in o.split("=== AVISOS")[1], "un cuestionamiento cuya respuesta está en un archivado de hace años no reaparece como abierto")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

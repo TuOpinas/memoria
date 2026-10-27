@@ -567,7 +567,13 @@ button.est-btn{all:unset;cursor:pointer}
 .tira{display:inline-grid;grid-template-columns:repeat(28,7px);gap:2px}
 .tira i{display:block;width:7px;height:14px;border-radius:2px;background:var(--rule-soft)} .tira i.on{background:var(--signal)}
 .per-k{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);margin-top:6px} .per-k b{color:var(--ink)}
-.per-k .cruza{color:var(--signal)} .per-k .cruza b{color:var(--signal)}
+.per-h .rol{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:6px}
+.per-k .z,.per-k .z b{color:var(--muted);font-weight:500} .per-k .esp,.per-k .esp b{color:var(--signal)}
+.tira i{position:relative} .tira i:hover::after{content:attr(data-t);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--surface);font-size:11.5px;padding:3px 7px;border-radius:4px;pointer-events:none;z-index:5}
+.personas .ctl{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center} .act-area{font:inherit;font-size:13px;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);max-width:100%}
+.personas .nota{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.quiet .per-h b{color:var(--ink-soft)} .quiet-g{margin:12px -18px -16px;padding:0 18px 12px;background:var(--ground);border-top:1px solid var(--rule);border-radius:0 0 8px 8px}
+.quiet-g .sep{font:500 11.5px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 0 4px} .quiet-g .per{border-top:1px solid var(--rule)} .quiet-g .per:first-of-type{border-top:none}
 details.mas-c>summary{cursor:pointer;list-style:none} details.mas-c>summary::-webkit-details-marker{display:none}
 details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(--muted)} details.mas-c[open]>summary::before{content:"– "}
 
@@ -742,7 +748,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.22.5"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.23.0"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1387,18 +1393,23 @@ const VIEWER = () => DATOS_NUEVOS() ? (META.tablero_de||"") : "";
 // sin saber quién lee (ni la cuenta ni el nombre), nada es suyo: el tablero no atribuye (1.22.4)
 const esMio = p => p.escribe!==undefined ? p.escribe===true : (!!VIEWER() && (persona(p.dueno)===persona(VIEWER()) || (p.colaboran||[]).some(c=>persona(c)===persona(VIEWER()))));
 // quién decide lo que «Falta decidir» dice, si nombra a alguien que no es quien mira
-function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c = conocidos(); return md && c[md[1]] ? c[md[1]] : null; }
+function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/); return md ? nombreEn(fd, md.index + md[0].length - md[1].length, md[1]) : null; }
 const esYo = n => !!n && !!VIEWER() && nombreCorto(n)===nombreCorto(VIEWER());
 // si no se sabe quién mira (la carpeta no da nombre a la cuenta), nada se mueve por nombre
 function otroDecide(fd){ const n = quienDecide(fd); return n && VIEWER() && !esYo(n) ? n : null; }
 const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/)[0].trim().replace(/[.;,:\s]+$/,"");
-const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...(a.colaboran||[]).map(persona)]), ...PROJ.flatMap(p=>(p.colaboran||[]).map(persona))].filter(Boolean));
+// quien colabora en un área viaja por su nombre en colaboran_ver; colaboran son sus cuentas, que nunca coinciden con el nombre
+// de «Sesión de:» o «Decidió:» (1.23: antes quedaban fuera de «Por persona» y de «Con otros»)
+const colaboranArea = a => "colaboran_ver" in a ? (a.colaboran_ver||[]) : (a.colaboran||[]).filter(c=>!/@/.test(c));
+// los mismos que «Por persona»: también quien responde por un proyecto sin responder por su área (segunda vuelta)
+const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>[persona(p.dueno), ...(p.colaboran||[]).map(persona)])].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
 const activo = p => p && !p.restringido && !p.cerrado;
 function sesionesTodas(p){
   // las de las últimas cuatro semanas vienen con el proyecto; las demás, con su detalle cuando ya se trajo
   const s = [], d = TEXTOS[p.id];
-  for(const x of [...(p.sesiones_recientes||[]), ...(p.sesiones||[]), ...((d && d.sesiones)||[])]) if(x && !s.some(y=>y.fecha===x.fecha && y.titulo===x.titulo)) s.push(x);
+  // las de un mismo día llevan el mismo título: las distingue su posición en el archivo (n, 1.23); sin ella, datos de antes
+  for(const x of [...(p.sesiones_recientes||[]), ...(p.sesiones||[]), ...((d && d.sesiones)||[])]) if(x && !s.some(y=>y.fecha===x.fecha && y.titulo===x.titulo && y.n===x.n)) s.push(x);
   return s.filter(x=>x.fecha && !/\((tarea|migracion)\)/i.test(x.titulo||"")).sort((a,b)=>b.fecha.localeCompare(a.fecha));
 }
 function decisionesTodas(p){
@@ -1511,15 +1522,41 @@ let _CONOCIDOS = null, _CONOCIDOS_DE = null;
 // la organización de cada persona de fuera, de «Nombre Apellido (Organización)» en pasos y decisiones (revisión 1.22.4)
 const ORG_DE = {};
 function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; _CONOCIDOS_DE = PROJ; const full = new Set();
+  // quien responde por un área o colabora en ella, aunque no haya cerrado sesión ni decidido nada (1.23)
+  for(const a of AREAS){ if(a.dueno) full.add(persona(a.dueno)); for(const c of colaboranArea(a)) full.add(persona(c)); }
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
     for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
     for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
-  const porNombre = {}, carpeta = escribenSet();
+  const porNombre = {}, carpeta = escribenSet(), completos = {};
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
+    // un nombre de pila es ambiguo solo entre quienes escriben hoy en la carpeta o están nombrados hoy como de fuera, no por
+    // una decisión vieja de alguien que ya no está (revisión de la 1.23, segunda vuelta)
+    if(f.split(" ").length>1 && (carpeta.has(persona(f)) || ORG_DE[f])) (completos[k] = completos[k] || new Set()).add(f);
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
+  // un nombre de pila que llevan dos personas no se atribuye por sí solo: hace falta el apellido (1.23)
+  _AMBIGUOS = new Set(Object.keys(completos).filter(k=>completos[k].size>1));
+  _COMPLETOS = [...full].filter(f=>f.split(" ").length>1).sort((a,b)=>b.length-a.length);
+  // una sola expresión con todos los nombres completos, de más largo a más corto: se recorre el texto una vez (segunda vuelta)
+  RE_COMPLETOS = _COMPLETOS.length ? new RegExp(`(?<![${LETRA}])(${_COMPLETOS.map(f=>f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?![${LETRA}])`, "g") : null;
   return _CONOCIDOS = porNombre; }
-function nombresEn(txt){ const c = conocidos(), out = [], re = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\b/g; let m; while((m = re.exec(txt||""))){ const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); } return out; }
+let _AMBIGUOS = new Set(), _COMPLETOS = [], RE_COMPLETOS = null;
+// una palabra con mayúscula, con fronteras que conocen los acentos: «\b» de JavaScript no los ve, y «Ángel» no casaba (1.23)
+const LETRA = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
+const RE_NOMBRE = new RegExp(`(?<![${LETRA}])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)(?![${LETRA}])`, "g");
+// los nombres completos que el texto trae, y las posiciones donde empiezan
+function completosEn(txt){ conocidos(); const out = []; if(!RE_COMPLETOS) return out; RE_COMPLETOS.lastIndex = 0; let m;
+  while((m = RE_COMPLETOS.exec(txt||""))) out.push({f:m[1], i:m.index}); return out; }
+function nombresEn(txt){ const c = conocidos(), out = [], cs = completosEn(txt), ini = new Set(cs.map(x=>x.i));
+  for(const {f} of cs) if(!out.includes(f)) out.push(f);
+  const re = new RegExp(RE_NOMBRE.source, "g"); let m;
+  while((m = re.exec(txt||""))){ if(ini.has(m.index) || _AMBIGUOS.has(m[1])) continue; const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); }
+  return out; }
+// el nombre que empieza en la posición i del texto: el completo si lo trae; el de pila si no es ambiguo; si no, nadie
+function nombreEn(txt, i, pila){ const c = conocidos(), x = completosEn(txt).find(x=>x.i===i); return x ? x.f : (_AMBIGUOS.has(pila) ? null : c[pila] || null); }
+// cuántas veces el texto nombra a alguien solo por un nombre de pila que llevan dos personas
+const ambiguosEn = txt => { conocidos(); if(!_AMBIGUOS.size) return 0; const ini = new Set(completosEn(txt).map(x=>x.i)), re = new RegExp(RE_NOMBRE.source, "g"); let n = 0, m;
+  while((m = re.exec(txt||""))) if(_AMBIGUOS.has(m[1]) && !ini.has(m.index)) n++; return n; };
 
 // ===================== Inicio en tres pestañas: Estatus · Con otros · Mantenimiento =====================
 let INI_TAB = "estatus";
@@ -1593,7 +1630,9 @@ function bandaRaiz(){
 }
 
 // ---- Acciones: te toca a ti, y con otros (te deben / les debes) ----
-const RE_DEBES = /\b(mandar|mandarle|manda|enviar|enviarle|envía|avisar|avisarle|avisa|pedir|pedirle|pide|preguntar|preguntarle|pregunta|escribir|escribirle|responder|responderle|llamar|presentar|proponer|compartir|agendar|confirmar|acordar|revisar|buscar)(?:le)?\s+(?:a|con)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/;
+// el verbo vale con mayúscula inicial («Revisar con Diego…», al principio del paso); el nombre sigue pidiendo mayúscula (1.23)
+const VERBOS_DEBES = "mandar mandarle manda enviar enviarle envía avisar avisarle avisa pedir pedirle pide preguntar preguntarle pregunta escribir escribirle responder responderle llamar presentar proponer compartir agendar confirmar acordar revisar buscar".split(" ");
+const RE_DEBES = new RegExp("\\b(" + VERBOS_DEBES.map(v=>`[${v[0].toUpperCase()}${v[0]}]${v.slice(1)}`).join("|") + ")(?:le)?\\s+(?:a|con)\\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)");
 const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
 const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy_contexto !== undefined ? META.soy_contexto === true : !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER())) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
@@ -1602,16 +1641,17 @@ const SIN_QUIEN = () => { let n = 0; for(const p of PROJ){ if(p.restringido || p
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
-  const yo = nombreCorto(VIEWER()), esc_ = escribenSet(), por = {};
+  // quién mira, por su nombre completo: con dos Anas en la carpeta, la otra no es «tú» (segunda vuelta)
+  const yo = nombreCorto(VIEWER()), yoN = persona(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
-    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)));
+    for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? persona(n)!==yoN : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
       if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
-      else if(md){ lado = "debes"; n = c[md[2]] && fuera(c[md[2]]) ? c[md[2]] : null; }
+      else if(md){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const md = fd.match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/), c0 = conocidos(); const ns = md && c0[md[1]] ? [c0[md[1]]] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? nombreCorto(n)!==yo : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = faltaDecidir(p); if(fd){ const qd = quienDecide(fd); const ns = qd ? [qd] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
@@ -1665,6 +1705,11 @@ function indicadores(p, piezas){
   const emb = `<div class="emb"><span><b>${tal.length}</b> en taller</span><span class="fl">→</span><span><b>${bor.filter(z=>z.tipo==="entregable").length}</b> entregables en borrador</span><span class="fl">→</span><span><b>${vig.length}</b> vigente${vig.length===1?"":"s"}</span><span class="fl">→</span><span><b>${cit}</b> proyecto${cit===1?"":"s"} los cita${cit===1?"":"n"}</span></div>`;
   return `<div class="qh-ks">${k(vig.length, vig.length===1?"vigente":"vigentes", ultPub?`último, ${fmtD(ultPub)}`:"nada publicado", "")}${k(bor.length, bor.length===1?"borrador":"borradores", med!=null?`edad mediana ${med} días`:"", med>30?"warn":"")}${k(desf, "con base que cambió", "decisiones posteriores", desf?"warn":"")}<div class="qh-k"><b>${sem.reduce((a,b)=>a+b,0)}</b><span>tocadas en 8 semanas</span>${tira}</div></div>${emb}`;
 }
+// lo que el generador cuenta y no lista (1.23: antes viajaba y solo lo leían las pruebas)
+function notasQueHay(r){ if(!r) return ""; const n = [];
+  if(r.entregables_en_subcarpetas) n.push(`${cuantos(r.entregables_en_subcarpetas,"documento de entregables está","documentos de entregables están")} en una subcarpeta y no se lista${r.entregables_en_subcarpetas===1?"":"n"} aquí.`);
+  if(r.reemplazos_sin_resolver) n.push(`${cuantos(r.reemplazos_sin_resolver,"pieza reemplazada dice","piezas reemplazadas dicen")} que la sustituye algo que no está en este proyecto: en su cabecera, «reemplazado_por» tiene que llevar la ruta de la pieza nueva.`);
+  return n.length ? `<p class="pt-n">${n.join(" ")}</p>` : ""; }
 function queHayTab(p){
   const Q = queHayDe(p), d = Q.d || {piezas:[]}, piezas = d.piezas || [];
   if(Q.falta) return `<section class="card">${CARGANDO}</section>`;
@@ -1674,7 +1719,7 @@ function queHayTab(p){
   const origen = gen ? `Resumen escrito en la puesta al día del ${fmtD(gen.fecha)}, con lo que cada pieza dice que aporta.` : "Resumen hecho con lo que cada pieza dice que aporta.";
   const pend = piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
   const top = `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un proyecto")}</h2>${indicadores(p, piezas)}
-    <div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(R.ent)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(R.tal)}</p></div></div><p class="pt-n">${origen}</p>
+    <div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(R.ent)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(R.tal)}</p></div></div><p class="pt-n">${origen}</p>${notasQueHay(Q.r)}
     ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una frase de resumen sugerida por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
   const grupo = (t, list) => `<section class="card"><h3>${t} <span class="c">${list.length}</span></h3>${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</section>`;
   return top + grupo("Entregables", piezas.filter(z=>z.tipo==="entregable")) + grupo("Taller", piezas.filter(z=>z.tipo==="taller"))
@@ -1690,17 +1735,29 @@ document.addEventListener("click", async e => { const b = e.target.closest && e.
 // ===================== Actividad: por área, por proyecto, por persona =====================
 let ACT_DIAS = 7; try{ ACT_DIAS = +(localStorage.getItem("tablero-actividad-dias")||7) || 7; }catch(e){}
 
+// Quién escribió y quién publicó cada documento lo dicen «Escribió:» y «Publicó:» de la entrada de la sesión (1.23). Un
+// entregable publicado en el periodo que ninguna sesión dice haber publicado cuenta sin atribuir (q vacío).
+const docNombre = r => (r||"").replace(/^(entregables|taller)\//,"");
 function eventos(desde){
   const ev = [];
   for(const p of PROJ){ if(p.restringido) continue;
-    for(const s of sesionesTodas(p)) if(s.fecha>=desde) ev.push({k:"ses", f:s.fecha, p, q:persona(quienSes(p,s)), t:s.trabajamos||""});
+    const nombrados = new Set(), publicados = {};
+    for(const s of sesionesTodas(p)){ if(s.fecha<desde) continue; const q = persona(quienSes(p,s));
+      ev.push({k:"ses", f:s.fecha, p, q, t:s.trabajamos||""});
+      for(const r of new Set(s.escribio||[])){ nombrados.add(r); ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
+      // publicado es lo que una entrada dice en «Publicó:», una vez por documento: la fecha del entregable no lo dice (1.23)
+      for(const r of new Set(s.publico||[])){ nombrados.add(r); const e = (p.entregables||[]).find(e=>"entregables/"+(e.archivo||e.nombre||"")===r);
+        if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:(e && (e.titulo||e.nombre)) || docNombre(r), doc:r}; } }
+    for(const r in publicados) ev.push({k:"pub", p, ...publicados[r]});
     for(const d of decisionesTodas(p)) if(d.fecha && d.fecha>=desde && d.tipo!=="cuestionamiento") ev.push({k:"dec", f:d.fecha, p, q:persona(d.decidio||""), t:d.titulo, cruza: AREAS.some(a=>a.slug!==p.area && (d.afecta||"").includes(a.slug+"/"))});
-    for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && e.actualizado>=desde) ev.push({k:"pub", f:e.actualizado, p, q:persona(p.dueno||""), t:e.titulo||e.nombre});
+    // un vigente que cambió en el periodo sin que ninguna entrada lo nombre: se cuenta aparte, sin suponer quién ni por qué
+    for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && e.actualizado>=desde && !nombrados.has("entregables/"+(e.archivo||e.nombre||"")))
+      ev.push({k:"cambio", f:e.actualizado, p, q:"", t:e.titulo||e.nombre});
   }
   return ev;
 }
-const agrega = (evs) => { const o = {ses:0, dec:0, pub:0, cruza:0, q:new Set(), proy:new Set(), dias:new Set()}; for(const e of evs){ o[e.k]++; if(e.cruza) o.cruza++; if(e.q) o.q.add(e.q); o.proy.add(e.p.id); if(e.k==="ses") o.dias.add(e.f); } return o; };
-const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o.dec,"decisión","decisiones"):"", o.pub?cuantos(o.pub,"publicado","publicados"):""].filter(Boolean).join(" · ") || "sin movimiento";
+const agrega = (evs) => { const o = {ses:0, dec:0, pub:0, esc:0, cambio:0, cruza:0, q:new Set(), proy:new Set(), dias:new Set()}; for(const e of evs){ o[e.k]++; if(e.cruza) o.cruza++; if(e.q) o.q.add(e.q); o.proy.add(e.p.id); if(e.k==="ses") o.dias.add(e.f); } return o; };
+const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o.dec,"decisión","decisiones"):"", o.pub?cuantos(o.pub,"publicado","publicados"):"", o.cambio?cuantos(o.cambio,"documento vigente cambió","documentos vigentes cambiaron"):""].filter(Boolean).join(" · ") || "sin movimiento";
 
 function actPorArea(ev){
   const esc_ = escribenSet();
@@ -1713,26 +1770,92 @@ function actPorArea(ev){
         <span class="act-k">${kTxt(o)}${o.cruza?` · <em>${o.cruza} para otras áreas</em>`:""}</span></button>`; }).join("")}</div>
     <p class="more act-leg"><i class="s"></i>sesiones <i class="d"></i>decisiones <i class="p"></i>publicados · <em>para otras áreas</em>: decisiones que nombran a otra área en «Afecta a»</p></section>`;
 }
-function actPersonas(ev){
-  const esc_ = escribenSet(), gente = {};
-  const P = n => gente[n] = gente[n] || {n, dias:new Set(), ses:0, proy:new Set(), dec:0, cruza:0, pub:0};
-  let sinNombre = 0;
-  for(const e of ev){ if(e.k==="ses" && !e.q){ sinNombre++; continue; } if(!e.q || !esc_.has(e.q)) continue; const g = P(e.q); g.proy.add(e.p.id); if(e.k==="ses"){ g.ses++; g.dias.add(e.f); } else if(e.k==="dec"){ g.dec++; if(e.cruza) g.cruza++; } else g.pub++; }
-  const lista = Object.values(gente).sort((a,b)=>a.n.localeCompare(b.n,"es"));
-  const n = ACT_DIAS;
-  const tira = g => { let h = ""; for(let i=n-1;i>=0;i--){ const f = addDays(-i); h += `<i class="${g.dias.has(f)?"on":""}" title="${esc(fmtD(f))}"></i>`; } return `<span class="tira" style="grid-template-columns:repeat(${n},${n>14?7:12}px)" aria-label="${g.dias.size} días con sesión">${h}</span>`; };
-  return `<section class="card personas"><h2>Por persona</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta: responsables y colaboradores de cada área y proyecto. Hechos, sin puntaje ni orden por volumen.</p>
-    ${lista.length ? lista.map(g=>`<div class="per"><div class="per-h"><b>${esc(g.n)}</b>${tira(g)}</div><div class="per-k"><span><b>${g.ses}</b> sesiones · ${g.dias.size} días</span><span><b>${g.proy.size}</b> proyectos</span><span><b>${g.dec}</b> decisiones</span><span><b>${g.pub}</b> publicados</span><span class="cruza"><b>${g.cruza}</b> decisiones que tocan otras áreas</span></div></div>`).join("") : `<p class="empty">Nadie cerró sesión en el periodo.</p>`}
-    ${sinNombre?`<p class="more">${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró (son de antes de que el cierre lo apuntara); no se atribuyen a nadie.</p>`:""}
-    ${lista.length===1?`<p class="more">Aquí escribe una sola persona. Con varias, esta tarjeta las pone lado a lado, en orden alfabético.</p>`:""}</section>`;
+// «Por persona» (1.23): todos los que escriben en la carpeta, también quien no tuvo sesión en el periodo, para que el
+// responsable les dé seguimiento. Una línea por persona: sesiones, decisiones, documentos escritos y publicados (de
+// «Escribió:» y «Publicó:») y acciones planeadas (pasos abiertos que la nombran). Sin puntaje ni orden por volumen.
+let ACT_AREA = ""; try{ ACT_AREA = localStorage.getItem("tablero-actividad-area")||""; }catch(e){}
+function rolesEscriben(areaSlug){
+  // {persona: {resp:[áreas o proyectos], col:[…]}} de guia.md (áreas) y de «Quién participa» (proyectos); sin área, también
+  // quien administra la carpeta, que escribe guia.md y base/
+  const R = {}, add = (n, lado, x) => { n = persona(n); if(!n) return; const r = R[n] = R[n] || {resp:[], col:[]}; if(x && !r[lado].includes(x)) r[lado].push(x); };
+  for(const a of AREAS){ if(a.legible===false || archivada(a) || (areaSlug && a.slug!==areaSlug)) continue; const an = a.nombre||a.slug;
+    add(a.dueno, "resp", an); for(const c of colaboranArea(a)) add(c, "col", an); }
+  for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug) || !areaBy[p.area] || archivada(areaBy[p.area])) continue;
+    if(p.dueno && persona(p.dueno)!==persona(areaBy[p.area].dueno)) add(p.dueno, "resp", p.nombre);
+    for(const c of (p.colaboran||[])) add(c, "col", p.nombre); }
+  if(!areaSlug && META && META.administra){ const n = persona(META.administra); if(n && !R[n]) R[n] = {resp:[], col:[], adm:true}; }
+  return R;
 }
+const rolTxt = r => r.fuera ? "trabaja aquí sin figurar en la carpeta: pide a quien responde por el área que lo sume"
+  : [r.adm ? "administra la carpeta" : "", r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : "", r.aqui ? "trabajó aquí" : ""].filter(Boolean).join(" · ");
+function accionesDe(areaSlug){
+  // pasos abiertos de cada proyecto visible cuyo texto nombra a la persona: lo que tiene que hacer y lo que otros esperan de
+  // ella; un nombre de pila que llevan dos personas, sin apellido, no se atribuye y se cuenta aparte (n_ambiguos)
+  const n = {}; let amb = 0; const ambP = new Set();
+  for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug)) continue;
+    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } if(ambiguosEn(s.texto)){ amb++; ambP.add(p.nombre); } } }
+  return {n, amb, ambP:[...ambP]};
+}
+function actPersonas(ev, areaFija){
+  const areaSel = areaFija || (ACT_AREA && areaBy[ACT_AREA] && areaBy[ACT_AREA].legible!==false ? ACT_AREA : "");
+  const evs = areaSel ? ev.filter(e=>e.p.area===areaSel) : ev;
+  // los papeles salen de toda la carpeta: quien responde por otra área y trabajó en esta conserva el suyo (1.23)
+  const todosRoles = rolesEscriben(""), roles = areaSel ? rolesEscriben(areaSel) : todosRoles, A = accionesDe(areaSel), acc = A.n, gente = {};
+  const P = n => gente[n] = gente[n] || {n, dias:{}, ses:0, dec:0, esc:new Set(), pub:new Set()};
+  for(const n of Object.keys(roles)) P(n);
+  // quien cerró sesión aquí sin papel en esta área sale con el suyo y «trabajó aquí»; sin papel en ninguna, con su papel sin
+  // declarar; quien solo decide desde fuera no, porque nunca cierra sesión
+  for(const e of evs) if(e.q && !roles[e.q] && (e.k==="ses" || todosRoles[e.q])){ roles[e.q] = todosRoles[e.q] ? {...todosRoles[e.q], aqui:true} : {resp:[], col:[], fuera:true}; P(e.q); }
+  let sinNombre = 0, escSin = 0, cambios = 0;
+  for(const e of evs){
+    if(e.k==="cambio"){ cambios++; continue; }
+    if(!e.q){ if(e.k==="ses") sinNombre++; else if(e.k==="esc") escSin++; continue; }
+    if(!roles[e.q]) continue; const g = P(e.q);
+    if(e.k==="ses"){ g.ses++; g.dias[e.f] = (g.dias[e.f]||0) + 1; }
+    else if(e.k==="dec") g.dec++;
+    else if(e.k==="esc") g.esc.add(e.p.id+"/"+e.doc);
+    else if(e.k==="pub") g.pub.add(e.p.id+"/"+(e.doc||e.t)); }
+  // la última sesión de cada persona, en cualquier fecha: la que da el generador sobre toda la bitácora y, si no, las que hay aquí
+  const ult = {};
+  for(const p of PROJ){ if(p.restringido || (areaSel && p.area!==areaSel)) continue;
+    for(const [q0, f] of Object.entries(p.ultima_por_persona||{})){ const q = persona(q0); if(q && (!ult[q] || f>ult[q])) ult[q] = f; }
+    for(const s of sesionesTodas(p)){ const q = persona(quienSes(p,s)); if(q && (!ult[q] || s.fecha>ult[q])) ult[q] = s.fecha; } }
+  const todos = Object.values(gente).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  // arriba quien hizo algo en el periodo (una sesión, una decisión o un documento); abajo, quien no
+  const hizo = g => g.ses || g.dec || g.esc.size || g.pub.size;
+  const activos = todos.filter(hizo), quietos = todos.filter(g=>!hizo(g));
+  const n = ACT_DIAS, w = n>14 ? 7 : 12;
+  const tira = g => { let h = "", dias = 0; for(let i=n-1;i>=0;i--){ const f = addDays(-i), c = g.dias[f]||0, tt = esc(fmtD(f) + (c ? ` · ${cuantos(c,"sesión","sesiones")}` : "")); if(c) dias++; h += `<i class="${c?"on":""}" data-t="${tt}" title="${tt}"></i>`; }
+    return `<span class="tira" style="grid-template-columns:repeat(${n},${w}px)" aria-label="${cuantos(dias,"día","días")} con sesión">${h}</span>`; };
+  const docs = g => { const e = g.esc.size, u = g.pub.size; return !e && !u ? `<span class="z">documentos: <b>0</b></span>` : `<span>documentos: ${[e?`<b>${e}</b> ${e===1?"escrito":"escritos"}`:"", u?`<b>${u}</b> ${u===1?"publicado":"publicados"}`:""].filter(Boolean).join(" y ")}</span>`; };
+  const accion = g => { const k = acc[g.n]||0; return `<span class="${k?"esp":"z"}"><b>${k}</b> ${k===1?"acción planeada":"acciones planeadas"}</span>`; };
+  const fila = g => `<div class="per"><div class="per-h"><span><b>${esc(g.n)}</b><span class="rol">${esc(rolTxt(roles[g.n]))}</span></span>${tira(g)}</div>
+    <div class="per-k"><span class="${g.ses?"":"z"}"><b>${g.ses}</b> ${g.ses===1?"sesión":"sesiones"}</span><span class="${g.dec?"":"z"}"><b>${g.dec}</b> ${g.dec===1?"decisión":"decisiones"}</span>${docs(g)}${accion(g)}</div></div>`;
+  const filaQuieta = g => `<div class="per quiet"><div class="per-h"><span><b>${esc(g.n)}</b><span class="rol">${esc([rolTxt(roles[g.n]), ult[g.n] ? `última sesión el ${fmtL(ult[g.n])}` : "sin sesiones todavía"].filter(Boolean).join(" · "))}</span></span></div>
+    <div class="per-k">${accion(g)}</div></div>`;
+  const opciones = areaFija ? "" : `<select class="act-area" aria-label="Área" data-act-area>${[["", "Toda la carpeta"], ...areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>[a.slug, a.nombre||a.slug])].map(([v,l])=>`<option value="${esc(v)}"${v===areaSel?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
+  // lo que no se atribuye se dice como hecho, sin suponer la causa
+  const notas = [sinNombre ? `${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró` : "",
+    escSin ? `${cuantos(escSin,"documento escrito","documentos escritos")} en una sesión sin nombre` : "",
+    cambios ? `${cuantos(cambios,"documento vigente cambió","documentos vigentes cambiaron")} sin que ninguna sesión lo nombre` : "",
+    A.amb ? `${cuantos(A.amb,"paso nombra","pasos nombran")} a alguien solo por un nombre de pila que llevan dos personas (en ${A.ambP.map(esc).join(", ")}): con el apellido, cuenta` : ""].filter(Boolean);
+  // quien colabora en un área sin nombre junto a su cuenta no se puede listar: se cuenta (1.23)
+  const sinNombreGuia = AREAS.filter(a=>a.legible!==false && !archivada(a) && (!areaSel || a.slug===areaSel)).reduce((n,a)=>n+(a.colaboran_sin_nombre||0),0);
+  return `<section class="card personas"><h2>Por persona${hq("por-persona","Qué cuenta «Por persona»")}</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta. Hechos, sin puntaje ni orden por volumen.</p>
+    ${opciones ? `<div class="ctl">${opciones}</div>` : ""}
+    ${activos.length ? activos.map(fila).join("") : `<p class="empty">Nadie trabajó en el periodo${areaSel?" en esta área":""}.</p>`}
+    ${activos.length || notas.length ? `<p class="nota">${activos.length ? "Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó." : ""}${notas.length ? ` En el periodo: ${notas.join("; ")}.` : ""}</p>` : ""}
+    ${quietos.length || sinNombreGuia ? `<div class="quiet-g"><div class="sep">Sin actividad en el periodo</div>${quietos.map(filaQuieta).join("")}${sinNombreGuia ? `<p class="nota">${cuantos(sinNombreGuia,"persona colabora","personas colaboran")} sin nombre junto a su cuenta en la carpeta y no ${sinNombreGuia===1?"sale":"salen"} aquí: se le da con una línea «Colabora: Nombre Apellido (correo)» en uno de sus proyectos.</p>` : ""}</div>` : ""}</section>`;
+}
+document.addEventListener("change", e => { const s = e.target.closest && e.target.closest("[data-act-area]"); if(!s) return;
+  ACT_AREA = s.value; try{ localStorage.setItem("tablero-actividad-area", ACT_AREA); }catch(x){} render(); });
 function otrosDatos(){
   // lo que otros cerraron o decidieron en cada proyecto después de tu última sesión en él; sale de la carpeta, no del navegador
   const yo = persona(VIEWER()), esc_ = escribenSet(), out = [];
   if(!yo) return null;
   for(const p of PROJ){ if(p.restringido) continue;
     const mias = sesionesTodas(p).filter(s=>persona(quienSes(p,s))===yo).map(s=>s.fecha).sort(), ult = mias[mias.length-1] || addDays(-ACT_DIAS);
-    const evs = eventos(ult).filter(e=>e.p.id===p.id && e.q && e.q!==yo && esc_.has(e.q) && e.f>=ult);
+    const evs = eventos(ult).filter(e=>e.k!=="esc" && e.p.id===p.id && e.q && e.q!==yo && esc_.has(e.q) && e.f>=ult);
     if(evs.length) out.push({p, evs, ult: mias.length?ult:null});
   }
   return out;
@@ -1906,7 +2029,7 @@ function renderArea(a){
   } else if(tab==="actividad"){
     const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
-    body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
+    body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev, a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
   } else {
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     const nc = T.nc.length ? `<section class="due"><div class="top"><h2>Lo que no cuadra en el área</h2><span class="c">${T.nc.length}</span></div><div class="nc">${T.nc.map(x=>`<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}">${esc(x.p.nombre)} ›</button>`:esc(a.nombre)}</span>${ncAcciones(x)}</div>`).join("")}</div></section>` : "";
@@ -2073,7 +2196,7 @@ function decItem(d, p, conProy){
   const esC = d.tipo==="cuestionamiento", cqA = (d.cuestionado_por||[]).filter(c=>c.abierto);
   const w = [esC?`<span class="pill ${d.abierto?"soon":"closed"}">cuestionamiento${d.abierto?" abierto":" respondido"}</span>`:"", cqA.length?`<span class="pill soon">cuestionada</span>`:"", isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su responsable. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
   return `<div class="dl-i"><button type="button" class="dl-b" data-dec-open="${esc(k)}" aria-expanded="${open}"><time>${d.fecha?fmtD(d.fecha):""}</time><span class="dl-t">${inline(d.titulo)}</span><span class="dl-c" aria-hidden="true">${open?"−":"+"}</span>${w?`<span class="dl-w">${w}</span>`:""}</button>
-    ${open?`<article class="dec"><dl>${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartado</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
+    ${open?`<article class="dec"><dl>${d.archivada && !d.porque && !esC?`<dt>Archivada</dt><dd>El porqué y lo descartado siguen en el registro archivado del proyecto, con este identificador.</dd>`:""}${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartado</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
 }
 function decList(items, conProy, limite){
   let mes = null, out = "";
@@ -2245,7 +2368,7 @@ function ayudaArts(){
       <li><b>Crea tu proyecto en Claude</b><span>En Projects, con el nombre «${ORG} · tu área», privado. Uno por persona, no uno para todos.</span></li>
       <li><b>Conecta la carpeta completa, no la de tu área</b><span>La que tiene dentro <code>guia.md</code> y <code>metodo.md</code>. Claude necesita ver todas las áreas para decirte qué se sabe ya y qué decisión de otra te afecta; dónde escribes lo fijan tu cuenta y los permisos de la carpeta. Conéctala en el proyecto, no en una conversación suelta, y cuando Claude pida permiso para usarla, deja que lo haga siempre.</span></li>
       <li><b>Instala el plugin</b><span>En Customize › Plugins, la flechita del botón Add › Add marketplace › Add from a repository. Escribe <code>TuOpinas/memoria</code>, deja activado Sync automatically y pulsa Sync; luego, en Discover, busca Memoria y pulsa Add. En Add › Manage marketplaces, <code>memoria</code> tiene que decir Synced, y entre tus plugins Memoria tiene que estar encendido: en algunas versiones se instala apagado. Si tu organización ya distribuye el plugin a todos, te saltas este paso.</span></li>
-      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria de trabajo», con la organización, la versión del método y las áreas donde escribes. Después te pone al día y te propone en qué trabajar.</span></li>
+      <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria de trabajo», con la organización y la versión del método, y solo las filas que te piden algo. Después te pone al día y te propone en qué trabajar.</span></li>
       <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
     <dl class="hc-def">
@@ -2269,7 +2392,7 @@ function ayudaArts(){
       <dt>Mejor una unidad compartida</dt><dd>Sus archivos son de la organización y no de una persona: si alguien se va, nada se pierde. Las unidades compartidas son de Google Workspace; con una cuenta personal de Gmail no las hay, y la carpeta va en «Mi unidad» de quien administra, compartida con el equipo. Entonces los archivos son de esa persona: si deja la organización, hay que pasarlos antes a otra cuenta.</dd>
       <dt>La raíz</dt><dd>La unidad entera o una carpeta de su primer nivel, con <code>guia.md</code> y <code>metodo.md</code> dentro. Una sola por organización, con un nombre sin signos raros.</dd>
       <dt>Los permisos</dt><dd>En la unidad compartida, todo el equipo como «Lector» y solo quien la administra como «Administrador». En la carpeta de cada área (clic derecho › Compartir), «Gestor de contenido» para su responsable y quienes colaboran en ella; quien colabora en un solo proyecto, solo en la carpeta de ese proyecto. Nunca «Colaborador», que no deja mover ni borrar archivos, ni «Gestor de contenido» en la unidad entera, que abre la escritura en todas las áreas. En «Mi unidad», los roles son «Lector» y «Editor». Lo que no puede leer todo el equipo se marca en su carpeta con el acceso limitado de Drive, desde la web; en una unidad compartida lo pone quien la administra.</dd>
-      <dt>En cada computadora</dt><dd>Google Drive para escritorio no copia entera al disco una unidad compartida: hay que marcarla «Disponible sin conexión» en el Finder o en el Explorador de archivos y esperar a que bajen sus archivos antes de conectarla a Claude. En Windows aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual: Claude trabaja con ella algo más lento, y para mover archivos necesita el conector de Google Drive activado en Claude.</dd>
+      <dt>En cada computadora</dt><dd>Cada persona marca la carpeta «Disponible sin conexión» y la conecta a Claude, como dice <button type="button" class="lnk" data-help="conectarte">Conectarte</button>. En Windows la unidad aparece como una letra de disco aparte (por ejemplo, G:) y se conecta igual: Claude trabaja con ella algo más lento, y para mover archivos necesita el conector de Google Drive activado en Claude.</dd>
     </dl>
     <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
@@ -2358,7 +2481,8 @@ function ayudaArts(){
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas: <b>Estatus</b> (cómo va), <b>Acciones</b> (lo que espera algo de ti), <b>Actividad</b> (lo que se hizo y quién) y <b>Qué hay</b> (lo que el trabajo ha producido). En Inicio, la última es <b>Mantenimiento</b>. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda.</dd>
       <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si sigue con el texto de la plantilla o queda vacío, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. Quien colabora en el área sale por el nombre que la carpeta da a su cuenta («Nombre Apellido (correo)» en una línea «Colabora:» de un proyecto); si no lo tiene, solo se cuenta. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
       <dt>Acciones</dt><dd>Lo que te toca a ti (decidir, lo vencido, los cuestionamientos que esperan tu respuesta), las decisiones de otras personas que te afectan, lo que esperas de alguien o le debes (del equipo o de fuera, con su organización), y <b>Por dónde empezar</b>. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Cada línea abre el sitio exacto: un paso vencido abre su fecha para moverla.</dd>
-      <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
+      <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona, y lo que otros hicieron desde tu última sesión. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
+      <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos y acciones planeadas. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión, que las de antes de la 1.23 no tienen. Un entregable vigente que cambió sin que ninguna sesión lo nombre se cuenta aparte, en la nota. Las acciones planeadas son los pasos abiertos que nombran a la persona: lo que tiene que hacer y lo que otros esperan de ella. Un nombre de pila que llevan dos personas, sin apellido, no se le cuenta a ninguna, y la nota dice en qué proyecto está. El calendario marca los días con sesión; al pasar por encima dice cuántas. En Inicio, la lista se puede reducir a un área.</dd>
       <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una frase de resumen que sugirió la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
       <dt>Mantenimiento</dt><dd>Solo en Inicio. Un número en rojo cuenta lo que te pide hacer algo: sincronizar, poner al día la tarea del tablero, lo que no cuadra y lo marcado aquí que ya no coincide con la carpeta. Si no hay nada de eso pero sí algo que revisar (una versión nueva, lo que espera a la próxima sesión, lo que la memoria tiene flojo), sale un punto amarillo; si no hay nada, no sale nada. Primero, los avisos de la herramienta (versiones, sesiones cerradas desde la última sincronización); después, lo que no cuadra (un Estatus viejo, algo decidido después de «Falta decidir», las sugerencias de la memoria, que aceptas o descartas ahí si el tablero es tuyo y escribes en su proyecto) y el detalle por proyecto de lo que hay que poner al día, con la frase para hacerlo en sesión.</dd>
@@ -2459,7 +2583,7 @@ function ayudaArts(){
       <dt>Cómo se revisa</dt><dd>Quien responde por el contexto, o quien administra la carpeta, le dice a Claude ${F("revisa los permisos")}. Claude lee los permisos con el conector de Google Drive, sin cambiar nada, y lo propone solo al cerrar una sesión en la que cambió quién escribe o qué se restringe. Un grupo de Google no se mira por dentro: Claude lo avisa y pide comprobar quién está en él.</dd>
       <dt>En el tablero</dt><dd>Si algo no cuadra, arriba de Inicio sale «Permisos de Drive: N por corregir», con cada cambio y un botón para copiarlo y mandárselo a quien administra la carpeta. Si todo cuadra, al final de Mantenimiento queda la fecha de la última revisión. Solo lo ve el tablero de quien responde por el contexto.</dd>
       <dt>Quién lo arregla</dt><dd>Quien administra la carpeta. Una parte la puede aplicar Claude en su sesión, con su sí a la lista exacta: compartir como «Lector» y marcar con acceso limitado lo que la carpeta declara restringido, solo cuando sabe a quién conservar el acceso (${F("aplica los permisos")}; el texto que copia el botón lleva lo que hace falta). Dar «Gestor de contenido», bajar un rol o quitar a alguien se hace desde la web: el conector de Drive no lo permite. Si alguien escribe sin estar declarado, la pregunta es para quien responde por el contexto: ¿debe escribir?</dd>
-      <dt>Los roles</dt><dd>Todo el equipo, «Lector» en la unidad; quien escribe en un área, «Gestor de contenido» en la carpeta de esa área; quien administra, «Administrador». Nunca «Colaborador», que no deja mover ni borrar archivos.</dd>
+      <dt>Los roles</dt><dd>Los que tiene que dar Drive a cada quien están en <button type="button" class="lnk" data-help="carpeta-drive">Montar la carpeta en Drive</button>.</dd>
     </dl>`},
   {g:"Anclar y cuestionar", id:"premisas", t:"Premisas y cuestionamientos", h:`
     <h3 class="hc-h">Las premisas</h3>
@@ -2517,7 +2641,7 @@ function ayudaArts(){
             <ul>
               <li><code>proyecto.md</code><span>La ficha: estatus, objetivo, alcance, siguientes pasos y quién participa.</span></li>
               <li><code>decisiones.md</code><span>Qué se decidió, quién, por qué y qué se descartó.</span></li>
-              <li><code>sesiones.md</code><span>La bitácora: el tema y los avances de cada sesión; lo que sigue está en el Estatus.</span></li>
+              <li><code>sesiones.md</code><span>La bitácora: el tema y los avances de cada sesión, quién la cerró y qué documentos escribió y publicó; lo que sigue está en el Estatus.</span></li>
               <li><code>entregables/</code><span>Lo que el proyecto produce para que otros lo usen.</span></li>
               <li><code>taller/</code><span>Borradores y trabajo intermedio, que no sale del proyecto.</span></li>
               <li><code>fuentes/</code><span>Material que llega de fuera, tal como llegó.</span></li>
@@ -2570,7 +2694,7 @@ function ayudaToc(arts, cur){
   return grupos.map(g => `<div class="hc-g"><span class="eyebrow">${esc(g)}</span>${vis.filter(a=>a.g===g).map(a=>`<button type="button" class="hc-i" data-help="${a.id}"${a.id===cur?' aria-current="page"':""}>${esc(a.t)}</button>`).join("")}</div>`).join("");
 }
 // artículos fundidos en 1.14.11: sus enlaces viejos siguen llevando a donde está ahora su texto
-const AYUDA_ALIAS = {necesitas:"conectarte", "que-hay":"tablero", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
+const AYUDA_ALIAS = {necesitas:"conectarte", "que-hay":"tablero", "por-persona":"tablero", "en-corto":"estado-proyecto", pasos:"estado-proyecto", "memoria-al-dia":"por-donde-empezar", cuestionar:"premisas", "como-lee":"quien-escribe"};
 // La ayuda es un solo documento (1.19): todos los artículos seguidos, con el índice al lado para saltar a cada uno y la
 // sección actual marcada mientras se baja; cada sección se sigue enlazando sola (#ayuda-<id>) desde los «?» del tablero.
 let HC_CUR = null;

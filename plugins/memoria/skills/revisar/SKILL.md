@@ -22,7 +22,7 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 ## Qué leo antes
 
 1. El entregable completo, con su cabecera
-2. `decisiones.md` completo del proyecto
+2. `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`) completo del proyecto
 3. Cada archivo listado en `basado_en`, con su fecha `actualizado`
 4. La skill `estilo`
 5. Si el documento sigue el brief o el comparativo, esa plantilla, que está en `plantillas/` dentro de la skill `nuevo`
@@ -31,7 +31,7 @@ Tres trabajos distintos sobre el mismo material: revisar un entregable, detectar
 
 **1. Trazabilidad.** Cada afirmación no obvia sale de un archivo citado. Se listan las que no salen de ninguno. Si `basado_en` está vacía (`[]`), se dice desde la primera línea: el documento no se puede publicar así. Si cita una fuente de otra área o un archivo guardado en `restringido/`, también es bloqueante: de otra área solo se citan entregables vigentes y decisiones, y lo restringido se cita por su fila de `inventario.md`. Si el entregable lo lee todo el equipo y cita algo restringido, es bloqueante siempre: la cita solo va en la otra dirección.
 
-**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md`, ni siquiera de hace meses.
+**2. Coherencia con las decisiones.** Nada en el documento contradice una entrada de `decisiones.md` ni de sus archivados de este año y del anterior, ni siquiera de hace meses.
 
 **3. Frescura.** Ningún archivo de `basado_en` tiene una fecha `actualizado` posterior a la del entregable. Si la tiene, se dice qué cambió aguas arriba.
 
@@ -104,7 +104,7 @@ Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 1. `estado: vigente` y la fecha de hoy en `actualizado`
 2. Si sustituye a otro entregable, el viejo pasa a `estado: reemplazado` con `reemplazado_por` apuntando al nuevo
 3. La línea del entregable en el bloque `Proyectos` de `area.md`, debajo de su proyecto: su `aportacion`, con la fecha de hoy (con `cerrar.py`, el entregable como `{"archivo": "x.md"}` en `area.entregables`)
-4. Una línea en `sesiones.md` al cerrar la sesión, indicando qué se publicó
+4. La línea «Publicó:» de la entrada de `sesiones.md` al cerrar la sesión: el entregable va en `publico` de `cambios.json` y `cerrar.py` la escribe (`escribir.md`, formato de `sesiones.md`). Así el tablero lo cuenta como publicado para quien lo publicó y como escrito para quien lo escribió, aunque sean dos personas
 
 Publicar no es una decisión y no entra en `decisiones.md`. Lo que se decidió ya está registrado; publicar solo cambia quién puede leerlo.
 

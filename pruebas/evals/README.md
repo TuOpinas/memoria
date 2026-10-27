@@ -52,7 +52,7 @@ Comprobaciones: `recuadro`, `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <
 
 ## Los escenarios
 
-Del 01 al 09 corren sobre la raíz ya migrada a la 1.22 (`preparar: migrar`): sin migrar, la pregunta bloqueante de la estructura ocupa el primer turno, y eso lo prueban el 10 y el 11.
+Del 01 al 09, y el 12, corren sobre la raíz ya migrada a la 1.22 (`preparar: migrar`): sin migrar, la pregunta bloqueante de la estructura ocupa el primer turno, y eso lo prueban el 10 y el 11.
 
 | # | Qué | Qué tiene que pasar |
 |---|---|---|
@@ -67,6 +67,7 @@ Del 01 al 09 corren sobre la raíz ya migrada a la 1.22 (`preparar: migrar`): si
 | 09 | Cierre sobre una raíz migrada a la 1.22 | sin oferta de migrar; decisión y `Estatus` enseñados antes de escribir; entrada con «Tema:», decisión con «Descartado:», `Estatus` del proyecto y del área, con `cerrar.py` |
 | 10 | Apertura sobre una raíz sin migrar | pregunta si se migra antes de responder, sin escribir; con el sí, `migrar_estructura.py` migra las áreas de la cuenta, `guia.md` y, porque es la responsable de contexto, las de otra cuenta, con su entrada `(migracion)` (la de las ajenas dice por quién) |
 | 11 | El 10 sin consola | lo mismo por la copia, con `espejo.py migracion` y `device_commit_files` |
+| 12 | Escribe, publica y cierra (1.23) | la entrada lleva «Escribió:» y «Publicó:» escritos por `cerrar.py`; el entregable queda vigente; el cierre termina con el recuadro «Memoria · sesión cerrada» (`recuadro-cierre`) |
 
 Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20), y qué pasó con cada cosa: la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí (corregido en `cerrar.md`); el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); «Descartamos: no consta» como relleno (corregido en `cerrar.md`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt` (dos llamadas de más; sin cambio todavía, pendiente de ver si se repite).
 

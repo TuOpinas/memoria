@@ -27,8 +27,6 @@ Detecta, con lo que está escrito y sin modelo:
   estado-desfasado  `proyecto.md` es más viejo que la última sesión que registra `sesiones.md`.
   paso-hecho        un paso de «Siguientes pasos» cuyas palabras casi todas están en «Avances:» de una de las dos últimas
                     sesiones: el registro parece darlo por hecho y el paso sigue ahí.
-  rotacion          `sesiones.md` o `decisiones.md` pasa de 1.500 líneas, o su entrada más nueva es de otro año que la
-                    más vieja: toca archivarlo (`escribir.md`, sección 8).
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
@@ -58,7 +56,44 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
            "esos esas pero cuando donde sobre entre desde hasta hay ser fue han había solo todo todos cada otro otra muy también "
            "paso pasos hacer hecho hacer queda quedó falta".split())
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
-LIMITE_LINEAS = 1500
+# --- los registros con sus archivados ---
+# La misma función en abrir.py, generar_vista.py y barrido.py (cada uno se descarga suelto); pruebas/tablero/paridad.py
+# comprueba que las tres copias son idénticas (1.23).
+ARCHIVADO = re.compile(r"^(sesiones|decisiones)-(20\d\d)(?:-(\d+))?\.md$")
+def archivados_de(carpeta, nombre, anio):
+    """Los nombres de los archivados de un registro («sesiones» o «decisiones») de este año y del anterior, del más nuevo
+    al más viejo. Los de años anteriores no se leen: lo que una decisión vieja sostiene ya está en Alcance o en el Estatus,
+    y quien la cita la busca por el año que lleva su identificador."""
+    vistos = []
+    try:
+        nombres = [x.name for x in pathlib.Path(carpeta).iterdir()]
+    except OSError:
+        nombres = []
+    for n in nombres:
+        m = ARCHIVADO.match(n)
+        if m and m.group(1) == nombre and int(m.group(2)) >= int(anio) - 1:
+            vistos.append((int(m.group(2)), int(m.group(3) or 1), n))
+    return [n for _, _, n in sorted(vistos, reverse=True)]
+def con_archivados(carpeta, nombre, vivo, anio, leer_):
+    """(texto, entradas del vivo): el registro vivo seguido de las entradas de sus archivados recientes, como si no se
+    hubiera archivado, así que los identificadores de cada decisión son los de siempre. Lo que no se deja leer se salta."""
+    partes = [vivo or ""]
+    for n in archivados_de(carpeta, nombre, anio):
+        t = leer_(pathlib.Path(carpeta) / n) or ""
+        m = re.search(r"^## ", t, re.M)
+        if m:
+            partes.append(t[m.start():])
+    return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+def respuestas_viejas(carpeta, anio, leer_):
+    """Las líneas «Responde a:» de los archivados de decisiones de antes del año anterior, que no se leen enteros: un
+    cuestionamiento respondido hace años sigue respondido (revisión de la 1.23, hallazgo 5). Es un patrón de línea."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out
+# --- fin de los registros ---
 MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")
 MAX_CONTRASTE = 5
@@ -259,7 +294,10 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
         vistos.append(pid)
         tp = leer(proy / "proyecto.md")
         ses_t, dec_t = leer(proy / "sesiones.md"), leer(proy / "decisiones.md")
-        ses = entradas(ses_t)
+        # lo que se compara lleva los archivados de este año y del anterior (1.23): una decisión registrada antes de archivar
+        # sigue registrada; la rotación de abajo mira solo el registro vivo
+        ses = entradas(con_archivados(proy, "sesiones", ses_t, hoy[:4], leer)[0])
+        dec_todas = con_archivados(proy, "decisiones", dec_t, hoy[:4], leer)[0]
         reales = [e for e in ses if "(tarea)" not in e[1] and "(migracion)" not in e[1]]
         cerrado = any(re.search(r"Proyecto terminado el \d{4}-\d{2}-\d{2}", seccion(tp, n_)) for n_ in ("Estatus", "Estado actual", "En corto"))
         reciente = max((e[0] for e in reales if fecha_ok(e[0])), default="")      # la última sesión real: el tope de afirma va primero a lo activo
@@ -299,15 +337,10 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                         prop("paso-hecho", "|".join(sorted(pp)) + f"|{e[0]}",
                              f"Quitar de «Siguientes pasos»: «{una_linea(paso, 140)}». La sesión del {e[0]} parece darlo por hecho.",
                              f"sesiones.md ({e[0]}) lo cuenta en Avances")
-        # rotación
-        for nombre, texto, es in (("sesiones.md", ses_t, ses), ("decisiones.md", dec_t, entradas(dec_t))):
-            n = texto.count("\n") + 1 if texto else 0
-            anios = {e[0][:4] for e in es}
-            if n > LIMITE_LINEAS or len(anios) > 1:
-                motivo = f"pasa de {LIMITE_LINEAS} líneas" if n > LIMITE_LINEAS else "mezcla años"
-                prop("rotacion", f"{nombre}|{motivo}", f"Archivar {nombre} por año: {motivo}.", "escribir.md, sección 8")
+        # la rotación ya no se propone: la hace cerrar.py en el próximo cierre, sin preguntar (revisión de la 1.23, hallazgo 4);
+        # las propuestas «rotacion» que queden en la cola se borran solas, porque esta corrida no las vuelve a dar
         # decisiones que se cuentan en una sesión y no están registradas
-        fechas_dec = {e[0] for e in entradas(dec_t)}
+        fechas_dec = {e[0] for e in entradas(dec_todas)}
         limite = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=14)).isoformat()
         # registrada el mismo día o el siguiente: el cierre acepta hoy o ayer, y una sesión que cruza la medianoche fecha la
         # bitácora un día y la decisión el otro
@@ -633,7 +666,8 @@ def main():
         # una aceptada desde el tablero la espera el cierre, aunque lo mecánico deje de proponerla (1.22.3). Solo se retira la
         # aceptada de «aportacion» cuya pieza ya la tiene (la escribió el cierre o alguien a mano): ya no hay nada que aplicar
         if d["data"].get("estado") == "aceptada":
-            if d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids:
+            # «rotacion» ya no existe desde la 1.23 (la hace el cierre): se retira aunque esté aceptada, que nadie la aplicará
+            if (d["data"].get("clase") == "afirma" and d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["data"].get("clase") == "rotacion":
                 borrar.append({"id": d["id"], "if_version": d["version"]})
             continue
         if (d["data"].get("proyecto") in vistos and d["id"] not in nuevos_ids) or d["id"] in caducadas:

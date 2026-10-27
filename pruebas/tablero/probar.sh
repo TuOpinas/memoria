@@ -91,6 +91,8 @@ python3 "$AQUI/../sesion/probar_cerrar.py"
 python3 "$AQUI/../sesion/probar_migrar.py"
 # la página con el detalle de cada proyecto aparte (1.19): cuántos textos se traen y cuándo
 python3 "$AQUI/probar_textos.py"
+# «Por persona» (1.23): sesiones del mismo día, «Escribió:» y «Publicó:», quien colabora en un área
+python3 "$AQUI/probar_personas.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"
 bash "$AQUI/../hook/probar_control.sh"

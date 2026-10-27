@@ -70,6 +70,57 @@ const path = require('path');
     await abre(p, url, '', '[data-ini="actividad"]');
     const act = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { area: /Por área/.test(t), persona: /Por persona/.test(t), dias: !!document.querySelector('[data-act-dias]') }; });
     if(!(act.area && act.persona && act.dias)) errores.push(`${etiqueta}: Inicio › Actividad no trae «Por área», «Por persona» y el periodo (${JSON.stringify(act)})`);
+    // «Por persona» (1.23) con un equipo inventado: quien colabora en un área sale; tres sesiones del mismo día son tres; un
+    // documento cuenta escrito para quien lo escribió y publicado para quien lo publicó; los que no tuvieron sesión van abajo;
+    // las acciones planeadas cuentan los pasos que los nombran; el combo de área reduce la lista; «Con otros» los ve del equipo
+    if(etiqueta === 'completo-claro'){
+      const pp = await p.evaluate(() => {
+        const guardado = {AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS};
+        try{
+          const d0 = addDays(-1), viejo = addDays(-40);
+          AREAS = [{slug:"op", nombre:"operación", dueno:"Ana Lombardo", colaboran:["bruno@x.test", "angel@x.test"], colaboran_ver:["Bruno Esquivel", "Ángel Ruiz"]},
+                   {slug:"prod", nombre:"producto", dueno:"Carmen Oyarzún", colaboran:["anar@x.test"], colaboran_ver:["Ana Ruiz"]},
+                   {slug:"tec", nombre:"tecnología", dueno:"Elena Reyes", colaboran:["diego@x.test"], colaboran_ver:["Diego Antúnez"]}];
+          PROJ = [{id:"op--alfa", area:"op", slug:"alfa", nombre:"Alfa", dueno:"Ana Lombardo", colaboran:[],
+                   pasos:[{texto:"Esperar a que Bruno mande el informe"}, {texto:"Revisar con Diego el servidor"}, {texto:"Esperar a que Ángel confirme la fecha"},
+                          {texto:"Pedir a Ana el contrato"}, {texto:"Avisar a Ana Ruiz del cierre"}],
+                   sesiones_recientes:[{fecha:d0, titulo:d0, n:5, quien:"Ana Lombardo", publico:["entregables/x.md"]},
+                                       {fecha:d0, titulo:d0, n:4, quien:"Bruno Esquivel", escribio:["entregables/x.md", "taller/y.md", "entregables/w.md"]},
+                                       {fecha:d0, titulo:d0, n:3, quien:"Bruno Esquivel"},
+                                       {fecha:d0, titulo:d0, n:2},
+                                       {fecha:d0, titulo:d0, n:1, quien:"Fede Singuía"}],
+                   decisiones:[{fecha:d0, decidio:"Bruno Esquivel", titulo:"Una decisión"}, {fecha:d0, decidio:"Carmen Oyarzún", titulo:"Otra, sin sesión suya"}],
+                   entregables:[{nombre:"x", archivo:"x.md", estado:"vigente", actualizado:d0}, {nombre:"w", archivo:"w.md", estado:"vigente", actualizado:d0},
+                                {nombre:"z", archivo:"z.md", estado:"vigente", actualizado:d0}]},
+                  {id:"tec--srv", area:"tec", slug:"srv", nombre:"Servidor", dueno:"Elena Reyes", colaboran:[], pasos:[],
+                   sesiones_recientes:[{fecha:d0, titulo:d0, n:9, quien:"Ana Lombardo"}], ultima_por_persona:{"Elena Reyes": viejo}, decisiones:[], entregables:[]}];
+          areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); byId = Object.fromEntries(PROJ.map(x=>[x.id,x])); _CONOCIDOS = null;
+          META = {...(guardado.META||{}), tablero_de:"Ana Lombardo", administra:"Ana Lombardo"}; ACT_AREA = ""; ACT_DIAS = 7;
+          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6)));
+          const filas = [...div.querySelectorAll(".per:not(.quiet)")].map(x=>x.textContent.replace(/\s+/g," ").trim());
+          const quietas = [...div.querySelectorAll(".per.quiet")].map(x=>x.textContent.replace(/\s+/g," ").trim());
+          const tipBruno = [...div.querySelectorAll(".per:not(.quiet)")].find(x=>/Bruno/.test(x.textContent)).querySelector(".tira i.on").dataset.t;
+          const nota = (div.querySelector(".nota")||{}).textContent || "";
+          const otros = conOtros().map(g=>({n:g.n, dentro:g.dentro}));
+          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6)));
+          const tec = [...div2.querySelectorAll(".per")].map(x=>x.textContent.replace(/\s+/g," ").trim());
+          const decide = quienDecide("decide Ana si se firma");
+          return {filas, quietas, tipBruno, nota, otros, tec, decide, sel: !!div.querySelector("[data-act-area]")};
+        } finally { ({AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS} = guardado); _CONOCIDOS = null; }
+      });
+      const fila = n => pp.filas.find(x=>x.startsWith(n)) || "", quieta = n => pp.quietas.find(x=>x.startsWith(n)) || "";
+      const bien = pp.filas.length === 4 && /sin figurar en la carpeta/.test(fila("Fede")) && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
+        && /documentos: 3 escritos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 acción planeada/.test(fila("Bruno"))
+        && /2 sesiones/.test(fila("Ana Lombardo")) && /documentos: 1 publicado/.test(fila("Ana Lombardo")) && !/escrito/.test(fila("Ana Lombardo")) && /0 acciones planeadas/.test(fila("Ana Lombardo"))
+        && /0 sesiones/.test(fila("Carmen")) && /1 decisión/.test(fila("Carmen"))
+        && /· 2 sesiones/.test(pp.tipBruno) && pp.quietas.length === 4 && /1 acción planeada/.test(quieta("Diego")) && /1 acción planeada/.test(quieta("Ángel"))
+        && /1 acción planeada/.test(quieta("Ana Ruiz")) && /última sesión el/.test(quieta("Elena"))
+        && /1 sesión no dice quién/.test(pp.nota) && /1 documento vigente cambió/.test(pp.nota) && /1 paso nombra a alguien solo por un nombre de pila/.test(pp.nota) && !/de antes/.test(pp.nota)
+        && pp.otros.some(g=>g.n==="Bruno Esquivel" && g.dentro) && pp.otros.some(g=>g.n==="Diego Antúnez" && g.dentro) && pp.otros.some(g=>g.n==="Ángel Ruiz" && g.dentro)
+        && pp.otros.some(g=>g.n==="Ana Ruiz" && g.dentro) && !pp.otros.some(g=>g.n==="Ana Lombardo") && pp.decide === null && /en Alfa/.test(pp.nota)
+        && pp.tec.length === 3 && /^Ana Lombardo\s*responsable de operación · trabajó aquí/.test(pp.tec[0]) && pp.sel;
+      if(!bien) errores.push(`${etiqueta}: «Por persona» no cuenta como debe (${JSON.stringify(pp)})`);
+    }
     // el proyecto: Estatus arriba, con su titular
     await abre(p, url, '#p-ventas--cuentas-t-estatus');
     const est = await p.evaluate(() => ({ tab: !!document.querySelector('.tab[data-tab="estatus"][aria-selected="true"]'), tabs: [...document.querySelectorAll('#main .tab')].map(t => t.dataset.tab).join(','), corto: !!document.querySelector('#main .corto, #main .brief') }));

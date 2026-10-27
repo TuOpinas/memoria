@@ -289,6 +289,14 @@ def _(ctx, arg):
     return hay, "en la primera respuesta" if hay else "no está en la primera respuesta"
 
 
+@comprobacion("recuadro-cierre")
+def _(ctx, arg):
+    """La última respuesta termina el cierre con el recuadro «Memoria · sesión cerrada · …» (1.23)."""
+    t = texto_de(ctx["turnos"][-1])
+    hay = bool(re.search(r"Memoria (·|\u00b7) sesión cerrada (·|\u00b7) \d+ archivos?", t))
+    return hay, "en la última respuesta" if hay else "no está en la última respuesta"
+
+
 @comprobacion("sin-escrituras")
 def _(ctx, arg):
     c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])

@@ -19,7 +19,7 @@ Por los niveles de la sección 12 de `convenciones`. Escribir un entregable es d
 
 1. El bloque `Proyectos` de `<area>/area.md`, para saber qué entregables vigentes hay ya en el área
 2. `<area>/<proyecto>/proyecto.md`
-3. `decisiones.md` **completo**, no solo las últimas. Un entregable que contradice una decisión de hace ocho meses es peor que no tenerlo
+3. `decisiones.md` con sus archivados de este año y del anterior (`decisiones-<año>.md`), **completo**, no solo las últimas. Un entregable que contradice una decisión de hace ocho meses es peor que no tenerlo
 4. Las cabeceras de los demás entregables del proyecto
 5. `base/contexto.md`, porque el documento sale del proyecto y hay criterios transversales que aplican sin que nadie los diga
 6. `base/glosario.md`, si el documento usa siglas o nombres internos; `base/sistemas.md`, si toca un sistema

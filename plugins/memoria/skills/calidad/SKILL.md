@@ -74,7 +74,7 @@ Qué pasa: … (con la evidencia)
 Propuesta: … (qué cambiar, sin cambiarlo)
 ```
 
-**Dónde se guarda.** En el `taller/` del proyecto que se revisó (o del proyecto que mantiene lo revisado), como `revision-de-calidad-<tema>.md` en `borrador`, con `basado_en` de lo que se leyó. Si ya existe uno del mismo tema, se reescribe: la revisión anterior queda en el historial de la carpeta y lo que importaba de ella ya entró al proyecto. La auditoría de la carpeta se guarda en el proyecto que su responsable de contexto elija.
+**Dónde se guarda.** En `taller/revisiones-de-calidad/` del proyecto que se revisó (o del proyecto que mantiene lo revisado), como `revision-de-calidad-<tema>.md` en `borrador`, con `basado_en` de lo que se leyó: cada revisión es un informe distinto, así que el número de la versión revisada va en el nombre (contrato, sección 6), y juntas en su subcarpeta no llenan el taller (1.23). Las que estén sueltas en `taller/` de antes se mueven ahí la primera vez que se guarda una nueva, sin cambiarles el nombre. Si ya existe uno del mismo tema, se reescribe: la revisión anterior queda en el historial de la carpeta y lo que importaba de ella ya entró al proyecto. La auditoría de la carpeta se guarda en el proyecto que su responsable de contexto elija.
 
 **Qué respondo.** Cuántos hallazgos hay por peso, los tres o cuatro primeros en una línea cada uno, dónde quedó el informe y la frase para trabajarlos en una sesión. Si la revisión es periódica, se propone la fecha de la siguiente para que la sesión la ponga en los siguientes pasos.
 

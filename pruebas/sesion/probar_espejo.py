@@ -230,6 +230,36 @@ ok(not any(pathlib.Path(tmp / "salidas").glob("espejo-*")), "sin nada pendiente,
 rc, _, _ = corre(ESPEJO, "nuevo", C, "../fuera.md")
 ok(rc != 0, "no admite rutas que salen de la raíz")
 
+print("Sin consola: los registros archivados (1.23)")
+R2, C2 = tmp / "raiz2", tmp / "uploads2" / "Raiz Prueba"
+shutil.copytree(R, R2)
+anio = time.strftime("%Y")
+d2 = R2 / "ventas/cuentas/decisiones.md"
+(R2 / f"ventas/cuentas/decisiones-{anio}.md").write_text(d2.read_text(encoding="utf-8"), encoding="utf-8")
+d2.write_text(f"---\nestado: vigente\n---\n# Decisiones\n\nArchivado: decisiones-2019.md, decisiones-{anio}.md, decisiones-{anio}-2.md.\n", encoding="utf-8")
+pedidas2, rondas2 = [], 0
+while rondas2 < 8:
+    rc, out, err = corre(ESPEJO, "rutas", C2, ACTIVO)
+    if rc != 0 or out.strip() == "COMPLETA":
+        break
+    rondas2 += 1
+    for r in out.split():
+        pedidas2.append(r)
+        if (R2 / r).is_file():
+            (C2 / r).parent.mkdir(parents=True, exist_ok=True); shutil.copy(R2 / r, C2 / r)
+        else:
+            corre(ESPEJO, "falta", C2, r)
+ok(out.strip() == "COMPLETA" and f"ventas/cuentas/decisiones-{anio}.md" in pedidas2 and "ventas/cuentas/decisiones-2019.md" not in pedidas2,
+   f"una cuarta ronda trae los archivados de este año y del anterior que nombra «Archivado:», y no los viejos ({[r for r in pedidas2 if '-20' in r]})")
+o2 = subprocess.run([sys.executable, str(ABRIR), str(C2), ACTIVO, "--sin-fechas"], capture_output=True, text=True).stdout
+# con el listado de la carpeta del proyecto, también los archivados que «Archivado:» no nombra, de cualquier año
+(R2 / "ventas/cuentas/decisiones-2018.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2018-01-01 · Vieja\nDecidió: Ana\nResponde a: operacion/soporte#2018-01-01\n", encoding="utf-8")
+lst = tmp / "listado.json"
+lst.write_text(json.dumps({"entries": [{"name": n.name, "type": "file", "mtimeMs": 1} for n in (R2 / "ventas/cuentas").iterdir() if n.is_file()]}), encoding="utf-8")
+_, out4, _ = corre(ESPEJO, "rutas", C2, ACTIVO, "--listado", lst)
+ok(out4.split() == ["ventas/cuentas/decisiones-2018.md"], f"con --listado pide los archivados que faltan, de cualquier año, aunque «Archivado:» no los nombre ({out4.split()})")
+ok("(ninguna)" not in o2.split("=== DECISIONES")[1].split("=== SESIONES")[0], "y la apertura sin consola ve las decisiones archivadas")
+
 print()
 print("Todo bien." if not fallos else f"{fallos} fallos.")
 shutil.rmtree(tmp, ignore_errors=True)

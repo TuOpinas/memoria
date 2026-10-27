@@ -59,6 +59,62 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+# --- el primer párrafo de guia.md sin lo que habla de la carpeta ---
+# La misma función en abrir.py y en generar_vista.py (cada uno se descarga suelto); pruebas/tablero/paridad.py comprueba
+# que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
+SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
+def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
+    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    out = []
+    for f in frases:
+        if not re.search(rx, f):
+            out.append(f); continue
+        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
+        quedan = [c for c in partes if c and not re.search(rx, c)]
+        if quedan and len(partes) > 1:
+            t = "; ".join(quedan); t = t[0].upper() + t[1:]
+            out.append(t if t[-1] in ".!?" else t + ".")
+    return out
+# --- fin del primer párrafo ---
+# --- los registros con sus archivados ---
+# La misma función en abrir.py, generar_vista.py y barrido.py (cada uno se descarga suelto); pruebas/tablero/paridad.py
+# comprueba que las tres copias son idénticas (1.23).
+ARCHIVADO = re.compile(r"^(sesiones|decisiones)-(20\d\d)(?:-(\d+))?\.md$")
+def archivados_de(carpeta, nombre, anio):
+    """Los nombres de los archivados de un registro («sesiones» o «decisiones») de este año y del anterior, del más nuevo
+    al más viejo. Los de años anteriores no se leen: lo que una decisión vieja sostiene ya está en Alcance o en el Estatus,
+    y quien la cita la busca por el año que lleva su identificador."""
+    vistos = []
+    try:
+        nombres = [x.name for x in pathlib.Path(carpeta).iterdir()]
+    except OSError:
+        nombres = []
+    for n in nombres:
+        m = ARCHIVADO.match(n)
+        if m and m.group(1) == nombre and int(m.group(2)) >= int(anio) - 1:
+            vistos.append((int(m.group(2)), int(m.group(3) or 1), n))
+    return [n for _, _, n in sorted(vistos, reverse=True)]
+def con_archivados(carpeta, nombre, vivo, anio, leer_):
+    """(texto, entradas del vivo): el registro vivo seguido de las entradas de sus archivados recientes, como si no se
+    hubiera archivado, así que los identificadores de cada decisión son los de siempre. Lo que no se deja leer se salta."""
+    partes = [vivo or ""]
+    for n in archivados_de(carpeta, nombre, anio):
+        t = leer_(pathlib.Path(carpeta) / n) or ""
+        m = re.search(r"^## ", t, re.M)
+        if m:
+            partes.append(t[m.start():])
+    return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+def respuestas_viejas(carpeta, anio, leer_):
+    """Las líneas «Responde a:» de los archivados de decisiones de antes del año anterior, que no se leen enteros: un
+    cuestionamiento respondido hace años sigue respondido (revisión de la 1.23, hallazgo 5). Es un patrón de línea."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out
+# --- fin de los registros ---
 RAIZ = pathlib.Path(sys.argv[1])
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
@@ -254,6 +310,7 @@ def fechas_en(texto):
 # lo que la base del tablero admite: un doc_id sin espacios ni acentos y un documento de menos de 1 MB (plan_subida.py)
 ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")
 LIMITE_DOC = 1_000_000
+MAX_ARCHIVADAS = 150   # decisiones archivadas que viajan por proyecto (1.23): las más recientes
 
 # ---------- guia.md ----------
 guia = leer(RAIZ / "guia.md") or ""
@@ -423,7 +480,9 @@ def es_cerrado(cuerpo):
     return any(re.search(r"Proyecto terminado el\s*20\d\d-\d\d-\d\d", seccion(cuerpo, n)) for n in ("Estatus", "Estado actual", "En corto"))
 
 
-def parse_decisiones(texto):
+def parse_decisiones(texto, n_vivas=None):
+    """Las entradas de decisiones.md; con n_vivas (con_archivados), las que vienen después de esas son de un archivado y
+    llevan «archivada» (1.23)."""
     out = []
     if not texto:
         return out
@@ -469,6 +528,9 @@ def parse_decisiones(texto):
         for k in ("planteo", "cuestiona", "responde", "reemplaza"):
             if not d_[k]: del d_[k]
         out.append(d_)
+    if n_vivas is not None:
+        for d_ in out[n_vivas:]:
+            d_["archivada"] = True
     # identificador: la fecha y, si ese día hay más de una entrada, -2, -3… contando desde la de más abajo (la más antigua)
     # una entrada sin fecha válida no tiene identificador: no se puede citar
     cuenta = {}
@@ -500,10 +562,21 @@ def parse_sesiones(texto):
         titulo = cab.strip()
         campos = {"trabajamos": "", "avances": "", "pendiente": ""}
         quien = ""
+        docs = {"escribio": [], "publico": []}
         actual = None
         for l in cuerpo.split("\n"):
             s = l.strip()
             low = s.lower()
+            m_doc = re.match(r"^(escribió|escribio|publicó|publico)\s*:\s*(.*)$", low)
+            if m_doc:
+                # quién escribió y quién publicó cada documento (1.23): rutas dentro del proyecto, separadas por comas
+                actual = None
+                k_ = "escribio" if m_doc.group(1).startswith("escrib") else "publico"
+                for r_ in s.split(":", 1)[1].split(","):
+                    r_ = r_.strip().strip("`").strip()
+                    if r_ and "restringido" not in r_.split("/") and r_ not in docs[k_]:
+                        docs[k_].append(r_[:160])
+                continue
             if low.startswith("trabajamos en:") or low.startswith("tema:"):
                 actual = "trabajamos"; campos[actual] = s.split(":", 1)[1].strip()
             elif low.startswith("avances:"):
@@ -516,7 +589,12 @@ def parse_sesiones(texto):
                 quien = re.split(r"\s+[·\-–—]\s+|\s*\(", s.split(":", 1)[1].strip(), maxsplit=1)[0].strip()[:80]
             elif actual and s:
                 campos[actual] += "\n" + s
-        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {})})
+        out.append({"fecha": fecha, "titulo": titulo, **campos, **({"quien": quien} if quien else {}),
+                    **{k_: v_[:20] for k_, v_ in docs.items() if v_}})
+    # la posición de cada entrada contando desde la más vieja: distingue las de un mismo día, que llevan el mismo título,
+    # y no cambia cuando se añaden entradas arriba (1.23; antes se juntaban en una)
+    for i_, d_ in enumerate(out):
+        d_["n"] = len(out) - 1 - i_
     out.sort(key=lambda d: d["fecha"], reverse=True)
     return out
 
@@ -799,7 +877,7 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     if sin_resolver:
         resumen["reemplazos_sin_resolver"] = sin_resolver   # un reemplazado_por que no apunta a ninguna pieza de este proyecto
     if pdoc.get("_sub"):
-        resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # se listan en la siguiente versión; mientras, se cuentan
+        resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # no se listan: la página dice cuántos (1.23)
     if cadenas:
         resumen["ultimo_giro"] = cadenas[0]["pasos"][-1]
     if SIN_FECHAS:
@@ -1041,6 +1119,13 @@ if INVENTARIO:
             suyos = [rel(pc / "proyecto.md")]
             ses = parse_sesiones(leer(pc / "sesiones.md")) if _si_legible(pc / "sesiones.md", suyos) else []
             _si_legible(pc / "decisiones.md", suyos)
+            # los archivados de este año y del anterior viajan con el proyecto: la generación los lee como si no se hubiera
+            # archivado (1.23); entran en la huella, y como no cambian, no hacen volver a traer el proyecto
+            # de los de antes, solo sus líneas «Responde a:» (respuestas_viejas): viajan también, sin leerlos aquí enteros
+            _arch = [n_ for r_, desde_ in (("sesiones", HOY[:4]), ("decisiones", 0)) for n_ in archivados_de(pc, r_, desde_)
+                     if (pc / n_).is_file() and os.access(pc / n_, os.R_OK) and not suyos.append(rel(pc / n_))]
+            if any(n_.startswith("sesiones-") for n_ in _arch):
+                ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
             fm_p, cuerpo_p = frontmatter(tp)
             cerrado = es_cerrado(cuerpo_p)
             ss_ = sin_sesion_de(pc, ses, cerrado)
@@ -1056,17 +1141,15 @@ if INVENTARIO:
             sub_ = entregables_en_subcarpetas(pc)
             # La huella del proyecto: todo lo que entra en su documento antes de cruzarlo con los demás. Sus archivos (tamaño y
             # fecha), lo que el área dice de él (su fila de guia.md, su línea del índice, las prioridades), sus fechas de entregables,
-            # su trabajo sin sesión, el modo y este script. Del día solo cuenta lo que lo usa: qué sesiones caen en los últimos
-            # 90 días y, si no tiene sesiones ni «actualizado», la fecha de hoy. Así un proyecto que no se tocó no se vuelve a traer
-            # aunque cambie el día.
+            # su trabajo sin sesión, el modo y este script. Del día solo cuenta, si no tiene sesiones ni «actualizado», la fecha de
+            # hoy. Así un proyecto que no se tocó no se vuelve a traer aunque cambie el día. Las sesiones de las últimas cuatro
+            # semanas no entran (1.23): al reutilizar, las que salen de la ventana se quitan sin volver a leer el proyecto.
             _reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
-            reales_ = [s_["fecha"] for s_ in _reales if fecha_valida(s_["fecha"])]
-            _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
             # igual que la generación: la última sesión es la primera de la lista aunque su fecha no sea válida
             sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
             h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
                                  [(r_, os.path.getsize(RAIZ / r_), marca(RAIZ / r_)) for r_ in suyos],
-                                 sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_, tal, sub_)
+                                 [], HOY if sin_ref else "", fe, ss_, tal, sub_)
             pid = f"{a['slug']}--{slug}"
             por_proyecto[rel(pc)] = (suyos, fe, ss_, tal, sub_)
             # un id que la base no admite (espacios, acentos) nunca llega a ella: no se puede reutilizar
@@ -1323,7 +1406,7 @@ for a in areas_guia:
             if pdoc["escribe"] and CUENTA_TABLERO in NOMBRE_DE_CUENTA:
                 pdoc["nombre_cuenta"] = NOMBRE_DE_CUENTA[CUENTA_TABLERO]   # el nombre que su línea «Colabora:» da a la cuenta, para no perderlo al reutilizar
         pdoc.pop("quien", None)   # la sección en bruto lleva las cuentas de quien colabora: no viaja a la base
-        ses = parse_sesiones(leer(pc / "sesiones.md"))
+        ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
         reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
         ultima_real = reales[0]["fecha"] if reales else None
         # pasos con fecha. Una fecha es plazo solo si el texto la trata como tal («antes del», «para el», al inicio
@@ -1344,18 +1427,59 @@ for a in areas_guia:
                     p_["revisar"] = p_["fecha"]; p_["fecha"] = None
             pasos.append(p_)
         pdoc["pasos"] = pasos
-        dec = parse_decisiones(leer(pc / "decisiones.md"))
-        pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
+        dec = parse_decisiones(*con_archivados(pc, "decisiones", leer(pc / "decisiones.md"), HOY[:4], leer))
+        # de una decisión archivada viaja la cabecera (quién, qué, a quién afecta, qué reemplaza o responde), no su porqué:
+        # dos años de archivados no caben en la base, y el porqué está en la carpeta (revisión de la 1.23, hallazgo 6). Un
+        # cuestionamiento se queda entero: lo que cuestiona es lo que alguien tiene que contestar.
+        for d_ in dec:
+            if d_.get("archivada") and d_.get("tipo") != "cuestionamiento":
+                d_["porque"] = ""; d_["descartamos"] = ""
+        # y enteras como mucho las 150 archivadas más recientes; de las demás se queda solo lo que avisa o cierra algo (a quién
+        # afecta, qué cuestiona, a qué responde), para que los avisos y los cuestionamientos digan lo mismo que la apertura
+        _arch_d = [d_ for d_ in dec if d_.get("archivada")]
+        if len(_arch_d) > MAX_ARCHIVADAS:
+            _quedan = []
+            for d_ in _arch_d[MAX_ARCHIVADAS:]:   # dec ya va de la más nueva a la más vieja
+                if d_.get("afecta") or d_.get("cuestiona") or d_.get("responde") or d_.get("tipo") == "cuestionamiento":
+                    _quedan.append(id(d_))
+                    for k_ in ("reemplaza", "por_confirmar"):
+                        d_.pop(k_, None)
+            _fuera_d = {id(d_) for d_ in _arch_d[MAX_ARCHIVADAS:]} - set(_quedan)
+            dec = [d_ for d_ in dec if id(d_) not in _fuera_d]
+            if _fuera_d:
+                pdoc["decisiones_archivadas_fuera"] = len(_fuera_d)
+            else:
+                pdoc.pop("decisiones_archivadas_fuera", None)
+        else:
+            pdoc.pop("decisiones_archivadas_fuera", None)
+        _rv = respuestas_viejas(pc, HOY[:4], leer)
+        if _rv:
+            pdoc["respuestas_viejas"] = _rv[:200]
+        else:
+            pdoc.pop("respuestas_viejas", None)
+        pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento") + pdoc.get("decisiones_archivadas_fuera", 0)
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
         # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
-        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada: fecha, título, Tema y quién.
+        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada (fecha, título, Tema y quién), su posición en el archivo y qué documentos escribió y publicó (1.23).
         _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
         pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
-                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220)}.items() if v}
+                                       "trabajamos": una_linea_(s_.get("trabajamos") or "", 220), "n": s_.get("n"),
+                                       "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
+        # la última sesión de cada persona en este proyecto, sobre toda la bitácora leída (con sus archivados): la banda
+        # «Sin actividad» de «Por persona» no la saca de las cinco sesiones que viajan (1.23)
+        _upp = {}
+        for s_ in reales:
+            q_ = s_.get("quien")
+            if q_ and fecha_valida(s_["fecha"]) and s_["fecha"] > _upp.get(q_, ""):
+                _upp[q_] = s_["fecha"]
+        if _upp:
+            pdoc["ultima_por_persona"] = dict(sorted(_upp.items(), key=lambda x: x[1], reverse=True)[:40])   # las 40 más recientes
+        else:
+            pdoc.pop("ultima_por_persona", None)
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
         # contenido; proyecto.md no cuenta, porque la tarea del tablero lo toca al aplicar fechas, y restringido/ no se mira.
@@ -1377,6 +1501,9 @@ for pid, pdoc in docs["proyectos"].items():
         if d_.get("responde"):
             q, i = ref_decision(d_["responde"])
             if q: respuestas.add((q, i))
+    for r_ in pdoc.get("respuestas_viejas") or []:   # las de los archivados de hace años (1.23)
+        q, i = ref_decision(r_)
+        if q: respuestas.add((q, i))
 # una premisa nueva que reemplaza a P<n> responde a los cuestionamientos de P<n> anteriores a ella (contrato, sección 4)
 reemplazos = {p_["reemplaza"]: p_["fecha"] for p_ in premisas if p_["reemplaza"]}
 cuestionamientos = []
@@ -1457,19 +1584,7 @@ elif re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _que_
 else:
     # las frases que hablan del método o de sus archivos son para quien mantiene la carpeta, no para quien la dirige
     _frases = re.split(r"(?<=[.!?])\s+", _que_es)
-    # una frase que habla de la carpeta se quita; si va unida con «;» a otra que no, se queda la otra (1.22.5)
-    def _sin_carpeta(frases, rx=r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"):
-        out = []
-        for f in frases:
-            if not re.search(rx, f):
-                out.append(f); continue
-            partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]   # no se parte por un «;» entre paréntesis
-            quedan = [c for c in partes if c and not re.search(rx, c)]
-            if quedan and len(partes) > 1:
-                t = "; ".join(quedan); t = t[0].upper() + t[1:]
-                out.append(t if t[-1] in ".!?" else t + ".")
-        return out
-    _que_es = " ".join(_sin_carpeta(_frases)).strip()
+    _que_es = " ".join(sin_carpeta(_frases)).strip()
 _que_es_falta = not _que_es
 if guia.strip() and _que_es_falta:
     docs["meta"]["estado"]["fuera"].append({"carpeta": "guia.md", "archivos": 0, "de_claude": False, "que_es": True})
@@ -1593,8 +1708,8 @@ for pid, pd in docs["proyectos"].items():
     else:
         pd.pop("personas_fuera", None)
     # las recientes no repiten la que ya viaja en «sesiones»: la página junta las dos listas (1.22.4)
-    _ya = {(x.get("fecha"), x.get("titulo") or "") for x in pd.get("sesiones") or []}
-    pd["sesiones_recientes"] = [x for x in pd.get("sesiones_recientes") or [] if (x.get("fecha"), x.get("titulo") or "") not in _ya]
+    _ya = {(x.get("fecha"), x.get("titulo") or "", x.get("n")) for x in pd.get("sesiones") or []}
+    pd["sesiones_recientes"] = [x for x in pd.get("sesiones_recientes") or [] if (x.get("fecha"), x.get("titulo") or "", x.get("n")) not in _ya]
     if not pd["sesiones_recientes"]:
         pd.pop("sesiones_recientes")
     ea = (pd.get("estado_actual") or "").strip()
@@ -1612,6 +1727,14 @@ for pid, pd in docs["proyectos"].items():
         det["que_hay"] = qh; pd["que_hay_aparte"] = True
     if det:
         docs["detalle"][pid] = det
+
+# un proyecto cuyo detalle la base rechazaría por tamaño tampoco guarda su huella: si se reutilizara, la página se quedaría
+# sin su detalle para siempre (revisión de la 1.23, hallazgo 6)
+if INV is not None and INV.get("huellas") and "huellas" in docs["meta"]["estado"]:
+    _grd = {pid for pid, d_ in docs["detalle"].items() if len(json.dumps(d_, ensure_ascii=False, indent=1).encode("utf-8")) > LIMITE_DOC}
+    if _grd:
+        _fuera = {INV["huellas"].get(pid) for pid in _grd}
+        docs["meta"]["estado"]["huellas"] = [h for h in docs["meta"]["estado"]["huellas"] if h not in _fuera]
 
 # ---------- escribir ----------
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día
