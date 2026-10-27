@@ -21,6 +21,15 @@ if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VE
   echo "Toca a fondo (seis lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2
   exit 1
 fi
+# los scripts corren en la computadora de cada persona, con su Python (3.10 en la consola de la app, 3.9 en un Mac): sin
+# comprobarlo con uno viejo, la 1.23.0 salió con un cierre que no arrancaba (1.23.1)
+COMPILA="$(cd "$(dirname "$0")" && pwd)/../../pruebas/probar_compila.py"
+if [ -f "$COMPILA" ]; then   # fuera del repo (una copia del plugin en las pruebas) no hay pruebas/
+  if ! command -v python3.9 >/dev/null && ! command -v python3.10 >/dev/null; then
+    echo "Falta un Python viejo (3.9 o 3.10) para comprobar que los scripts corren en la computadora de cada persona: uv python install 3.9 3.10" >&2; exit 1
+  fi
+  python3 "$COMPILA" >/dev/null || { echo "Algún script del plugin no compila con un Python viejo: corre pruebas/probar_compila.py y corrígelo antes de publicar." >&2; exit 1; }
+fi
 CONTRATO_VER="${VERSION%.*}"
 
 PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"
