@@ -281,20 +281,43 @@ def comprobacion(nombre):
     return deco
 
 
+def sin_codigo(t):
+    """El texto sin lo que va entre ``` (un recuadro dentro de un bloque de código no es el recuadro, 1.23.2)."""
+    return re.sub(r"```.*?(```|\Z)", "", t, flags=re.S)
+
+
+def en_tabla(t, patron):
+    """La cabecera va como primera celda de una tabla de Markdown de una columna, fuera de un bloque de código."""
+    return bool(re.search(r"^(?:> ?)?\| *" + patron + r"[^|\n]*\|\s*\n(?:> ?)?\|-", sin_codigo(t), re.M))
+
+
 @comprobacion("recuadro")
 def _(ctx, arg):
-    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»)."""
+    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»), como tabla de
+    una columna (1.23.2)."""
     t = texto_de(ctx["turnos"][0])
-    hay = "Memoria de trabajo ·" in t
-    return hay, "en la primera respuesta" if hay else "no está en la primera respuesta"
+    hay = en_tabla(t, r"Memoria de trabajo ·")
+    return hay, "en la primera respuesta" if hay else ("no es una tabla de una columna" if "Memoria de trabajo ·" in t else "no está en la primera respuesta")
 
 
 @comprobacion("recuadro-cierre")
 def _(ctx, arg):
-    """La última respuesta termina el cierre con el recuadro «Memoria · sesión cerrada · …» (1.23)."""
+    """La última respuesta termina el cierre con el recuadro «Memoria · sesión cerrada · …» (1.23), la misma tabla de una
+    columna que la apertura y nunca un bloque de código (1.23.2)."""
     t = texto_de(ctx["turnos"][-1])
-    hay = bool(re.search(r"Memoria (·|\u00b7) sesión cerrada (·|\u00b7) \d+ archivos?", t))
-    return hay, "en la última respuesta" if hay else "no está en la última respuesta"
+    pat = r"Memoria (?:·|\u00b7) sesión cerrada (?:·|\u00b7) \d+ archivos?"
+    hay = en_tabla(t, pat)
+    return hay, "en la última respuesta" if hay else ("no es una tabla de una columna" if re.search(pat, t) else "no está en la última respuesta")
+
+
+@comprobacion("cita-antes-de-escribir")
+def _(ctx, arg):
+    """Lo que el cierre enseña antes de escribir (la entrada de la bitácora y cada decisión) va en cita con barra lateral,
+    tal como quedará escrito, con su título «## AAAA-MM-DD…» dentro de la cita (1.23.2). Se mira la penúltima respuesta, la
+    que pide el sí."""
+    t = sin_codigo(texto_de(ctx["turnos"][-2])) if len(ctx["turnos"]) > 1 else ""
+    hay = bool(re.search(r"^> ?## \d{4}-\d{2}-\d{2}", t, re.M))
+    return hay, "en la respuesta que pide el sí" if hay else "la entrada no va en cita con su título"
 
 
 @comprobacion("sin-escrituras")
