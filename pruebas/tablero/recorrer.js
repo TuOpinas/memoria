@@ -86,7 +86,8 @@ const path = require('path');
                    sesiones_recientes:[{fecha:d0, titulo:d0, n:5, quien:"Ana Lombardo", publico:["entregables/x.md"]},
                                        {fecha:d0, titulo:d0, n:4, quien:"Bruno Esquivel", escribio:["entregables/x.md", "taller/y.md"]},
                                        {fecha:d0, titulo:d0, n:3, quien:"Bruno Esquivel"},
-                                       {fecha:d0, titulo:d0, n:2}],
+                                       {fecha:d0, titulo:d0, n:2},
+                                       {fecha:d0, titulo:d0, n:1, quien:"Fede Singuía"}],
                    decisiones:[{fecha:d0, decidio:"Bruno Esquivel", titulo:"Una decisión"}],
                    entregables:[{nombre:"x", archivo:"x.md", estado:"vigente", actualizado:d0}, {nombre:"z", archivo:"z.md", estado:"vigente", actualizado:d0}]},
                   {id:"tec--srv", area:"tec", slug:"srv", nombre:"Servidor", dueno:"Elena Reyes", colaboran:[], pasos:[],
@@ -105,7 +106,7 @@ const path = require('path');
         } finally { ({AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS} = guardado); _CONOCIDOS = null; }
       });
       const fila = n => pp.filas.find(x=>x.startsWith(n)) || "", quieta = n => pp.quietas.find(x=>x.startsWith(n)) || "";
-      const bien = pp.filas.length === 2 && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
+      const bien = pp.filas.length === 3 && /no figura con este nombre/.test(fila("Fede")) && /2 sesiones/.test(fila("Bruno")) && /colabora en operación/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
         && /documentos: 2 escritos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 acción planeada/.test(fila("Bruno"))
         && /1 sesión/.test(fila("Ana")) && /documentos: 1 publicado/.test(fila("Ana")) && !/escrito/.test(fila("Ana"))
         && /· 2 sesiones/.test(pp.tipBruno) && pp.quietas.length === 3 && /1 acción planeada/.test(quieta("Diego")) && /última sesión el/.test(quieta("Elena"))

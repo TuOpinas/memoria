@@ -1753,7 +1753,7 @@ function rolesEscriben(areaSlug){
     for(const c of (p.colaboran||[])) add(c, "col", p.nombre); }
   return R;
 }
-const rolTxt = r => [r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : ""].filter(Boolean).join(" · ");
+const rolTxt = r => r.fuera ? "no figura con este nombre en la carpeta" : [r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : ""].filter(Boolean).join(" · ");
 function accionesDe(areaSlug){
   // pasos abiertos de cada proyecto visible cuyo texto nombra a la persona: lo que tiene que hacer y lo que otros esperan de ella
   const n = {};
@@ -1767,6 +1767,9 @@ function actPersonas(ev, areaFija){
   const roles = rolesEscriben(areaSel), acc = accionesDe(areaSel), gente = {};
   const P = n => gente[n] = gente[n] || {n, dias:{}, ses:0, dec:0, esc:new Set(), pub:new Set()};
   for(const n of Object.keys(roles)) P(n);
+  // quien cerró sesión sin figurar en la carpeta (un colaborador sin nombre junto a su cuenta, un nombre escrito distinto)
+  // también trabajó: sale, con su papel sin declarar; quien solo decide desde fuera no, porque nunca cierra sesión
+  for(const e of evs) if(e.k==="ses" && e.q && !roles[e.q]){ roles[e.q] = {resp:[], col:[], fuera:true}; P(e.q); }
   let sinNombre = 0, pubSin = 0;
   for(const e of evs){
     if(e.k==="ses" && !e.q){ sinNombre++; continue; }
