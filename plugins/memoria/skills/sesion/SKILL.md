@@ -61,7 +61,7 @@ Si no hay forma de correr `abrir.py` (ni en la computadora ni en el contenedor),
 
 Entre una llamada y la siguiente no se manda ningún mensaje («ya abrí la sesión, ahora leo…»): la apertura son unas pocas llamadas seguidas y la respuesta llega entera al final. Lo que la persona necesita saber va en esa respuesta.
 
-**La primera vez en la conversación** que se abre sesión sobre la carpeta, la respuesta empieza con un recuadro, para que se vea de un vistazo que entró la memoria: una tabla de Markdown de una sola columna. La cabecera es «Memoria de trabajo · <organización> · v<versión de la primera línea de `metodo.md` de la raíz>», con esas palabras: es la marca, y la misma en todas las raíces, y debajo van solo las filas que piden algo a quien lee (1.23): una fila que no pide nada sobra, y sin ninguna el recuadro es solo su cabecera, que basta para ver que entró la memoria. Dónde escribe la cuenta no lleva fila, porque ya lo sabe, salvo que CUENTA no le dé ninguna área («No escribes en ninguna área: dime en cuál trabajas»); si CUENTA trae un «aviso para decirlo» (la cuenta está en la celda de un área que no se deja leer, como dos correos sin «colabora:»), una fila con él, con cómo se escribe y que la corrige el responsable de contexto; y, solo para la cuenta del responsable de contexto, la fila de «Claude outputs» del paso 3 de la apertura mínima, si CLAUDE OUTPUTS trae archivos y no se dijo ya en esta conversación (`abrir.py` la imprime en todos los modos, también al abrir un proyecto, al final de su salida; sin consola la copia no la trae, y se mira con `device_list_dir` de esa carpeta, solo si es esa cuenta). Solo esa vez. Una celda no admite saltos de línea ni el carácter «|»: si un texto los trae, se cambian por «·». Por ejemplo:
+**La primera vez en la conversación** que se abre sesión sobre la carpeta, la respuesta empieza con un recuadro, para que se vea de un vistazo que entró la memoria: una tabla de Markdown de una sola columna, nunca un bloque de código ni un recuadro dibujado con caracteres; el cierre termina con el mismo recuadro (`cerrar.md`), y lo que se enseña antes de escribir va en cita (1.23.2). La cabecera es «Memoria de trabajo · <organización> · v<versión de la primera línea de `metodo.md` de la raíz>», con esas palabras: es la marca, y la misma en todas las raíces, y debajo van solo las filas que piden algo a quien lee (1.23): una fila que no pide nada sobra, y sin ninguna el recuadro es solo su cabecera, que basta para ver que entró la memoria. Dónde escribe la cuenta no lleva fila, porque ya lo sabe, salvo que CUENTA no le dé ninguna área («No escribes en ninguna área: dime en cuál trabajas»); si CUENTA trae un «aviso para decirlo» (la cuenta está en la celda de un área que no se deja leer, como dos correos sin «colabora:»), una fila con él, con cómo se escribe y que la corrige el responsable de contexto; y, solo para la cuenta del responsable de contexto, la fila de «Claude outputs» del paso 3 de la apertura mínima, si CLAUDE OUTPUTS trae archivos y no se dijo ya en esta conversación (`abrir.py` la imprime en todos los modos, también al abrir un proyecto, al final de su salida; sin consola la copia no la trae, y se mira con `device_list_dir` de esa carpeta, solo si es esa cuenta). Solo esa vez. Una celda no admite saltos de línea ni el carácter «|»: si un texto los trae, se cambian por «·». Por ejemplo:
 
 | Memoria de trabajo · Acme · v1.23.0 |
 |---|
@@ -138,19 +138,21 @@ El aviso del método que pide algo va como fila del recuadro «Memoria de trabaj
 
 ## Ejemplo de apertura
 
+La respuesta de Claude va aquí tal cual se escribe.
+
 **Usuario:** retomamos automatización de órdenes
 
-> El proyecto busca quitar aprobaciones manuales en compras de bajo monto. La última sesión, el 14 de agosto, terminaste las entrevistas con Ana y con Finanzas y quedó pendiente decidir el criterio de corte.
->
-> | Memoria · avisos · 2 |
-> |---|
-> | Finanzas registró el 20 de agosto que el cierre pasa al día 3 y marca este proyecto como afectado · decidió Luis Romero. |
-> | El mapa de proceso lleva 41 días en borrador, esperando a Ana. |
->
-> Tres focos posibles para hoy:
->
-> 1. Cerrar el criterio de corte por monto. Es lo que bloquea el flujo de aprobación y Finanzas está esperando.
-> 2. Revisar si el cambio de fecha de cierre toca el flujo de aprobación antes de seguir construyendo sobre él.
-> 3. Empujar la revisión del mapa de proceso, que lleva seis semanas parado.
->
-> ¿Por cuál empezamos?
+El proyecto busca quitar aprobaciones manuales en compras de bajo monto. La última sesión, el 14 de agosto, terminaste las entrevistas con Ana y con Finanzas y quedó pendiente decidir el criterio de corte.
+
+| Memoria · avisos · 2 |
+|---|
+| Finanzas registró el 20 de agosto que el cierre pasa al día 3 y marca este proyecto como afectado · decidió Luis Romero. |
+| El mapa de proceso lleva 41 días en borrador, esperando a Ana. |
+
+Tres focos posibles para hoy:
+
+1. Cerrar el criterio de corte por monto. Es lo que bloquea el flujo de aprobación y Finanzas está esperando.
+2. Revisar si el cambio de fecha de cierre toca el flujo de aprobación antes de seguir construyendo sobre él.
+3. Empujar la revisión del mapa de proceso, que lleva seis semanas parado.
+
+¿Por cuál empezamos?

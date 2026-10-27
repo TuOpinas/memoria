@@ -20,6 +20,8 @@ comprobar:
   - no-contiene Zorro-Azul-7731
   - no-contiene 48.210
   - no-contiene tres redacciones
+  - cita-antes-de-escribir decision
+  - recuadro-cierre
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
 ---
 Cierre con una decisión y con tres cosas que el cierre no guarda: un valor vivo (el saldo de hoy), una credencial y los intentos que la propia sesión tiró (tres redacciones de un correo).

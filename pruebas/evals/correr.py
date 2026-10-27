@@ -281,20 +281,70 @@ def comprobacion(nombre):
     return deco
 
 
+def sin_codigo(t):
+    """El texto sin los bloques de código (vallas de ``` o ~~~ al principio de línea, también sin cerrar): un recuadro
+    dentro de un bloque de código no es el recuadro (1.23.2)."""
+    return re.sub(r"(?ms)^(?:> ?)? {0,3}(`{3,}|~{3,}).*?(?:^(?:> ?)? {0,3}\1[ \t]*$|\Z)", "", t.replace("\r\n", "\n"))
+
+
+def en_tabla(t, patron):
+    """La cabecera va como primera celda de una tabla de Markdown de una columna, fuera de un bloque de código y fuera de
+    una cita (la cita es para lo que se enseña antes de escribir, 1.23.2). Vale en negrita, con sangría de hasta tres
+    espacios y con los separadores de GFM («|---|», «| --- |», «|:---|»)."""
+    return bool(re.search(r"(?m)^ {0,3}\|? *(?:\*\*)?" + patron + r"[^|\n]*\|?[ \t]*\n {0,3}\|? *:?-{3,}:? *\|?[ \t]*$", sin_codigo(t)))
+
+
 @comprobacion("recuadro")
 def _(ctx, arg):
-    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»)."""
+    """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»), como tabla de
+    una columna (1.23.2)."""
     t = texto_de(ctx["turnos"][0])
-    hay = "Memoria de trabajo ·" in t
-    return hay, "en la primera respuesta" if hay else "no está en la primera respuesta"
+    hay = en_tabla(t, r"Memoria de trabajo ·")
+    return hay, "en la primera respuesta" if hay else ("no es una tabla de una columna fuera de cita y de código" if "Memoria de trabajo ·" in t else "no está en la primera respuesta")
 
 
 @comprobacion("recuadro-cierre")
 def _(ctx, arg):
-    """La última respuesta termina el cierre con el recuadro «Memoria · sesión cerrada · …» (1.23)."""
+    """La última respuesta termina el cierre con el recuadro «Memoria · sesión cerrada · …» (1.23), la misma tabla de una
+    columna que la apertura y nunca un bloque de código (1.23.2)."""
     t = texto_de(ctx["turnos"][-1])
-    hay = bool(re.search(r"Memoria (·|\u00b7) sesión cerrada (·|\u00b7) \d+ archivos?", t))
-    return hay, "en la última respuesta" if hay else "no está en la última respuesta"
+    pat = r"Memoria (?:·|·) sesión cerrada (?:·|·) \d+ archivos?"
+    hay = en_tabla(t, pat)
+    return hay, "en la última respuesta" if hay else ("no es una tabla de una columna fuera de cita y de código" if re.search(pat, t) else "no está en la última respuesta")
+
+
+def cita_antes_de_escribir(t, con_decision=False, hoy=None):
+    """Lo que se enseña antes de escribir, fuera de los bloques de código (1.23.2): las palabras «Bitácora» y «Estatus»
+    solas en su línea; la entrada de la bitácora en cita con su «## AAAA-MM-DD»; el Estatus en cita con «AAAA-MM-DD ·
+    **…»; las dos con la misma fecha; y con decisión, «Decisiones» y cada decisión en cita con «## <esa fecha> · título».
+    Devuelve (bien, qué falta)."""
+    t = sin_codigo(t)
+    sola = lambda w: re.search(r"(?m)^ {0,3}(?:\*\*)?" + w + r"(?:\*\*)?:?[ \t]*$", t)
+    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})[ \t]*$", t)
+    est = re.findall(r"(?m)^> ?(\d{4}-\d{2}-\d{2}) · \*\*", t)
+    falta = [n for n, c in (("«Bitácora»", sola("Bitácora")), ("«Estatus»", sola("Estatus")), ("la entrada en cita", bit), ("el Estatus en cita", est)) if not c]
+    if hoy and bit and hoy not in bit:
+        falta.append(f"la entrada de hoy ({hoy})")
+    hoy = hoy if hoy in bit else (max(bit) if bit else None)
+    if bit and est and hoy not in est:
+        falta.append("la misma fecha en la entrada y en el Estatus")
+    if con_decision:
+        if not sola("Decisiones"):
+            falta.append("«Decisiones»")
+        if not (hoy and re.search(r"(?m)^> ?## " + hoy + r" · \S", t)):
+            falta.append("cada decisión en cita con su título")
+    return not falta, ", ".join(falta)
+
+
+@comprobacion("cita-antes-de-escribir")
+def _(ctx, arg):
+    """cita-antes-de-escribir [decision]: la respuesta que pide el sí (la penúltima) enseña lo que se va a registrar en
+    cita, tal como quedará escrito, bajo «Decisiones», «Bitácora» y «Estatus» (1.23.2); con «decision», también cada
+    decisión."""
+    if len(ctx["turnos"]) < 2:
+        return False, "el escenario no tiene un turno de sí"
+    bien, falta = cita_antes_de_escribir(texto_de(ctx["turnos"][-2]), (arg or "").strip() == "decision", HOY)
+    return bien, "en la respuesta que pide el sí" if bien else "falta " + falta
 
 
 @comprobacion("sin-escrituras")

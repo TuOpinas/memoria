@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.23.1 · huella d4b6613 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.23.2 · huella fd924e1 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -865,7 +865,7 @@ De cada archivo el script hace leer → cambiar → escribir bajo un cerrojo y, 
 
 Quién escribió y quién publicó lo pone `cerrar.py`: en `escribio`, cada documento de `entregables/` o `taller/` del proyecto que la sesión creó o cambió en su contenido (no los que solo leyó, ni una `aportacion` añadida a una cabecera); en `publico`, cada entregable que la skill `revisar` pasó a `vigente` en esta sesión (el paso a `vigente` puede ir en «otros» de la misma llamada); rutas dentro del proyecto. No se teclean en el texto de la entrada: el script rechaza una «Escribió:» o «Publicó:» escrita a mano y, con cualquiera de las dos listas, una entrada sin «Sesión de: Nombre». **Antes de enseñar la entrada**, una llamada con `--comprobar` (y el mismo `--abierto`) valida sin escribir la forma de las entradas y la autoría, y devuelve la entrada tal como quedará, con sus líneas, y `sin_nombrar` (sin consola no lo hay, porque las fechas de la copia no dicen nada; los reemplazos y los permisos se comprueban en la llamada que escribe): lo que cambió desde la apertura y no va en las listas. Si es de esta sesión, se añade a `escribio`; si no, es de otra persona y se dice. Lo que se enseña para confirmar es esa `entrada`.
 
-**3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se listan al usuario las decisiones detectadas, cada una como va a quedar escrita, y se pide confirmación explícita; la respuesta termina ahí y el cierre sigue en el turno siguiente, con el sí. También cuando la persona dictó la decisión en el mismo mensaje en que pide cerrar: dictarla no es confirmar la entrada. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. `Descartado`, `Reemplaza` y `Afecta a` van solo si hay algo que decir: nunca «no consta» ni «ninguno». Las líneas van en este orden, con `Afecta a` la última. Formato:
+**3. `decisiones.md`, solo si hubo decisiones.** Antes de escribir, se enseñan al usuario las decisiones detectadas, cada una como va a quedar escrita (abajo, «Cómo se enseña antes de escribir»), y se pide confirmación explícita; la respuesta termina ahí y el cierre sigue en el turno siguiente, con el sí. También cuando la persona dictó la decisión en el mismo mensaje en que pide cerrar: dictarla no es confirmar la entrada. El registro no se puede corregir después, así que nada entra sin que alguien lo confirme. `Descartado`, `Reemplaza` y `Afecta a` van solo si hay algo que decir: nunca «no consta» ni «ninguno». Las líneas van en este orden, con `Afecta a` la última. Formato:
 
 ```markdown
 ## 2026-08-29 · Las órdenes bajo 5.000 MXN no pasan por aprobación
@@ -876,6 +876,8 @@ Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a
 ```
 
 Si la decisión sustituye a una anterior de este proyecto (cambia de criterio, de precio, de fecha), lleva además `Reemplaza: <identificador de la anterior> · <su título>`, antes de `Afecta a`; se pregunta en el mismo mensaje que enseña la decisión cuando el extracto de la sesión lo sugiere («antes…», «ya no…», «en vez de…»). La anterior no se toca.
+
+**Cómo se enseña antes de escribir** (1.23.2). La respuesta que pide el sí lleva estos bloques, en este orden y cada uno con su palabra sola encima, en texto normal: «Decisiones» (si las hay, y ahí también un cuestionamiento que se plantea o se responde), «Bitácora», «Estatus» y, si toca, «Estatus del área». Dentro, cada pieza va en una cita con barra lateral (`>` delante de cada línea) y tal como va a quedar escrita, sin resumirla ni traducirla: una cita por decisión, con su línea `## AAAA-MM-DD · título` (sale como título dentro de la cita, y es lo que se quiere) y debajo sus campos (`Decidió`, `Por qué`, `Descartado`, `Afecta a`…), cada uno empezando en su línea, y un `Por qué` de varios párrafos con una línea `>` vacía entre ellos, como en el archivo; la entrada de la bitácora, la que devolvió `--comprobar`, con su `## AAAA-MM-DD`; y el `Estatus` entero. Los reemplazos de «Siguientes pasos» y la línea del área van debajo, en una o dos líneas en llano, porque son cambios en un archivo vivo y no registro. La respuesta termina con la pregunta en texto («¿Lo registro así?»), no con la herramienta de preguntas; si en esa app el texto antes de una herramienta no se muestra tal cual (hay `SendUserMessage`), las citas y la pregunta van con él. Nunca una lista que resume las decisiones en lugar de enseñarlas, ni un bloque de código, tampoco en un cliente que no pinta Markdown. Esto vale aunque la persona pida respuestas breves: es lo único que confirma de un registro que no se corrige, así que se acorta el texto de alrededor y nunca las citas. Lo mismo vale fuera del cierre para todo lo que se enseña antes de escribirlo en un registro o en un `Estatus`: un cuestionamiento del director, el `Estatus` del área, una premisa.
 
 **Responder un cuestionamiento.** Si al abrir se avisó de un cuestionamiento abierto a este proyecto y lo respondió en la sesión el responsable, o quien colabora si la decisión cuestionada es suya (lo dicen CUENTA EN EL PROYECTO y el `Decidió` de la decisión), la respuesta es una decisión más de esta lista, aunque solo mantenga lo que ya estaba: «lo mantengo» cambia algo, porque cierra una pregunta que alguien tenía abierta. La entrada lleva `Responde a: <identificador del cuestionamiento>` (el que se citó al abrir), dice en el título si mantiene o reemplaza lo cuestionado, y en `Por qué` la razón que dio el responsable. Se confirma como cualquier decisión y se dice a quién avisar: a quien lo planteó. Además, Claude se lo enseñará a esa persona la próxima vez que abra sesión en su proyecto.
 
@@ -913,7 +915,7 @@ El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plan
 
 #### Qué respondo al terminar
 
-Lo que escribió el cierre va en el mismo recuadro que la apertura (1.23), para que todo lo que es de la memoria se vea igual: una tabla de Markdown de una columna, con la cabecera «Memoria · sesión cerrada · <n> archivos» (los `escritos` de `cerrar.py`, que ya incluyen el archivado si hubo rotación, más la copia en conflicto si se juntó una) y una fila por archivo, con su enlace (`computer://`, como cualquier archivo que se nombra en la conversación) y en pocas palabras qué cambió en él. Las celdas siguen la regla del recuadro de la apertura: sin saltos de línea ni «|». Debajo, en texto normal y solo si hay algo: qué queda para la próxima en una línea, a quién avisar de otra área, lo que quedó en `fuentes/` pendiente de decidir si es confidencial, y `ajenos` o `sin_nombrar` en llano («alguien más escribió proyecto.md a las 10:03; sumé lo de hoy encima», «taller/x.md cambió mientras trabajábamos y no lo escribió esta sesión»). Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más: el resumen largo ya está en los archivos. La cita con barra lateral se queda para lo que se enseña antes de escribir (la entrada, las decisiones y el `Estatus`), no para el resumen.
+Lo que escribió el cierre va en el mismo recuadro que la apertura (1.23), para que todo lo que es de la memoria se vea igual: una tabla de Markdown de una columna, nunca un bloque de código ni un recuadro dibujado con caracteres (1.23.2), con la cabecera «Memoria · sesión cerrada · <n> archivos» (los `escritos` de `cerrar.py`, que ya incluyen el archivado si hubo rotación, más la copia en conflicto si se juntó una) y una fila por archivo, con su enlace (`computer://`, como cualquier archivo que se nombra en la conversación) y en pocas palabras qué cambió en él. Las celdas siguen la regla del recuadro de la apertura: sin saltos de línea ni «|». Debajo, en texto normal y solo si hay algo: qué queda para la próxima en una línea, a quién avisar de otra área, lo que quedó en `fuentes/` pendiente de decidir si es confidencial, y `ajenos` o `sin_nombrar` en llano («alguien más escribió proyecto.md a las 10:03; sumé lo de hoy encima», «taller/x.md cambió mientras trabajábamos y no lo escribió esta sesión»). Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más: el resumen largo ya está en los archivos. La cita con barra lateral se queda para lo que se enseña antes de escribir (la entrada, las decisiones y el `Estatus`, arriba en «Cómo se enseña antes de escribir»), no para el resumen.
 
 ---
 
@@ -937,42 +939,50 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 ### Ejemplo de cierre
 
+Las respuestas de Claude van aquí tal cual se escriben: la `>` es la cita que ve la persona.
+
 **Usuario:** [después de trabajar en el criterio de corte por monto de compras/automatizacion-ordenes] cierra la sesión
 
 **Antes de escribir:**
 
-> Detecté una decisión en la conversación de hoy:
->
-> Las órdenes bajo 5.000 MXN no pasan por aprobación. Decidió Ana Pérez. Descartado: el tope acumulado mensual, porque el ERP no lo expone en tiempo real. Afecta al flujo de aprobación y al cierre mensual de Finanzas.
->
-> La bitácora de hoy:
->
+Decisiones
+
+> ## 2026-08-29 · Las órdenes bajo 5.000 MXN no pasan por aprobación
+> Decidió: Ana Pérez
+> Por qué: el 70% del volumen son órdenes pequeñas y consumían el 80% del tiempo de aprobación, según el export de órdenes de 2025.
+> Descartado: tope acumulado mensual por proveedor, porque el ERP no expone el acumulado en tiempo real.
+> Afecta a: entregables/flujo-aprobacion.md (el paso de validación ya no aplica a todas) · finanzas/cierre-mensual (menos órdenes que conciliar)
+
+Bitácora
+
 > ## 2026-08-29
 > Tema: el criterio de corte por monto.
 > Avances: criterio fijado en 5.000 MXN y descartado el tope acumulado.
 > Escribió: entregables/flujo-aprobacion.md
-> Sesión de: Ana Pérez · plugin 1.23.0
->
-> El estatus quedaría así:
->
+> Sesión de: Ana Pérez · plugin 1.23.2
+
+Estatus
+
 > 2026-08-29 · **Las órdenes bajo 5.000 MXN ya no pasan por aprobación; el 5 de septiembre se valida el criterio con Finanzas.**
 > - **Se completó:** el criterio de corte por monto, el 29 de agosto.
 > - **Siguiente:** validarlo con Luis Romero el 5 de septiembre; Ana retoma el mapa de proceso.
->
-> ¿Los registro así?
+
+En «Siguientes pasos» quito «fijar el criterio de corte» y añado «validar el criterio con Finanzas el 5 de septiembre»; en `compras/area.md`, la línea del proyecto (Ana no es la responsable del área, así que su `Estatus` no se toca).
+
+¿Lo registro así?
 
 **Usuario:** sí
 
 **Respuesta al cerrar:**
 
-> | Memoria · sesión cerrada · 4 archivos |
-> |---|
-> | [compras/automatizacion-ordenes/decisiones.md](computer:///…/compras/automatizacion-ordenes/decisiones.md) · el corte en 5.000 MXN |
-> | [compras/automatizacion-ordenes/sesiones.md](computer:///…/compras/automatizacion-ordenes/sesiones.md) · la sesión de hoy |
-> | [compras/automatizacion-ordenes/proyecto.md](computer:///…/compras/automatizacion-ordenes/proyecto.md) · estatus y siguientes pasos |
-> | [compras/area.md](computer:///…/compras/area.md) · la línea del proyecto |
->
-> La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a»: conviene revisarlo antes de publicarlo. Afecta también a `finanzas/cierre-mensual`: avísale a Luis Romero, responsable de Finanzas; la carpeta no lo hace por ti. Para la próxima, validar el criterio con Finanzas y retomar el mapa de proceso.
+| Memoria · sesión cerrada · 4 archivos |
+|---|
+| [compras/automatizacion-ordenes/decisiones.md](computer:///…/compras/automatizacion-ordenes/decisiones.md) · el corte en 5.000 MXN |
+| [compras/automatizacion-ordenes/sesiones.md](computer:///…/compras/automatizacion-ordenes/sesiones.md) · la sesión de hoy |
+| [compras/automatizacion-ordenes/proyecto.md](computer:///…/compras/automatizacion-ordenes/proyecto.md) · estatus y siguientes pasos |
+| [compras/area.md](computer:///…/compras/area.md) · la línea del proyecto |
+
+La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a»: conviene revisarlo antes de publicarlo. Afecta también a `finanzas/cierre-mensual`: avísale a Luis Romero, responsable de Finanzas; la carpeta no lo hace por ti. Para la próxima, validar el criterio con Finanzas y retomar el mapa de proceso.
 
 ## Premisas
 
@@ -982,7 +992,7 @@ Solo en la sesión del responsable de contexto según `guia.md`; a cualquier otr
 
 1. Se lee `base/premisas.md` entero si existe. Si no existe, se crea con su cabecera (`estado: vigente`, `actualizado` de hoy) y el título `# Premisas`.
 2. Se redacta la línea con el formato de la sección 2 de `convenciones`: `- P<n> · <texto> · Confirmó: <nombre y apellido> · <fecha de hoy>`, con el `P<n>` siguiente al mayor que haya en el archivo, aunque alguna esté reemplazada. Si cambia una que existe («la premisa P2 cambia a…», «ya no vale»), la línea nueva termina en `· Reemplaza P<n>`; la antigua no se toca. Quien confirma es quien dirige la organización, no quien abre la sesión, salvo que sean la misma persona: se pregunta si no está claro.
-3. Se enseña la línea y se escribe solo con el sí. Se añade al final del archivo y se pone al día `actualizado`.
+3. Se enseña la línea en cita, tal como quedará escrita (`cerrar.md`, «Cómo se enseña antes de escribir»), y se escribe solo con el sí. Se añade al final del archivo y se pone al día `actualizado`.
 4. Si la premisa nueva reemplaza a una con cuestionamientos abiertos (los del barrido al abrir), se dice que quedan respondidos y a quién avisar: a quien los planteó. Si la premisa se mantiene frente a un cuestionamiento, no hay línea nueva: la respuesta es una entrada con `Responde a:` en el `decisiones.md` de un proyecto del responsable de contexto, como cualquier otra (paso 3 de cerrar).
 
 Una premisa es algo que la dirección confirmó y sobre lo que todos construyen; un objetivo de un proyecto o una preferencia de un área no lo es. Ante la duda, se pregunta de quién es la confirmación.

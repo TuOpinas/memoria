@@ -11,11 +11,13 @@ turnos:
 comprobar:
   - recuadro
   - apertura-completa ventas/cuentas
+  - nada-hasta-el-turno 2 metodo.md,ventas/cuentas/taller/nota-soporte.md,ventas/cuentas/entregables/borrador-viejo.md,ventas/area.md
   - entrada-sesion ventas/cuentas
   - cierre-con-script
   - contiene ventas/cuentas/sesiones.md Escribió: taller/nota-soporte.md
-  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md
+  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md,ventas/area.md
   - contiene ventas/cuentas/entregables/borrador-viejo.md estado: vigente
+  - cita-antes-de-escribir
   - recuadro-cierre
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
   - sin-rutas-absolutas
@@ -23,4 +25,5 @@ comprobar:
 Quién escribió y quién publicó (1.23). La sesión escribe un documento del taller y publica un entregable con la skill
 `revisar` (Ana es la responsable del proyecto), y el cierre los nombra en `escribio` y `publico`: `cerrar.py` escribe
 «Escribió:» y «Publicó:» en la entrada, antes de «Sesión de:», sin que nadie los teclee. Antes de enseñar la entrada, una
-llamada con `--comprobar` la devuelve completa. El cierre termina con el recuadro «Memoria · sesión cerrada · N archivos».
+llamada con `--comprobar` la devuelve completa. Lo que se enseña antes de escribir va en cita, como quedará escrito, y el cierre termina con el recuadro «Memoria · sesión
+cerrada · N archivos», una tabla de una columna como la de la apertura (1.23.2).
