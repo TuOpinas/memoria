@@ -1792,11 +1792,13 @@ function actPersonas(ev, areaFija){
     <div class="per-k">${accion(g)}</div></div>`;
   const opciones = areaFija ? "" : `<select class="act-area" aria-label="Área" data-act-area>${[["", "Toda la carpeta"], ...areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>[a.slug, a.nombre||a.slug])].map(([v,l])=>`<option value="${esc(v)}"${v===areaSel?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
   const sinAtrib = [sinNombre ? cuantos(sinNombre,"sesión","sesiones") : "", pubSin ? cuantos(pubSin,"documento publicado","documentos publicados") : ""].filter(Boolean).join(" y ");
+  // quien colabora en un área sin nombre junto a su cuenta no se puede listar: se cuenta (1.23)
+  const sinNombreGuia = AREAS.filter(a=>a.legible!==false && !archivada(a) && (!areaSel || a.slug===areaSel)).reduce((n,a)=>n+(a.colaboran_sin_nombre||0),0);
   return `<section class="card personas"><h2>Por persona${hq("por-persona","Qué cuenta «Por persona»")}</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta. Hechos, sin puntaje ni orden por volumen.</p>
     ${opciones ? `<div class="ctl">${opciones}</div>` : ""}
     ${activos.length ? activos.map(fila).join("") : `<p class="empty">Nadie cerró sesión en el periodo${areaSel?" en esta área":""}.</p>`}
     ${activos.length || sinAtrib ? `<p class="nota">${activos.length ? "Los documentos se cuentan a quien los escribió y, aparte, a quien los publicó." : ""}${sinAtrib ? ` ${sinAtrib} del periodo no dicen quién: son de antes de que la bitácora lo apuntara, y no se atribuyen a nadie.` : ""}</p>` : ""}
-    ${quietos.length ? `<div class="quiet-g"><div class="sep">Sin sesión en el periodo</div>${quietos.map(filaQuieta).join("")}</div>` : ""}</section>`;
+    ${quietos.length || sinNombreGuia ? `<div class="quiet-g"><div class="sep">Sin sesión en el periodo</div>${quietos.map(filaQuieta).join("")}${sinNombreGuia ? `<p class="nota">${cuantos(sinNombreGuia,"persona colabora","personas colaboran")} sin nombre junto a su cuenta en la carpeta y no ${sinNombreGuia===1?"sale":"salen"} aquí: se le da con una línea «Colabora: Nombre Apellido (correo)» en uno de sus proyectos.</p>` : ""}</div>` : ""}</section>`;
 }
 document.addEventListener("change", e => { const s = e.target.closest && e.target.closest("[data-act-area]"); if(!s) return;
   ACT_AREA = s.value; try{ localStorage.setItem("tablero-actividad-area", ACT_AREA); }catch(x){} render(); });
