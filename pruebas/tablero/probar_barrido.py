@@ -60,7 +60,7 @@ try:
     ok("ventas--tarea" not in por("estado-desfasado"), "una entrada «(tarea)» no cuenta como sesión")
     ok("ventas--cerrado" not in por("estado-desfasado"), "un proyecto terminado no se propone")
     ok(por("paso-hecho") == ["ventas--hecho"] and len([d for d in docs.values() if d["clase"] == "paso-hecho"]) == 1, "paso hecho: solo el paso que la sesión cuenta, no el otro ni los de otros proyectos")
-    ok(por("rotacion") == ["ventas--anios", "ventas--pesado"], f"rotación: un registro que mezcla años, y uno de pocas líneas que pasa de 100 KB (1.23) ({por('rotacion')})")
+    ok(por("rotacion") == [], f"rotación: ya no se propone, la hace el cierre (1.23), ni por años ni por tamaño ({por('rotacion')})")
     # una frase que comparte las palabras del paso pero lo niega no lo da por hecho; fechar el paso no cambia el id
     proyecto(raiz, "ventas", "niega", "2026-10-20", ["Mandar la encuesta de satisfacción al equipo"], sesion("2026-10-20", "la encuesta", "Revisamos el borrador de la encuesta de satisfacción con el equipo; falta mandarla."))
     b2, docs2 = correr(raiz, tmp / "s1b")

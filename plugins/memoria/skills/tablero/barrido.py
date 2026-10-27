@@ -27,8 +27,6 @@ Detecta, con lo que está escrito y sin modelo:
   estado-desfasado  `proyecto.md` es más viejo que la última sesión que registra `sesiones.md`.
   paso-hecho        un paso de «Siguientes pasos» cuyas palabras casi todas están en «Avances:» de una de las dos últimas
                     sesiones: el registro parece darlo por hecho y el paso sigue ahí.
-  rotacion          `sesiones.md` o `decisiones.md` pasa de 1.500 líneas o de 100 KB (1.23), o su entrada más nueva es de otro año que la
-                    más vieja: toca archivarlo (`escribir.md`, sección 8).
 y deja para el modelo lo que solo un modelo puede decidir:
   para_juicio   las sesiones de los últimos días que cuentan una decisión («decidimos», «se acordó»…) cuando
                 `decisiones.md` no tiene ninguna entrada de esa fecha.
@@ -58,8 +56,6 @@ STOP = set("de la el los las un una y o en a al del para por con sin que se su s
            "esos esas pero cuando donde sobre entre desde hasta hay ser fue han había solo todo todos cada otro otra muy también "
            "paso pasos hacer hecho hacer queda quedó falta".split())
 STOP = {"".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn") for w in STOP}
-LIMITE_LINEAS = 1500
-LIMITE_BYTES = 100_000   # 1.23: un registro también se archiva por tamaño; las entradas largas llenan antes de las 1.500 líneas
 # --- los registros con sus archivados ---
 # La misma función en abrir.py, generar_vista.py y barrido.py (cada uno se descarga suelto); pruebas/tablero/paridad.py
 # comprueba que las tres copias son idénticas (1.23).
@@ -332,14 +328,8 @@ def barrer(copia, hoy, hay_propuesta=lambda i: False, salida=None, en_cola=lambd
                         prop("paso-hecho", "|".join(sorted(pp)) + f"|{e[0]}",
                              f"Quitar de «Siguientes pasos»: «{una_linea(paso, 140)}». La sesión del {e[0]} parece darlo por hecho.",
                              f"sesiones.md ({e[0]}) lo cuenta en Avances")
-        # rotación
-        for nombre, texto, es in (("sesiones.md", ses_t, entradas(ses_t)), ("decisiones.md", dec_t, entradas(dec_t))):
-            n = texto.count("\n") + 1 if texto else 0
-            anios = {e[0][:4] for e in es}
-            peso = len(texto.encode("utf-8")) if texto else 0
-            if n > LIMITE_LINEAS or peso > LIMITE_BYTES or len(anios) > 1:
-                motivo = f"pasa de {LIMITE_LINEAS} líneas" if n > LIMITE_LINEAS else f"pasa de {LIMITE_BYTES // 1000} KB" if peso > LIMITE_BYTES else "mezcla años"
-                prop("rotacion", f"{nombre}|{motivo}", f"Archivar {nombre} por año: {motivo}.", "escribir.md, sección 8")
+        # la rotación ya no se propone: la hace cerrar.py en el próximo cierre, sin preguntar (revisión de la 1.23, hallazgo 4);
+        # las propuestas «rotacion» que queden en la cola se borran solas, porque esta corrida no las vuelve a dar
         # decisiones que se cuentan en una sesión y no están registradas
         fechas_dec = {e[0] for e in entradas(dec_todas)}
         limite = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=14)).isoformat()
