@@ -59,6 +59,24 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+# --- el primer párrafo de guia.md sin lo que habla de la carpeta ---
+# La misma función en abrir.py y en generar_vista.py (cada uno se descarga suelto); pruebas/tablero/paridad.py comprueba
+# que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
+SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
+def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
+    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    out = []
+    for f in frases:
+        if not re.search(rx, f):
+            out.append(f); continue
+        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
+        quedan = [c for c in partes if c and not re.search(rx, c)]
+        if quedan and len(partes) > 1:
+            t = "; ".join(quedan); t = t[0].upper() + t[1:]
+            out.append(t if t[-1] in ".!?" else t + ".")
+    return out
+# --- fin del primer párrafo ---
 RAIZ = pathlib.Path(sys.argv[1])
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
@@ -815,7 +833,7 @@ def que_hay(pdoc, taller, dec, ruta_proyecto=""):
     if sin_resolver:
         resumen["reemplazos_sin_resolver"] = sin_resolver   # un reemplazado_por que no apunta a ninguna pieza de este proyecto
     if pdoc.get("_sub"):
-        resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # se listan en la siguiente versión; mientras, se cuentan
+        resumen["entregables_en_subcarpetas"] = pdoc["_sub"]    # no se listan: la página dice cuántos (1.23)
     if cadenas:
         resumen["ultimo_giro"] = cadenas[0]["pasos"][-1]
     if SIN_FECHAS:
@@ -1072,17 +1090,15 @@ if INVENTARIO:
             sub_ = entregables_en_subcarpetas(pc)
             # La huella del proyecto: todo lo que entra en su documento antes de cruzarlo con los demás. Sus archivos (tamaño y
             # fecha), lo que el área dice de él (su fila de guia.md, su línea del índice, las prioridades), sus fechas de entregables,
-            # su trabajo sin sesión, el modo y este script. Del día solo cuenta lo que lo usa: qué sesiones caen en los últimos
-            # 90 días y, si no tiene sesiones ni «actualizado», la fecha de hoy. Así un proyecto que no se tocó no se vuelve a traer
-            # aunque cambie el día.
+            # su trabajo sin sesión, el modo y este script. Del día solo cuenta, si no tiene sesiones ni «actualizado», la fecha de
+            # hoy. Así un proyecto que no se tocó no se vuelve a traer aunque cambie el día. Las sesiones de las últimas cuatro
+            # semanas no entran (1.23): al reutilizar, las que salen de la ventana se quitan sin volver a leer el proyecto.
             _reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
-            reales_ = [s_["fecha"] for s_ in _reales if fecha_valida(s_["fecha"])]
-            _lim = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=90)).isoformat()
             # igual que la generación: la última sesión es la primera de la lista aunque su fecha no sea válida
             sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
             h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
                                  [(r_, os.path.getsize(RAIZ / r_), marca(RAIZ / r_)) for r_ in suyos],
-                                 sorted({f_ for f_ in reales_ if f_ >= _lim}), HOY if sin_ref else "", fe, ss_, tal, sub_)
+                                 [], HOY if sin_ref else "", fe, ss_, tal, sub_)
             pid = f"{a['slug']}--{slug}"
             por_proyecto[rel(pc)] = (suyos, fe, ss_, tal, sub_)
             # un id que la base no admite (espacios, acentos) nunca llega a ella: no se puede reutilizar
@@ -1474,19 +1490,7 @@ elif re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _que_
 else:
     # las frases que hablan del método o de sus archivos son para quien mantiene la carpeta, no para quien la dirige
     _frases = re.split(r"(?<=[.!?])\s+", _que_es)
-    # una frase que habla de la carpeta se quita; si va unida con «;» a otra que no, se queda la otra (1.22.5)
-    def _sin_carpeta(frases, rx=r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"):
-        out = []
-        for f in frases:
-            if not re.search(rx, f):
-                out.append(f); continue
-            partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]   # no se parte por un «;» entre paréntesis
-            quedan = [c for c in partes if c and not re.search(rx, c)]
-            if quedan and len(partes) > 1:
-                t = "; ".join(quedan); t = t[0].upper() + t[1:]
-                out.append(t if t[-1] in ".!?" else t + ".")
-        return out
-    _que_es = " ".join(_sin_carpeta(_frases)).strip()
+    _que_es = " ".join(sin_carpeta(_frases)).strip()
 _que_es_falta = not _que_es
 if guia.strip() and _que_es_falta:
     docs["meta"]["estado"]["fuera"].append({"carpeta": "guia.md", "archivos": 0, "de_claude": False, "que_es": True})

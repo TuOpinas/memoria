@@ -48,4 +48,16 @@ for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-s
     j_ = subprocess.run(["node", "-e", js.split("\nconst c = ")[0] + f"\nconsole.log(soloNombre({json.dumps(d)}))"], capture_output=True, text=True).stdout.strip()
     bien = A["solo_nombre"](d) == j_
     print(("  bien  " if bien else "  FALLA ") + f"el dueño «{d}» sale igual"); fallos += not bien
+# sin_carpeta (1.23): el primer párrafo de guia.md, igual en la sesión y en el tablero
+bloque = lambda ruta: (lambda s: s[s.index("# --- el primer párrafo de guia.md"):s.index("# --- fin del primer párrafo ---")])((P / ruta).read_text(encoding="utf-8"))
+ba, bg = bloque("skills/sesion/abrir.py"), bloque("skills/tablero/generar_vista.py")
+bien = ba == bg
+print(("  bien  " if bien else "  FALLA ") + "sin_carpeta es la misma en abrir.py y en generar_vista.py"); fallos += not bien
+ns = {"re": re}; exec(ba, ns)
+casos = [(["Acme fabrica muebles.", "Cómo se trabaja está en `metodo.md`."], ["Acme fabrica muebles."]),
+         (["Acme fabrica muebles; lo demás está en `guia.md`."], ["Acme fabrica muebles."]),
+         (["Acme (ver `guia.md`; abajo) fabrica muebles."], [])]
+for entrada, sale in casos:
+    bien = ns["sin_carpeta"](entrada) == sale
+    print(("  bien  " if bien else "  FALLA ") + f"sin_carpeta({entrada!r})"); fallos += not bien
 sys.exit(1 if fallos else 0)

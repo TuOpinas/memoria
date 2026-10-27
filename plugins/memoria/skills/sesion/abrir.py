@@ -216,6 +216,24 @@ def colaboran_en(quien):
     """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
     return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
 # --- fin de quién escribe ---
+# --- el primer párrafo de guia.md sin lo que habla de la carpeta ---
+# La misma función en abrir.py y en generar_vista.py (cada uno se descarga suelto); pruebas/tablero/paridad.py comprueba
+# que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
+SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
+def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
+    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    out = []
+    for f in frases:
+        if not re.search(rx, f):
+            out.append(f); continue
+        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
+        quedan = [c for c in partes if c and not re.search(rx, c)]
+        if quedan and len(partes) > 1:
+            t = "; ".join(quedan); t = t[0].upper() + t[1:]
+            out.append(t if t[-1] in ".!?" else t + ".")
+    return out
+# --- fin del primer párrafo ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
 # que las dos copias son idénticas. Recibe el texto de «Quién responde por qué» y {nombre en minúscula: cuentas} de la
@@ -421,19 +439,7 @@ if CUENTA:
         _cuerpo = re.sub(r"^\s*#[^\n]*\n", "", re.sub(r"\A---\n.*?\n---\n", "", guia, count=1, flags=re.S), count=1)
         _p1 = next((b.strip() for b in re.split(r"\n\s*\n", _cuerpo.strip()) if b.strip() and not b.strip().startswith(("|", "- "))), "")
         _p1 = re.sub(r"\*\*([^*]+)\*\*", r"\1", re.sub(r"<!--.*?-->", "", _p1, flags=re.S)).strip()
-        # una frase que habla de la carpeta se quita; si va unida con «;» a otra que no, se queda la otra (1.22.5)
-        def _sin_carpeta(frases, rx=r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"):
-            out = []
-            for f in frases:
-                if not re.search(rx, f):
-                    out.append(f); continue
-                partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]   # no se parte por un «;» entre paréntesis
-                quedan = [c for c in partes if c and not re.search(rx, c)]
-                if quedan and len(partes) > 1:
-                    t = "; ".join(quedan); t = t[0].upper() + t[1:]
-                    out.append(t if t[-1] in ".!?" else t + ".")
-            return out
-        _frases = _sin_carpeta(re.split(r"(?<=[.!?])\s+", _p1))
+        _frases = sin_carpeta(re.split(r"(?<=[.!?])\s+", _p1))
         if (not _p1 or _p1.startswith(("#", ">", "*", "```", "|")) or re.match(r"^\d+[.)]\s", _p1) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _p1)
                 or re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _p1) or not " ".join(_frases).strip()):
             print("(aviso para decirlo: el primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. "
