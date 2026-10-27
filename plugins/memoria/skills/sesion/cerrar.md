@@ -74,7 +74,7 @@ El `Estatus` se reescribe entero desde lo que pasó en esta sesión, con la plan
 
 ### Qué respondo al terminar
 
-Dos o tres líneas: qué archivos se escribieron y qué queda para la próxima. Si hay que avisar a otra área, se dice a quién. Si quedó algo en `fuentes/` pendiente de decidir si es confidencial, se dice. Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más. El resumen largo ya está en los archivos.
+Lo que escribió el cierre va en el mismo recuadro que la apertura (1.23), para que todo lo que es de la memoria se vea igual: una tabla de Markdown de una columna, con la cabecera «Memoria · sesión cerrada · <n> archivos» (los `escritos` de `cerrar.py`, más la rotación o la copia en conflicto si las hubo) y una fila por archivo, con su enlace (`computer://`, como cualquier archivo que se nombra en la conversación) y en pocas palabras qué cambió en él. Las celdas siguen la regla del recuadro de la apertura: sin saltos de línea ni «|». Debajo, en texto normal y solo si hay algo: qué queda para la próxima en una línea, a quién avisar de otra área, lo que quedó en `fuentes/` pendiente de decidir si es confidencial, `ajenos` y `sin_nombrar` en media línea. Del tablero no se dice nada si se apuntó el cierre; media línea solo si se lanzó porque la persona lo pidió, si se puso al día aquí o si algo falló. Nada más: el resumen largo ya está en los archivos. La cita con barra lateral se queda para lo que se enseña antes de escribir (la entrada, las decisiones y el `Estatus`), no para el resumen.
 
 ---
 
@@ -111,7 +111,8 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 > ## 2026-08-29
 > Tema: el criterio de corte por monto.
 > Avances: criterio fijado en 5.000 MXN y descartado el tope acumulado.
-> Sesión de: Ana Pérez · plugin 1.22.0
+> Escribió: entregables/flujo-aprobacion.md
+> Sesión de: Ana Pérez · plugin 1.23.0
 >
 > El estatus quedaría así:
 >
@@ -125,8 +126,11 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta al cerrar:**
 
-> Escribí la entrada en `decisiones.md`, la sesión de hoy en `sesiones.md`, actualicé el estatus y los siguientes pasos en `proyecto.md` y la línea del proyecto en `compras/area.md`. La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a», así que conviene revisarlo antes de publicarlo.
+> | Memoria · sesión cerrada · 4 archivos |
+> |---|
+> | [compras/automatizacion-ordenes/decisiones.md](computer:///…/compras/automatizacion-ordenes/decisiones.md) · el corte en 5.000 MXN |
+> | [compras/automatizacion-ordenes/sesiones.md](computer:///…/compras/automatizacion-ordenes/sesiones.md) · la sesión de hoy |
+> | [compras/automatizacion-ordenes/proyecto.md](computer:///…/compras/automatizacion-ordenes/proyecto.md) · estatus y siguientes pasos |
+> | [compras/area.md](computer:///…/compras/area.md) · la línea del proyecto |
 >
-> La decisión afecta a `finanzas/cierre-mensual`. Avísale a Luis Romero, que es el responsable de Finanzas; la carpeta no lo hace por ti.
->
-> Para la próxima queda validar el criterio con Finanzas y reanudar la revisión del mapa de proceso.
+> La decisión cita `entregables/flujo-aprobacion.md` en «Afecta a»: conviene revisarlo antes de publicarlo. Afecta también a `finanzas/cierre-mensual`: avísale a Luis Romero, responsable de Finanzas; la carpeta no lo hace por ti. Para la próxima, validar el criterio con Finanzas y retomar el mapa de proceso.
