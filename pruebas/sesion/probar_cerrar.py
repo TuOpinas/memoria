@@ -191,6 +191,12 @@ c, sa = corre(RA, {"sesion": SESION, "escribio": ["entregables/borrador-viejo.md
 sesA = (RA / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
 ok(c == 0 and "Avances: PRUEBA-CERRAR cerrada.\nEscribió: entregables/borrador-viejo.md, taller/nota-precios.md\nPublicó: entregables/kit-cuentas.md\nSesión de: Ana Prueba" in sesA, "«Escribió:» y «Publicó:» van antes de «Sesión de:», sin repetir y con la ruta normalizada")
 ok(sa.get("sin_nombrar") == ["taller/nota-nueva.md"], f"lo cambiado desde la apertura que no se nombró vuelve en sin_nombrar ({sa.get('sin_nombrar')})")
+RC = raiz_nueva()
+(RC / "ventas/cuentas/taller/otra-nueva.md").write_text("---\nestado: borrador\n---\n# x\n", encoding="utf-8")
+antes_c = (RC / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+c, sc_ = corre(RC, {"sesion": SESION, "escribio": ["entregables/kit-cuentas.md"]}, "--comprobar", "--abierto", abiertoA)
+ok(c == 0 and sc_.get("comprobado") and "Escribió: entregables/kit-cuentas.md\nSesión de" in sc_.get("entrada", "") and sc_.get("sin_nombrar") == ["taller/otra-nueva.md"]
+   and (RC / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") == antes_c, "con --comprobar devuelve la entrada y lo que falta nombrar, y no escribe nada")
 c, sb = corre(raiz_nueva(), {"sesion": SESION, "publico": ["entregables/borrador-viejo.md"]})
 ok(c == 1 and "no está vigente" in sb.get("error", ""), "publicar algo que no está vigente se rechaza antes de escribir")
 c, sc = corre(raiz_nueva(), {"sesion": SESION, "escribio": ["proyecto.md"]})
@@ -200,7 +206,16 @@ ok(c == 1 and "no existe" in sd.get("error", ""), "un documento que no existe se
 c, se = corre(raiz_nueva(), {"escribio": ["entregables/kit-cuentas.md"]})
 ok(c == 1 and "hace falta «sesion»" in se.get("error", ""), "sin entrada de sesión no hay dónde atribuir")
 c, sf = corre(raiz_nueva(), {"sesion": SESION.replace("Sesión de", "Escribió: x\nSesión de"), "escribio": ["entregables/kit-cuentas.md"]})
-ok(c == 1 and "ya trae" in sf.get("error", ""), "una entrada que ya trae «Escribió:» y además la lista se rechaza")
+ok(c == 1 and "a mano" in sf.get("error", ""), "una entrada que ya trae «Escribió:» y además la lista se rechaza")
+c, sf2 = corre(raiz_nueva(), {"sesion": SESION.replace("Sesión de", "Escribio: entregables/kit-cuentas.md\nSesión de")})
+ok(c == 1 and "a mano" in sf2.get("error", ""), "una «Escribió:» tecleada se rechaza aunque no venga la lista, también sin acento")
+c, sf3 = corre(raiz_nueva(), {"sesion": SESION.replace("Sesión de: Ana Prueba · plugin 9.9.9", "Avances: más"), "escribio": ["entregables/kit-cuentas.md"]})
+ok(c == 1 and "Sesión de" in sf3.get("error", ""), "con «escribio», una entrada sin «Sesión de:» se rechaza: no habría a quién atribuirlo")
+RP = raiz_nueva()
+c, sp = corre(RP, {"sesion": SESION, "publico": ["entregables/borrador-viejo.md"],
+                   "otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador", "a": "estado: vigente"}]}]})
+ok(c == 0 and "Publicó: entregables/borrador-viejo.md" in (RP / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+   and "estado: vigente" in (RP / "ventas/cuentas/entregables/borrador-viejo.md").read_text(encoding="utf-8"), "publicar y cerrar en la misma llamada: el estado se mira sobre lo que deja «otros»")
 RG = raiz_nueva()
 c, sg = corre(RG, {"sesion": SESION})
 ok(c == 0 and "Escribió:" not in (RG / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") and "sin_nombrar" not in sg, "sin documentos no hay líneas, y sin --abierto no hay sin_nombrar")
@@ -233,6 +248,20 @@ pses.write_text(pses.read_text(encoding="utf-8").replace("2026-", "2025-"), enco
 c, sy = corre(RY, {"sesion": SESION})
 ok((RY / "ventas/cuentas/sesiones-2025.md").is_file() and any(x["motivo"] == "cambió el año" for x in sy.get("rotados", [])) and f"## {HOY}" in pses.read_text(encoding="utf-8"),
    "al cambiar el año, la bitácora del año anterior se archiva con ese año y la entrada de hoy abre la nueva")
+RD = raiz_nueva()
+pd_ = RD / "ventas/cuentas/decisiones.md"; pd_.write_text(grande, encoding="utf-8")
+(RD / "ventas/cuentas/decisiones-2026.md").write_text(grande, encoding="utf-8")   # una rotación que no llegó a encoger el vivo
+c, sd_ = corre(RD, {"sesion": SESION})
+ok(c == 0 and not (RD / "ventas/cuentas/decisiones-2026-2.md").exists() and sd_.get("rotados", [{}])[0].get("ya_estaba") and "Archivado: decisiones-2026.md." in pd_.read_text(encoding="utf-8"),
+   "un decisiones.md grande se archiva en un cierre sin decisión, y si ya hay un archivado idéntico no se duplica: solo se encoge el vivo")
+ok(len(sd_["escritos"]) == len(set(sd_["escritos"])), f"«escritos» no repite archivos ({sd_['escritos']})")
+RH = raiz_nueva()
+ph = RH / "ventas/cuentas/decisiones.md"; ph.write_text(grande.split("---\n", 2)[2], encoding="utf-8")   # sin cabecera
+(RH / "ventas/cuentas/decisiones-2025.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2025-03-01 · Vieja\nDecidió: Ana\n", encoding="utf-8")
+c, sh_ = corre(RH, {"decisiones": [DEC]})
+ah = (RH / "ventas/cuentas/decisiones-2026.md").read_text(encoding="utf-8")
+ok(ah.startswith("---\nestado: vigente\nactualizado: 2026-") and "Archivado: decisiones-2025.md, decisiones-2026.md." in ph.read_text(encoding="utf-8"),
+   "un registro sin cabecera se archiva con ella, y «Archivado:» lista también los archivados hechos a mano")
 RN = raiz_nueva()
 pn = RN / "ventas/cuentas/decisiones.md"; pn.write_text(grande, encoding="utf-8")
 c, sn = corre(RN, {"decisiones": [DEC]}, "--sin-rotar")
