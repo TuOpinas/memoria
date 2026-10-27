@@ -247,6 +247,10 @@ ok("Le afecta una decisión de ventas/cuentas" in o.split("=== AVISOS")[1] and "
 o = subprocess.run([sys.executable, str(ABRIR), str(RA), "ventas/cuentas"], capture_output=True, text=True).stdout
 dec_ = o.split("=== DECISIONES")[1].split("=== SESIONES")[0]
 ok("(ninguna)" not in dec_ and "## 2026-" in dec_, "las decisiones más recientes salen aunque el registro vivo esté recién archivado")
+# la respuesta a un cuestionamiento, archivada hace años: el cuestionamiento sigue respondido
+(pc_ / f"decisiones-{anio_}.md").rename(pc_ / "decisiones-2019.md")
+o = subprocess.run([sys.executable, str(ABRIR), str(RA), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("operacion/soporte#2026-09-25" not in o.split("=== AVISOS")[1], "un cuestionamiento cuya respuesta está en un archivado de hace años no reaparece como abierto")
 
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")

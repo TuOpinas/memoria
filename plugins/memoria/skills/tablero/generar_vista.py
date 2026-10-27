@@ -105,6 +105,15 @@ def con_archivados(carpeta, nombre, vivo, anio, leer_):
         if m:
             partes.append(t[m.start():])
     return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+def respuestas_viejas(carpeta, anio, leer_):
+    """Las líneas «Responde a:» de los archivados de decisiones de antes del año anterior, que no se leen enteros: un
+    cuestionamiento respondido hace años sigue respondido (revisión de la 1.23, hallazgo 5). Es un patrón de línea."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out
 # --- fin de los registros ---
 RAIZ = pathlib.Path(sys.argv[1])
 ZONA_AVISO = None
@@ -301,6 +310,7 @@ def fechas_en(texto):
 # lo que la base del tablero admite: un doc_id sin espacios ni acentos y un documento de menos de 1 MB (plan_subida.py)
 ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")
 LIMITE_DOC = 1_000_000
+MAX_ARCHIVADAS = 150   # decisiones archivadas que viajan por proyecto (1.23): las más recientes
 
 # ---------- guia.md ----------
 guia = leer(RAIZ / "guia.md") or ""
@@ -1111,7 +1121,9 @@ if INVENTARIO:
             _si_legible(pc / "decisiones.md", suyos)
             # los archivados de este año y del anterior viajan con el proyecto: la generación los lee como si no se hubiera
             # archivado (1.23); entran en la huella, y como no cambian, no hacen volver a traer el proyecto
-            _arch = [n_ for r_ in ("sesiones", "decisiones") for n_ in archivados_de(pc, r_, HOY[:4]) if _si_legible(pc / n_, suyos)]
+            # de los de antes, solo sus líneas «Responde a:» (respuestas_viejas): viajan también, sin leerlos aquí enteros
+            _arch = [n_ for r_ in ("sesiones", "decisiones") for n_ in archivados_de(pc, r_, 0)
+                     if (pc / n_).is_file() and os.access(pc / n_, os.R_OK) and not suyos.append(rel(pc / n_))]
             if any(n_.startswith("sesiones-") for n_ in _arch):
                 ses = parse_sesiones(con_archivados(pc, "sesiones", leer(pc / "sesiones.md"), HOY[:4], leer)[0])
             fm_p, cuerpo_p = frontmatter(tp)
@@ -1416,7 +1428,25 @@ for a in areas_guia:
             pasos.append(p_)
         pdoc["pasos"] = pasos
         dec = parse_decisiones(*con_archivados(pc, "decisiones", leer(pc / "decisiones.md"), HOY[:4], leer))
-        pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento")
+        # de una decisión archivada viaja la cabecera (quién, qué, a quién afecta, qué reemplaza o responde), no su porqué:
+        # dos años de archivados no caben en la base, y el porqué está en la carpeta (revisión de la 1.23, hallazgo 6)
+        for d_ in dec:
+            if d_.get("archivada"):
+                d_["porque"] = ""; d_["descartamos"] = ""
+        # y como mucho las 150 archivadas más recientes: el resto se cuenta, y sigue en la carpeta con su identificador
+        _arch_d = [d_ for d_ in dec if d_.get("archivada")]
+        if len(_arch_d) > MAX_ARCHIVADAS:
+            _fuera_d = {id(d_) for d_ in _arch_d[MAX_ARCHIVADAS:]}   # dec ya va de la más nueva a la más vieja
+            dec = [d_ for d_ in dec if id(d_) not in _fuera_d]
+            pdoc["decisiones_archivadas_fuera"] = len(_fuera_d)
+        else:
+            pdoc.pop("decisiones_archivadas_fuera", None)
+        _rv = respuestas_viejas(pc, HOY[:4], leer)
+        if _rv:
+            pdoc["respuestas_viejas"] = _rv[:200]
+        else:
+            pdoc.pop("respuestas_viejas", None)
+        pdoc["decisiones_total"] = sum(1 for d_ in dec if d_.get("tipo") != "cuestionamiento") + pdoc.get("decisiones_archivadas_fuera", 0)
         pdoc["decisiones"] = dec
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
@@ -1460,6 +1490,9 @@ for pid, pdoc in docs["proyectos"].items():
         if d_.get("responde"):
             q, i = ref_decision(d_["responde"])
             if q: respuestas.add((q, i))
+    for r_ in pdoc.get("respuestas_viejas") or []:   # las de los archivados de hace años (1.23)
+        q, i = ref_decision(r_)
+        if q: respuestas.add((q, i))
 # una premisa nueva que reemplaza a P<n> responde a los cuestionamientos de P<n> anteriores a ella (contrato, sección 4)
 reemplazos = {p_["reemplaza"]: p_["fecha"] for p_ in premisas if p_["reemplaza"]}
 cuestionamientos = []
@@ -1683,6 +1716,14 @@ for pid, pd in docs["proyectos"].items():
         det["que_hay"] = qh; pd["que_hay_aparte"] = True
     if det:
         docs["detalle"][pid] = det
+
+# un proyecto cuyo detalle la base rechazaría por tamaño tampoco guarda su huella: si se reutilizara, la página se quedaría
+# sin su detalle para siempre (revisión de la 1.23, hallazgo 6)
+if INV is not None and INV.get("huellas") and "huellas" in docs["meta"]["estado"]:
+    _grd = {pid for pid, d_ in docs["detalle"].items() if len(json.dumps(d_, ensure_ascii=False, indent=1).encode("utf-8")) > LIMITE_DOC}
+    if _grd:
+        _fuera = {INV["huellas"].get(pid) for pid in _grd}
+        docs["meta"]["estado"]["huellas"] = [h for h in docs["meta"]["estado"]["huellas"] if h not in _fuera]
 
 # ---------- escribir ----------
 # Cada documento lleva una huella de su contenido (sin la hora de sincronización) para que la puesta al día

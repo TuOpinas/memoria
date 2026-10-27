@@ -84,6 +84,15 @@ def con_archivados(carpeta, nombre, vivo, anio, leer_):
         if m:
             partes.append(t[m.start():])
     return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+def respuestas_viejas(carpeta, anio, leer_):
+    """Las líneas «Responde a:» de los archivados de decisiones de antes del año anterior, que no se leen enteros: un
+    cuestionamiento respondido hace años sigue respondido (revisión de la 1.23, hallazgo 5). Es un patrón de línea."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out
 # --- fin de los registros ---
 MAX_AFIRMA = 24      # 1.22.3: el inventario necesita la línea de cada pieza; con 6 por corrida tardaba semanas
 DATO_PERSONAL = re.compile(r"[\w.+'-]+@[\w-]+\.[\w.-]+|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b\d[\d .-]{9,}\d\b")

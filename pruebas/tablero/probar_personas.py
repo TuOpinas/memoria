@@ -86,5 +86,15 @@ ok(set(ids(antes)) <= set(ids(despues)) and len(viejas) == len(antes.get("decisi
    "las decisiones archivadas llegan con sus identificadores de siempre, marcadas «archivada»; la nueva no")
 ok(despues.get("sesiones_total") == antes.get("sesiones_total") and despues.get("ultima_sesion") == antes.get("ultima_sesion"), "las sesiones archivadas siguen contando: el total y la última sesión no cambian")
 
+# la respuesta a un cuestionamiento archivada hace años: sigue respondido en el tablero
+rv = tmp / "raiz-vieja"; shutil.copytree(AQUI / "raiz", rv)
+pv = rv / "ventas" / "cuentas"
+(pv / "decisiones-2019.md").write_text((pv / "decisiones.md").read_text(encoding="utf-8"), encoding="utf-8")
+(pv / "decisiones.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\nArchivado: decisiones-2019.md.\n", encoding="utf-8")
+subprocess.run([sys.executable, str(GV), str(rv), str(tmp / "vieja"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
+sop = json.loads((tmp / "vieja" / "proyectos" / "operacion--soporte.json").read_text(encoding="utf-8"))
+c925 = [d for d in sop.get("decisiones") or [] if d.get("id") == "2026-09-25"]
+ok(c925 and c925[0].get("abierto") is False, f"un cuestionamiento respondido en un archivado de hace años sigue respondido ({c925[:1]})")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

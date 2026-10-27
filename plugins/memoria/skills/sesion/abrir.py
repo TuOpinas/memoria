@@ -262,6 +262,15 @@ def con_archivados(carpeta, nombre, vivo, anio, leer_):
         if m:
             partes.append(t[m.start():])
     return "\n\n".join(p.strip("\n") for p in partes if p.strip()) + "\n", len(re.findall(r"^## ", vivo or "", re.M))
+def respuestas_viejas(carpeta, anio, leer_):
+    """Las líneas «Responde a:» de los archivados de decisiones de antes del año anterior, que no se leen enteros: un
+    cuestionamiento respondido hace años sigue respondido (revisión de la 1.23, hallazgo 5). Es un patrón de línea."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out
 # --- fin de los registros ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
@@ -896,6 +905,11 @@ patron_area = re.compile(r"(?<![\w/-])" + re.escape(area_activa) + r"/(?![\w-])"
 for a_slug, slug, carpeta in proyectos_legibles():
     # con los archivados de este año y del anterior: una decisión archivada sigue avisando y respondiendo (1.23)
     t, _ = con_archivados(carpeta, "decisiones", leer(carpeta / "decisiones.md"), HOY.year, leer)
+    for r_ in respuestas_viejas(carpeta, HOY.year, leer):
+        for m in re.finditer(r"([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", r_):
+            respuestas.add((m.group(1), m.group(2)))
+        for m in re.finditer(r"premisa\s+(P\d+)", r_, re.I):
+            respuestas.add(("premisa", m.group(1).upper()))
     if not t.strip():
         continue
     origen = f"{a_slug}/{slug}"
