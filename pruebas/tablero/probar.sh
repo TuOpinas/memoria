@@ -93,6 +93,8 @@ python3 "$AQUI/../sesion/probar_migrar.py"
 python3 "$AQUI/probar_textos.py"
 # «Por persona» (1.23): sesiones del mismo día, «Escribió:» y «Publicó:», quien colabora en un área
 python3 "$AQUI/probar_personas.py"
+# los scripts compilan con un Python viejo, el que puede haber en la computadora de cada persona (1.23.1)
+python3 "$AQUI/../probar_compila.py"
 # el hook de arranque: JSON válido, versión, bloque entero, y que release.sh pare si el bloque se rompe
 bash "$AQUI/../hook/probar_hook.sh"
 bash "$AQUI/../hook/probar_control.sh"

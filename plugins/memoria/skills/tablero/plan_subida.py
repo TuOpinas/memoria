@@ -128,7 +128,7 @@ def extras_cierre(sincronizado, zona):
         raw = _json(p)
         dd = _datos(raw)
         try:
-            h = datetime.datetime.fromisoformat(str(dd.get("hora", "")))
+            h = datetime.datetime.fromisoformat(str(dd.get("hora", "")).replace("Z", "+00:00"))   # «…Z» no lo lee Python < 3.11
             if h.tzinfo is None:
                 h = h.replace(tzinfo=ahora.tzinfo)
         except ValueError:

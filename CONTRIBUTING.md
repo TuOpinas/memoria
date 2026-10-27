@@ -12,7 +12,7 @@ Se aceptan para revisión, no para fusión automática.
 
 - Juanjo Jiménez-Alfaro los revisa y puede rechazarlos sin explicar el motivo. Que alguien revise un pull request no obliga a fusionarlo.
 - `main` está protegida y nadie más tiene permiso de escritura: todo entra por pull request, desde una rama `version-X-Y-Z` o una de tu fork.
-- Antes de abrirlo, corre lo de `pruebas/` que toque lo que cambias (`pruebas/sesion/`, `pruebas/tablero/`, `pruebas/hook/`, `pruebas/verificar/`), y `plugins/memoria/verificar.sh` sobre una raíz de prueba si cambias el contrato. Los evals (`pruebas/evals/`) cuestan tokens y los corre quien publica.
+- Antes de abrirlo, corre lo de `pruebas/` que toque lo que cambias (con un Python 3.9 a mano, que `pruebas/probar_compila.py` usa para comprobar que los scripts corren en la computadora de cada persona: `uv python install 3.9`) (`pruebas/sesion/`, `pruebas/tablero/`, `pruebas/hook/`, `pruebas/verificar/`), y `plugins/memoria/verificar.sh` sobre una raíz de prueba si cambias el contrato. Los evals (`pruebas/evals/`) cuestan tokens y los corre quien publica.
 - Antes del pull request de una versión, su revisión de calidad con la skill `calidad`, con el informe en `taller/revisiones-de-calidad/` del proyecto que mantiene el plugin: a fondo, con las seis lentes, una versión menor o mayor o un parche grande; errores y riesgos con dos revisores, un parche pequeño. Lo que impide o pone en riesgo el objetivo se arregla en la misma rama; lo demás va a la versión siguiente. `release.sh` no publica sin `--revisada <informe>`.
 - No toques `metodo.md` a mano: se genera desde el plugin con `build-metodo.sh`.
 - Un cambio por pull request, con el porqué en la descripción.
