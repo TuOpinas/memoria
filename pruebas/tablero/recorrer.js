@@ -82,7 +82,7 @@ const path = require('path');
                    {slug:"prod", nombre:"producto", dueno:"Carmen Oyarzún", colaboran:[], colaboran_ver:[]},
                    {slug:"tec", nombre:"tecnología", dueno:"Elena Reyes", colaboran:["diego@x.test"], colaboran_ver:["Diego Antúnez"]}];
           PROJ = [{id:"op--alfa", area:"op", slug:"alfa", nombre:"Alfa", dueno:"Ana Lombardo", colaboran:[],
-                   pasos:[{texto:"Esperar a que Bruno mande el informe"}, {texto:"Esta semana, revisar con Diego el servidor"}],
+                   pasos:[{texto:"Esperar a que Bruno mande el informe"}, {texto:"Revisar con Diego el servidor"}],
                    sesiones_recientes:[{fecha:d0, titulo:d0, n:5, quien:"Ana Lombardo", publico:["entregables/x.md"]},
                                        {fecha:d0, titulo:d0, n:4, quien:"Bruno Esquivel", escribio:["entregables/x.md", "taller/y.md"]},
                                        {fecha:d0, titulo:d0, n:3, quien:"Bruno Esquivel"},

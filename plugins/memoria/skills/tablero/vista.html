@@ -1605,7 +1605,9 @@ function bandaRaiz(){
 }
 
 // ---- Acciones: te toca a ti, y con otros (te deben / les debes) ----
-const RE_DEBES = /\b(mandar|mandarle|manda|enviar|enviarle|envía|avisar|avisarle|avisa|pedir|pedirle|pide|preguntar|preguntarle|pregunta|escribir|escribirle|responder|responderle|llamar|presentar|proponer|compartir|agendar|confirmar|acordar|revisar|buscar)(?:le)?\s+(?:a|con)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/;
+// el verbo vale con mayúscula inicial («Revisar con Diego…», al principio del paso); el nombre sigue pidiendo mayúscula (1.23)
+const VERBOS_DEBES = "mandar mandarle manda enviar enviarle envía avisar avisarle avisa pedir pedirle pide preguntar preguntarle pregunta escribir escribirle responder responderle llamar presentar proponer compartir agendar confirmar acordar revisar buscar".split(" ");
+const RE_DEBES = new RegExp("\\b(" + VERBOS_DEBES.map(v=>`[${v[0].toUpperCase()}${v[0]}]${v.slice(1)}`).join("|") + ")(?:le)?\\s+(?:a|con)\\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)");
 const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
 const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy_contexto !== undefined ? META.soy_contexto === true : !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER())) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
