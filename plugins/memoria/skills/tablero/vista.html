@@ -1527,11 +1527,27 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
     for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
     for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
-  const porNombre = {}, carpeta = escribenSet();
+  const porNombre = {}, carpeta = escribenSet(), completos = {};
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
+    if(f.split(" ").length>1) (completos[k] = completos[k] || new Set()).add(f);
     if(!hay || (carpeta.has(persona(f)) && !carpeta.has(persona(hay))) || (carpeta.has(persona(f))===carpeta.has(persona(hay)) && f.split(" ").length>hay.split(" ").length)) porNombre[k] = f; }
+  // un nombre de pila que llevan dos personas no se atribuye por sí solo: hace falta el apellido (1.23)
+  _AMBIGUOS = new Set(Object.keys(completos).filter(k=>completos[k].size>1));
+  _COMPLETOS = [...full].filter(f=>f.split(" ").length>1).sort((a,b)=>b.length-a.length);
   return _CONOCIDOS = porNombre; }
-function nombresEn(txt){ const c = conocidos(), out = [], re = /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)\b/g; let m; while((m = re.exec(txt||""))){ const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); } return out; }
+let _AMBIGUOS = new Set(), _COMPLETOS = [];
+// una palabra con mayúscula, con fronteras que conocen los acentos: «\b» de JavaScript no los ve, y «Ángel» no casaba (1.23)
+const LETRA = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
+const RE_NOMBRE = new RegExp(`(?<![${LETRA}])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)(?![${LETRA}])`, "g");
+const conFronteras = (txt, n) => new RegExp(`(?<![${LETRA}])${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![${LETRA}])`).test(txt||"");
+function nombresEn(txt){ const c = conocidos(), out = [], conApellido = new Set();
+  for(const f of _COMPLETOS) if(conFronteras(txt, f) && !out.includes(f)){ out.push(f); conApellido.add(f.split(" ")[0]); }
+  let m; RE_NOMBRE.lastIndex = 0;
+  while((m = RE_NOMBRE.exec(txt||""))){ const k = m[1]; if(conApellido.has(k) || _AMBIGUOS.has(k)) continue; const f = c[k]; if(f && !out.includes(f)) out.push(f); }
+  return out; }
+// cuántas veces el texto nombra a alguien solo por un nombre de pila que llevan dos personas
+const ambiguosEn = txt => { conocidos(); let n = 0, m; RE_NOMBRE.lastIndex = 0; const ya = new Set(_COMPLETOS.filter(f=>conFronteras(txt, f)).map(f=>f.split(" ")[0]));
+  while((m = RE_NOMBRE.exec(txt||""))) if(_AMBIGUOS.has(m[1]) && !ya.has(m[1])) n++; return n; };
 
 // ===================== Inicio en tres pestañas: Estatus · Con otros · Mantenimiento =====================
 let INI_TAB = "estatus";
@@ -1715,19 +1731,21 @@ const docNombre = r => (r||"").replace(/^(entregables|taller)\//,"");
 function eventos(desde){
   const ev = [];
   for(const p of PROJ){ if(p.restringido) continue;
-    const pubPor = {};
+    const nombrados = new Set(), publicados = {};
     for(const s of sesionesTodas(p)){ if(s.fecha<desde) continue; const q = persona(quienSes(p,s));
       ev.push({k:"ses", f:s.fecha, p, q, t:s.trabajamos||""});
-      for(const r of new Set(s.escribio||[])) ev.push({k:"esc", f:s.fecha, p, q, t:docNombre(r), doc:r});
-      for(const r of new Set(s.publico||[])) if(!(r in pubPor) || s.fecha>pubPor[r].f) pubPor[r] = {f:s.fecha, q}; }
+      for(const r of new Set(s.escribio||[])){ nombrados.add(r); ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
+      // publicado es lo que una entrada dice en «Publicó:», una vez por documento: la fecha del entregable no lo dice (1.23)
+      for(const r of new Set(s.publico||[])){ nombrados.add(r); if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:docNombre(r)}; } }
+    for(const r in publicados) ev.push({k:"pub", p, ...publicados[r]});
     for(const d of decisionesTodas(p)) if(d.fecha && d.fecha>=desde && d.tipo!=="cuestionamiento") ev.push({k:"dec", f:d.fecha, p, q:persona(d.decidio||""), t:d.titulo, cruza: AREAS.some(a=>a.slug!==p.area && (d.afecta||"").includes(a.slug+"/"))});
-    for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && e.actualizado>=desde){
-      const r = "entregables/"+(e.archivo||e.nombre||""), por = pubPor[r] || Object.entries(pubPor).find(([k])=>docNombre(k).replace(/\.\w+$/,"")===(e.nombre||""))?.[1];
-      ev.push({k:"pub", f:e.actualizado, p, q:por ? por.q : "", t:e.titulo||e.nombre}); }
+    // un vigente que cambió en el periodo sin que ninguna entrada lo nombre: se cuenta aparte, sin suponer quién ni por qué
+    for(const e of (p.entregables||[])) if(e.estado==="vigente" && e.actualizado && e.actualizado>=desde && !nombrados.has("entregables/"+(e.archivo||e.nombre||"")))
+      ev.push({k:"cambio", f:e.actualizado, p, q:"", t:e.titulo||e.nombre});
   }
   return ev;
 }
-const agrega = (evs) => { const o = {ses:0, dec:0, pub:0, esc:0, cruza:0, q:new Set(), proy:new Set(), dias:new Set()}; for(const e of evs){ o[e.k]++; if(e.cruza) o.cruza++; if(e.q) o.q.add(e.q); o.proy.add(e.p.id); if(e.k==="ses") o.dias.add(e.f); } return o; };
+const agrega = (evs) => { const o = {ses:0, dec:0, pub:0, esc:0, cambio:0, cruza:0, q:new Set(), proy:new Set(), dias:new Set()}; for(const e of evs){ o[e.k]++; if(e.cruza) o.cruza++; if(e.q) o.q.add(e.q); o.proy.add(e.p.id); if(e.k==="ses") o.dias.add(e.f); } return o; };
 const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o.dec,"decisión","decisiones"):"", o.pub?cuantos(o.pub,"publicado","publicados"):""].filter(Boolean).join(" · ") || "sin movimiento";
 
 function actPorArea(ev){
@@ -1746,64 +1764,77 @@ function actPorArea(ev){
 // «Escribió:» y «Publicó:») y acciones planeadas (pasos abiertos que la nombran). Sin puntaje ni orden por volumen.
 let ACT_AREA = ""; try{ ACT_AREA = localStorage.getItem("tablero-actividad-area")||""; }catch(e){}
 function rolesEscriben(areaSlug){
-  // {persona: {resp:[áreas o proyectos], col:[…]}} de guia.md (áreas) y de «Quién participa» (proyectos)
-  const R = {}, add = (n, lado, x) => { n = persona(n); if(!n) return; const r = R[n] = R[n] || {resp:[], col:[]}; if(!r[lado].includes(x)) r[lado].push(x); };
+  // {persona: {resp:[áreas o proyectos], col:[…]}} de guia.md (áreas) y de «Quién participa» (proyectos); sin área, también
+  // quien administra la carpeta, que escribe guia.md y base/
+  const R = {}, add = (n, lado, x) => { n = persona(n); if(!n) return; const r = R[n] = R[n] || {resp:[], col:[]}; if(x && !r[lado].includes(x)) r[lado].push(x); };
   for(const a of AREAS){ if(a.legible===false || archivada(a) || (areaSlug && a.slug!==areaSlug)) continue; const an = a.nombre||a.slug;
     add(a.dueno, "resp", an); for(const c of colaboranArea(a)) add(c, "col", an); }
   for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug) || !areaBy[p.area] || archivada(areaBy[p.area])) continue;
     if(p.dueno && persona(p.dueno)!==persona(areaBy[p.area].dueno)) add(p.dueno, "resp", p.nombre);
     for(const c of (p.colaboran||[])) add(c, "col", p.nombre); }
+  if(!areaSlug && META && META.administra){ const n = persona(META.administra); if(n && !R[n]) R[n] = {resp:[], col:[], adm:true}; }
   return R;
 }
-const rolTxt = r => r.fuera ? "no figura con este nombre en la carpeta" : [r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : ""].filter(Boolean).join(" · ");
+const rolTxt = r => r.fuera ? "cerró sesión sin estar en la guía ni en una línea «Colabora:»"
+  : [r.adm ? "administra la carpeta" : "", r.resp.length ? "responsable de "+r.resp.join(" y de ") : "", r.col.length ? "colabora en "+r.col.join(" y en ") : "", r.aqui ? "trabajó aquí" : ""].filter(Boolean).join(" · ");
 function accionesDe(areaSlug){
-  // pasos abiertos de cada proyecto visible cuyo texto nombra a la persona: lo que tiene que hacer y lo que otros esperan de ella
-  const n = {};
+  // pasos abiertos de cada proyecto visible cuyo texto nombra a la persona: lo que tiene que hacer y lo que otros esperan de
+  // ella; un nombre de pila que llevan dos personas, sin apellido, no se atribuye y se cuenta aparte (n_ambiguos)
+  const n = {}; let amb = 0;
   for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug)) continue;
-    for(const s of stepsLive(p)) for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } }
-  return n;
+    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } amb += ambiguosEn(s.texto) ? 1 : 0; } }
+  return {n, amb};
 }
 function actPersonas(ev, areaFija){
   const areaSel = areaFija || (ACT_AREA && areaBy[ACT_AREA] && areaBy[ACT_AREA].legible!==false ? ACT_AREA : "");
   const evs = areaSel ? ev.filter(e=>e.p.area===areaSel) : ev;
-  const roles = rolesEscriben(areaSel), acc = accionesDe(areaSel), gente = {};
+  // los papeles salen de toda la carpeta: quien responde por otra área y trabajó en esta conserva el suyo (1.23)
+  const todosRoles = rolesEscriben(""), roles = areaSel ? rolesEscriben(areaSel) : todosRoles, A = accionesDe(areaSel), acc = A.n, gente = {};
   const P = n => gente[n] = gente[n] || {n, dias:{}, ses:0, dec:0, esc:new Set(), pub:new Set()};
   for(const n of Object.keys(roles)) P(n);
-  // quien cerró sesión sin figurar en la carpeta (un colaborador sin nombre junto a su cuenta, un nombre escrito distinto)
-  // también trabajó: sale, con su papel sin declarar; quien solo decide desde fuera no, porque nunca cierra sesión
-  for(const e of evs) if(e.k==="ses" && e.q && !roles[e.q]){ roles[e.q] = {resp:[], col:[], fuera:true}; P(e.q); }
-  let sinNombre = 0, pubSin = 0;
+  // quien cerró sesión aquí sin papel en esta área sale con el suyo y «trabajó aquí»; sin papel en ninguna, con su papel sin
+  // declarar; quien solo decide desde fuera no, porque nunca cierra sesión
+  for(const e of evs) if(e.k==="ses" && e.q && !roles[e.q]){ roles[e.q] = todosRoles[e.q] ? {...todosRoles[e.q], aqui:true} : {resp:[], col:[], fuera:true}; P(e.q); }
+  let sinNombre = 0, escSin = 0, cambios = 0;
   for(const e of evs){
-    if(e.k==="ses" && !e.q){ sinNombre++; continue; }
-    if(e.k==="pub" && !e.q){ pubSin++; continue; }
-    if(!e.q || !roles[e.q]) continue; const g = P(e.q);
+    if(e.k==="cambio"){ cambios++; continue; }
+    if(!e.q){ if(e.k==="ses") sinNombre++; else if(e.k==="esc") escSin++; continue; }
+    if(!roles[e.q]) continue; const g = P(e.q);
     if(e.k==="ses"){ g.ses++; g.dias[e.f] = (g.dias[e.f]||0) + 1; }
     else if(e.k==="dec") g.dec++;
     else if(e.k==="esc") g.esc.add(e.p.id+"/"+e.doc);
     else if(e.k==="pub") g.pub.add(e.p.id+"/"+e.t); }
-  // la última sesión de cada persona, en cualquier fecha, para quien no tuvo ninguna en el periodo
+  // la última sesión de cada persona, en cualquier fecha: la que da el generador sobre toda la bitácora y, si no, las que hay aquí
   const ult = {};
-  for(const p of PROJ){ if(p.restringido || (areaSel && p.area!==areaSel)) continue; for(const s of sesionesTodas(p)){ const q = persona(quienSes(p,s)); if(q && (!ult[q] || s.fecha>ult[q])) ult[q] = s.fecha; } }
+  for(const p of PROJ){ if(p.restringido || (areaSel && p.area!==areaSel)) continue;
+    for(const [q0, f] of Object.entries(p.ultima_por_persona||{})){ const q = persona(q0); if(q && (!ult[q] || f>ult[q])) ult[q] = f; }
+    for(const s of sesionesTodas(p)){ const q = persona(quienSes(p,s)); if(q && (!ult[q] || s.fecha>ult[q])) ult[q] = s.fecha; } }
   const todos = Object.values(gente).sort((a,b)=>a.n.localeCompare(b.n,"es"));
-  const activos = todos.filter(g=>g.ses), quietos = todos.filter(g=>!g.ses);
+  // arriba quien hizo algo en el periodo (una sesión, una decisión o un documento); abajo, quien no
+  const hizo = g => g.ses || g.dec || g.esc.size || g.pub.size;
+  const activos = todos.filter(hizo), quietos = todos.filter(g=>!hizo(g));
   const n = ACT_DIAS, w = n>14 ? 7 : 12;
-  const tira = g => { let h = "", dias = 0; for(let i=n-1;i>=0;i--){ const f = addDays(-i), c = g.dias[f]||0; if(c) dias++; h += `<i class="${c?"on":""}" data-t="${esc(fmtD(f) + (c ? ` · ${cuantos(c,"sesión","sesiones")}` : ""))}"></i>`; }
+  const tira = g => { let h = "", dias = 0; for(let i=n-1;i>=0;i--){ const f = addDays(-i), c = g.dias[f]||0, tt = esc(fmtD(f) + (c ? ` · ${cuantos(c,"sesión","sesiones")}` : "")); if(c) dias++; h += `<i class="${c?"on":""}" data-t="${tt}" title="${tt}"></i>`; }
     return `<span class="tira" style="grid-template-columns:repeat(${n},${w}px)" aria-label="${cuantos(dias,"día","días")} con sesión">${h}</span>`; };
   const docs = g => { const e = g.esc.size, u = g.pub.size; return !e && !u ? `<span class="z">documentos: <b>0</b></span>` : `<span>documentos: ${[e?`<b>${e}</b> ${e===1?"escrito":"escritos"}`:"", u?`<b>${u}</b> ${u===1?"publicado":"publicados"}`:""].filter(Boolean).join(" y ")}</span>`; };
   const accion = g => { const k = acc[g.n]||0; return `<span class="${k?"esp":"z"}"><b>${k}</b> ${k===1?"acción planeada":"acciones planeadas"}</span>`; };
   const fila = g => `<div class="per"><div class="per-h"><span><b>${esc(g.n)}</b><span class="rol">${esc(rolTxt(roles[g.n]))}</span></span>${tira(g)}</div>
-    <div class="per-k"><span><b>${g.ses}</b> ${g.ses===1?"sesión":"sesiones"}</span><span class="${g.dec?"":"z"}"><b>${g.dec}</b> ${g.dec===1?"decisión":"decisiones"}</span>${docs(g)}${accion(g)}</div></div>`;
+    <div class="per-k"><span class="${g.ses?"":"z"}"><b>${g.ses}</b> ${g.ses===1?"sesión":"sesiones"}</span><span class="${g.dec?"":"z"}"><b>${g.dec}</b> ${g.dec===1?"decisión":"decisiones"}</span>${docs(g)}${accion(g)}</div></div>`;
   const filaQuieta = g => `<div class="per quiet"><div class="per-h"><span><b>${esc(g.n)}</b><span class="rol">${esc([rolTxt(roles[g.n]), ult[g.n] ? `última sesión el ${fmtL(ult[g.n])}` : "sin sesiones todavía"].filter(Boolean).join(" · "))}</span></span></div>
     <div class="per-k">${accion(g)}</div></div>`;
   const opciones = areaFija ? "" : `<select class="act-area" aria-label="Área" data-act-area>${[["", "Toda la carpeta"], ...areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>[a.slug, a.nombre||a.slug])].map(([v,l])=>`<option value="${esc(v)}"${v===areaSel?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
-  const sinAtrib = [sinNombre ? cuantos(sinNombre,"sesión","sesiones") : "", pubSin ? cuantos(pubSin,"documento publicado","documentos publicados") : ""].filter(Boolean).join(" y ");
+  // lo que no se atribuye se dice como hecho, sin suponer la causa
+  const notas = [sinNombre ? `${cuantos(sinNombre,"sesión no dice","sesiones no dicen")} quién la cerró` : "",
+    escSin ? `${cuantos(escSin,"documento escrito","documentos escritos")} en una sesión sin nombre` : "",
+    cambios ? `${cuantos(cambios,"documento vigente cambió","documentos vigentes cambiaron")} sin que ninguna sesión lo nombre` : "",
+    A.amb ? `${cuantos(A.amb,"paso nombra","pasos nombran")} a alguien solo por un nombre de pila que llevan dos personas: con el apellido, cuenta` : ""].filter(Boolean);
   // quien colabora en un área sin nombre junto a su cuenta no se puede listar: se cuenta (1.23)
   const sinNombreGuia = AREAS.filter(a=>a.legible!==false && !archivada(a) && (!areaSel || a.slug===areaSel)).reduce((n,a)=>n+(a.colaboran_sin_nombre||0),0);
   return `<section class="card personas"><h2>Por persona${hq("por-persona","Qué cuenta «Por persona»")}</h2><p class="sub" style="font-size:13.5px">Quien escribe en la carpeta. Hechos, sin puntaje ni orden por volumen.</p>
     ${opciones ? `<div class="ctl">${opciones}</div>` : ""}
-    ${activos.length ? activos.map(fila).join("") : `<p class="empty">Nadie cerró sesión en el periodo${areaSel?" en esta área":""}.</p>`}
-    ${activos.length || sinAtrib ? `<p class="nota">${activos.length ? "Los documentos se cuentan a quien los escribió y, aparte, a quien los publicó." : ""}${sinAtrib ? ` ${sinAtrib} del periodo no dicen quién: son de antes de que la bitácora lo apuntara, y no se atribuyen a nadie.` : ""}</p>` : ""}
-    ${quietos.length || sinNombreGuia ? `<div class="quiet-g"><div class="sep">Sin sesión en el periodo</div>${quietos.map(filaQuieta).join("")}${sinNombreGuia ? `<p class="nota">${cuantos(sinNombreGuia,"persona colabora","personas colaboran")} sin nombre junto a su cuenta en la carpeta y no ${sinNombreGuia===1?"sale":"salen"} aquí: se le da con una línea «Colabora: Nombre Apellido (correo)» en uno de sus proyectos.</p>` : ""}</div>` : ""}</section>`;
+    ${activos.length ? activos.map(fila).join("") : `<p class="empty">Nadie trabajó en el periodo${areaSel?" en esta área":""}.</p>`}
+    ${activos.length || notas.length ? `<p class="nota">${activos.length ? "Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó." : ""}${notas.length ? ` En el periodo: ${notas.join("; ")}.` : ""}</p>` : ""}
+    ${quietos.length || sinNombreGuia ? `<div class="quiet-g"><div class="sep">Sin actividad en el periodo</div>${quietos.map(filaQuieta).join("")}${sinNombreGuia ? `<p class="nota">${cuantos(sinNombreGuia,"persona colabora","personas colaboran")} sin nombre junto a su cuenta en la carpeta y no ${sinNombreGuia===1?"sale":"salen"} aquí: se le da con una línea «Colabora: Nombre Apellido (correo)» en uno de sus proyectos.</p>` : ""}</div>` : ""}</section>`;
 }
 document.addEventListener("change", e => { const s = e.target.closest && e.target.closest("[data-act-area]"); if(!s) return;
   ACT_AREA = s.value; try{ localStorage.setItem("tablero-actividad-area", ACT_AREA); }catch(x){} render(); });

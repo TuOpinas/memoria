@@ -1428,6 +1428,17 @@ for a in areas_guia:
                                        "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
+        # la última sesión de cada persona en este proyecto, sobre toda la bitácora leída (con sus archivados): la banda
+        # «Sin actividad» de «Por persona» no la saca de las cinco sesiones que viajan (1.23)
+        _upp = {}
+        for s_ in reales:
+            q_ = s_.get("quien")
+            if q_ and fecha_valida(s_["fecha"]) and s_["fecha"] > _upp.get(q_, ""):
+                _upp[q_] = s_["fecha"]
+        if _upp:
+            pdoc["ultima_por_persona"] = dict(sorted(_upp.items())[:40])
+        else:
+            pdoc.pop("ultima_por_persona", None)
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
         # sesión o de una tarea que dejó su línea «(tarea)». Solo se mira la fecha de modificación, nunca el
         # contenido; proyecto.md no cuenta, porque la tarea del tablero lo toca al aplicar fechas, y restringido/ no se mira.
