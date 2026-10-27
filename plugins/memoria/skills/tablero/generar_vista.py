@@ -1477,7 +1477,7 @@ for a in areas_guia:
             if q_ and fecha_valida(s_["fecha"]) and s_["fecha"] > _upp.get(q_, ""):
                 _upp[q_] = s_["fecha"]
         if _upp:
-            pdoc["ultima_por_persona"] = dict(sorted(_upp.items())[:40])
+            pdoc["ultima_por_persona"] = dict(sorted(_upp.items(), key=lambda x: x[1], reverse=True)[:40])   # las 40 más recientes
         else:
             pdoc.pop("ultima_por_persona", None)
         # trabajo sin sesión: archivos que cambiaron después de la última entrada de la bitácora, sea de una
