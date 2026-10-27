@@ -104,7 +104,7 @@ Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 1. `estado: vigente` y la fecha de hoy en `actualizado`
 2. Si sustituye a otro entregable, el viejo pasa a `estado: reemplazado` con `reemplazado_por` apuntando al nuevo
 3. La línea del entregable en el bloque `Proyectos` de `area.md`, debajo de su proyecto: su `aportacion`, con la fecha de hoy (con `cerrar.py`, el entregable como `{"archivo": "x.md"}` en `area.entregables`)
-4. Una línea en `sesiones.md` al cerrar la sesión, indicando qué se publicó
+4. La línea «Publicó:» de la entrada de `sesiones.md` al cerrar la sesión: el entregable va en `publico` de `cambios.json` y `cerrar.py` la escribe (`escribir.md`, formato de `sesiones.md`). Así el tablero lo cuenta como publicado para quien lo publicó y como escrito para quien lo escribió, aunque sean dos personas
 
 Publicar no es una decisión y no entra en `decisiones.md`. Lo que se decidió ya está registrado; publicar solo cambia quién puede leerlo.
 

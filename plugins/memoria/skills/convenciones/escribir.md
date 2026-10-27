@@ -93,6 +93,10 @@ Cuando se dice cuánto lleva algo («para cuándo» en `Siguiente`, una propuest
 
 Lo lee alguien con poco tiempo que no va a abrir nada más, en el proyecto y en el área. La primera frase dice el hecho, no lo anuncia, y sobra toda palabra que se puede borrar sin perder información. Personas con nombre, fechas absolutas, sin adjetivos y sin rutas. La primera frase no empieza por el nombre del área o del proyecto, que ya está en el título de todo lo que la enseña, y no dice «hoy», «ayer» ni «esta semana»: se lee días después, y la fecha ya va delante. Es la voz del director de área y el estilo de la casa (skills `director` y `estilo`); para escribir un `Estatus` basta con este párrafo.
 
+### Personas de fuera
+
+A una persona de fuera de la organización (de un cliente, un proveedor, un socio) se la escribe «Nombre Apellido (Organización)»: al menos una vez en el `Estatus` o en `Siguientes pasos` del proyecto que la nombra, y siempre en `Decidió:` cuando decide ella. Después, en el mismo texto, basta su nombre. Es la única forma en que el tablero la reconoce y la agrupa por organización en «Con otros»: no adivina personas por las mayúsculas, así que «Ana Ruiz» sin paréntesis no sale, y «Sistema Nuevo Contable» no es nadie. A quien es de la organización se la escribe con nombre y apellido, sin paréntesis; un correo nunca va en estos textos. Si su organización no consta, se pregunta: no se inventa.
+
 ### Qué guarda el cierre y qué no
 
 **Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `Estatus` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
@@ -145,7 +149,7 @@ Cuestiona a: compras/automatizacion-ordenes#2026-08-29
 
 `Cuestiona a` lleva un identificador de decisión o `premisa P<n>`. El cuestionamiento sigue abierto hasta que el responsable de lo cuestionado registra en su proyecto una decisión con `Responde a: <identificador del cuestionamiento>`, que mantiene lo decidido o lo reemplaza. Mantenerlo también es una decisión («lo mantengo, porque…»): se registra igual, con su por qué, y es lo que cierra el cuestionamiento. Una premisa la responde el responsable de contexto con una premisa nueva que lleve `Reemplaza P<n>`, que cierra los cuestionamientos abiertos a `P<n>`, o con una entrada con `Responde a:` en el `decisiones.md` de un proyecto suyo si la mantiene. Un cuestionamiento no es una decisión, aunque viva en el mismo registro y se cite igual: no se cuenta como tal.
 
-Cuando decide alguien de fuera de la organización (un cliente, un proveedor, un socio), `Decidió: Nombre Apellido (Organización)`: el tablero separa a quienes deciden de dentro y de fuera, y a los de fuera los agrupa por organización.
+Cuando decide alguien de fuera de la organización (un cliente, un proveedor, un socio), `Decidió: Nombre Apellido (Organización)` («Personas de fuera», sección 3): el tablero separa a quienes deciden de dentro y de fuera, y a los de fuera los agrupa por organización.
 
 Una decisión recuperada al migrar que nadie ha confirmado todavía lleva `Decidió: Nombre Apellido (pendiente de confirmar)`. La confirma su responsable con una entrada nueva que la da por buena o la cambia; la recuperada no se edita.
 
@@ -159,10 +163,12 @@ Una entrada tiene lo justo para entender qué se decidió y por qué sin abrir n
 ## AAAA-MM-DD
 Tema: …
 Avances: …
-Sesión de: Nombre Apellido · plugin 1.22.0
+Escribió: entregables/arquitectura.md, taller/guia-fase-1.md
+Publicó: entregables/mapa-epicas.md
+Sesión de: Nombre Apellido · plugin 1.23.0
 ```
 
-`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
+`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: sus documentos cuentan aparte, sin atribuir. La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
 Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`, y la migración de estructura de la 1.22, como `## AAAA-MM-DD (migracion)`: cuentan lo que hicieron, pero no son sesiones, y el tablero no las cuenta como tales.
 

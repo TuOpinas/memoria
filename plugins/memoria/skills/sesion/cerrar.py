@@ -14,6 +14,7 @@ Uso:
 cambios.json, todo opcional:
   {"sesion": "## AAAA-MM-DD\\nTema: …\\nAvances: …\\nSesión de: Nombre · plugin X.Y.Z",
    "decisiones": ["## AAAA-MM-DD · Título\\nDecidió: …\\nPor qué: …\\nDescartado: …", …],
+   "escribio": ["entregables/x.md", "taller/y.md"], "publico": ["entregables/z.md"],
    "proyecto": {"estatus": "texto entero del bloque Estatus, sin el encabezado: «AAAA-MM-DD · **frase**» y sus viñetas",
                 "reemplazos": [{"de": "texto exacto viejo", "a": "texto nuevo"}, …]},
    "area": {"linea": "- `slug/` — descripción",
@@ -32,6 +33,14 @@ no se migró); sin ninguna de las dos, se conserva la línea que ese entregable 
 «entregables» no viene, las líneas que había debajo del proyecto se conservan: el índice nunca pierde un entregable por un
 cierre. «otros» se escribe antes que area.md, para que la línea de un entregable que se publica en la misma llamada lleve
 la fecha nueva.
+
+«escribio» y «publico» son los documentos que la sesión escribió (creó o cambió en su contenido) y los que publicó (pasó a
+vigente con la skill revisar), con su ruta dentro del proyecto. Van a la entrada de la sesión como «Escribió: …» y
+«Publicó: …», justo antes de «Sesión de:», cada una solo si trae algo; así el tablero atribuye cada documento a quien lo
+escribió y a quien lo publicó (escribir.md, formato de sesiones.md). Cada ruta tiene que estar en entregables/ o taller/ del
+proyecto y existir; lo que se publica, en entregables/ y vigente. Con --abierto, la salida trae en «sin_nombrar» los
+documentos de entregables/ y taller/ que cambiaron desde que se abrió y no van en ninguna de las dos listas, para que la
+sesión diga si son suyos: no se atribuyen solos, porque pudo escribirlos otra persona.
 
 Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
 fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
@@ -379,6 +388,66 @@ def con_linea_proyecto(t, slug, linea, entregables):
     return t[:m.start(1)] + "\n".join(bloque) + t[m.end(1):], True
 
 
+def rutas_documento(lista, pd, que, malos, publicar=False):
+    """Normaliza las rutas de «escribio» o «publico»: relativas al proyecto, dentro de entregables/ o taller/, existentes.
+    Lo publicado, en entregables/ y con `estado: vigente`. Lo que no cumple va a «malos» y no se escribe nada."""
+    if lista is None:
+        return []
+    if not isinstance(lista, list):
+        malos.append(f"«{que}» va como lista de rutas"); return []
+    fuera = []
+    for r in lista:
+        r = str(r or "").replace("\\", "/").strip().strip("/")
+        partes = r.split("/")
+        if not r or ".." in partes or partes[0] not in ("entregables", "taller") or len(partes) < 2:
+            malos.append(f"«{que}» lleva «{r or '(vacío)'}»: va la ruta dentro del proyecto, en entregables/ o taller/"); continue
+        if publicar and partes[0] != "entregables":
+            malos.append(f"«{que}» lleva «{r}»: solo se publica lo de entregables/"); continue
+        p = pd / r
+        if not p.is_file():
+            malos.append(f"«{que}» lleva «{r}», que no existe en el proyecto"); continue
+        if publicar and r.endswith(".md"):
+            try:
+                estado = clave_cabecera(p.read_text(encoding="utf-8-sig"), "estado")
+            except (OSError, UnicodeDecodeError):
+                estado = None
+            if estado != "vigente":
+                malos.append(f"«{que}» lleva «{r}», que no está vigente: lo publica la skill revisar antes de cerrar"); continue
+        if r not in fuera:
+            fuera.append(r)
+    return fuera
+
+
+def con_autoria(entrada, escribio, publico):
+    """Pone «Escribió:» y «Publicó:» en la entrada, justo antes de «Sesión de:» (al final si no la tiene)."""
+    extra = ([f"Escribió: {', '.join(escribio)}"] if escribio else []) + ([f"Publicó: {', '.join(publico)}"] if publico else [])
+    if not extra:
+        return entrada
+    lineas = entrada.strip("\n").split("\n")
+    i = next((k for k, l in enumerate(lineas) if re.match(r"^Sesión de\s*:", l)), len(lineas))
+    lineas[i:i] = extra
+    return "\n".join(lineas)
+
+
+def sin_nombrar(pd, abierto, nombrados):
+    """Documentos de entregables/ y taller/ cambiados desde que se abrió la sesión y que no van en las listas."""
+    out = []
+    for sub in ("entregables", "taller"):
+        base = pd / sub
+        if not base.is_dir():
+            continue
+        for p in sorted(base.rglob("*")):
+            rel = p.relative_to(pd).as_posix()
+            if not p.is_file() or any(x.startswith(".") for x in rel.split("/")) or rel in nombrados:
+                continue
+            try:
+                if p.stat().st_mtime > abierto:
+                    out.append(rel)
+            except OSError:
+                pass
+    return out
+
+
 # ---------- un archivo ----------
 class Cierre:
     def __init__(self, raiz, tz, abierto, sin_fechas, forzar):
@@ -535,6 +604,12 @@ def main(argv):
     for que, e in (("«estatus»", (cambios.get("proyecto") or {}).get("estatus")), ("«estatus_area»", cambios.get("estatus_area"))):
         if e and not re.match(r"^\s*20\d\d-\d\d-\d\d\s*·\s*\*\*.+?\*\*", e.strip(), re.S):
             malos.append(f"{que} empieza por «AAAA-MM-DD · **frase**», como dice escribir.md")
+    escribio = rutas_documento(cambios.get("escribio"), pd, "escribio", malos)
+    publico = rutas_documento(cambios.get("publico"), pd, "publico", malos, publicar=True)
+    if (escribio or publico) and not ses:
+        malos.append("«escribio» y «publico» van en la entrada de la sesión: hace falta «sesion»")
+    if ses and (escribio or publico) and re.search(r"^(Escribió|Publicó)\s*:", ses, re.M):
+        malos.append("«sesion» ya trae «Escribió:» o «Publicó:»: van solo en «escribio» y «publico»")
     otros = []
     for o in cambios.get("otros") or []:
         r = str(o.get("ruta", "")).replace("\\", "/").strip("/")
@@ -556,7 +631,8 @@ def main(argv):
 
     # 2. sesiones.md
     if ses:
-        c.cambiar(pd / "sesiones.md", lambda t, sm: con_entrada_arriba(t, ses))
+        entrada = con_autoria(ses, escribio, publico)
+        c.cambiar(pd / "sesiones.md", lambda t, sm: con_entrada_arriba(t, entrada))
     # 3. decisiones.md: de la más antigua a la más nueva, para que la última quede arriba
     if cambios.get("decisiones"):
         def f_dec(t, sm):
@@ -613,6 +689,9 @@ def main(argv):
             return t, t != t0
         c.cambiar(pa, f_area)
     c.guardar_estado()
+    if abierto and not sin_fechas:
+        propios = {e[len(activo) + 1:] for e in s["escritos"] if e.startswith(activo + "/")}
+        s["sin_nombrar"] = sin_nombrar(pd, abierto, set(escribio) | set(publico) | propios)
     ahora = datetime.datetime.now(datetime.timezone.utc)
     s["hora"] = ahora.strftime("%Y-%m-%dT%H:%MZ")
     s["documento"] = f"{area}--{slug}--{ahora.strftime('%Y%m%d%H%M')}"
