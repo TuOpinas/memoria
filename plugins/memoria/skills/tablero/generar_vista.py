@@ -1608,22 +1608,36 @@ docs["meta"]["estado"]["soy_contexto"] = bool(CUENTA_TABLERO) and (CUENTA_TABLER
 # quien colabora en un área se enseña por su nombre, nunca por su correo (1.22.4): el de la carpeta junto a su cuenta
 # («Nombre (correo)») o el del área de la que es responsable; sin nombre, solo se cuenta
 _nombre_cta = {c: limpio(a_["dueno"]) for a_ in areas_guia for c in cuentas(a_["cuenta"])[0] if limpio(a_["dueno"])}
-# el nombre de quien colabora escrito en la celda Responsable, «Ana Prueba (colabora Carla Prueba)», con su correo detrás de
-# «colabora:» en la celda Cuenta: se emparejan en orden, solo si hay tantos nombres como correos y ninguno es ya de otra
-# cuenta (1.23.3: sin esto, quien colabora en un área salía como «sin nombre» o como alguien que no figura en la carpeta)
-for _a_ in areas_guia:
-    _m_ = re.search(r"\(\s*colabora[n]?\s+([^)]*)\)", _a_["dueno"] or "", re.I)
-    if not _m_:
-        continue
-    _ns_ = [n.strip() for n in re.split(r",|;|\s+y\s+", _m_.group(1))]
-    _ns_ = [n for n in _ns_ if re.fullmatch(r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:de\s+|del\s+|la\s+)?[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){1,3}", n)]
-    _partes_ = PALABRA_COLABORA.split((_a_["cuenta"] or "").lower(), maxsplit=1)
-    _cs_ = list(dict.fromkeys(CORREO.findall(_partes_[1]))) if len(_partes_) > 1 else []
-    if _ns_ and len(_ns_) == len(_cs_):
-        for c, n in zip(_cs_, _ns_):
-            if n not in _nombre_cta.values():
-                _nombre_cta.setdefault(c, n)
 _nombre_cta.update(NOMBRE_DE_CUENTA)
+# el nombre de quien colabora escrito en la celda Responsable, «Ana Prueba (colabora Carla Prueba)», con su correo tras
+# «colabora:» en la celda Cuenta (1.23.3: sin esto, quien colabora en un área salía «sin nombre» o como alguien que no figura
+# en la carpeta). Solo se empareja lo seguro: un nombre con el correo cuya parte local lo nombra (carla@, carla.prueba@,
+# cprueba@), o el único nombre con el único correo que quedan; nunca un nombre que ya tiene otra cuenta. Lo demás sigue
+# «sin nombre», que Mantenimiento cuenta (revisión 1.23.3: el emparejamiento por orden cruzaba nombres en silencio)
+def _sin_acentos(t):
+    return "".join(c for c in unicodedata.normalize("NFD", t.lower()) if unicodedata.category(c) != "Mn")
+def _correo_nombra(c, n):
+    loc = re.sub(r"[^a-z]", "", _sin_acentos(c.split("@")[0]))
+    ps = [re.sub(r"[^a-z]", "", _sin_acentos(x)) for x in n.split() if x.lower() not in ("de", "del", "la", "las", "los", "y")]
+    ps = [x for x in ps if x]
+    if not ps or not loc:
+        return False
+    return loc in (ps[0], "".join(ps), ps[0] + ps[-1], ps[0][0] + ps[-1])
+_NOMBRE_COLAB = re.compile(r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){1,3}")
+for _a_ in areas_guia:
+    _ms_ = re.findall(r"\(\s*colabora[n]?\s*:?\s*([^)]*)\)", _a_["dueno"] or "", re.I)
+    if not _ms_:
+        continue
+    _ns_ = [n.strip() for m_ in _ms_ for n in re.split(r",|;|\s+y\s+(?=[A-ZÁÉÍÓÚÑ])", m_)]
+    _ns_ = [n for n in _ns_ if _NOMBRE_COLAB.fullmatch(n) and n not in _nombre_cta.values()]
+    _partes_ = PALABRA_COLABORA.split((_a_["cuenta"] or "").lower(), maxsplit=1)
+    _cs_ = [c for c in dict.fromkeys(CORREO.findall(_partes_[1])) if c not in _nombre_cta] if len(_partes_) > 1 else []
+    for c in list(_cs_):
+        _q_ = [n for n in _ns_ if _correo_nombra(c, n)]
+        if len(_q_) == 1:
+            _nombre_cta[c] = _q_[0]; _cs_.remove(c); _ns_.remove(_q_[0])
+    if len(_cs_) == 1 and len(_ns_) == 1:
+        _nombre_cta[_cs_[0]] = _ns_[0]
 for _slug_a, _a in docs["areas"].items():
     _co = _a.get("colaboran") or []
     # el nombre puede venir de un proyecto que hoy se reutilizó: el área de la base guarda el que se vio (revisión 1.22.4, hallazgo 5)

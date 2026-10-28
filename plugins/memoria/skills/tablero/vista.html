@@ -352,7 +352,6 @@ footer{font-size:12.5px;color:var(--muted)}
 .acc-i .t .w{display:block;margin-top:3px;font-size:12.5px;color:var(--muted)}
 .acc-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 .acc-b.izq{justify-content:flex-start;margin-top:4px}
-.esp-i.static{cursor:default} .esp-i.static:hover .t{color:inherit}
 .sgs,.pds{display:grid}
 .sg{display:grid;gap:5px;padding:12px 0;border-top:1px solid var(--rule-soft)} .sg:first-child{border-top:none}
 .sg .kind{font:500 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -362,8 +361,7 @@ footer{font-size:12.5px;color:var(--muted)}
 .pd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--rule-soft)} .pd:first-child{border-top:none}
 .pd b .ctx{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:6px} .pd ul{margin:2px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-soft);grid-column:1}
 .pd>b{grid-column:1} .pd>.acc-b{grid-column:2;grid-row:1/span 2}
-@media (max-width:640px){ .pd{grid-template-columns:minmax(0,1fr)} .pd>.acc-b{grid-column:1;grid-row:auto;justify-content:flex-start} }
-@media (max-width:640px){ .acc-i{grid-template-columns:auto minmax(0,1fr)} .acc-i>.acc-b{grid-column:2;justify-content:flex-start} }
+@media (max-width:640px){ .pd{grid-template-columns:minmax(0,1fr)} .pd>.acc-b{grid-column:1;grid-row:auto;justify-content:flex-start} .acc-i{grid-template-columns:auto minmax(0,1fr)} .acc-i>.acc-b{grid-column:2;justify-content:flex-start} }
 /* ficha del proyecto */
 .ficha dd .pill{margin-left:6px;vertical-align:1px}
 .leer{all:unset;cursor:pointer;color:var(--signal);font-weight:500;font-size:13.5px;justify-self:start;border-radius:3px}
@@ -371,13 +369,6 @@ footer{font-size:12.5px;color:var(--muted)}
 .leer:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 /* inicio */
 .crumbs:empty{display:none}
-.mt{display:grid}
-.mt-i{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--rule-soft)}
-.mt-i:first-child{border-top:none;padding-top:2px}
-.mt-i .t{display:grid;gap:3px;min-width:0}
-.mt-i .t b{font-weight:600}
-.mt-i .t span{font-size:13px;color:var(--ink-soft)}
-.mt-i .t em{font:400 13px var(--f-body);font-style:normal;color:var(--muted)}
 .ent-t{all:unset;cursor:pointer;font-weight:600;border-radius:3px}
 .ent-t:hover{color:var(--signal);text-decoration:underline;text-underline-offset:3px}
 .ent-t:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
@@ -390,7 +381,6 @@ button.est-btn{all:unset;cursor:pointer}
 .pill.est-btn[aria-expanded="true"]{box-shadow:0 0 0 2px var(--signal)}
 .aviso{background:var(--warn-dim);color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13.5px}
 .aviso.suave{background:var(--rule-soft);color:var(--ink-soft)}
-.mt-i .prio-go{justify-self:end}
 
 
 
@@ -403,7 +393,6 @@ button.est-btn{all:unset;cursor:pointer}
 
 
 .ent b small{font:500 11.5px var(--f-mono);color:var(--muted);margin-left:8px}
-@media (max-width:600px){.mt-i{grid-template-columns:1fr}.mt-i .chip,.mt-i .prio-go{justify-self:start}}
 /* lo que explica: premisas, panorama por área, cuestionamientos y el resumen de un proyecto */
 .prem{display:grid;gap:8px}
 .prem-l{margin:0;padding:0;list-style:none;display:grid;gap:6px}
@@ -585,7 +574,6 @@ button.est-btn{all:unset;cursor:pointer}
 .tira i{display:block;width:7px;height:14px;border-radius:2px;background:var(--rule-soft)} .tira i.on{background:var(--signal)}
 .per-k{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);margin-top:6px} .per-k b{color:var(--ink)}
 .per-h .rol{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:6px}
-.per-k .z,.per-k .z b{color:var(--muted);font-weight:500} .per-k .esp,.per-k .esp b{color:var(--signal)}
 .tira i{position:relative} .tira i:hover::after{content:attr(data-t);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--surface);font-size:11.5px;padding:3px 7px;border-radius:4px;pointer-events:none;z-index:5}
 .personas .ctl{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center} .act-area{font:inherit;font-size:13px;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);max-width:100%}
 .personas .nota{font-size:12.5px;color:var(--muted);margin:8px 0 0}
@@ -665,8 +653,8 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
  
 @media (max-width:600px){ .sem-tira{grid-template-columns:repeat(8,minmax(0,1fr))} .sem-d:nth-child(-n+7){display:none} .nc-i{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "t" "w" "a"} }
 
-.esp-i{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--rule-soft);padding:8px 0;color:var(--ink);font:inherit;cursor:pointer}
-.esp-i .t{font-size:14px} .esp-i .w{font-size:12.5px;color:var(--muted)} .esp-i:hover .t{color:var(--signal)}
+.esp-i{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--rule-soft);padding:8px 0;color:var(--ink);font:inherit;cursor:default}
+.esp-i .t{font-size:14px} .esp-i .w{font-size:12.5px;color:var(--muted)}
 
 /* Inicio en tres pestañas */
 .ini-tabs{margin-top:-4px}
@@ -692,7 +680,6 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 
  
 .mt-list .stale{background:none;border:none;border-top:1px solid var(--rule-soft);border-radius:0;padding:10px 0;color:var(--ink-soft)} .mt-list .stale:first-child{border-top:none}
-.sub-h{font:600 15px/1.3 var(--f-body);margin:18px 0 4px}
 .foco{outline:3px solid var(--warn-fill)!important;outline-offset:4px;border-radius:6px;background:var(--warn-dim)!important;transition:background .6s}
 @media (max-width:600px){ .org-band{padding:16px} .org-band h2{font-size:20px} .per-grid{grid-template-columns:minmax(0,1fr)} }
 
@@ -726,8 +713,6 @@ details.mas-c>summary::before{content:"+ ";font-family:var(--f-mono);color:var(-
 .act-leg{display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;margin-top:8px} .act-leg i{display:inline-block;width:10px;height:10px;border-radius:2px}
 @media (max-width:600px){ .act-row{grid-template-columns:minmax(0,1fr)} .act-k{grid-column:1} }
 
-.af-q{display:block;font-size:12.5px;color:var(--muted)} .af-w{max-width:260px;text-align:right}
-@media (max-width:600px){ .af-w{max-width:none;text-align:left} }
 
 .side-g{font:500 11px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 10px 4px}
 .filtros{display:flex;flex-direction:column;gap:6px} .filtros .chips{align-items:center} .filtros .more{min-width:44px}
@@ -764,7 +749,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.23.2"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.23.3"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -776,7 +761,7 @@ const fmtL = _fmt({day:"numeric",month:"long",year:"numeric"}, "—");
 function due(f){
   if(!f) return {cls:"none", label:"Sin fecha"};
   const diff = Math.round((new Date(f+"T12:00:00") - new Date(today()+"T12:00:00"))/DAY);
-  if(diff < 0) return {cls:"late", label:`Venció hace ${-diff} d`};
+  if(diff < 0) return {cls:"late", label:`Venció hace ${-diff} ${-diff===1?"día":"días"}`};
   if(diff === 0) return {cls:"soon", label:"Hoy"};
   if(diff === 1) return {cls:"soon", label:"Mañana"};
   if(diff <= 7) return {cls:"soon", label:`En ${diff} d`};
@@ -815,6 +800,7 @@ const key = (pid, texto) => pid + "||" + texto;
 // los mismos nombres llanos que la apertura de sesión (sesion/SKILL.md, «Sugerencias de la memoria», 1.22.5)
 const CLASE_PROP = {"estado-desfasado":"Estatus viejo", "paso-hecho":"Paso hecho", "rotacion":"Archivar", "decision-sin-registrar":"Decisión sin registrar", "afirma":"Frase de resumen", "candidato-entregable":"Documento nuevo", "contradiccion":"No cuadra"};
 // el texto de una sugerencia en lenguaje llano; las de antes de la 1.22.5 traen ruta y clave, y se rehacen con sus campos
+const textoPropLimpio = q => { const k = CLASE_PROP[q.clase] || q.clase; return textoProp(q).replace(new RegExp("^"+k+"\\s*:\\s*","i"),"").replace(/^(Candidato a entregable|Contradicción)\s*:\s*/,""); };
 const textoProp = c => c.clase==="afirma" && c.afirma ? `Frase de resumen para «${c.titulo || (c.ruta||"").split("/").pop().replace(/\.md$/,"").replace(/-/g," ")}»: «${c.afirma}»` : (c.texto||"");
 const propsDe = pid => PROPUESTAS.filter(c=>c.proyecto===pid && c.estado!=="descartada").sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 let _PEND_SRC = null, _PEND_IDX = null;
@@ -952,7 +938,7 @@ function stepRow(p, s, withProj){
     <span class="step-r">${done ? `<span class="pill none">Hecho</span>` : duePill(p, s)}${CAN && !done ? `<button type="button" class="step-x" data-corr="${esc(k)}" aria-expanded="${CORR===k}" aria-label="Corregir cómo lee el tablero este paso" ${tip("Corregir cómo lee el tablero este paso")}>⋯</button>`:""}</span>
     ${CORR===k ? `<span class="corr-form"><span class="lbl">Corregir cómo lee el tablero este paso; lo registra la siguiente sesión del proyecto:</span>${CORR_OPC.map(([v,l])=>`<button type="button" class="chip${pend(p.id,s.texto).corregir?.propuesta===v?" on":""}" data-corr-set="${esc(k)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip" data-acc-drop="${esc(k)}">Ya no aplica: quitarlo</button><button type="button" class="chip ghost" data-corr-cancel>✕</button></span>` : ""}
     ${EDIT===k && !done ? dueForm(p, s) : ""}
-    ${HECHO===k ? `<form class="hecho-form" data-hecho="${esc(k)}"><label class="sr" for="hecho-nota">Qué pasó</label><input id="hecho-nota" class="search" type="text" maxlength="240" placeholder="Qué pasó, en una línea (opcional)"><button type="submit" class="btn" data-hecho-save>Marcar hecho</button><button type="button" class="chip ghost" data-hecho-cancel>Cancelar</button></form>` : ""}
+    ${HECHO===k ? hechoForm(k) : ""}
   </div>`;
 }
 document.addEventListener("click", e => {
@@ -1177,7 +1163,7 @@ function isNew(k, pid, x){
   if(k==="e") return !NOV.e.has(hsh(x));
   return false;
 }
-// ---- la memoria al día: dónde está floja, el detalle para decidir y la frase para arreglarlo en sesión ----
+// ---- por poner al día: dónde está floja, el detalle para decidir y la frase para arreglarlo en sesión ----
 let MT_OPEN = null, MT_POS = null;
 const POS_KEY = () => { const k = "tablero-pospuesto:" + (META?.organizacion||"") + ":completo"; try{ const v = "tablero-pospuesto:" + (META?.organizacion||"") + ":publico"; if(!localStorage.getItem(k) && localStorage.getItem(v)) localStorage.setItem(k, localStorage.getItem(v)); }catch(e){} return k; };
 function pospuestos(){
@@ -1252,16 +1238,6 @@ function mtDatos(){
     frase: r.que_es ? "escribe el primer párrafo de guia.md: qué es la organización, a qué se dedica y para quién, en una o dos frases y sin hablar de la carpeta; lo de la carpeta pasa al segundo párrafo. Enséñamelo antes de guardarlo" : r.guia ? `revisa la tabla de áreas de guia.md: ${r.guia}` : r.de_claude ? "ordena Claude outputs: propón a qué proyecto va cada archivo y muévelo cuando te lo confirme" : `revisa la carpeta «${r.carpeta}» de la raíz, que no es de ningún área, y propón a qué proyecto va lo que tiene`}));
   return [...filasR, ...filasA, ...filas];
 }
-function memoriaAlDia(){
-  const pos = pospuestos(), todas = mtDatos(), activas = todas.filter(f=>!pos[f.id]), nPos = todas.length - activas.length;
-  const vis = MT_ALL ? activas : activas.slice(0,6);
-  const fila = f => `<div class="mt-i"><span class="t"><b>${f.r ? `${f.r.que_es ? "Qué es la organización" : f.r.guia ? "El mapa de la carpeta" : f.r.de_claude ? "Archivos de Claude sin proyecto" : esc(f.r.carpeta)} <em>· ${f.r.guia || f.r.que_es ? "guia.md" : f.r.de_claude ? "carpeta «Claude outputs»" : "raíz"}</em>` : f.p ? `<button type="button" class="lnk" data-go-proj="${esc(f.p.id)}">${esc(f.p.nombre)}</button> <em>· ${esc(areaBy[f.p.area]?.nombre||"")}</em>` : `<button type="button" class="lnk" data-go-area="${esc(f.a.slug)}">${esc(f.a.nombre)}</button> <em>· área</em>`}</b><span>${f.it.map(x=>esc(x.txt)).join(" · ")}</span></span><button type="button" class="prio-go" data-mt-open="${esc(f.id)}">Revisar<span aria-hidden="true"> ›</span></button></div>`;
-  const n = activas.length;
-  // va dentro del desplegable «Por poner al día» de Mantenimiento, que ya lleva el título
-  return `<section class="due">
-    ${n ? `<div class="mt">${vis.map(fila).join("")}</div>${activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":(((activas.length-6)===1)?"Ver el restante":`Ver los ${activas.length-6} restantes`)}</button>`:""}` : `<p class="empty">${nPos ? "Nada más por ahora." : "Nada flojo: pasos clasificados, objetivos confirmados, decisiones confirmadas y nada por registrar."}</p>`}
-    ${nPos ? `<p class="hint">${nPos} pospuesto${nPos===1?"":"s"} con «Ahora no». <button type="button" class="lnk" data-mt-unpos>Volver a mostrarlo${nPos===1?"":"s"}</button></p>` : ""}</section>`;
-}
 function mtModal(){
   if(!MT_OPEN) return "";
   const f = mtDatos().find(x=>x.id===MT_OPEN); if(!f){ MT_OPEN = null; return ""; }
@@ -1295,7 +1271,7 @@ function mtModal(){
     return "";
   };
   return `<div class="modal-bg" data-modal-close><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt-h" tabindex="-1">
-    <header class="modal-h"><span></span><div><div class="eyebrow">${esc(sub)} · la memoria al día</div><h2 id="mt-h">${esc(nom)}</h2><p class="sub">${f.it.map(x=>esc(x.txt)).join(" · ")}</p></div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
+    <header class="modal-h"><span></span><div><div class="eyebrow">${esc(sub)} · por poner al día</div><h2 id="mt-h">${esc(nom)}</h2><p class="sub">${f.it.map(x=>esc(x.txt)).join(" · ")}</p></div><button type="button" class="modal-x" data-modal-close aria-label="Cerrar">✕</button></header>
     ${f.it.map(x=>`<section class="modal-s">${sec(x)}</section>`).join("")}
     <section class="modal-s"><h3>Para resolverlo en una sesión</h3><div class="frase"><code class="frase-t">${esc(f.frase)}</code><button type="button" class="chip" data-copy="${esc(f.frase)}">Copiar</button></div></section>
     <footer class="modal-f"><button type="button" class="chip" data-mt-pos="${esc(f.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador. Vuelve solo, o antes con «Volver a mostrarlos».")}>Ahora no</button><button type="button" class="chip" data-modal-close style="margin-left:auto">Cerrar</button></footer>
@@ -1387,7 +1363,7 @@ function colaRows(){
     if(!p || p.restringido){ if(!OWNER) return ""; return `<div class="due-item static orf"><span class="pill late">${p?"restringido":"sin proyecto"}</span><span class="t">Un cambio en un proyecto que este tablero no muestra; lo recoge su siguiente sesión.</span><span class="w">${esc(c.proyecto||"")} · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${esc(c.id)}">Deshacer</button>`:""}</span></div>`; }
     if(PEND_AREA && view.lvl==="pend" && p.area!==PEND_AREA) return "";
     const que = c.tipo==="fecha" ? `Fecha ${c.fecha_anterior?fmtD(c.fecha_anterior):"sin fecha"} → ${c.fecha_nueva?fmtD(c.fecha_nueva):"sin fecha"}: ${inline(c.paso)}`
-      : c.tipo==="hecho" ? `Hecho${c.nota?` (${esc(c.nota)})`:""}: ${inline(c.paso)}`
+      : c.tipo==="hecho" ? (c.nota==="Ya no aplica" ? `Quitado, ya no aplica: ${inline(c.paso)}` : `Hecho${c.nota?` (${esc(c.nota)})`:""}: ${inline(c.paso)}`)
       : c.tipo==="corregir" && c.campo==="estado" ? `Estado del proyecto: ${esc((EST[c.propuesta]||{label:c.propuesta==="riesgo"?"En riesgo (ya no es un estado; se resuelve con las fechas)":c.propuesta}).label)}`
       : c.tipo==="corregir" ? `${esc((CORR_OPC.find(o=>o[0]===c.propuesta)||[,c.propuesta])[1])}: ${inline(c.paso)}`
       : `Nota: ${esc(c.nota)}`;
@@ -1412,9 +1388,12 @@ const esMio = p => p.escribe!==undefined ? p.escribe===true : (!!VIEWER() && (pe
 function quienDecide(fd){ const md = (fd||"").match(/\bdecide(?:n)?\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/); return md ? nombreEn(fd, md.index + md[0].length - md[1].length, md[1]) : null; }
 const esYo = n => !!n && !!VIEWER() && nombreCorto(n)===nombreCorto(VIEWER());
 // si no se sabe quién mira (la carpeta no da nombre a la cuenta), nada se mueve por nombre
-function otroDecide(fd){ const n = quienDecide(fd); return n && VIEWER() && !esYo(n) ? n : null; }
-// a quién pone «Con otros» lo que falta decidir: quien «decide», o el primer nombre conocido del texto (la misma regla)
-function deOtroFd(fd){ if(!VIEWER()) return null; const qd = quienDecide(fd); if(qd) return esYo(qd) ? null : qd; const n = nombresEn(fd)[0]; return n && !esYo(n) ? n : null; }
+// quien decide lo que falta decidir: «decide X», o el nombre entre paréntesis al final («… (Ana)»). Un nombre que el texto
+// solo menciona no decide: «si contratamos a Beto» sigue siendo tuyo (revisión 1.23.3)
+const RE_PAREN_FIN = /\s*\(([^()]{1,40})\)\s*[.;]?\s*$/;
+function decisorFd(fd){ const qd = quienDecide(fd); if(qd) return qd; const m = (fd||"").match(RE_PAREN_FIN); if(!m) return null; const n = m[1].trim(); return /^[A-ZÁÉÍÓÚÑ]/.test(n) ? nombreEn(n, 0, n.split(/\s+/)[0]) : null; }
+// lo decide otra persona, con la misma regla que «Con otros»: con quien mira conocido, quien no es él; sin él, quien no escribe en la carpeta
+function deOtroFd(fd){ const d = decisorFd(fd); if(!d) return null; return VIEWER() ? (esYo(d) ? null : d) : (escribenSet().has(persona(d)) ? null : d); }
 const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/)[0].trim().replace(/[.;,:\s]+$/,"");
 // quien colabora en un área viaja por su nombre en colaboran_ver; colaboran son sus cuentas, que nunca coinciden con el nombre
 // de «Sesión de:» o «Decidió:» (1.23: antes quedaban fuera de «Por persona» y de «Con otros»)
@@ -1450,10 +1429,10 @@ function diaLabel(f){ const d = diasDesde(f); if(d===0) return "Hoy"; if(d===1) 
 function paraTi(){
   const t = today(), mios = PROJ.filter(p=>activo(p) && esMio(p));
   // lo que decide otra persona, de dentro o de fuera, no te toca a ti: va a «Con otros»
-  // ni lo que «Con otros» atribuye a otra persona por el primer nombre que el texto da (1.23.3: salía en los dos sitios)
-  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && !otroDecide(x.txt) && !deOtroFd(x.txt))
+  // la misma regla que «Con otros», para que nada salga en los dos sitios (1.23.3)
+  const decidir = mios.map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && !deOtroFd(x.txt))
     // y lo que un proyecto ajeno dice que decides tú
-    .concat(PROJ.filter(p=>activo(p) && !esMio(p)).map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && esYo(quienDecide(x.txt))));
+    .concat(PROJ.filter(p=>activo(p) && !esMio(p)).map(p=>({p, txt: faltaDecidir(p)})).filter(x=>x.txt && esYo(decisorFd(x.txt))));
   const venc = pendientes().filter(i=>i.f && i.f<t && mios.includes(i.p)).sort((a,b)=>a.f.localeCompare(b.f));
   const afect = mios.map(p=>({p, af: afectan(p).filter(x=>x.nueva)})).filter(x=>x.af.length).sort((a,b)=>b.af.length-a.af.length);
   const viejos = mios.filter(estatusViejo).sort((a,b)=>(fechaEstatus(a)||"").localeCompare(fechaEstatus(b)||""));
@@ -1524,7 +1503,7 @@ function noCuadra(){
     const fd = faltaDecidir(p);
     if(fd){ const dec = decisionesTodas(p).filter(d=>fe && d.fecha > fe); if(dec.length) out.push({id:"fd:"+p.id, p, k:"Decidido después", t:`«Falta decidir» dice: ${esc(fd.slice(0,120))}${fd.length>120?"…":""}; después hay ${dec.length} decisi${dec.length===1?"ón":"ones"} (${fmtD(dec[0].fecha)}). Puede estar resuelto.`, accion:"Confirmar"}); }
     // lo vencido ya no va aquí: está en Acciones, «Tareas vencidas», con su botón en la fila (1.23.3)
-    for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc(textoProp(q).replace(new RegExp("^"+k+"\\s*:\\s*","i"),"").replace(/^(Candidato a entregable|Contradicción)\s*:\s*/,""));
+    for(const q of propsDe(p.id)){ const k = CLASE_PROP[q.clase]||q.clase, t = esc(textoPropLimpio(q));
       if(q.clase!=="afirma" && q.estado==="pendiente") out.push({id:"prop:"+q.id, p, k, t, accion:"Aceptar"});
       // aceptada y esperando: la de otra clase espera el sí en sesión; la de un proyecto donde ya no se escribe, no la aplicará nadie
       else if(q.estado==="aceptada" && (p.escribe===false || q.clase!=="afirma")) out.push({id:"prop:"+q.id, p, k: p.escribe===false ? "Aceptada sin quien la aplique" : k+" · aceptada", t: p.escribe===false ? `${t} Se aceptó${q.por?` (${esc(q.por)})`:""} en un proyecto donde este tablero ya no escribe.` : t, aceptada:true}); }
@@ -1607,15 +1586,16 @@ function enfoque2(){
 // ---- 2. Con otros: a quién esperas (personas de fuera, con su organización, lo pendiente y las fechas) ----
 function contextoDe(p){ return p.area==="clientes" ? p.nombre : (areaBy[p.area]?.nombre||"") + " · " + p.nombre; }
 
-// ---- 3. Mantenimiento: avisos de la herramienta y lo que no cuadra ----
+// ---- 3. Mantenimiento: sugerencias, por poner al día, la carpeta y el tablero (1.23.3) ----
 // ---- Mantenimiento (1.23.3): ordenado por lo que pide. Las sugerencias se contestan aquí; lo de cada proyecto, en una
 // sesión, con una frase; lo de la carpeta, quien responde por el contexto; el tablero, abajo; lo marcado aquí, al final ----
 const PREG_PROP = {
-  "candidato-entregable": ["¿Crear un documento con esto?", "Sí, crearlo", p => `Si aceptas, Claude lo redacta como borrador en la próxima sesión de ${p.nombre}.`],
-  "paso-hecho": ["¿Quitar este paso de los siguientes pasos?", "Sí, quitarlo", p => `Si aceptas, la próxima sesión de ${p.nombre} lo quita, con tu sí.`],
-  "decision-sin-registrar": ["¿Registrar esta decisión?", "Sí, registrarla", p => `Si aceptas, la próxima sesión de ${p.nombre} te la enseña escrita para tu sí.`],
-  "contradiccion": ["Dos documentos no cuadran: ¿revisarlos?", "Sí, revisarlos", p => `Si aceptas, la próxima sesión de ${p.nombre} te enseña los dos para que digas cuál vale.`],
-  "estado-desfasado": ["¿Reescribir el Estatus?", "Sí, reescribirlo", p => `Si aceptas, la próxima sesión de ${p.nombre} lo reescribe.`]
+  // lo que promete «si aceptas» es lo que hace el cierre (sesion, cerrar.md, paso 0): nada se escribe sin el sí en la sesión
+  "candidato-entregable": [p => "¿Hacer un documento con esto?", "Sí, hacerlo", p => `Si aceptas, la próxima sesión de ${p.nombre} te lo propone; si no da tiempo, queda como siguiente paso.`],
+  "paso-hecho": [p => "¿Quitar este paso de los siguientes pasos?", "Sí, quitarlo", p => `Si aceptas, la próxima sesión de ${p.nombre} lo quita, con tu sí.`],
+  "decision-sin-registrar": [p => "¿Registrar esta decisión?", "Sí, registrarla", p => `Si aceptas, la próxima sesión de ${p.nombre} te la enseña escrita para tu sí.`],
+  "contradiccion": [p => "Dos documentos no cuadran: ¿revisarlos?", "Sí, revisarlos", p => `Si aceptas, la próxima sesión de ${p.nombre} te los propone; si no da tiempo, queda como siguiente paso.`],
+  "estado-desfasado": [p => `¿Reescribir el Estatus de ${p.nombre}?`, "Sí, reescribirlo", p => `Si aceptas, la próxima sesión de ${p.nombre} lo reescribe.`]
 };
 // las notas de donde sale una sugerencia van plegadas, por su nombre y no por su ruta
 const notasDeTexto = t => { const m = (t||"").match(/\s*\(de ((?:[\w./-]+\.md(?:,\s*)?)+)[^)]*\)\.?\s*$/); if(!m) return {t, notas: []};
@@ -1625,40 +1605,43 @@ function sugerencias(){
     .sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 }
 function filaSugerencia(q){
-  const p = byId[q.proyecto], k = CLASE_PROP[q.clase] || q.clase, pr = PREG_PROP[q.clase] || ["¿Aceptar esta sugerencia?", "Aceptar", () => ""];
-  const {t, notas} = notasDeTexto(textoProp(q).replace(new RegExp("^"+k+"\\s*:\\s*","i"),"").replace(/^(Candidato a entregable|Contradicción)\s*:\s*/,""));
+  const p = byId[q.proyecto], k = CLASE_PROP[q.clase] || q.clase, pr = PREG_PROP[q.clase] || [() => "¿Aceptar esta sugerencia?", "Aceptar", () => ""];
+  // el porqué que dejó el barrido, sin rutas, cuando lo hay; si no, el texto de la sugerencia (revisión 1.23.3)
+  const limpio = textoPropLimpio(q), porQue = (q.por_que||"").replace(/[\w./-]+\.md\b/g, m => m.split("/").pop().replace(/\.md$/,"").replace(/-/g," ")).trim();
+  const {t: t0, notas} = notasDeTexto(limpio), t = porQue && q.clase!=="paso-hecho" ? `${t0.replace(/[.\s]+$/,"")}. ${porQue.replace(/^./, c=>c.toUpperCase()).replace(/[.\s]*$/,".")}` : t0;
   const puede = CAN && OWNER && DATOS_NUEVOS(), mio = escribeAqui(p);
   const acc = !puede ? "" : !mio ? `<span class="more">Es de ${esc(nombreCorto(p.dueno||""))}: pásasela.</span>` : `<button type="button" class="chip pri" data-nc="${esc(q.id)}" data-v="aceptada">${esc(pr[1])}</button><button type="button" class="chip ghost" data-nc="${esc(q.id)}" data-v="descartada">No hace falta</button>`;
-  return `<div class="sg"><span class="kind">${esc(k)}</span><span class="q">${esc(q.clase==="estado-desfasado" ? `¿Reescribir el Estatus de ${p.nombre}?` : pr[0])}</span><span class="why">${inline(t.replace(/^./, c=>c.toUpperCase()))}</span>${mio && puede ? `<span class="then">${esc(pr[2](p))}</span>` : ""}
+  return `<div class="sg"><span class="kind">${esc(k)}</span><span class="q">${esc(pr[0](p))}</span><span class="why">${inline(t.replace(/^./, c=>c.toUpperCase()))}</span>${mio && puede ? `<span class="then">${esc(pr[2](p))}</span>` : ""}
     <span class="foot">${acc ? `<span class="acc-b izq" style="margin:0">${acc}</span>` : ""}<span class="w">${irProy(p, "estatus", {sel:".corto"})} · ${esc(areaBy[p.area]?.nombre||"")}</span>${notas.length ? `<details><summary>Ver ${notas.length===1?"la nota":`las ${notas.length} notas`}</summary>${notas.map(esc).join(" · ")}</details>` : ""}</span></div>`;
 }
 // una tarjeta por proyecto con todo lo que hay que poner al día en él y una sola frase para Claude
 function porPonerAlDia(){
   const pos = pospuestos(), out = [], porId = {};
   const add = (id, base, txt, frase) => { const g = porId[id] = porId[id] || (out.push({id, ...base, it:[], fr:[]}), out[out.length-1]); if(!g.it.includes(txt)) g.it.push(txt); if(frase && !g.fr.includes(frase)) g.fr.push(frase); };
-  const viejosMios = new Set(paraTi().viejos.map(p=>p.id));
+  const viejosMios = new Set(PROJ.filter(p=>activo(p) && esMio(p) && estatusViejo(p)).map(p=>p.id)), mt = mtDatos(), conDetalle = new Set(mt.map(f=>f.id));
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+    // si ya hay una sugerencia de reescribirlo, la pregunta va arriba y aquí no se repite
+    if(propsDe(p.id).some(q=>q.clase==="estado-desfasado" && q.estado==="pendiente")) continue;
     const fe = fechaEstatus(p), tras = fe && p.ultima_sesion && p.ultima_sesion > fe;
     if(tras || viejosMios.has(p.id)) add(p.id, {p}, !fe ? "Sin Estatus todavía." : `El Estatus es del ${fmtD(fe)}, hace ${cuantos(diasDesde(fe),"día","días")}${tras?`, y hubo sesión el ${fmtD(p.ultima_sesion)}`:""}: ya no dice cómo va.`, "reescribe su Estatus");
     const fd = faltaDecidir(p); if(fd && fe){ const dec = decisionesTodas(p).filter(d=>d.fecha > fe); if(dec.length) add(p.id, {p}, `Lo que falta decidir puede estar resuelto: hay ${cuantos(dec.length,"decisión","decisiones")} después del Estatus.`, "mira si lo que falta decidir ya se decidió"); }
   }
-  for(const f of mtDatos()){ if(f.r) continue;
+  for(const f of mt){ if(f.r) continue;
     const id = f.p ? f.p.id : "a:"+f.a.slug, base = f.p ? {p:f.p} : {a:f.a};
     // lo marcado aquí y las sugerencias ya tienen su sitio en esta pestaña
-    const it = f.it.filter(x=>x.k!=="cola" && x.k!=="prop"); if(!it.length && f.p) continue;
-    for(const x of (it.length ? it : f.it)) add(id, base, x.txt.replace(/^./, c=>c.toUpperCase()) + ".", null);
+    const it = f.it.filter(x=>x.k!=="cola" && x.k!=="prop" && x.k!=="prio"); if(!it.length) continue;
+    for(const x of it) add(id, base, x.txt.replace(/^./, c=>c.toUpperCase()) + ".", null);
     const fr = (f.frase.split(": ").slice(1).join(": ")||"").split("; ").filter(x=>x && !/sugerencias de la memoria|lo que se marcó en el tablero/.test(x));
     for(const x of fr) add(id, base, null, x);
   }
   for(const x of noCuadra()) if(x.a && !x.p) add("a:"+x.a.slug, {a:x.a}, x.t.replace(/<[^>]+>/g,""), x.id.startsWith("prio:") ? "revisa sus prioridades" : "reescribe su Estatus");
-  for(const g of out){ g.it = g.it.filter(Boolean);
+  for(const g of out){ g.it = g.it.filter(Boolean); g.detalle = conDetalle.has(g.id);
     g.frase = g.p ? `abre sesión en ${g.p.area}/${g.p.slug} y pon al día su memoria: ${g.fr.join("; ")}` : `abre sesión en el área ${g.a.slug} y ${g.fr.join("; ")}`; }
   return {todas: out, activas: out.filter(g=>!pos[g.id] && g.it.length)};
 }
 function filaPonerAlDia(g){
   const nom = g.p ? `${irProy(g.p, "estatus", {sel:".corto"})}<span class="ctx">${esc(areaBy[g.p.area]?.nombre||"")}</span>` : `<button type="button" class="lnk" data-go-area="${esc(g.a.slug)}">${esc(g.a.nombre)}</button><span class="ctx">área</span>`;
-  const hayDetalle = mtDatos().some(f=>f.id===g.id);
-  return `<div class="pd"><b>${nom}</b><ul>${g.it.map(t=>`<li>${inline(t)}</li>`).join("")}</ul><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(g.frase)}">Copiar frase para Claude</button>${hayDetalle?`<button type="button" class="chip" data-mt-open="${esc(g.id)}">Ver detalle</button>`:""}<button type="button" class="chip ghost" data-mt-pos="${esc(g.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador.")}>Ahora no</button></span></div>`;
+  return `<div class="pd"><b>${nom}</b><ul>${g.it.map(t=>`<li>${inline(t)}</li>`).join("")}</ul><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(g.frase)}">Copiar frase para Claude</button>${g.detalle?`<button type="button" class="chip" data-mt-open="${esc(g.id)}">Ver detalle</button>`:""}<button type="button" class="chip ghost" data-mt-pos="${esc(g.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador.")}>Ahora no</button></span></div>`;
 }
 // lo que se arregla en la guía o en cómo se escribe la carpeta: le toca a quien responde por el contexto
 function deLaCarpeta(){
@@ -1681,16 +1664,18 @@ function tabMant(){
   const sec2 = pd.activas.length || nPos ? `<section class="due"><div class="top"><h2>Por poner al día</h2><span class="c">${cuantos(pd.activas.length,"sitio","sitios")}</span><span class="c" style="margin-left:auto">Se arregla en una sesión con Claude</span></div>
     ${pd.activas.length ? `<div class="pds">${pdVis.map(filaPonerAlDia).join("")}</div>${pd.activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":`Ver ${pd.activas.length-6===1?"el restante":`los ${pd.activas.length-6} restantes`}`}</button>`:""}` : `<p class="empty">Nada más por ahora.</p>`}
     ${nPos ? `<p class="hint">${cuantos(nPos,"pospuesto","pospuestos")} con «Ahora no». <button type="button" class="lnk" data-mt-unpos>Volver a mostrar${nPos===1?"lo":"los"}</button></p>` : ""}</section>` : "";
-  const sec3 = car.items.length ? `<section class="due"><div class="top"><h2>La carpeta</h2><span class="c">${car.items.length}</span><span class="c" style="margin-left:auto">${car.ctx ? "Te toca: respondes por el contexto" : "Lo arregla quien responde por el contexto"}</span></div>
-    <div class="pds">${car.items.map(x=>`<div class="pd"><span>${inline(x.t)}</span>${car.ctx || x.dueno==="areas" ? `<span class="acc-b"><button type="button" class="chip" data-copy="${esc(x.frase)}">Copiar frase para Claude</button></span>` : ""}</div>`).join("")}</div></section>` : "";
+  const sec3 = car.items.length ? `<section class="due"><div class="top"><h2>La carpeta</h2><span class="c">${car.items.length}</span><span class="c" style="margin-left:auto">${car.ctx ? "Respondes por el contexto" : "Lo arregla quien responde por el contexto"}</span></div>
+    <div class="pds">${car.items.map(x=>`<div class="pd"><span>${inline(x.t)}${x.dueno==="areas" ? ` <span class="more">Lo arregla el responsable de cada área.</span>` : ""}</span>${car.ctx || x.dueno==="areas" ? `<span class="acc-b"><button type="button" class="chip" data-copy="${esc(x.frase)}">Copiar frase para Claude</button></span>` : ""}</div>`).join("")}</div></section>` : "";
   const sec4 = av || permisosLinea() ? `<section class="due"><div class="top"><h2>El tablero</h2></div>${av ? `<div class="mt-list">${av}</div>` : ""}${permisosLinea()}</section>` : "";
   // lo tocado aquí que la carpeta aún no refleja, y las sugerencias aceptadas, con su «Deshacer»
   const acept = PROPUESTAS.filter(q=>q.estado==="aceptada" && q.clase!=="afirma" && byId[q.proyecto]);
   const nCola = cambiosVis().length + acept.length;
-  const filaAcept = q => `<div class="due-item static"><span class="pill ok">Aceptada</span><span class="t">${inline(notasDeTexto(textoProp(q)).t)}</span><span class="w">${esc(byId[q.proyecto].nombre)}${CAN && OWNER ? ` · <button type="button" class="lnk" data-nc="${esc(q.id)}" data-v="pendiente">Deshacer</button>` : ""}</span></div>`;
-  const cola = nCola ? `<details class="card mas-c"><summary><h2 style="display:inline">Marcado aquí, por registrar</h2><span class="more"> · ${nCola} · lo pasa a la carpeta el próximo cierre</span></summary><div class="due-list" style="margin-top:10px">${acept.map(filaAcept).join("")}${colaRows()}</div></details>` : "";
-  const nOrf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length;
-  const espera = pd.activas.length + car.items.length;
+  const sinQuien = q => byId[q.proyecto].escribe===false;
+  const filaAcept = q => `<div class="due-item static${sinQuien(q)?" orf":""}"><span class="pill ok">Aceptada</span><span class="t">${inline(notasDeTexto(textoPropLimpio(q)).t)}${sinQuien(q) ? `<span class="pend-note">Este tablero ya no escribe en ese proyecto: nadie la aplicará. Pásasela a ${esc(nombreCorto(byId[q.proyecto].dueno||""))} o descártala.</span>` : ""}</span><span class="w">${esc(byId[q.proyecto].nombre)}${CAN && OWNER ? ` · <button type="button" class="lnk" data-nc="${esc(q.id)}" data-v="${sinQuien(q)?"descartada":"pendiente"}">${sinQuien(q)?"Descartar":"Deshacer"}</button>` : ""}</span></div>`;
+  const cola = nCola ? `<details class="card mas-c"><summary><h2 style="display:inline">Marcado aquí, por registrar</h2><span class="more"> · ${nCola} · lo pasa a la carpeta la próxima puesta al día o la sesión del proyecto</span></summary><div class="due-list" style="margin-top:10px">${acept.map(filaAcept).join("")}${colaRows()}</div></details>` : "";
+  const nOrf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length + acept.filter(sinQuien).length;
+  // lo marcado aquí que espera la puesta al día también enciende el punto (revisión 1.23.3)
+  const espera = pd.activas.length + car.items.length + (cambiosVis().length - cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length) + acept.filter(q=>!sinQuien(q)).length;
   // de las sugerencias cuentan las que puedes contestar: las de un proyecto que no escribe tu cierre se pasan, no se contestan
   const nSg = CAN && OWNER && DATOS_NUEVOS() ? sg.filter(q=>escribeAqui(byId[q.proyecto])).length : 0;
   return {n: nAcc + nSg + nOrf, info: (nAv - nAcc) + espera + (sg.length - nSg), html: sec1 + sec2 + sec3 + sec4 + cola};
@@ -1739,7 +1724,7 @@ function conOtros(){
       if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
       else if(md){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const qd = quienDecide(fd); const ns = qd ? [qd] : nombresEn(fd).slice(0,1); for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = faltaDecidir(p); if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
@@ -1751,12 +1736,17 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 const irProy = (p, tab, foco) => `<button type="button" class="lnk" data-go-proj="${esc(p.id)}" data-tab="${tab}" ${focoAttr(foco)}>${esc(p.nombre)}</button>`;
 // lo que falta decidir se lee como la pregunta que hay que contestar: «si se corrigen…» pasa a «¿Se corrigen…?», y el
 // nombre de quien mira entre paréntesis al final sobra
+// sin el nombre de quien mira, que sobra: «(Ana)» al final o «; lo decide Ana»
+const sinMiNombre = t => (t||"").trim().replace(RE_PAREN_FIN, (m, n) => esYo(n.trim()) ? "" : m).replace(/[;,]\s*(?:lo|la|los|las)?\s*deciden?\s+([A-ZÁÉÍÓÚÑ][^;,.]*)\.?\s*$/i, (m, n) => esYo(n.trim()) ? "" : m).replace(/[.;\s]+$/, "");
+const RE_INTERROGA = /^(qu[ée]|cu[áa]l(?:es)?|qui[ée]n(?:es)?|c[óo]mo|cu[áa]ndo|cu[áa]nt[oa]s?|d[óo]nde|por qu[ée]|whether|which|what|who|how|when)(?=\s|$)/i;
 function comoPregunta(t){
-  let x = (t||"").trim().replace(/\s*\(([^()]{1,40})\)\s*[.;]?\s*$/, (m, n) => esYo(n.trim()) ? "" : m).replace(/[.;\s]+$/, "");
+  const x = sinMiNombre(t);
+  if(/[?]$/.test(x)) return x.replace(/^./, c=>c.toUpperCase());
   if(/^si\s/i.test(x)) return "¿" + x.replace(/^si\s+/i, "").replace(/^./, c=>c.toUpperCase()) + "?";
-  return x.replace(/^./, c=>c.toUpperCase()) + (/[?!]$/.test(x) ? "" : ".");
+  if(RE_INTERROGA.test(x)) return (/^(whether|which|what|who|how|when)(?=\s|$)/i.test(x) ? "" : "¿") + x.replace(/^./, c=>c.toUpperCase()) + "?";
+  return x.replace(/^./, c=>c.toUpperCase()) + (/[!]$/.test(x) ? "" : ".");
 }
-const fraseDecidir = (p, t) => `abre sesión en ${p.nombre}: decidamos ${(t||"").trim().replace(/\s*\([^()]{1,40}\)\s*[.;]?\s*$/,"").replace(/[.;\s]+$/,"").replace(/^./, c=>c.toLowerCase())}`;
+const fraseDecidir = (p, t) => `abre sesión en ${p.nombre}: decidamos ${sinMiNombre(t).replace(/^./, c=>c.toLowerCase())}`;
 const hechoForm = k => `<form class="hecho-form" data-hecho="${esc(k)}"><label class="sr" for="hecho-nota">Qué pasó</label><input id="hecho-nota" class="search" type="text" maxlength="240" placeholder="Qué pasó, en una línea (opcional)"><button type="submit" class="btn" data-hecho-save>Marcar hecha</button><button type="button" class="chip ghost" data-hecho-cancel>Cancelar</button></form>`;
 const puedeMarcar = () => CAN && !!DB;
 function filaDecidir(p, txt, conArea){
@@ -1769,13 +1759,16 @@ function filaVencida(p, s, f, conArea){
 document.addEventListener("click", e => {
   const b = e.target.closest && e.target.closest("[data-acc-hecho],[data-acc-fecha],[data-acc-drop]"); if(!b || !puedeMarcar()) return;
   const k = b.dataset.accHecho || b.dataset.accFecha || b.dataset.accDrop, [pid, ...rest] = k.split("||"), p = byId[pid], st = p && (p.pasos||[]).find(x=>x.texto===rest.join("||")); if(!p || !st) return;
-  // «Ya no aplica» va a la cola como un hecho con esa nota: el cierre lo quita de los pasos y lo dice en la bitácora
-  if(b.dataset.accDrop){ marcarHecho(p, st, "Ya no aplica"); return; }
+  // «Ya no aplica» va a la cola como un hecho con esa nota: la puesta al día o el cierre lo quitan de los pasos y lo apuntan
+  // como retirado, no como avance. Nunca alterna: si el paso ya está marcado, no hace nada (revisión 1.23.3)
+  if(b.dataset.accDrop){ CORR = null; if(pend(p.id, st.texto).hecho){ render(); return; } b.disabled = true; marcarHecho(p, st, "Ya no aplica"); return; }
   if(b.dataset.accFecha){ EDIT = EDIT===k ? null : k; HECHO = null; CALM = null; render(); return; }
   HECHO = HECHO===k ? null : k; EDIT = null; render(); const i = document.getElementById("hecho-nota"); if(i) i.focus();
 });
+// el formulario de «Hecha» no se envía dos veces
+document.addEventListener("submit", e => { const f = e.target; if(f.classList && f.classList.contains("hecho-form")){ const b = f.querySelector("[data-hecho-save]"); if(b){ if(b.disabled){ e.preventDefault(); e.stopImmediatePropagation(); return; } b.disabled = true; } } }, true);
 function teToca(dec, venc, conArea, extra){
-  const notaV = puedeMarcar() ? "Márcala hecha, dale fecha nueva o quítala: el próximo cierre lo pasa a la carpeta." : "Al abrir una, ves su proyecto.";
+  const notaV = puedeMarcar() ? "Márcala hecha, dale fecha nueva o quítala: lo pasa a la carpeta la próxima puesta al día o la sesión del proyecto." : "Al abrir una, ves su proyecto.";
   return [ptGrupo(conArea ? "pt-decidir" : "pa-decidir", "Por decidir", "Se decide en una sesión: copia la frase y pégala en Claude.", dec.map(({p,txt})=>filaDecidir(p, txt, conArea))),
     ptGrupo(conArea ? "pt-venc" : "pa-venc", "Tareas vencidas", notaV, venc.map(({p,s,f})=>filaVencida(p, s, f, conArea)))].join("") + (extra||"");
 }
@@ -1786,12 +1779,14 @@ function juntaOtros(otros, afe){
   for(const x of afe){ const n = persona(x.d.decidio||"") || "Sin decir quién"; const g = por[n] = por[n] || {n, deben:[], debes:[], afe:[], dentro: esc_.has(n)}; g.afe.push(x); }
   return Object.values(por).sort((a,b)=>(b.deben.length+b.debes.length+b.afe.length)-(a.deben.length+a.debes.length+a.afe.length) || a.n.localeCompare(b.n,"es"));
 }
-function seccionOtros(gs, conOrg){
-  const t = today();
+function seccionOtros(gs, conOrg, yaVenc){
+  const t = today(), venc = new Set((yaVenc||[]).map(({p,s})=>key(p.id, s.texto)));
+  // un paso tuyo vencido ya está en «Tareas vencidas», con sus botones: aquí no se repite (revisión 1.23.3)
+  gs = gs.map(g=>({...g, deben:g.deben.filter(x=>!venc.has(x.row)), debes:g.debes.filter(x=>!venc.has(x.row))})).filter(g=>g.deben.length+g.debes.length+g.afe.length);
   const itemPaso = x => { const fut = x.f && x.f>=t;
-    return `<div class="esp-i static"><span class="t">${inline(corta(x.t))}</span><span class="w">${irProy(x.p, x.tab, x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}${x.f?` · ${fut?`para el ${fmtD(x.f)}`:`desde el ${fmtD(x.f)}`}`:""}</span>${x.row && puedeMarcar() ? `<span class="acc-b izq"><button type="button" class="chip" data-acc-hecho="${esc(x.row)}">Hecha</button></span>${HECHO===x.row ? hechoForm(x.row) : ""}` : ""}</div>`; };
+    return `<div class="esp-i"><span class="t">${inline(corta(x.t))}</span><span class="w">${irProy(x.p, x.tab, x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}${x.f?` · ${fut?`para el ${fmtD(x.f)}`:`desde el ${fmtD(x.f)}`}`:""}</span>${x.row && puedeMarcar() && escribeAqui(x.p) ? `<span class="acc-b izq"><button type="button" class="chip" data-acc-hecho="${esc(x.row)}">Hecha</button></span>${HECHO===x.row ? hechoForm(x.row) : ""}` : ""}</div>`; };
   const itemAfe = x => { const p0 = x.a[0], quien = persona(x.d.decidio||"") || "otra persona";
-    return `<div class="esp-i static"><span class="t">${inline(x.d.titulo)}</span><span class="w">${esc(x.q.nombre)} · ${fmtD(x.d.fecha)} · toca a ${x.a.map(p=>irProy(p, "estatus", {sel:"dl.facts dt", texto:"Le afectan", af:true, pid:p.id})).join(", ")}</span><span class="acc-b izq"><button type="button" class="chip" data-copy="${esc(`abre sesión en ${p0.nombre}: adoptamos la decisión de ${quien} «${x.d.titulo}»`)}">Adoptar con Claude</button><button type="button" class="chip ghost" data-copy="${esc(`abre sesión en ${p0.nombre}: quiero cuestionar la decisión de ${quien} «${x.d.titulo}»`)}">Cuestionar</button></span></div>`; };
+    return `<div class="esp-i"><span class="t">${inline(x.d.titulo)}</span><span class="w">${esc(x.q.nombre)} · ${fmtD(x.d.fecha)} · toca a ${x.a.map(p=>irProy(p, "estatus", {sel:"dl.facts dt", texto:"Le afectan", af:true, pid:p.id})).join(", ")}</span><span class="acc-b izq"><button type="button" class="chip" data-copy="${esc(`abre sesión en ${p0.nombre}: adoptamos la decisión de ${quien} «${x.d.titulo}»`)}">Adoptar con Claude</button><button type="button" class="chip ghost" data-copy="${esc(`abre sesión en ${p0.nombre}: quiero cuestionar la decisión de ${quien} «${x.d.titulo}»`)}">Cuestionar</button></span></div>`; };
   const col = (tit, xs, f) => xs.length ? `<div><h4>${tit} <span class="c">${xs.length}</span></h4>${xs.map(f).join("")}</div>` : "";
   const tarjeta = g => { const ctx = [...new Set([...g.deben,...g.debes].map(x=>contextoDe(x.p)).concat(g.afe.map(x=>contextoDe(x.q))))];
     return `<article class="per-ext"><header><b>${esc(g.n)}</b>${conOrg ? (g.dentro?` <span class="pill none">del equipo</span>`:ORG_DE[g.n]?` <span class="pill none">${esc(ORG_DE[g.n])}</span>`:"") : ""}<span class="per-ctx">${ctx.map(esc).join(" · ")}</span></header>
@@ -1802,11 +1797,12 @@ function seccionOtros(gs, conOrg){
     <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("")}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>`;
 }
 function tabAcciones(){
-  const pt = paraTi(), afe = afectaDeOtros(), gs = juntaOtros(conOtros(), afe);
+  // sin saber quién mira, no se sabe qué te afecta: no se enseña ni se cuenta (revisión 1.23.3)
+  const pt = paraTi(), afe = VIEWER() ? afectaDeOtros() : [], gs = juntaOtros(conOtros(), afe);
   const nCuest = ((META && META.cuestionamientos) || []).filter(cuestMio).length;
   const tuyo = teToca(pt.decidir, pt.venc, true);
   // el número cuenta también los cuestionamientos que esperan al lector y las decisiones de otros que te afectan (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || `<p class="empty">Nada te espera hoy.</p>`}</section>${seccionOtros(gs, true)}`};
+  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
 }
 
 
@@ -1942,9 +1938,9 @@ function actPersonas(ev, areaFija){
   // quien cerró sesión aquí sin papel en esta área sale con el suyo y «trabajó aquí»; sin papel en ninguna, con su papel sin
   // declarar; quien solo decide desde fuera no, porque nunca cierra sesión
   for(const e of evs) if(e.q && !roles[e.q] && (e.k==="ses" || todosRoles[e.q])){ roles[e.q] = todosRoles[e.q] ? {...todosRoles[e.q], aqui:true} : {resp:[], col:[], fuera:true}; P(e.q); }
-  let sinNombre = 0, escSin = 0, cambios = 0;
+  let sinNombre = 0, escSin = 0;
   for(const e of evs){
-    if(e.k==="cambio"){ cambios++; continue; }
+    if(e.k==="cambio") continue;
     if(!e.q){ if(e.k==="ses") sinNombre++; else if(e.k==="esc") escSin++; continue; }
     if(!roles[e.q]) continue; const g = P(e.q);
     if(e.k==="ses"){ g.ses++; g.dias[e.f] = (g.dias[e.f]||0) + 1; }
@@ -2139,7 +2135,7 @@ function renderArea(a){
   } else if(tab==="acciones"){
     // las mismas piezas que Acciones de Inicio, filtradas al área; sus prioridades hacen de «Por dónde empezar» (1.23.3)
     const tuyo = teToca(T.dec, T.venc, false);
-    body = `<section class="prios card"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section><section class="due"><div class="top"><h2>Te toca a ti</h2><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`}</section>${seccionOtros(juntaOtros(T.otros, T.afe), false)}`;
+    body = `<section class="prios card"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section><section class="due"><div class="top"><h2>Te toca a ti</h2><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`}</section>${seccionOtros(juntaOtros(T.otros, VIEWER() ? T.afe : []), false, T.venc)}`;
   } else if(tab==="actividad"){
     const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
@@ -2216,8 +2212,8 @@ function renderEnt(){
 // textos de pasos: sin la fecha inicial (ya va en la fila) y cortados
 function corta(t){ const s = (t||"").replace(/^\s*20\d\d-\d\d-\d\d(?:,[^·:]*)?\s*[·:—-]\s*/,""); return s.length>160 ? s.slice(0,157)+"…" : s; }
 // la pestaña elegida se conserva al pasar de un área o proyecto a otro, también desde el lateral y las migas (1.22.4)
-// «Por dónde empezar» es una lista de acciones: va al final de Acciones de Inicio
-// arriba del Estatus de Inicio, una línea con lo que te toca y lo que otros hicieron desde tu última sesión (revisión 1.22.3)
+// «Por dónde empezar» va arriba de Acciones de Inicio (1.23.3)
+// arriba del Estatus de Inicio, una línea con lo que te toca (revisión 1.22.3)
 function lineaHoy(){
   if(!DATOS_NUEVOS()) return `<p class="hoy-linea"><span class="more">Los datos son de una versión anterior del tablero: hasta la próxima puesta al día no sabe quién eres ni dónde escribes.</span></p>`;
   const pt = paraTi(), partes = [];
@@ -2244,7 +2240,7 @@ function ncAcciones(x){
 document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !OWNER || !DB) return;
   n.disabled = true;
   const q = PROPUESTAS.find(c=>c.id===n.dataset.nc);
-  try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null} : n.dataset.v==="pendiente" ? {estado:"pendiente", aceptada: {"__delete__": true}} : {estado:"descartada", descartada: nowISO()});
+  try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null} : n.dataset.v==="pendiente" ? {estado:"pendiente", aceptada: null, por: null, creado: nowISO()} : {estado:"descartada", descartada: nowISO()});
     flash(n.dataset.v==="pendiente" ? "Vuelve a las sugerencias." : n.dataset.v!=="aceptada" ? "Descartada: no se vuelve a proponer igual." : q && q.clase==="afirma" ? "Aceptada: la escribe el próximo cierre del proyecto." : "Aceptada: la próxima sesión del proyecto te la enseña con su texto, para tu sí."); }
   catch(x){ n.disabled = false; flash("No se pudo guardar. Vuelve a intentarlo."); }
 });
@@ -2405,7 +2401,6 @@ function syncBtn(){
   const cls = (listo?"":" off") + (SYNC_STATE==="corriendo"?" busy":"") + (SYNC_STATE==="lanzada"?" done":"") + (!SYNC_STATE && pend?" pend":"");
   return `<span class="sync-g"><button type="button" class="sync-ico${cls}" data-sync ${tip(tipTxt)} aria-label="Sincronizar ahora${pend?": hace falta":""}" ${SYNC_STATE==="corriendo"?"disabled":""}>${ico}</button>${listo && cuando && !SYNC_STATE ? `<span class="sync-cuando" aria-hidden="true">${esc(min < 2 ? "ahora" : min < 60 ? `${min} min` : min < 1440 ? `${Math.floor(min/60)} h` : `${Math.floor(min/1440)} d`)}</span>` : ""}</span>`;
 }
-const verMenor = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for(let i=0;i<3;i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) < (y[i]||0); } return false; };
 function staleBanner(){
   if(!META || !META.sincronizado) return "";
   let out = "";
@@ -2417,12 +2412,11 @@ function staleBanner(){
   // un tablero que era público pasa a mostrar todo lo que lee su cuenta (1.18): se dice una semana, con lo que implica
   if(view.lvl === "root" && OWNER && META.paso_a_completo && (Date.now() - new Date(META.paso_a_completo+"T12:00:00").getTime()) < 7*DAY) out += `<div class="stale info" data-acc><span>Desde la versión 1.18 hay un solo tablero por persona: este ya muestra todo lo que tu cuenta lee en la carpeta, también lo restringido y la bitácora entera. Es solo para ti: si lo compartiste con alguien, quítale el acceso desde el menú de la página, y que monte el suyo. <button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien ›</button></span></div>`;
   if(view.lvl === "root" && META.tarea_desfasada) out += `<div class="stale" data-acc><span>La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación: dile a Claude con la carpeta conectada «actualiza el tablero». Desde entonces las versiones nuevas llegan sin pedirlo.</span></div>`;
-  // La carpeta puede ir detrás de la página: su metodo.md lo pone al día la primera cuenta con el plugin nuevo que abre sesión o sincroniza y puede escribir en ella.
   // la carpeta detrás de la página se pone al día sola y no pide nada: ya no se avisa (1.23.3)
   if(view.lvl === "root" && META.version_tablero && META.version_tablero !== VERSION_TABLERO) out += `<div class="stale suave"${OWNER && !syncFalta() ? " data-acc" : ""}><span>Los datos del tablero son de la versión <b>${esc(META.version_tablero)}</b> y la página es la <b>${esc(VERSION_TABLERO)}</b>. Se ponen a la par en la próxima sincronización${OWNER&&!syncFalta()?", o ya mismo con el botón junto al nombre":""}.</span></div>`;
   // Pasar días sin ponerse al día es normal si nadie trabajó: se avisa con margen y se dice cómo traer lo de otros.
   const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea && !META.tarea_manual ? 2 : 7;
-  if(dias >= umbral) out += `<div class="stale" data-acc><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Si cerraste sesiones o si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
+  if(dias >= umbral) out += `<div class="stale"${OWNER ? " data-acc" : ""}><span>El tablero lleva <b>${dias} días</b> sin ponerse al día (última vez ${new Date(META.sincronizado).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}). Si cerraste sesiones o si otras personas trabajaron en la carpeta, ${OWNER&&!syncFalta()?"pulsa el botón junto al nombre, arriba a la izquierda":"dile a Claude con la carpeta conectada «sincroniza el tablero»"}. <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día ›</button></span></div>`;
   return out;
 }
 // ---- ayuda: el manual y cómo funciona, como artículos con su índice ----
@@ -2470,7 +2464,7 @@ function ayudaArts(){
     </table></div>
     <p class="hc-nota">Funciona en la medida en que todos la usan: una sesión que no se cierra, o un acuerdo que se quedó en un chat, es un hueco que la siguiente conversación no puede llenar.</p>
     <dl class="hc-def">
-      <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. Al cerrar cada sesión, Claude escribe con la voz del director del área cómo va el proyecto (lo que se completó y lo que sigue) y el estatus del área (qué se movió, qué sigue y qué preocupa), y el tablero los enseña en Estatus, cada uno en su nivel; al final de Acciones está «Por dónde empezar»: los grupos de pasos que avanzan varias cosas a la vez. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
+      <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. Al cerrar cada sesión, Claude escribe con la voz del director del área cómo va el proyecto (lo que se completó y lo que sigue) y el estatus del área (qué se movió, qué sigue y qué preocupa), y el tablero los enseña en Estatus, cada uno en su nivel; arriba de Acciones está «Por dónde empezar»: los grupos de pasos que avanzan varias cosas a la vez. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
     </dl>`},
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
@@ -2593,12 +2587,12 @@ function ayudaArts(){
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas: <b>Estatus</b> (cómo va), <b>Acciones</b> (lo que espera algo de ti), <b>Actividad</b> (lo que se hizo y quién) y <b>Qué hay</b> (lo que el trabajo ha producido). En Inicio, la última es <b>Mantenimiento</b>. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda.</dd>
       <dt>Estatus</dt><dd>En Inicio, qué es la organización (el primer párrafo de la guía de la carpeta; si sigue con el texto de la plantilla o queda vacío, Mantenimiento pide escribirlo), una ficha por área con el titular de su Estatus y su primer «Siguiente», y las premisas. En el área, su Estatus entero, que escribe su director al cerrar sesión, y una ficha por proyecto. Quien colabora en el área sale por el nombre que la carpeta da a su cuenta («Nombre Apellido (correo)» en una línea «Colabora:» de un proyecto); si no lo tiene, solo se cuenta. En el proyecto, su Estatus: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa, con el estado completo plegado debajo.</dd>
-      <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de pasos que más avanzan con una sola sesión, con la frase para pegársela a Claude. Después, lo que te toca a ti, y cada línea se resuelve ahí mismo: lo que falta decidir se lee como pregunta y lleva «Decidir con Claude», que copia la frase para decidirlo en sesión; una tarea vencida se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica», y lo pasa a la carpeta el próximo cierre. Los cuestionamientos que esperan tu respuesta van primero. Al final, <b>Con otros</b>: una tarjeta por persona con lo que te debe, lo que le debes y lo que decidió y te afecta, que adoptas o cuestionas en una sesión. El lado sale del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Lo que falta decidir y nombra a otra persona va a su tarjeta, no a lo tuyo. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. En el área, Acciones lleva lo mismo filtrado a ella, con sus prioridades arriba.</dd>
-      <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa. Lo que otros hicieron en un proyecto tuyo desde tu última sesión te lo dice Claude al abrir sesión en él.</dd>
+      <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de pasos que más avanzan con una sola sesión, con la frase para pegársela a Claude. Después, lo que te toca a ti, y cada línea se resuelve ahí mismo: lo que falta decidir se lee como pregunta y lleva «Decidir con Claude», que copia la frase para decidirlo en sesión; una tarea vencida se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica», y lo pasa a la carpeta la próxima puesta al día o la sesión del proyecto (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>). Los cuestionamientos que esperan tu respuesta van primero. Al final, <b>Con otros</b>: una tarjeta por persona con lo que te debe, lo que le debes y lo que decidió y te afecta, que adoptas o cuestionas en una sesión. El lado sale del texto del paso: «esperar a…» o «que confirme…» es que te deben; lo demás, que le debes. Alguien de fuera sale cuando el paso o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona. Lo que falta decidir y nombra a otra persona va a su tarjeta, no a lo tuyo. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. En el área, Acciones lleva lo mismo filtrado a ella, con sus prioridades arriba.</dd>
+      <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, por área, por proyecto y por persona. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa. Al abrir sesión en un proyecto, Claude te cuenta su última sesión y las decisiones de otros proyectos que lo afectan.</dd>
       <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos escritos y publicados y acciones planeadas; lo que vale cero no se escribe. Al pasar por el nombre dice su papel: de qué áreas es responsable o en cuáles colabora, y los proyectos solo donde no tiene el área. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión, que las de antes de la 1.23 no tienen. Una sesión que no dice quién la cerró no se le cuenta a nadie, y la nota de abajo dice cuántas son. Las acciones planeadas son los pasos abiertos que nombran a la persona: lo que tiene que hacer y lo que otros esperan de ella. Un nombre de pila que llevan dos personas, sin apellido, no se le cuenta a ninguna. El calendario marca los días con sesión; al pasar por encima dice cuántas. En Inicio, la lista se puede reducir a un área.</dd>
       <dt>Qué hay</dt><dd>El cuerpo del trabajo que el Estatus no cuenta: un resumen de lo publicado y de lo que hay en el taller, cuántos documentos están vigentes y en borrador, cuáles se quedaron viejos frente a una decisión posterior, y cada pieza con su estado, su fecha y la línea de su cabecera que dice qué aporta. La trayectoria muestra qué decisión o documento reemplazó a cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una frase de resumen que sugirió la memoria sale como provisional. Solo las acepta el dueño del tablero, y solo en los proyectos donde su cuenta escribe: todas de una vez, y las escribe el próximo cierre del proyecto. En el área, Qué hay lleva además lo que no cuadra en sus proyectos.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
-      <dt>Mantenimiento</dt><dd>Solo en Inicio, ordenado por lo que te pide. <b>Sugerencias de la memoria</b>: lo que Claude vio al poner el tablero al día, cada una como pregunta, con por qué y qué pasa si aceptas; se contesta ahí mismo si el tablero es tuyo y escribes en su proyecto. <b>Por poner al día</b>: una tarjeta por proyecto o área con lo que su memoria tiene flojo (un Estatus viejo, algo decidido después de «Falta decidir», trabajo sin sesión, pasos sin ordenar…) y una sola frase para arreglarlo todo en una sesión. <b>La carpeta</b>: lo que se arregla en la guía o en cómo se escribe, y le toca a quien responde por el contexto. <b>El tablero</b>: sincronizar y lo que pida un clic. Plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». El número en rojo cuenta lo que se contesta o se hace aquí: las sugerencias que puedes contestar, lo que pide un clic y lo marcado que ya no coincide con la carpeta. Si solo hay cosas para una sesión, sale un punto amarillo; si no hay nada, nada.</dd>
+      <dt>Mantenimiento</dt><dd>Solo en Inicio, ordenado por lo que te pide. <b>Sugerencias de la memoria</b>: lo que Claude vio al poner el tablero al día, cada una como pregunta, con por qué y qué pasa si aceptas; se contesta ahí mismo si el tablero es tuyo y escribes en su proyecto. <b>Por poner al día</b>: una tarjeta por proyecto o área con lo que su memoria tiene flojo (un Estatus viejo, algo decidido después de «Falta decidir», trabajo sin sesión, pasos sin ordenar…) y una sola frase para arreglarlo todo en una sesión. <b>La carpeta</b>: lo que se arregla en la guía o en cómo se escribe; le toca a quien responde por el contexto, salvo los pasos que esperan a alguien sin su nombre completo, que arregla el responsable de cada área. <b>El tablero</b>: sincronizar y lo que pida un clic. Plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». El número en rojo cuenta lo que se contesta o se hace aquí: las sugerencias que puedes contestar, lo que pide un clic y lo marcado que ya no coincide con la carpeta. Si solo hay cosas para una sesión, sale un punto amarillo; si no hay nada, nada.</dd>
       <dt>Dos voces</dt><dd>La línea de estado de un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, pasos. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el Estatus, que se firma al cerrar sesión.</dd>
       <dt>Actuar desde él</dt><dd>Puedes poner fecha a un paso, marcarlo hecho, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
       <dt>No se comparte</dt><dd>Muestra todo lo que tu cuenta lee, incluido lo restringido, así que es solo para ti. Quien quiera ver la carpeta así monta el suyo con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</dd>
@@ -2622,7 +2616,7 @@ function ayudaArts(){
       <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, la pestaña Mantenimiento de Inicio te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
       <dt>Lo que escriben otras personas</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Para traerlo, el botón «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o dile a Claude ${F("sincroniza el tablero")}. El botón no corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
-      <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día, y Mantenimiento lo avisa una semana.</dd>
+      <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día. No hace falta hacer nada.</dd>
     </dl>`},
   {g:"El tablero", id:"del-tablero", t:"Lo que tocas aquí", h:`
     <p>La página no escribe en la carpeta. Lo que tocas se apunta en una lista de pendientes y se ve marcado (⟳) hasta que está escrito. Mientras siga pendiente, puedes deshacerlo tocándolo otra vez.</p>
@@ -2631,13 +2625,14 @@ function ayudaArts(){
       <tbody>
         <tr><td>Cambiar la fecha de un paso</td><td>la puesta al día</td><td>La fecha nueva en la línea del paso, en la ficha del proyecto.</td></tr>
         <tr><td>Marcar un paso como hecho, con nota</td><td>la puesta al día</td><td>Quita el paso y añade a la bitácora una entrada «(tarea)» con el paso y tu nota. Solo si el paso no es una decisión.</td></tr>
+        <tr><td>«Ya no aplica» en una tarea vencida, o en el «⋯» de un paso</td><td>la puesta al día</td><td>Quita el paso y apunta en la bitácora que se retiró porque ya no aplica, no como avance.</td></tr>
         <tr><td>Marcar hecho sin nota, o un paso que es decidir, definir o aprobar algo</td><td>la siguiente sesión</td><td>Claude te pregunta qué pasó y lo registra. A veces de ahí sale una decisión.</td></tr>
         <tr><td>Anotar algo en un proyecto</td><td>la siguiente sesión</td><td>Claude lo registra donde le toque.</td></tr>
         <tr><td>Corregir cómo lee el tablero un paso o el estado</td><td>la siguiente sesión</td><td>Si lo apruebas, Claude reescribe el paso o el estatus.</td></tr>
         <tr><td>Marcar una prioridad del área como cumplida o retirada (en Acciones del área)</td><td>el responsable del área</td><td>Una sesión suya la quita de las prioridades.</td></tr>
       </tbody>
     </table></div>
-    <p class="hc-nota">Lo que aún no está escrito se ve en Mantenimiento de Inicio, en «Por registrar en la carpeta». La puesta al día ocurre cuando pulsas «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
+    <p class="hc-nota">Lo que aún no está escrito se ve en Mantenimiento de Inicio, en «Marcado aquí, por registrar». La puesta al día ocurre cuando pulsas «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
   {g:"El tablero", id:"estado-proyecto", t:"Cómo lee cada proyecto", h:`
     <p>De cada proyecto, el tablero enseña tres cosas: cómo va, en qué estado está y qué pasos tiene. Solo la primera la escribe una persona con Claude; las otras dos las calcula el tablero con lo que hay escrito.</p>
     <h3 class="hc-h">Cómo va</h3>
@@ -2940,7 +2935,7 @@ function cortoCard(p){
     : `<p class="more">Firmado al cerrar la sesión del ${fmtD(c.fecha)}.</p>`;
   return `<div class="card brief corto"><h3>Estatus${hq("en-corto","Qué es el Estatus")}</h3>${c.tit?`<p class="corto-t">${inline(c.tit)}</p>`:""}${c.items.length?`<ul class="corto-l">${c.items.map(i=>{ const fd = /^\**\s*falta decidir/i.test(i) ? faltaDecidir(p) : null;
       // lo que falta decidir y te toca lleva la frase para decidirlo con Claude, como en Acciones (1.23.3)
-      const btn = fd && activo(p) && esMio(p) && !otroDecide(fd) && !deOtroFd(fd) ? ` <button type="button" class="chip pri" data-copy="${esc(fraseDecidir(p, fd))}">Decidir con Claude</button>` : "";
+      const btn = fd && activo(p) && ((esMio(p) && !deOtroFd(fd)) || esYo(decisorFd(fd))) ? ` <button type="button" class="chip pri" data-copy="${esc(fraseDecidir(p, fd))}">Decidir con Claude</button>` : "";
       return `<li>${inline(i)}${btn}</li>`; }).join("")}</ul>`:""}${nota}</div>`;
 }
 function projLinea(p, sinEstado){

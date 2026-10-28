@@ -53,17 +53,17 @@ const path = require('path');
     const ini = await p.evaluate(() => { const fichas = [...document.querySelectorAll('#main .area-card')]; return { que: /Raíz inventada para probar el tablero/.test((document.querySelector('.org-q')||{}).textContent||''), fichas: fichas.length,
       panorama: fichas.some(x => /una sola cuenta grande abierta/.test(x.textContent)), avisos: document.querySelectorAll('#main .stale').length, etiqueta: /Personal · no compartir/.test(document.body.textContent) }; });
     if(!(ini.que && ini.fichas >= 2 && ini.panorama && ini.avisos === 0 && !ini.etiqueta)) errores.push(`${etiqueta}: Inicio › Estatus no dice qué es la organización, le faltan fichas de área (el Panorama vale de titular), o enseña avisos o la etiqueta vieja (${JSON.stringify(ini)})`);
-    // los avisos de la herramienta viven en Mantenimiento
+    // los avisos del tablero viven en Mantenimiento
     await abre(p, url, '', '[data-ini="mant"]');
     // la carpeta en una versión anterior del método se pone al día sola y no pide nada: no se avisa (1.23.3)
     const atraso = await p.evaluate(() => [...document.querySelectorAll('#main .stale')].some(x => /La carpeta usa todavía la versión/.test(x.textContent)));
     if(atraso) errores.push(`${etiqueta}: Mantenimiento avisa de algo que no pide nada (la versión del método de la carpeta)`);
     const boton = await p.evaluate(() => { const b = document.querySelector('.sync-ico'); return b ? { pend: b.classList.contains('pend'), off: b.classList.contains('off') } : null; });
     if(!boton || boton.off || boton.pend) errores.push(`${etiqueta}: el botón cuenta como pendiente un cambio que la sincronización dejó a propósito, o no está (${JSON.stringify(boton)})`);
-    // las propuestas del barrido viven en la cola pero no cuentan como lo marcado aquí; salen en «la memoria al día», y las descartadas no
+    // las propuestas del barrido viven en la cola pero no cuentan como lo marcado aquí; salen en el detalle de «Por poner al día», y las descartadas no
     const prop = await p.evaluate(async () => { const b = document.querySelector('[data-mt-open="ventas--cuentas"]'); if(!b) return null; b.click(); await new Promise(r => setTimeout(r, 250)); const m = document.querySelector('.modal'); return m ? m.textContent : ''; });
     await p.keyboard.press('Escape');
-    if(prop === null || !/Sugerencias de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en «la memoria al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
+    if(prop === null || !/Sugerencias de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en el detalle de «Por poner al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
     // Inicio › Acciones y Actividad
     await abre(p, url, '', '[data-ini="acciones"]');
     const acc = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { toca: /Te toca a ti/.test(t), empezar: /Por dónde empezar/.test(t) }; });
@@ -142,12 +142,16 @@ const path = require('path');
           const v = document.createElement("div"); v.innerHTML = filaVencida(p0, s0, "2026-01-05", true);
           const botones = [...v.querySelectorAll("button.chip")].map(b=>b.textContent.trim());
           const act = tabActividad().html, mant = tabMant().html;
-          return {pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
+          // quien decide: «decide X» o «(Nombre)» al final; un nombre solo mencionado no se lleva la decisión (revisión 1.23.3)
+          const menciona = deOtroFd("si contratamos a Beto Prueba para soporte"), parenOtro = deOtroFd("el precio de la fase 2 (Beto Prueba)"), parenYo = deOtroFd("el precio (Ana)");
+          const pregunta2 = comoPregunta("qué hacemos con la fase 2; lo decide Ana"), frase2 = fraseDecidir(byId["ventas--cuentas"], "si firmamos con Beta (antes del 30 de noviembre)");
+          return {menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
             act: !/Lo que otros hicieron/.test(act), mant: ["Sugerencias de la memoria", "Por poner al día", "La carpeta"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta/.test(mant)};
         } finally { ({CAN, DB, META} = g); }
       });
       const bien = r.pregunta === "¿Se corrigen las plantillas para que respeten la letra?" && r.otra === "El nombre y la métrica (Beto)." && /decidamos si se firma ya$/.test(r.frase)
         && r.orden[0] === "Por dónde empezar" && r.orden.indexOf("Te toca a ti") < r.orden.indexOf("Con otros") && r.otros === (r.nAfe > 0) && r.sinAfecta
+        && r.menciona === null && r.parenOtro === "Beto Prueba" && r.parenYo === null && r.pregunta2 === "¿Qué hacemos con la fase 2?" && /\(antes del 30 de noviembre\)$/.test(r.frase2)
         && r.botones.join("|") === "Hecha|Nueva fecha|Ya no aplica" && /hace \d+ días/.test(r.venc) && r.act && r.mant.every(Boolean) && !r.viejo;
       if(!bien) errores.push(`${etiqueta}: Acciones, Actividad o Mantenimiento no van como en la 1.23.3 (${JSON.stringify(r)})`);
     }
