@@ -1608,6 +1608,21 @@ docs["meta"]["estado"]["soy_contexto"] = bool(CUENTA_TABLERO) and (CUENTA_TABLER
 # quien colabora en un área se enseña por su nombre, nunca por su correo (1.22.4): el de la carpeta junto a su cuenta
 # («Nombre (correo)») o el del área de la que es responsable; sin nombre, solo se cuenta
 _nombre_cta = {c: limpio(a_["dueno"]) for a_ in areas_guia for c in cuentas(a_["cuenta"])[0] if limpio(a_["dueno"])}
+# el nombre de quien colabora escrito en la celda Responsable, «Ana Prueba (colabora Carla Prueba)», con su correo detrás de
+# «colabora:» en la celda Cuenta: se emparejan en orden, solo si hay tantos nombres como correos y ninguno es ya de otra
+# cuenta (1.23.3: sin esto, quien colabora en un área salía como «sin nombre» o como alguien que no figura en la carpeta)
+for _a_ in areas_guia:
+    _m_ = re.search(r"\(\s*colabora[n]?\s+([^)]*)\)", _a_["dueno"] or "", re.I)
+    if not _m_:
+        continue
+    _ns_ = [n.strip() for n in re.split(r",|;|\s+y\s+", _m_.group(1))]
+    _ns_ = [n for n in _ns_ if re.fullmatch(r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:de\s+|del\s+|la\s+)?[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){1,3}", n)]
+    _partes_ = PALABRA_COLABORA.split((_a_["cuenta"] or "").lower(), maxsplit=1)
+    _cs_ = list(dict.fromkeys(CORREO.findall(_partes_[1]))) if len(_partes_) > 1 else []
+    if _ns_ and len(_ns_) == len(_cs_):
+        for c, n in zip(_cs_, _ns_):
+            if n not in _nombre_cta.values():
+                _nombre_cta.setdefault(c, n)
 _nombre_cta.update(NOMBRE_DE_CUENTA)
 for _slug_a, _a in docs["areas"].items():
     _co = _a.get("colaboran") or []
