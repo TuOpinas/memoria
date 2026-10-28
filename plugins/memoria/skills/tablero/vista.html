@@ -1717,7 +1717,8 @@ function conOtros(){
   // quién mira, por su nombre completo: con dos Anas en la carpeta, la otra no es «tú» (segunda vuelta)
   const yo = nombreCorto(VIEWER()), yoN = persona(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
-  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+  // solo los proyectos de quien mira: en una carpeta con equipo, los pasos de los demás no son tuyos (1.23.3, tablero de Escuela Fácil)
+  for(const p of PROJ){ if(p.restringido || p.cerrado || !esMio(p)) continue;
     for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? persona(n)!==yoN : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
@@ -2026,7 +2027,8 @@ function sinSujeto(t, nombre, fecha){
 // ---- «Te afecta»: por decisión, solo de otras personas, y en Acciones (es algo a lo que reaccionar: adoptar o cuestionar) ----
 function afectaDeOtros(){
   const yo = persona(VIEWER()), por = {};
-  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+  // lo que afecta a tus proyectos, no a cualquiera de la carpeta (1.23.3)
+  for(const p of PROJ){ if(p.restringido || p.cerrado || !esMio(p)) continue;
     for(const {q,d,nueva} of afectan(p)){ if(!nueva) continue; if(persona(d.decidio||"")===yo) continue;
       const k = q.id+"#"+(d.id||d.fecha+d.titulo); const g = por[k] = por[k] || {q, d, a: []}; g.a.push(p); } }
   return Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
