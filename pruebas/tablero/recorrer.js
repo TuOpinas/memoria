@@ -146,7 +146,15 @@ const path = require('path');
           const menciona = deOtroFd("si contratamos a Beto Prueba para soporte"), parenOtro = deOtroFd("el precio de la fase 2 (Beto Prueba)"), parenYo = deOtroFd("el precio (Ana)");
           const pregunta2 = comoPregunta("qué hacemos con la fase 2; lo decide Ana"), frase2 = fraseDecidir(byId["ventas--cuentas"], "si firmamos con Beta (antes del 30 de noviembre)");
           // «Con otros» y «te afecta» solo miran tus proyectos: en una carpeta con equipo, lo de los demás no es tuyo (1.23.3)
-          const soloMios = conOtros().every(g=>[...g.deben, ...g.debes].every(x=>esMio(x.p))) && afectaDeOtros().every(g=>g.a.every(esMio)) && PROJ.some(x=>!esMio(x) && !x.restringido && !x.cerrado);
+          // de un proyecto ajeno solo sale lo que dice que tú haces algo con alguien; de uno tuyo, no lo que hace otra persona (1.23.4)
+          const ajeno = PROJ.find(x=>!esMio(x) && !x.restringido && !x.cerrado), propio = PROJ.find(x=>esMio(x) && !x.restringido && !x.cerrado);
+          const gp = {aj: ajeno.pasos, pr: propio.pasos};
+          ajeno.pasos = [...(ajeno.pasos||[]), {texto:"Ana Prueba pide a Beto Prueba el informe"}, {texto:"Carla Prueba pregunta a Beto Prueba por el temario"}];
+          propio.pasos = [...(propio.pasos||[]), {texto:"Beto Prueba pregunta a Carla Prueba por la firma"}];
+          _M = null; const co = conOtros(); ajeno.pasos = gp.aj; propio.pasos = gp.pr; _M = null;
+          const textos = co.flatMap(g=>[...g.deben, ...g.debes].map(x=>x.t));
+          const soloMios = co.every(g=>[...g.deben, ...g.debes].every(x=>esMio(x.p) || /^Ana Prueba pide/.test(x.t))) && textos.some(t=>/^Ana Prueba pide/.test(t))
+            && !textos.some(t=>/pregunta a/.test(t)) && afectaDeOtros().every(g=>g.a.every(esMio));
           return {soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
             act: !/Lo que otros hicieron/.test(act), mant: ["Sugerencias de la memoria", "Por poner al día", "La carpeta"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta/.test(mant)};
         } finally { ({CAN, DB, META} = g); }
