@@ -749,7 +749,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.23.3"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.23.4"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1717,14 +1717,22 @@ function conOtros(){
   // quién mira, por su nombre completo: con dos Anas en la carpeta, la otra no es «tú» (segunda vuelta)
   const yo = nombreCorto(VIEWER()), yoN = persona(VIEWER()), esc_ = escribenSet(), por = {};
   const add = (n, lado, x) => { const g = por[n] = por[n] || {n, deben:[], debes:[]}; g[lado].push(x); };
-  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+  // en una carpeta con equipo, solo lo tuyo (1.23.4, tablero de Escuela Fácil): de tus proyectos, sus pasos; de los ajenos,
+  // solo los que dicen que tú haces algo con alguien. Un paso cuyo sujeto es otra persona («Ana pregunta a Beto…») no es
+  // tuyo en ningún proyecto. Sin saber quién mira ni qué escribe, como antes: todo
+  const filtra = !!VIEWER() || PROJ.some(p=>p.escribe!==undefined);
+  for(const p of PROJ){ if(p.restringido || p.cerrado) continue; const mio = !filtra || esMio(p);
     for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? persona(n)!==yoN : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
-      if(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
-      else if(md){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
+      // quién hace el paso: el nombre que va justo delante del verbo, si lo hay («Ana Prueba pide a…»); uno nombrado antes
+      // («Tras hablar con Bea, pedir a…») no lo hace. Por el nombre completo: con dos Anas, la otra no eres tú (revisión 1.23.4)
+      const ms = md && s.texto.slice(0, md.index).match(/(?:^|[^\wáéíóúñü,;:.])([A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){0,3})\s*$/);
+      const sujeto = ms ? nombresEn(ms[1]) : [], soyYo = x => !!yoN && persona(x)===yoN, deOtro = sujeto.some(x=>!soyYo(x)), deMi = sujeto.some(soyYo);
+      if(mio && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto))){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
+      else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
-    const fd = faltaDecidir(p); if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
+    const fd = mio ? faltaDecidir(p) : null; if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
 }
@@ -1802,7 +1810,7 @@ function tabAcciones(){
   const nCuest = ((META && META.cuestionamientos) || []).filter(cuestMio).length;
   const tuyo = teToca(pt.decidir, pt.venc, true);
   // el número cuenta también los cuestionamientos que esperan al lector y las decisiones de otros que te afectan (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
+  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : VIEWER() && PROJ.some(activo) && !PROJ.some(p=>activo(p) && esMio(p)) ? `<p class="empty">El tablero no encuentra ningún proyecto tuyo: tu correo no figura en la guía de la carpeta ni en la línea «Colabora:» de ningún proyecto, o figura con otro. Pide a quien responde por el área que lo corrija.</p>` : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
 }
 
 
@@ -2026,7 +2034,8 @@ function sinSujeto(t, nombre, fecha){
 // ---- «Te afecta»: por decisión, solo de otras personas, y en Acciones (es algo a lo que reaccionar: adoptar o cuestionar) ----
 function afectaDeOtros(){
   const yo = persona(VIEWER()), por = {};
-  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+  // lo que afecta a tus proyectos, no a cualquiera de la carpeta (1.23.4)
+  for(const p of PROJ){ if(p.restringido || p.cerrado || !esMio(p)) continue;
     for(const {q,d,nueva} of afectan(p)){ if(!nueva) continue; if(persona(d.decidio||"")===yo) continue;
       const k = q.id+"#"+(d.id||d.fecha+d.titulo); const g = por[k] = por[k] || {q, d, a: []}; g.a.push(p); } }
   return Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
