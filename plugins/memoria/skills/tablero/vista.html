@@ -749,7 +749,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.23.3"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.23.4"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1725,8 +1725,10 @@ function conOtros(){
     for(const s of stepsLive(p)){ const c = conocidos(), fuera = n => n && (yo ? persona(n)!==yoN : !esc_.has(persona(n)));
       let lado = null, n = null;
       const md = s.texto.match(RE_DEBES);
-      // quién hace el paso: el nombre que va antes del verbo, si lo hay
-      const sujeto = md ? nombresEn(s.texto.slice(0, md.index)) : [], deOtro = sujeto.some(x=>!esYo(x)), deMi = sujeto.some(esYo);
+      // quién hace el paso: el nombre que va justo delante del verbo, si lo hay («Ana Prueba pide a…»); uno nombrado antes
+      // («Tras hablar con Bea, pedir a…») no lo hace. Por el nombre completo: con dos Anas, la otra no eres tú (revisión 1.23.4)
+      const ms = md && s.texto.slice(0, md.index).match(/(?:^|[^\wáéíóúñü,;:.])([A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){0,3})\s*$/);
+      const sujeto = ms ? nombresEn(ms[1]) : [], soyYo = x => !!yoN && persona(x)===yoN, deOtro = sujeto.some(x=>!soyYo(x)), deMi = sujeto.some(soyYo);
       if(mio && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto))){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
       else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
@@ -1808,7 +1810,7 @@ function tabAcciones(){
   const nCuest = ((META && META.cuestionamientos) || []).filter(cuestMio).length;
   const tuyo = teToca(pt.decidir, pt.venc, true);
   // el número cuenta también los cuestionamientos que esperan al lector y las decisiones de otros que te afectan (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : VIEWER() && !PROJ.some(p=>activo(p) && esMio(p)) ? `<p class="empty">El tablero no encuentra ningún proyecto tuyo: tu correo no figura en la guía de la carpeta ni en la línea «Colabora:» de ningún proyecto, o figura con otro. Pide a quien responde por el área que lo corrija.</p>` : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
+  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : VIEWER() && PROJ.some(activo) && !PROJ.some(p=>activo(p) && esMio(p)) ? `<p class="empty">El tablero no encuentra ningún proyecto tuyo: tu correo no figura en la guía de la carpeta ni en la línea «Colabora:» de ningún proyecto, o figura con otro. Pide a quien responde por el área que lo corrija.</p>` : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
 }
 
 
