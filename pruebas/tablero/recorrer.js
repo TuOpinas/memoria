@@ -155,13 +155,17 @@ const path = require('path');
           const textos = co.flatMap(g=>[...g.deben, ...g.debes].map(x=>x.t));
           const soloMios = co.every(g=>[...g.deben, ...g.debes].every(x=>esMio(x.p) || /^Ana Prueba pide/.test(x.t))) && textos.some(t=>/^Ana Prueba pide/.test(t))
             && !textos.some(t=>/pregunta a/.test(t)) && textos.some(t=>/^Tras hablar con Carla Prueba/.test(t)) && afectaDeOtros().every(g=>g.a.every(esMio));
-          return {soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
+          // un paso que espera a alguien sin decir a quién va a la tarjeta de su proyecto, no a «La carpeta» (1.23.5)
+          const pq = PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
+          const tarjeta = porPonerAlDia().todas.find(g=>g.id===pq.id), sinQuien = !!tarjeta && tarjeta.it.some(t=>/espera(?:n)? a alguien sin decir a quién/.test(t)) && !deLaCarpeta().items.some(x=>/no reconoce/.test(x.t));
+          pq.pasos = gq; _M = null;
+          return {sinQuien, soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
             act: !/Lo que otros hicieron/.test(act), mant: ["Sugerencias de la memoria", "Por poner al día", "La carpeta"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta/.test(mant)};
         } finally { ({CAN, DB, META} = g); }
       });
       const bien = r.pregunta === "¿Se corrigen las plantillas para que respeten la letra?" && r.otra === "El nombre y la métrica (Beto)." && /decidamos si se firma ya$/.test(r.frase)
         && r.orden[0] === "Por dónde empezar" && r.orden.indexOf("Te toca a ti") < r.orden.indexOf("Con otros") && r.otros === (r.nAfe > 0) && r.sinAfecta
-        && r.soloMios && r.menciona === null && r.parenOtro === "Beto Prueba" && r.parenYo === null && r.pregunta2 === "¿Qué hacemos con la fase 2?" && /\(antes del 30 de noviembre\)$/.test(r.frase2)
+        && r.soloMios && r.sinQuien && r.menciona === null && r.parenOtro === "Beto Prueba" && r.parenYo === null && r.pregunta2 === "¿Qué hacemos con la fase 2?" && /\(antes del 30 de noviembre\)$/.test(r.frase2)
         && r.botones.join("|") === "Hecha|Nueva fecha|Ya no aplica" && /hace \d+ días/.test(r.venc) && r.act && r.mant.every(Boolean) && !r.viejo;
       if(!bien) errores.push(`${etiqueta}: Acciones, Actividad o Mantenimiento no van como en la 1.23.3 (${JSON.stringify(r)})`);
     }
