@@ -96,5 +96,36 @@ sop = json.loads((tmp / "vieja" / "proyectos" / "operacion--soporte.json").read_
 c925 = [d for d in sop.get("decisiones") or [] if d.get("id") == "2026-09-25"]
 ok(c925 and c925[0].get("abierto") is False, f"un cuestionamiento respondido en un archivado de hace años sigue respondido ({c925[:1]})")
 
+# el nombre de quien colabora escrito en la celda Responsable de guia.md (1.23.3): «Ana (colabora Carla Prueba)», con su
+# correo tras «colabora:» en la celda Cuenta; un nombre que ya es de otra cuenta no se le da a nadie
+print("Quien colabora, nombrado en la celda Responsable")
+rg = tmp / "raiz-guia"; shutil.copytree(AQUI / "raiz", rg)
+g_ = rg / "guia.md"; gt = g_.read_text(encoding="utf-8")
+gt = gt.replace("| Ana Prueba | ana@ejemplo.test · colabora: carla@ejemplo.test |", "| Ana Prueba (colabora Carla Prueba, dueña de nada) | ana@ejemplo.test · colabora: carla@ejemplo.test |", 1)
+gt = gt.replace("| Beto Prueba (escribe también Ana Prueba, dueña de `contratos/`) | beto@ejemplo.test · colabora: eva@ejemplo.test |", "| Beto Prueba (colabora Ana Prueba) | beto@ejemplo.test · colabora: eva@ejemplo.test |", 1)
+g_.write_text(gt, encoding="utf-8")
+subprocess.run([sys.executable, str(GV), str(rg), str(tmp / "guia"), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
+av = json.loads((tmp / "guia" / "areas" / "ventas.json").read_text(encoding="utf-8"))
+ok(av.get("colaboran_ver") == ["Carla Prueba"] and not av.get("colaboran_sin_nombre"), f"«(colabora Carla Prueba)» le da nombre a carla@ ({av.get('colaboran_ver')}, {av.get('colaboran_sin_nombre')})")
+al = tmp / "guia" / "areas" / "legal.json"
+if al.exists():
+    al_ = json.loads(al.read_text(encoding="utf-8"))
+    ok("Ana Prueba" not in (al_.get("colaboran_ver") or []), f"un nombre que ya es de otra cuenta (ana@) no se le da a eva@ ({al_.get('colaboran_ver')})")
+
+# en otro orden, o con más nombres que correos: se empareja por la parte local del correo y nunca se cruzan (revisión 1.23.3)
+def guia_con(fila_ventas, sal):
+    r_ = tmp / ("raiz-" + sal); shutil.copytree(AQUI / "raiz", r_)
+    g2 = r_ / "guia.md"; g2.write_text(g2.read_text(encoding="utf-8").replace("| Ana Prueba | ana@ejemplo.test · colabora: carla@ejemplo.test |", fila_ventas, 1), encoding="utf-8")
+    subprocess.run([sys.executable, str(GV), str(r_), str(tmp / sal), "--version", "prueba"], check=True, stdout=subprocess.DEVNULL)
+    return json.loads((tmp / sal / "areas" / "ventas.json").read_text(encoding="utf-8"))
+v1 = guia_con("| Ana Prueba (colabora Diego Ruiz, Carla Prueba) | ana@ejemplo.test · colabora: carla@ejemplo.test, diego@ejemplo.test |", "orden")
+ok(v1.get("colaboran_nombres") == {"carla@ejemplo.test": "Carla Prueba", "diego@ejemplo.test": "Diego Ruiz"}, f"en otro orden, cada correo con su nombre ({v1.get('colaboran_nombres')})")
+v2 = guia_con("| Ana Prueba (colabora Patricio Torres, dueño de `ronda/`, y Jorge Ortiz) | ana@ejemplo.test · colabora: patricio@ejemplo.test |", "mas")
+ok(v2.get("colaboran_nombres") == {"patricio@ejemplo.test": "Patricio Torres"}, f"más nombres que correos: solo el que el correo nombra ({v2.get('colaboran_nombres')})")
+v3 = guia_con("| Ana Prueba (colabora Luis Mora, Eva Sol) | ana@ejemplo.test · colabora: x1@ejemplo.test, x2@ejemplo.test |", "cruce")
+ok(not v3.get("colaboran_nombres") and v3.get("colaboran_sin_nombre") == 2, f"correos que no nombran a nadie: sin nombre, sin adivinar ({v3.get('colaboran_nombres')})")
+v4 = guia_con("| Ana Prueba (colabora María de la Fuente) | ana@ejemplo.test · colabora: mfuente@ejemplo.test |", "particulas")
+ok(v4.get("colaboran_ver") == ["María de la Fuente"], f"un nombre con partículas ({v4.get('colaboran_ver')})")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
