@@ -749,7 +749,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.23.4"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.23.5"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1620,13 +1620,13 @@ function porPonerAlDia(){
   const add = (id, base, txt, frase) => { const g = porId[id] = porId[id] || (out.push({id, ...base, it:[], fr:[]}), out[out.length-1]); if(!g.it.includes(txt)) g.it.push(txt); if(frase && !g.fr.includes(frase)) g.fr.push(frase); };
   const viejosMios = new Set(PROJ.filter(p=>activo(p) && esMio(p) && estatusViejo(p)).map(p=>p.id)), mt = mtDatos(), conDetalle = new Set(mt.map(f=>f.id));
   for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
+    // un paso que espera a alguien sin decir a quién: se arregla en la sesión del proyecto (1.23.5: estaba en «La carpeta»)
+    const sq = sinQuienDe(p); if(sq.length) add(p.id, {p}, `${cuantos(sq.length,"paso espera","pasos esperan")} a alguien sin decir a quién: ${citaPaso(sq[0].texto)}${sq.length>1?` y ${sq.length-1} más`:""}.`, "escribe en los pasos que esperan a alguien a quién esperan, como «Nombre Apellido (Organización)»");
     // si ya hay una sugerencia de reescribirlo, la pregunta va arriba y aquí no se repite
     if(propsDe(p.id).some(q=>q.clase==="estado-desfasado" && q.estado==="pendiente")) continue;
     const fe = fechaEstatus(p), tras = fe && p.ultima_sesion && p.ultima_sesion > fe;
     if(tras || viejosMios.has(p.id)) add(p.id, {p}, !fe ? "Sin Estatus todavía." : `El Estatus es del ${fmtD(fe)}, hace ${cuantos(diasDesde(fe),"día","días")}${tras?`, y hubo sesión el ${fmtD(p.ultima_sesion)}`:""}: ya no dice cómo va.`, "reescribe su Estatus");
     const fd = faltaDecidir(p); if(fd && fe){ const dec = decisionesTodas(p).filter(d=>d.fecha > fe); if(dec.length) add(p.id, {p}, `Lo que falta decidir puede estar resuelto: hay ${cuantos(dec.length,"decisión","decisiones")} después del Estatus.`, "mira si lo que falta decidir ya se decidió"); }
-    // un paso que espera a alguien sin decir a quién: se arregla en la sesión del proyecto (1.23.5: estaba en «La carpeta»)
-    const sq = sinQuienDe(p); if(sq.length) add(p.id, {p}, `${cuantos(sq.length,"paso espera","pasos esperan")} a alguien sin decir a quién: «${corta(sq[0].texto).slice(0,70)}${sq[0].texto.length>70?"…":""}»${sq.length>1?` y ${sq.length-1} más`:""}.`, "escribe en los pasos que esperan a alguien a quién esperan, como «Nombre Apellido (Organización)»");
   }
   for(const f of mt){ if(f.r) continue;
     const id = f.p ? f.p.id : "a:"+f.a.slug, base = f.p ? {p:f.p} : {a:f.a};
@@ -1711,6 +1711,8 @@ const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:conf
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
 const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy_contexto !== undefined ? META.soy_contexto === true : !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER())) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
 // pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
+// un paso citado en una línea: sin la fecha de delante, sin su punto final ni sus comillas, cortado a 70 caracteres
+const citaPaso = t => { const c = corta(t).replace(/[«»]/g,"").replace(/[.\s]+$/,""); return `«${c.length>70 ? c.slice(0,69).replace(/\s+\S*$/,"")+"…" : c}»`; };
 const sinQuienDe = p => stepsLive(p).filter(s=>(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !fueraEn(p, s.texto) && !nombresEn(s.texto).length);
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;

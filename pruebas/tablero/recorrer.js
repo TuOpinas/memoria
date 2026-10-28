@@ -157,7 +157,12 @@ const path = require('path');
             && !textos.some(t=>/pregunta a/.test(t)) && textos.some(t=>/^Tras hablar con Carla Prueba/.test(t)) && afectaDeOtros().every(g=>g.a.every(esMio));
           // un paso que espera a alguien sin decir a quién va a la tarjeta de su proyecto, no a «La carpeta» (1.23.5)
           const pq = PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
-          const tarjeta = porPonerAlDia().todas.find(g=>g.id===pq.id), sinQuien = !!tarjeta && tarjeta.it.some(t=>/espera(?:n)? a alguien sin decir a quién/.test(t)) && !deLaCarpeta().items.some(x=>/no reconoce/.test(x.t));
+          const tarjeta = porPonerAlDia().todas.find(g=>g.id===pq.id), cita = tarjeta && tarjeta.it.find(t=>/espera(?:n)? a alguien sin decir a quién/.test(t));
+          // también con una sugerencia de reescribir su Estatus pendiente, y sin «.» ni «…» de más (revisión 1.23.5)
+          const gpr = PROPUESTAS; PROPUESTAS = [...PROPUESTAS, {id:"t-ed", tipo:"propuesta", clase:"estado-desfasado", estado:"pendiente", proyecto:pq.id}]; _M = null;
+          const tarjeta2 = porPonerAlDia().todas.find(g=>g.id===pq.id); PROPUESTAS = gpr;
+          const sinQuien = !!cita && /«Esperar la respuesta [^«».…]*» y \d+ más\.$/.test(cita) && !deLaCarpeta().items.some(x=>/no reconoce/.test(x.t))
+            && !!tarjeta2 && tarjeta2.it.some(t=>/sin decir a quién/.test(t));
           pq.pasos = gq; _M = null;
           return {sinQuien, soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
             act: !/Lo que otros hicieron/.test(act), mant: ["Sugerencias de la memoria", "Por poner al día", "La carpeta"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta/.test(mant)};
