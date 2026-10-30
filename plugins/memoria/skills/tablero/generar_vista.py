@@ -1462,10 +1462,14 @@ for a in areas_guia:
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
         # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
-        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada (fecha, título, Tema y quién), su posición en el archivo y qué documentos escribió y publicó (1.23).
+        # traer el detalle de cada proyecto: la cabecera de la entrada (fecha, título, Tema y quién), su posición en el archivo,
+        # qué documentos escribió y publicó (1.23) y sus Avances recortados (1.24).
         _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
         pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
                                        "trabajamos": una_linea_(s_.get("trabajamos") or "", 220), "n": s_.get("n"),
+                                       # los Avances, cortos: «Avanzaron otros» cuenta en Estatus qué hizo otra persona en lo tuyo (1.24).
+                                       # Es cuerpo de la bitácora: viaja solo en el tablero de quien puede leer el proyecto, como su registro
+                                       "avances": una_linea_(s_.get("avances") or "", 600),
                                        "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
