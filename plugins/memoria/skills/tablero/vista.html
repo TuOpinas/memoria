@@ -405,7 +405,8 @@ button.est-btn{all:unset;cursor:pointer}
 
 .brief p{margin:0;font-size:15.5px;line-height:1.6}.brief h3{margin:0}
 .corto .corto-t{font-size:17px;font-weight:600;line-height:1.45;margin:4px 0 10px}
-.corto .corto-l{margin:0 0 10px;padding-left:18px;display:grid;gap:6px;font-size:15px;line-height:1.55}
+.corto .corto-l{margin:0 0 10px;padding-left:0;list-style:none;display:grid;gap:8px;font-size:15px;line-height:1.55}
+.corto .corto-l ol.prio-l{margin-top:6px;padding-left:0}
 .corto .more{margin-top:6px}
 
 
@@ -744,6 +745,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 .pd li.sgg{color:var(--info,var(--signal))}
 .q-form{grid-column:1/-1;display:grid;gap:8px} .q-form textarea{width:100%;min-height:56px;resize:vertical} .q-form .ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .hoy-linea.semana b{color:var(--ink)}
+#head .para-que{margin:8px 0 4px;max-width:80ch}
 #head .sub.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media (max-width:640px){ .acc-i.np{grid-template-columns:minmax(0,1fr)} .acc-i.np>.acc-b{grid-column:1;justify-content:flex-start} }
 </style>
@@ -1477,15 +1479,20 @@ function registroTab(p){
   const nQ = decs.filter(x=>x.d.tipo==="cuestionamiento").length;
   let items = REG_FILTRO==="decisiones" ? decs.filter(x=>x.d.tipo!=="cuestionamiento") : REG_FILTRO==="sesiones" ? ses : REG_FILTRO==="cuest" ? decs.filter(x=>x.d.tipo==="cuestionamiento") : decs.concat(ses);
   items.sort((a,b)=>b.f.localeCompare(a.f) || (a.k==="s"?-1:1));
-  const vis = items.slice(0, 60);
+  const desde = addDays(-(ACT_DIAS-1)), todos = REG_TODO.has(p.id), nAnt = items.filter(x=>x.f<desde).length;
+  const vis = (todos ? items : items.filter(x=>x.f>=desde)).slice(0, 60);
   let mes = null, out = "";
   for(const x of vis){ const m = MES_L(x.f); if(m!==mes){ mes = m; out += `<div class="dl-m">${esc(m)}</div>`; }
     if(x.k==="d") out += decItem(x.d, p, false);
     else { const s = x.s, tit = s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,"").trim();
       out += `<article class="dec ses"><div class="hd"><span class="pill none">Sesión</span><time>${fmtD(s.fecha)}</time>${tit?`<h3>${inline(tit)}</h3>`:""}${s.quien?`<span class="more">· ${esc(s.quien)}</span>`:""}</div><dl>${s.trabajamos?`<dt>Tema</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}</dl></article>`; } }
   const chip = (k, l, n) => `<button type="button" class="chip${REG_FILTRO===k?" on":""}" data-reg="${k}">${l}${n!=null?` · ${n}`:""}</button>`;
-  return `<div class="card"><div class="reg-f">${chip("todo","Todo",decs.length+ses.length)}${chip("decisiones","Decisiones",decs.length-nQ)}${chip("sesiones","Sesiones",ses.length)}${nQ?chip("cuest","Cuestionamientos",nQ):""}</div>${p.sesiones_aparte && !TEXTOS[p.id] ? CARGANDO : sinDetalle(p) ? SIN_DETALLE : ""}${vis.length?`<div class="dl">${out}</div>`:`<p class="empty">Nada registrado.</p>`}${items.length>60?`<p class="more">Se muestran los 60 más recientes de ${items.length}. El registro completo está en la carpeta del proyecto.</p>`:""}</div>`;
+  const o = agrega(eventos(desde).filter(e=>e.p===p));
+  const ant = !todos && nAnt ? `<button type="button" class="pg-more" style="padding-left:0" data-reg-todo="${esc(p.id)}">Ver anteriores (${nAnt})</button>` : "";
+  return selPeriodo(o) + `<div class="card"><div class="reg-f">${chip("todo","Todo",decs.length+ses.length)}${chip("decisiones","Decisiones",decs.length-nQ)}${chip("sesiones","Sesiones",ses.length)}${nQ?chip("cuest","Cuestionamientos",nQ):""}</div>${p.sesiones_aparte && !TEXTOS[p.id] ? CARGANDO : sinDetalle(p) ? SIN_DETALLE : ""}${vis.length?`<div class="dl">${out}</div>`:`<p class="empty">Nada en el periodo.</p>`}${ant}${todos && items.length>60?`<p class="more">Se muestran los 60 más recientes de ${items.length}. El registro completo está en la carpeta del proyecto.</p>`:""}</div>`;
 }
+const REG_TODO = new Set();
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-reg-todo]"); if(!b) return; REG_TODO.add(b.dataset.regTodo); render(); });
 const TAREAS_OPEN = new Set();
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-tareas-open]"); if(!b) return; const id = b.dataset.tareasOpen; setTimeout(()=>{ const d = document.getElementById("todas-tareas"); if(d && d.open) TAREAS_OPEN.add(id); else TAREAS_OPEN.delete(id); }, 0); });
 function enfoqueProyecto(p){
@@ -1505,22 +1512,21 @@ function renderProj(p){
   if(tab==="estatus"){
     const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
     const sig = p.cerrado ? "" : renderProjOld(p, "estado");
-    body = `${lineaSemana(x=>x===p, "")}${cuest}${cortoCard(p) || `<div class="card brief"><h3>Estatus</h3><p class="empty">Sin Estatus todavía: lo escribe el cierre de la siguiente sesión.</p><p class="more">${projLinea(p, true)}</p></div>`}${enDetalle(p)}${sig}${seccionEsperas(x=>x===p)}
-      <details class="card mas-c"><summary><h3 style="display:inline">Para qué</h3><span class="more"> · objetivo y alcance</span></summary><dl class="facts" style="margin-top:12px"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd>${p.terminado?`<dt>Termina</dt><dd>${inline(p.terminado)}</dd>`:""}<dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd></dl></details>`;
+    body = `${lineaSemana(x=>x===p, "")}${cuest}${cortoCard(p) || `<div class="card brief"><h3>Estatus</h3><p class="empty">Sin Estatus todavía: lo escribe el cierre de la siguiente sesión.</p><p class="more">${projLinea(p, true)}</p></div>`}${sig}${seccionEsperas(x=>x===p)}`;
   } else if(tab==="quehay"){
     // lo que quedó viejo, lo relevante para Acciones, el resumen y, plegadas, todas las tareas (1.24)
     const solo = Object.assign(x=>x===p, {unico:true}), nT = stepsLive(p).length;
-    body = seccionPonerAlDia(solo, "Por poner al día") + seccionRelevante(solo) + (p.que_hay ? renderProjOld(p, "quehay") : renderProjOld(p, "entregables"))
+    body = (p.que_hay ? renderProjOld(p, "quehay") : renderProjOld(p, "entregables"))
       + `<details class="card mas-c" id="todas-tareas"${TAREAS_OPEN.has(p.id)?" open":""}><summary data-tareas-open="${esc(p.id)}"><h2 style="display:inline">Todas las tareas</h2><span class="more"> · ${nT}</span></summary><div style="margin-top:10px">${renderProjOld(p, "pasos")}</div></details>`;
   } else if(tab==="pasos"){
     // Acciones del proyecto: por dónde empezar, lo que te toca decidir y las tareas críticas; la lista entera, en Qué hay (1.24)
     renderProjOld(p, "cabecera");   // solo pinta la cabecera
     const solo = x=>x===p;
-    const tuyo = seccionDecidir(solo, false) + seccionCriticas(solo, false, `Todas las tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.`) + seccionAfectan(solo);
+    const tuyo = seccionDecidir(solo, false) + seccionCriticas(solo, false, `Todas las tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.`) + seccionAfectan(solo) + seccionPonerAlDia(solo, "Por poner al día");
     body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + enfoqueProyecto(p) + (tuyo || `<p class="empty">Nada urgente en este proyecto. Todas sus tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.</p>`);
   } else body = registroTab(p);
-  const solo_ = x=>x===p, nP = p.cerrado ? 0 : porDecidir(solo_).length + tareasCriticas(solo_).length + decisionesQueAfectan(solo_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length, nQ = ponerAlDia(solo_).length;
-  const tabs = [["estatus","Estatus",""],["pasos","Acciones",nP||""],["registro","Actividad",""],["quehay","Qué hay",nQ||""]];
+  const solo_ = x=>x===p, nP = p.cerrado ? 0 : porDecidir(solo_).length + tareasCriticas(solo_).length + decisionesQueAfectan(solo_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length + ponerAlDia(solo_).length;
+  const tabs = [["estatus","Estatus",""],["pasos","Acciones",nP||""],["registro","Actividad",""],["quehay","Qué hay",""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); });
   main.querySelectorAll("[data-tab-go]").forEach(b=>b.onclick=()=>{ tab = b.dataset.tabGo; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); window.scrollTo({top:0}); });
@@ -2214,20 +2220,6 @@ function lineaArreglar(xs){
   const tipos = [...new Set(xs.map(x=>({Permisos:"permisos de Drive", "Guía":"la guía de la carpeta", Tablero:"la tarea del tablero"}[x.k]||x.k)))];
   return `<button type="button" class="alarma" data-alarma><span aria-hidden="true">⚠</span><span><b>Arreglar ya: ${xs.length}</b> · ${esc(tipos.join(", "))}</span><span class="ir">Ver</span></button>`;
 }
-// ---- «Relevante ahora»: los documentos que nombran las decisiones y tareas de arriba ----
-function relevantes(filtro){
-  const txts = [...porDecidir(filtro).map(x=>({p:x.p, t:x.txt})), ...tareasCriticas(filtro).map(x=>({p:x.p, t:x.s.texto}))], out = [], vistos = new Set();
-  for(const {p, t} of txts){ if(p.restringido) continue;
-    for(const e of (p.entregables||[])){ if(e.estado==="reemplazado") continue; const k = p.id+"|"+e.archivo; if(vistos.has(k)) continue;
-      const base = (e.archivo||"").replace(/\.\w+$/,""), tit = palabras(e.titulo||base.replace(/-/g," "));
-      if((base && t.includes(base)) || solapan(palabras(t), tit, Math.min(3, tit.size||3))){ vistos.add(k); out.push({p, e, t}); } } }
-  return out;
-}
-function seccionRelevante(filtro){
-  const xs = relevantes(filtro); if(!xs.length) return "";
-  return `<section class="card"><h2>Relevante ahora</h2><p class="pt-n">Lo que nombran las decisiones y tareas de Acciones.</p><div class="ents">${xs.map(({p,e,t})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(ESTADO_E[e.estado]||e.estado||"")}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}${filtro && filtro.unico ? "" : ` · ${esc(p.nombre)}`}</span><span class="d">Para: ${inline(corta(sinFechaDelante(t)))}</span></div>`).join("")}</div></section>`;
-}
-
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   head.innerHTML = cabeceraRaiz();
@@ -2349,7 +2341,7 @@ function estatusAreaCompleto(a){
   if(!m && !a.en_corto && a.panorama && a.panorama.texto) return `<section class="card pan"><p class="corto-t">${panTxt(a)}</p><p class="more">Es el resumen del área en su forma de antes: el próximo cierre del área lo reescribe.</p></section>`;
   if(!m) return `<section class="card pan"><p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p>${lis?`<p class="more">Mientras tanto, lo escrito en su sección:</p><ul class="corto-l">${lis}</ul>`:""}</section>`;
   if(!tit && !lis) return `<section class="card pan"><p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p></section>`;
-  return `<section class="card pan">${tit?`<p class="corto-t">${inline(tit)}</p>`:""}<ul class="corto-l">${lis}</ul>${m?`<p class="more">Firmado al cerrar la sesión del ${fmtD(m[1])}.</p>`:""}</section>`;
+  return `<section class="card pan corto">${tit?`<p class="corto-t">${inline(tit)}</p>`:""}<ul class="corto-l">${lis}</ul>${m?`<p class="more">Firmado al cerrar la sesión del ${fmtD(m[1])}.</p>`:""}</section>`;
 }
 function areaTabs(a, ps){
   const enArea = p => p && p.area===a.slug;
@@ -2377,7 +2369,7 @@ function renderArea(a){
   } else if(tab==="acciones"){
     // las mismas piezas que Acciones de Inicio, filtradas al área; sus prioridades van en Estatus, que es su «Siguiente» (1.24)
     const enA = p => p && p.area===a.slug;
-    const tuyo = seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA);
+    const tuyo = seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA) + seccionPonerAlDia(enA, "Por poner al día");
     body = enfoque2(enA) + (tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`);
   } else if(tab==="actividad"){
     const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
@@ -2386,11 +2378,11 @@ function renderArea(a){
   } else {
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     const nc = T.nc.length ? `<section class="due"><div class="top"><h2>Lo que no cuadra en el área</h2><span class="c">${T.nc.length}</span></div><div class="nc">${T.nc.map(x=>`<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}">${esc(x.p.nombre)} ›</button>`:esc(a.nombre)}</span>${ncAcciones(x)}</div>`).join("")}</div></section>` : "";
-    body = seccionPonerAlDia(p=>p && p.area===a.slug, "Por poner al día") + seccionRelevante(p=>p && p.area===a.slug) + `<section class="card"><h2>Publicado</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p><div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>` + queHayArea(a, ps);
+    body = `<section class="card"><h2>Publicado</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p><div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>` + queHayArea(a, ps);
   }
   const enA_ = p => p && p.area===a.slug;
-  const nA = porDecidir(enA_).length + tareasCriticas(enA_).length + decisionesQueAfectan(enA_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length, nQ = ponerAlDia(enA_).length;
-  const tabs = [["estatus","Estatus",""],["acciones","Acciones",nA||""],["actividad","Actividad",""],["quehay","Qué hay",nQ||""]];
+  const nA = porDecidir(enA_).length + tareasCriticas(enA_).length + decisionesQueAfectan(enA_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length + ponerAlDia(enA_).length;
+  const tabs = [["estatus","Estatus",""],["acciones","Acciones",nA||""],["actividad","Actividad",""],["quehay","Qué hay",""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-atab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n${k==="quehay"?" warn":""}">${n}</span>`:""}</button>`).join("")}</div>${body}`;
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-atab]"); if(!b) return; setNTAB(b.dataset.atab); render(); });
@@ -3184,7 +3176,7 @@ function cortoCard(p){
   const nota = !c.fecha ? `<p class="more">Lo escribe Claude al cerrar cada sesión del proyecto.</p>`
     : despues || viejo ? `<p class="corto-aviso">Escrito el ${fmtD(c.fecha)}${despues?"; la ficha cambió después, así que puede no estar al día":""}${!despues&&viejo?"; hace más de un mes":""}. Lo reescribe la siguiente sesión.</p>`
     : `<p class="more">Firmado al cerrar la sesión del ${fmtD(c.fecha)}.</p>`;
-  return `<div class="card brief corto"><h3>Estatus${hq("en-corto","Qué es el Estatus")}</h3>${c.tit?`<p class="corto-t">${inline(c.tit)}</p>`:""}${c.items.length?`<ul class="corto-l">${c.items.map(i=>{ const fd = /^\**\s*falta decidir/i.test(i) ? faltaDecidir(p) : null;
+  return `<div class="card brief corto">${c.tit?`<p class="corto-t">${inline(c.tit)}${hq("en-corto","Qué es el Estatus")}</p>`:""}${c.items.length?`<ul class="corto-l">${c.items.map(i=>{ const fd = /^\**\s*falta decidir/i.test(i) ? faltaDecidir(p) : null;
       // lo que falta decidir y te toca lleva la frase para decidirlo con Claude, como en Acciones (1.23.3)
       const btn = fd && activo(p) && ((esMio(p) && !deOtroFd(fd)) || esYo(decisorFd(fd))) ? ` <button type="button" class="chip pri" data-copy="${esc(fraseDecidir(p, fd))}">Decidir con Claude</button>` : "";
       return `<li>${inline(i)}${btn}</li>`; }).join("")}</ul>`:""}${nota}</div>`;
@@ -3285,8 +3277,9 @@ function renderProjOld(p, tab){
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo o su alcance siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
   // el objetivo, en dos líneas con «más» si es largo: empuja las pestañas en el teléfono (1.24)
-  const objLargo = (p.objetivo||"").length > 220;
-  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub${objLargo && !OBJ_ABIERTO.has(p.id) ? " clamp" : ""}">${inline(p.objetivo)}</p>${objLargo ? `<button type="button" class="lnk" data-obj-mas="${esc(p.id)}" style="font-size:13px">${OBJ_ABIERTO.has(p.id) ? "menos" : "más"}</button>` : ""}
+  const ab = OBJ_ABIERTO.has(p.id), hayMas = (p.objetivo||"").length > 220 || p.terminado || p.alcance;
+  const para = ab ? `<dl class="facts para-que">${p.terminado?`<dt>Termina</dt><dd>${inline(p.terminado)}</dd>`:""}${p.alcance?`<dt>Alcance</dt><dd class="md">${md(p.alcance)}</dd>`:""}</dl>` : "";
+  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub${!ab ? " clamp" : ""}">${inline(p.objetivo)}</p>${para}${hayMas ? `<button type="button" class="lnk" data-obj-mas="${esc(p.id)}" style="font-size:13px">${ab ? "menos" : "más: para qué y alcance"}</button>` : ""}
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Responsable: <b>${esc(persona(p.dueno))}</b></span>${(p.colaboran||[]).length?`<span>Colabora: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   let body = "";
@@ -3302,7 +3295,6 @@ function renderProjOld(p, tab){
     const ir = (t, txt) => `<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="${t}">${txt}</button>`;
     const filas = [
       p.sin_sesion ? `<dt>Trabajo sin sesión</dt><dd><span class="pill soon">${p.sin_sesion.archivos} archivo${p.sin_sesion.archivos===1?"":"s"}</span> cambi${p.sin_sesion.archivos===1?"ó":"aron"} después de ${p.ultima_sesion && p.sin_sesion.desde!==p.ultima_sesion ? "la última entrada de la bitácora, de una tarea," : "la última sesión,"} la del ${fmtD(p.sin_sesion.desde)}. <button type="button" class="lnk" style="font-size:13px" data-mt-open="${esc(p.id)}">Revisar ›</button></dd>` : "",
-      nLate ? `<dt>Tareas vencidas</dt><dd><span class="pill late">${nLate}</span> ${ir("pasos","Atenderlos ›")}</dd>` : "",
       esperas.length ? `<dt>Espera a alguien de fuera</dt><dd>${esperas.length===1?inline(esperas[0].texto):`${esperas.length} pasos esperan respuesta de fuera`}</dd>` : "",
       (()=>{ const af = afectan(p); if(!af.length) return ""; const nu = af.filter(x=>x.nueva), ver = AF_ALL.has(p.id) ? af : nu.length ? nu : af.slice(0,3);
         return `<dt>Le afectan</dt><dd>${nu.length?`<span class="pill soon">${nu.length} desde su última sesión</span> `:""}<span class="more">${af.length} decisi${af.length===1?"ón":"ones"} de otros proyectos lo citan</span><ul class="ent-l" style="margin-top:6px">${ver.map(({q,d,nueva})=>`<li>${inline(d.titulo)} <span class="more">· ${esc(q.nombre)} · ${fmtD(d.fecha)}${nueva?" · nueva":""}</span> <button type="button" class="lnk" style="font-size:12.5px" data-go-proj="${esc(q.id)}" data-tab="decisiones">Ver ›</button></li>`).join("")}</ul>${af.length>ver.length||AF_ALL.has(p.id)?`<button type="button" class="leer" data-af-all="${esc(p.id)}">${AF_ALL.has(p.id)?"Ver menos":`Ver las ${af.length}`}</button>`:""}</dd>`; })(),
@@ -3311,8 +3303,8 @@ function renderProjOld(p, tab){
       nc ? `<dt>Por registrar</dt><dd><span class="pill soon">${nc}</span> marcados aquí; los recoge la siguiente sesión</dd>` : ""
     ].join("");
     const top = live.filter(x=>["accion","decision","espera"].includes(effNat(p,x))).sort(stepOrder(p)).slice(0,3);
-    body = `<div class="card ficha"><h3>Lo siguiente</h3>${top.length ? `<div class="steps">${top.map(x=>stepRow(p,x,false)).join("")}</div>` : `<p class="empty">Ningún paso por hacer escrito.</p>`}${live.length>top.length ? ir("pasos", `Ver las ${live.length} acciones ›`) : ""}${filas.trim() ? `<dl class="facts" style="border-top:1px solid var(--rule-soft);padding-top:12px">${filas}</dl>` : ""}</div>
-      `;
+    // lo que calcula el tablero (las tareas) va en Acciones; aquí, solo lo que cuenta cómo está (1.24)
+    body = filas.trim() ? `<div class="card ficha"><dl class="facts">${filas}</dl></div>` : "";
   } else if(tab==="pasos"){
     const notas = notasDe(p.id);
     const pasos = (p.pasos||[]);

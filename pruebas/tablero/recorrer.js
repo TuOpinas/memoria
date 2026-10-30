@@ -202,7 +202,8 @@ const path = require('path');
       if(!(atras === '#p-ventas--cuentas-t-registro' && /operacion--soporte-t-quehay$/.test(await p.evaluate(() => location.hash)))) errores.push(`${etiqueta}: Atrás cambió la pestaña que se recuerda (${atras})`); }
     await p.goto(url + '#p-operacion--soporte-t-estatus'); await p.waitForTimeout(400);
     const corto = await p.evaluate(() => ({ t: (document.querySelector('.corto .corto-t')||{}).textContent || '', n: document.querySelectorAll('.corto .corto-l li').length, detalle: !!document.querySelector('[data-est-full]'), dos: [...document.querySelectorAll('.corto .corto-l li')].some(x=>/Beto las prueba el 24/.test(x.textContent)) }));
-    if(!(corto.t.startsWith('Terminamos la lista') && corto.n === 3 && corto.detalle && corto.dos)) errores.push(`${etiqueta}: un proyecto con Estatus no abre con su titular y el detalle plegado (${JSON.stringify(corto)})`);
+    // 1.24: sin «En detalle» (el estado largo de antes de la 1.22 vive en el taller del proyecto migrado)
+    if(!(corto.t.startsWith('Terminamos la lista') && corto.n === 3 && !corto.detalle && corto.dos)) errores.push(`${etiqueta}: un proyecto con Estatus no abre con su titular, o aún enseña «En detalle» (${JSON.stringify(corto)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-como-va.png`) });
     await p.goto(url + '#entregables'); await p.waitForTimeout(400);
     await p.click('[data-ent-open]'); await p.waitForTimeout(250);
@@ -354,6 +355,8 @@ const path = require('path');
     const p = await ctx.newPage();
     p.on('pageerror', e => errores.push(`detalle: ${e.message}`));
     await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(800);
+    // desde la 1.24 el registro enseña el periodo y «Ver anteriores» trae lo demás
+    await p.evaluate(() => { REG_TODO.add('ventas--cuentas'); render(); }); await p.waitForTimeout(200);
     const fechas = () => p.evaluate(() => [...document.querySelectorAll('#main article.dec.ses time')].map(t => t.textContent));
     const antes = await fechas();
     if(antes.length !== 2) errores.push(`detalle: la bitácora de Cuentas tenía que enseñar dos sesiones, una del proyecto y otra del detalle (${antes.join(', ')})`);
