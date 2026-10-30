@@ -406,7 +406,8 @@ button.est-btn{all:unset;cursor:pointer}
 .brief p{margin:0;font-size:15.5px;line-height:1.6}.brief h3{margin:0}
 .corto .corto-t{font-size:17px;font-weight:600;line-height:1.45;margin:4px 0 10px}
 .corto .corto-l{margin:0 0 10px;padding-left:0;list-style:none;display:grid;gap:8px;font-size:15px;line-height:1.55}
-.corto .corto-l ol.prio-l{margin-top:6px;padding-left:0}
+.corto .corto-l ol.prio-l{margin:6px 0 0;padding-left:24px;display:grid;gap:8px}
+.corto .corto-l ol.prio-l li::marker{font:500 12.5px var(--f-mono);color:var(--muted)}
 .corto .more{margin-top:6px}
 
 
@@ -753,7 +754,10 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 .av-a{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:13.5px;color:var(--ink-soft)}
 .av-pie{display:flex;gap:14px;padding-left:76px;font-size:13px} .av-otros{margin-top:8px} .av-otros summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
 @media (max-width:640px){ .av-i{grid-template-columns:minmax(0,1fr)} .av-pie{padding-left:0} }
-#head .para-que{margin:8px 0 4px;max-width:80ch}
+#head .head-mas{margin:10px 0 2px;display:grid;gap:12px;font-size:15px;line-height:1.6;color:var(--ink-soft)}
+#head .head-mas h4{margin:0 0 2px;font:500 11.5px/1.7 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#head .head-mas p,#head .head-mas ul,#head .head-mas ol{margin:0 0 6px}
+#head .ver-mas{font-size:13.5px;margin-top:2px}
 #head .sub.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media (max-width:640px){ .acc-i.np{grid-template-columns:minmax(0,1fr)} .acc-i.np>.acc-b{grid-column:1;justify-content:flex-start} }
 </style>
@@ -2406,7 +2410,8 @@ function areaTabs(a, ps){
 function renderArea(a){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
-  head.innerHTML = `<h1>${esc(a.nombre)}</h1><p class="sub">${inline(a.que)}</p>
+  const queL = a.que_largo && a.que_largo.trim().replace(/\.$/,"")!==(a.que||"").trim().replace(/\.$/,"") ? a.que_largo : "";
+  head.innerHTML = `<h1>${esc(a.nombre)}</h1>${cabeceraTexto("a:"+a.slug, a.que, [{t:"", html:queL ? `<div class="md">${md(queL)}</div>` : ""}])}
     <div class="meta"><span>Responsable: <b>${esc(soloNombre(a.dueno))}</b></span>${(a.colaboran||[]).length?`<span>Colabora: <b>${[...(a.colaboran_ver||[]).map(esc), ...(a.colaboran_sin_nombre ? [cuantos(a.colaboran_sin_nombre,"colaborador sin nombre en la guía","colaboradores sin nombre en la guía")] : [])].join(", ") || cuantos(a.colaboran.length,"colaborador","colaboradores")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span></div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card">${avisoNoLeido(a, true, a.nombre)}</div>`; return; }
   const T = areaTabs(a, ps), tab = ["estatus","acciones","actividad","quehay"].includes(NTAB) ? NTAB : "estatus";
@@ -2417,7 +2422,7 @@ function renderArea(a){
     body = lineaSemana(p=>p.area===a.slug, `<button type="button" class="lnk" data-atab="actividad">Ver actividad ›</button>`) + seccionAvances(p=>p.area===a.slug) + est + prioCard + `<section class="rumbo-sec"><div class="area-cards">${act.map(fichaProyecto).join("")}</div>
       ${cer.length||res.length?`<p class="more">${cer.length?`Cerrados: ${cer.map(p=>`<button type="button" class="lnk" data-go-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join(", ")}. `:""}${res.length?`Restringidos: ${res.map(p=>esc(p.nombre)).join(", ")}.`:""}</p>`:""}</section>
       ${seccionEsperas(p=>p.area===a.slug)}
-      ${a.que_largo && a.que_largo.trim().replace(/\.$/,"")!==(a.que||"").trim().replace(/\.$/,"")?`<details class="card mas-c"><summary><h3 style="display:inline">Qué es el área</h3></summary><div class="md" style="margin-top:8px">${md(a.que_largo)}</div></details>`:""}`;
+`;
   } else if(tab==="acciones"){
     // las mismas piezas que Acciones de Inicio, filtradas al área; sus prioridades van en Estatus, que es su «Siguiente» (1.24)
     const enA = p => p && p.area===a.slug;
@@ -3313,6 +3318,12 @@ let tab = "resumen", EST_FULL = new Set(), AF_ALL = new Set();
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-af-all]"); if(!b) return; const id = b.dataset.afAll; AF_ALL.has(id) ? AF_ALL.delete(id) : AF_ALL.add(id); render(); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-est-full]"); if(!b) return; const id = b.dataset.estFull; EST_FULL.has(id) ? EST_FULL.delete(id) : EST_FULL.add(id); render(); });
 const OBJ_ABIERTO = new Set();
+// la descripción de un área o un proyecto en la cabecera: dos líneas y «Ver más» si hay algo más que contar
+function cabeceraTexto(id, corto, bloques){
+  const ab = OBJ_ABIERTO.has(id), largo = (corto||"").length > 220, extra = bloques.filter(b=>b && b.html);
+  if(!largo && !extra.length) return corto ? `<p class="sub">${inline(corto)}</p>` : "";
+  return `<p class="sub${ab ? "" : " clamp"}">${inline(corto)}</p>${ab && extra.length ? `<div class="head-mas">${extra.map(b=>`<div>${b.t?`<h4>${esc(b.t)}</h4>`:""}${b.html}</div>`).join("")}</div>` : ""}<button type="button" class="lnk ver-mas" data-obj-mas="${esc(id)}" aria-expanded="${ab}">${ab ? "Ver menos" : "Ver más"}</button>`;
+}
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-obj-mas]"); if(!b) return; const id = b.dataset.objMas; OBJ_ABIERTO.has(id) ? OBJ_ABIERTO.delete(id) : OBJ_ABIERTO.add(id); render(); });
 function renderProjOld(p, tab){
   const head = document.getElementById("head"), main = document.getElementById("main");
@@ -3328,10 +3339,8 @@ function renderProjOld(p, tab){
   const ses = hace===null ? "sin sesiones" : hace===0 ? "hoy" : hace===1 ? "ayer" : `hace ${hace} días`;
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo o su alcance siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
-  // el objetivo, en dos líneas con «más» si es largo: empuja las pestañas en el teléfono (1.24)
-  const ab = OBJ_ABIERTO.has(p.id), hayMas = (p.objetivo||"").length > 220 || p.terminado || p.alcance;
-  const para = ab ? `<dl class="facts para-que">${p.terminado?`<dt>Termina</dt><dd>${inline(p.terminado)}</dd>`:""}${p.alcance?`<dt>Alcance</dt><dd class="md">${md(p.alcance)}</dd>`:""}</dl>` : "";
-  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub${!ab ? " clamp" : ""}">${inline(p.objetivo)}</p>${para}${hayMas ? `<button type="button" class="lnk" data-obj-mas="${esc(p.id)}" style="font-size:13px">${ab ? "menos" : "más: para qué y alcance"}</button>` : ""}
+  // el objetivo, en dos líneas con «Ver más»: lo largo empuja las pestañas en el teléfono (1.24)
+  head.innerHTML = `<h1>${esc(p.nombre)}</h1>${cabeceraTexto(p.id, p.objetivo, [{t:"Termina cuando", html:p.terminado ? `<p>${inline(p.terminado)}</p>` : ""}, {t:"Alcance", html:p.alcance ? `<div class="md">${md(p.alcance)}</div>` : ""}])}
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Responsable: <b>${esc(persona(p.dueno))}</b></span>${(p.colaboran||[]).length?`<span>Colabora: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   let body = "";
