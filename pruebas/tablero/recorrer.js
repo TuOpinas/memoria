@@ -18,9 +18,10 @@ const path = require('path');
   const pestanas = [['inicio', '', 'data-ini', ['estatus', 'acciones', 'actividad', 'mant']], ['area', '#a-ventas', 'data-atab', ['estatus', 'acciones', 'actividad', 'quehay']]];
   // ventanas y controles: se abren desde la vista indicada, con la pestaña que haga falta
   const acciones = [
-    ['memoria-al-dia', '', '[data-mt-open]', '[data-ini="mant"]'], ['prioridad', '#a-ventas', '[data-prio-toggle]', '[data-atab="acciones"]'],
+    ['memoria-al-dia', '', '[data-mt-open]', '[data-ini="mant"]'], ['prioridad', '#a-ventas', '[data-prio-toggle]', '[data-atab="estatus"]'],
     ['entregable', '#entregables', '[data-ent-open]'], ['estado', '#p-ventas--cuentas-t-estatus', '.est-btn'],
-    ['corregir-paso', '#p-ventas--cuentas-t-pasos', '.step-x'], ['fecha', '#p-ventas--cuentas-t-pasos', '[data-edit-due]'],
+    // desde la 1.24 la lista entera de tareas va plegada en «Qué hay» del proyecto
+    ['corregir-paso', '#p-ventas--cuentas-t-quehay', '.step-x', '#todas-tareas summary'], ['fecha', '#p-ventas--cuentas-t-quehay', '[data-edit-due]', '#todas-tareas summary'],
     ['decision', '#decisiones', '[data-dec-open]'],
     ['ayuda-desde-estado', '#p-ventas--cuentas-t-estatus', '.hq'],
   ];
@@ -66,8 +67,9 @@ const path = require('path');
     if(prop === null || !/Sugerencias de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en el detalle de «Por poner al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
     // Inicio › Acciones y Actividad
     await abre(p, url, '', '[data-ini="acciones"]');
-    const acc = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { toca: /Te toca a ti/.test(t), empezar: /Por dónde empezar/.test(t) }; });
-    if(!acc.toca) errores.push(`${etiqueta}: Inicio › Acciones no abre con «Te toca a ti» (${JSON.stringify(acc)})`);
+    // 1.24: lo que te toca decidir y las tareas críticas, sin «Te toca a ti» ni «Con otros»
+    const acc = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { toca: /Te toca decidir|Tareas críticas|Nada te espera hoy/.test(t), viejo: /Te toca a ti|Con otros/.test(t) }; });
+    if(!acc.toca || acc.viejo) errores.push(`${etiqueta}: Inicio › Acciones no va como en la 1.24 (${JSON.stringify(acc)})`);
     await abre(p, url, '', '[data-ini="actividad"]');
     const act = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { area: /Por área/.test(t), persona: /Por persona/.test(t), dias: !!document.querySelector('[data-act-dias]') }; });
     if(!(act.area && act.persona && act.dias)) errores.push(`${etiqueta}: Inicio › Actividad no trae «Por área», «Por persona» y el periodo (${JSON.stringify(act)})`);
@@ -164,15 +166,15 @@ const path = require('path');
           const sinQuien = !!cita && /«Esperar la respuesta [^«».…]*» y \d+ más\.$/.test(cita) && !deLaCarpeta().items.some(x=>/no reconoce/.test(x.t))
             && !!tarjeta2 && tarjeta2.it.some(t=>/sin decir a quién/.test(t));
           pq.pasos = gq; _M = null;
-          return {sinQuien, soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decidió y te afecta/.test(acc), sinAfecta: !/Decisiones de otros que te afectan/.test(acc),
-            act: !/Lo que otros hicieron/.test(act), mant: ["Sugerencias de la memoria", "Por poner al día", "La carpeta"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta/.test(mant)};
+          return {sinQuien, soloMios, menciona, parenOtro, parenYo, pregunta2, frase2, pregunta, otra, frase, orden, nAfe, botones, venc: v.textContent, otros: /Decisiones que te afectan/.test(acc), sinAfecta: !/Con otros|Te toca a ti/.test(acc),
+            act: !/Lo que otros hicieron/.test(act), mant: ["Proyectos por poner al día"].map(t=>mant.includes(t)), viejo: /Lo que no cuadra|Vencido y nadie lo movió|Avisos de la herramienta|<h2>La carpeta|<h2>El tablero|<h2>Sugerencias de la memoria/.test(mant)};
         } finally { ({CAN, DB, META} = g); }
       });
       const bien = r.pregunta === "¿Se corrigen las plantillas para que respeten la letra?" && r.otra === "El nombre y la métrica (Beto)." && /decidamos si se firma ya$/.test(r.frase)
-        && r.orden[0] === "Por dónde empezar" && r.orden.indexOf("Te toca a ti") < r.orden.indexOf("Con otros") && r.otros === (r.nAfe > 0) && r.sinAfecta
+        && r.orden[0] === "Por dónde empezar" && (r.orden.indexOf("Tareas críticas") < 0 || r.orden.indexOf("Te toca decidir") < r.orden.indexOf("Tareas críticas")) && r.otros === (r.nAfe > 0) && r.sinAfecta
         && r.soloMios && r.sinQuien && r.menciona === null && r.parenOtro === "Beto Prueba" && r.parenYo === null && r.pregunta2 === "¿Qué hacemos con la fase 2?" && /\(antes del 30 de noviembre\)$/.test(r.frase2)
         && r.botones.join("|") === "Hecha|Nueva fecha|Ya no aplica" && /hace \d+ días/.test(r.venc) && r.act && r.mant.every(Boolean) && !r.viejo;
-      if(!bien) errores.push(`${etiqueta}: Acciones, Actividad o Mantenimiento no van como en la 1.23.3 (${JSON.stringify(r)})`);
+      if(!bien) errores.push(`${etiqueta}: Acciones, Actividad o Mantenimiento no van como en la 1.24 (${JSON.stringify(r)})`);
     }
     // el proyecto: Estatus arriba, con su titular
     await abre(p, url, '#p-ventas--cuentas-t-estatus');
@@ -270,18 +272,16 @@ const path = require('path');
     if(!(r1.desborda && r1.der && !r1.izq && r2.izq && !r2.der)) errores.push(`320: las pestañas que no caben no se desvanecen por el lado que sigue (${JSON.stringify({ r1, r2 })})`);
     if(!r1.sync) errores.push('320: «Sincronizar ahora» no está en la barra del teléfono');
     await p.goto(url + '#'); await p.waitForTimeout(400); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
-    // las sugerencias son lo que se contesta aquí: cuentan todas, también las que no caben a la vista (1.23.3)
-    await p.evaluate(() => { window.SUGS = () => (CAN && OWNER && DATOS_NUEVOS() ? sugerencias().filter(q=>escribeAqui(byId[q.proyecto])).length : 0); });
-    const m = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); const b = t.querySelector('.n.badge'); return { badge: b ? +b.textContent : 0, punto: !!t.querySelector('.n.punto'), acc: document.querySelectorAll('#main .stale[data-acc]').length + SUGS(), info: document.querySelectorAll('#main .stale:not([data-acc])').length + document.querySelectorAll('#main .pds .pd').length }; });
-    if(!(m.badge > 0 && !m.punto && m.info > 0)) errores.push(`320: el número de Mantenimiento no cuenta solo lo que pide una acción (${JSON.stringify(m)})`);
-    const m2 = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); const b = t.querySelector('.n.badge'); return { badge: b ? +b.textContent : 0, conflictos: document.querySelectorAll('#main .due-item.orf').length, nc: SUGS(), acc: document.querySelectorAll('#main .stale[data-acc]').length }; });
-    if(!(m2.badge === m2.acc + m2.nc + m2.conflictos)) errores.push(`320: el número de Mantenimiento no cuenta lo marcado que ya no coincide (${JSON.stringify(m2)})`);
-    // sin nada que pida acción y con algo que revisar, sale el punto amarillo
-    // lo que espera una sesión («Por poner al día») enciende el punto, no el número (1.23.3)
-    await p.evaluate(() => { PROPUESTAS = []; CAMBIOS = []; META = {...META, version_tablero: VERSION_TABLERO, tarea_desfasada: false, sincronizado: new Date().toISOString()}; DATA_SEQ++; render(); });
+    // 1.24: el número cuenta lo que hay que arreglar ya; los proyectos por poner al día encienden el punto
+    const m = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); const b = t.querySelector('.n.badge'); return { badge: b ? +b.textContent : 0, punto: !!t.querySelector('.n.punto'), arr: document.querySelectorAll('#arreglar .due-item').length, pad: document.querySelectorAll('#poner-al-dia .pd').length }; });
+    if(!(m.badge === m.arr && (m.arr > 0 || (m.pad > 0) === m.punto))) errores.push(`320: el número de Mantenimiento no cuenta solo «Arreglar ya» (${JSON.stringify(m)})`);
+    // lo marcado aquí que ya no coincide con la carpeta va a «Arreglar ya»
+    const m2 = await p.evaluate(() => ({ orf: cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length, linea: arreglarYa().some(x=>/ya no coincide/.test(x.t)) }));
+    if(m2.orf && !m2.linea) errores.push(`320: lo marcado que ya no coincide no sale en «Arreglar ya» (${JSON.stringify(m2)})`);
+    await p.evaluate(() => { PROPUESTAS = []; CAMBIOS = []; PERMISOS = null; META = {...META, version_tablero: VERSION_TABLERO, tarea_desfasada: false, sincronizado: new Date().toISOString()}; DATA_SEQ++; render(); });
     await p.waitForTimeout(200);
-    const m3 = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); return { badge: !!t.querySelector('.n.badge'), punto: !!t.querySelector('.n.punto') }; });
-    if(!(m3.punto && !m3.badge)) errores.push(`320: sin acciones y con avisos que informan no sale el punto amarillo (${JSON.stringify(m3)})`);
+    const m3 = await p.evaluate(() => { const t = document.querySelector('[data-ini="mant"]'); return { badge: !!t.querySelector('.n.badge'), punto: !!t.querySelector('.n.punto'), pad: ponerAlDia().length, arr: arreglarYa().length, linea: !!document.querySelector('.alarma') }; });
+    if(!(m3.badge === (m3.arr > 0) && m3.linea === (m3.arr > 0) && m3.punto === (!m3.arr && m3.pad > 0))) errores.push(`320: el número y la línea de arriba no siguen a «Arreglar ya», o falta el punto de lo que hay por poner al día (${JSON.stringify(m3)})`);
     await ctx.close();
   }
   // la raíz migrada a la 1.22: la página no da errores y el área enseña su Estatus con sus prioridades aparte
@@ -293,9 +293,8 @@ const path = require('path');
     const v = await p.evaluate(() => { const m = document.getElementById('main'), h = document.getElementById('head');
       const pan = m.querySelector('.card.pan'); return { est: !!pan && /Tiene una sola cuenta grande abierta/.test(pan.textContent) && !/^Ventas tiene/.test(pan.textContent.trim()) && pan.querySelectorAll('ol li').length === 2,
         resp: /Responsable:/.test(h.textContent) && !/Dueño:/.test(h.textContent) }; });
-    await p.click('[data-atab="acciones"]'); await p.waitForTimeout(300);
-    const prios = await p.evaluate(() => document.querySelectorAll('#main .prios .prio-l li').length);
-    if(!(v.est && v.resp && prios === 2)) errores.push(`estructura 1.22: el área no enseña su Estatus sin repetir su nombre y con su Siguiente numerado, sus dos prioridades en Acciones o su responsable (${JSON.stringify({ ...v, prios })})`);
+    const prios = await p.evaluate(() => document.querySelectorAll('#main .card.pan .prio-l [data-prio-toggle]').length);
+    if(!(v.est && v.resp && prios === 2)) errores.push(`estructura 1.22: el área no enseña su Estatus sin repetir su nombre, con su Siguiente numerado y sus dos prioridades atendibles, o su responsable (${JSON.stringify({ ...v, prios })})`);
     await p.goto('file://' + path.resolve(dir, 'estructura.html') + '#p-operacion--soporte-t-estatus'); await p.waitForTimeout(800);
     const w = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { corto: !!document.querySelector('.corto'), term: /Terminado significa/.test(t) }; });
     if(!(w.corto && !w.term)) errores.push(`estructura 1.22: el proyecto no enseña su Estatus o aún dice «Terminado significa» (${JSON.stringify(w)})`);
@@ -308,8 +307,7 @@ const path = require('path');
     const p = await ctx.newPage();
     p.on('pageerror', e => errores.push(`migrado: ${e.message}`));
     await p.goto('file://' + path.resolve(dir, 'migrado.html')); await p.waitForTimeout(600); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
-    const banda = await p.evaluate(() => [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | '));
-    if(!/un solo tablero por persona/.test(banda) || !/quítale el acceso/.test(banda)) errores.push(`migrado: Inicio no avisa de que el tablero pasó a mostrarlo todo (${banda.slice(0, 200)})`);
+
     const titulo = await p.title();
     if(/completo/.test(titulo)) errores.push(`migrado: el título sigue diciendo «completo» (${titulo})`);
     await p.screenshot({ path: path.join(out, 'migrado.png') });
@@ -322,8 +320,8 @@ const path = require('path');
     p.on('pageerror', e => errores.push(`cierres: ${e.message}`));
     const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
     await p.goto(url); await p.waitForTimeout(600); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
-    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
-    if(r.llamadas !== 0 || !/2 sesiones cerradas.*Cuentas, Soporte.*Sincronizar ahora/.test(r.banda)) errores.push(`cierres: al abrir con dos cierres pendientes tiene que avisar con el botón y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend') }));
+    if(r.llamadas !== 0 || !r.pend) errores.push(`cierres: al abrir con dos cierres pendientes tiene que marcar el botón de sincronizar y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
     await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
     await p.reload(); await p.waitForTimeout(600);
     const r2 = await p.evaluate(() => (window.__llamadas || []).length);
@@ -344,9 +342,9 @@ const path = require('path');
     await p.waitForTimeout(400); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
     await p.evaluate(() => window.dispatchEvent(new Event('focus')));
     await p.waitForTimeout(300);
-    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, banda: [...document.querySelectorAll('.stale')].map(x => x.textContent).join(' | ') }));
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend') }));
     if(r.llamadas !== 0) errores.push(`abierto: un cierre que llega con la página abierta, o volver a la pestaña, lanzó la puesta al día (${r.llamadas})`);
-    if(!/1 sesión cerrada.*Cuentas.*Sincronizar ahora/.test(r.banda)) errores.push(`abierto: no avisa con el botón del cierre que llegó con la página abierta (${r.banda.slice(0, 200)})`);
+    if(!r.pend) errores.push(`abierto: el botón de sincronizar no marca el cierre que llegó con la página abierta`);
     await ctx.close();
   }
   // el detalle de un proyecto (bitácora vieja, estado entero, porqués) se vuelve a traer cuando el proyecto cambia en la

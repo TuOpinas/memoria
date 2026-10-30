@@ -729,6 +729,23 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.per-ext,.nc-i .t{min-width:0}
 
 .hoy-linea{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:0 0 14px;font-size:14.5px}
 .hoy-linea .sep{color:var(--muted)}
+/* 1.24: pie de las fichas, señales, respuestas en la cola y la línea de «Arreglar ya» */
+.pie-d{color:var(--warn)} .pie-v{color:var(--alert)} .pie-q,.pie-o{color:var(--muted)}
+.ac-m span+span::before{content:" · ";color:var(--muted)}
+.senal{font:600 12px var(--f-mono);color:var(--alert)}
+.tag-t{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.toast-i{font-size:12.5px;color:var(--signal);align-self:center}
+.due-item.resp .t>span:first-child,.due-item.resp>.t{color:var(--muted)}
+.acc-i.np{grid-template-columns:minmax(0,1fr) auto}
+.pill.org{background:var(--pause-dim);color:var(--pause);font-size:11px;padding:2px 7px}
+.alarma{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 14px;border:1px solid var(--warn);background:var(--warn-dim);color:var(--warn);border-radius:8px;font-size:14px}
+.alarma .ir{margin-left:auto;font-weight:600;text-decoration:underline} .alarma:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.pad-sub{grid-column:1/-1;margin-top:8px;padding:8px 12px;background:var(--ground);border-radius:8px}
+.pd li.sgg{color:var(--info,var(--signal))}
+.q-form{grid-column:1/-1;display:grid;gap:8px} .q-form textarea{width:100%;min-height:56px;resize:vertical} .q-form .ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hoy-linea.semana b{color:var(--ink)}
+#head .sub.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (max-width:640px){ .acc-i.np{grid-template-columns:minmax(0,1fr)} .acc-i.np>.acc-b{grid-column:1;justify-content:flex-start} }
 </style>
 
 <div class="app">
@@ -1469,6 +1486,15 @@ function registroTab(p){
   const chip = (k, l, n) => `<button type="button" class="chip${REG_FILTRO===k?" on":""}" data-reg="${k}">${l}${n!=null?` · ${n}`:""}</button>`;
   return `<div class="card"><div class="reg-f">${chip("todo","Todo",decs.length+ses.length)}${chip("decisiones","Decisiones",decs.length-nQ)}${chip("sesiones","Sesiones",ses.length)}${nQ?chip("cuest","Cuestionamientos",nQ):""}</div>${p.sesiones_aparte && !TEXTOS[p.id] ? CARGANDO : sinDetalle(p) ? SIN_DETALLE : ""}${vis.length?`<div class="dl">${out}</div>`:`<p class="empty">Nada registrado.</p>`}${items.length>60?`<p class="more">Se muestran los 60 más recientes de ${items.length}. El registro completo está en la carpeta del proyecto.</p>`:""}</div>`;
 }
+const TAREAS_OPEN = new Set();
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-tareas-open]"); if(!b) return; const id = b.dataset.tareasOpen; setTimeout(()=>{ const d = document.getElementById("todas-tareas"); if(d && d.open) TAREAS_OPEN.add(id); else TAREAS_OPEN.delete(id); }, 0); });
+function enfoqueProyecto(p){
+  const g = ENFOQUE && (ENFOQUE.grupos||[]).find(g=>(g.pasos||[]).some(x=>x.proyecto===p.id));
+  const sig = siguienteDe(p);
+  if(!g && !sig) return "";
+  const t = g ? g.titulo : `Siguiente en ${p.nombre}`, y = g ? (g.razon||"").split(/(?<=\.)\s/)[0] : sig, frase = g && g.sesion ? g.sesion : `abre sesión en ${p.nombre}: ${sig.replace(/^./, c=>c.toLowerCase())}`;
+  return `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2></div><ol class="enf-mini"><li><b>${esc(t)}</b><span>${inline(y)}</span><span class="enf-acc"><button type="button" class="chip pri" data-copy="${esc(frase)}">Empezar con Claude</button></span></li></ol></section>`;
+}
 function renderProj(p){
   tab = TABMAP[tab] || tab; if(!["estatus","quehay","pasos","registro"].includes(tab)) tab = "estatus";
   if(p.restringido){ renderProjOld(p, "resumen"); return; }
@@ -1479,17 +1505,25 @@ function renderProj(p){
   if(tab==="estatus"){
     const cuest = cuestAbiertos(c => c.a_proyecto===p.id);
     const sig = p.cerrado ? "" : renderProjOld(p, "estado");
-    body = `${cuest}${cortoCard(p) || `<div class="card brief"><h3>Estatus</h3><p class="empty">Sin Estatus todavía: lo escribe el cierre de la siguiente sesión.</p><p class="more">${projLinea(p, true)}</p></div>`}${enDetalle(p)}${sig}
+    body = `${lineaSemana(x=>x===p, "")}${cuest}${cortoCard(p) || `<div class="card brief"><h3>Estatus</h3><p class="empty">Sin Estatus todavía: lo escribe el cierre de la siguiente sesión.</p><p class="more">${projLinea(p, true)}</p></div>`}${enDetalle(p)}${sig}${seccionEsperas(x=>x===p)}
       <details class="card mas-c"><summary><h3 style="display:inline">Para qué</h3><span class="more"> · objetivo y alcance</span></summary><dl class="facts" style="margin-top:12px"><dt>Objetivo</dt><dd>${inline(p.objetivo)||"—"}</dd>${p.terminado?`<dt>Termina</dt><dd>${inline(p.terminado)}</dd>`:""}<dt>Alcance</dt><dd class="md">${md(p.alcance)||"—"}</dd></dl></details>`;
   } else if(tab==="quehay"){
-    body = p.que_hay ? renderProjOld(p, "quehay") : renderProjOld(p, "entregables");
+    // lo que quedó viejo, lo relevante para Acciones, el resumen y, plegadas, todas las tareas (1.24)
+    const solo = Object.assign(x=>x===p, {unico:true}), nT = stepsLive(p).length;
+    body = seccionPonerAlDia(solo, "Por poner al día") + seccionRelevante(solo) + (p.que_hay ? renderProjOld(p, "quehay") : renderProjOld(p, "entregables"))
+      + `<details class="card mas-c" id="todas-tareas"${TAREAS_OPEN.has(p.id)?" open":""}><summary data-tareas-open="${esc(p.id)}"><h2 style="display:inline">Todas las tareas</h2><span class="more"> · ${nT}</span></summary><div style="margin-top:10px">${renderProjOld(p, "pasos")}</div></details>`;
   } else if(tab==="pasos"){
-    body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + renderProjOld(p, "pasos");
+    // Acciones del proyecto: por dónde empezar, lo que te toca decidir y las tareas críticas; la lista entera, en Qué hay (1.24)
+    renderProjOld(p, "cabecera");   // solo pinta la cabecera
+    const solo = x=>x===p;
+    const tuyo = seccionDecidir(solo, false) + seccionCriticas(solo, false, `Todas las tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.`) + seccionAfectan(solo);
+    body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + enfoqueProyecto(p) + (tuyo || `<p class="empty">Nada urgente en este proyecto. Todas sus tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.</p>`);
   } else body = registroTab(p);
-  const nP = stepsLive(p).length;
-  const tabs = [["estatus","Estatus",""],["pasos","Acciones",p.cerrado?"":(nP||"")],["registro","Actividad",""],["quehay","Qué hay",""]];
+  const solo_ = x=>x===p, nP = p.cerrado ? 0 : porDecidir(solo_).length + tareasCriticas(solo_).length + decisionesQueAfectan(solo_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length, nQ = ponerAlDia(solo_).length;
+  const tabs = [["estatus","Estatus",""],["pasos","Acciones",nP||""],["registro","Actividad",""],["quehay","Qué hay",nQ||""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); });
+  main.querySelectorAll("[data-tab-go]").forEach(b=>b.onclick=()=>{ tab = b.dataset.tabGo; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); window.scrollTo({top:0}); });
 }
 
 // ---- lo que no cuadra, y los nombres de personas en los pasos ----
@@ -1574,13 +1608,14 @@ function aplicarFoco(){
 }
 
 // ---- 1. Estatus ----
-function enfoque2(){
+function enfoque2(filtro){
   if(!(ENFOQUE && ENFOQUE.grupos && ENFOQUE.grupos.length)) return "";
+  if(filtro){ const gs = ENFOQUE.grupos.filter(g=>(g.pasos||[]).some(x=>byId[x.proyecto] && filtro(byId[x.proyecto]))); if(!gs.length) return ""; const E = ENFOQUE; ENFOQUE = {...E, grupos: gs}; try{ return enfoque2(); } finally { ENFOQUE = E; } }
   // arriba de Acciones (1.23.3): es la respuesta a «qué hago hoy»; tres grupos a la vista y una acción principal
   const gs = ENFOQUE.grupos, vis = PARA_TI_ALL.has("enf") ? gs : gs.slice(0,3);
   return `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2><span class="c" style="margin-left:auto">Lo que más avanza con una sola sesión</span></div>
     <ol class="enf-mini">${vis.map(g=>{ const ps = (g.pasos||[]).filter(x=>byId[x.proyecto]); const p0 = ps[0] ? byId[ps[0].proyecto] : null;
-      return `<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${cuantos(ps.length,"paso","pasos")} · ${[...new Set(ps.map(x=>byId[x.proyecto].nombre))].map(esc).join(", ")}</span><span class="enf-acc">${g.sesion?`<button type="button" class="chip pri" data-copy="${esc(g.sesion)}">Copiar frase para Claude</button>`:""}${p0?`<button type="button" class="chip" data-go-proj="${esc(p0.id)}" data-tab="pasos" ${focoAttr({row:key(p0.id, ps[0].texto||""), prefijo:true})}>Ver el primer paso</button>`:""}</span></li>`; }).join("")}</ol>${gs.length>3?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="enf">${PARA_TI_ALL.has("enf")?"Ver menos":`Ver ${gs.length-3===1?"1 más":`${gs.length-3} más`}`}</button>`:""}</section>`;
+      return `<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${cuantos(ps.length,"paso","pasos")} · ${[...new Set(ps.map(x=>byId[x.proyecto].nombre))].map(esc).join(", ")}</span><span class="enf-acc">${g.sesion?`<button type="button" class="chip pri" data-copy="${esc(g.sesion)}">Empezar con Claude</button>`:""}${p0?`<button type="button" class="chip" data-go-proj="${esc(p0.id)}" data-tab="pasos" ${focoAttr({row:key(p0.id, ps[0].texto||""), prefijo:true})}>Ver la primera tarea</button>`:""}</span></li>`; }).join("")}</ol>${gs.length>3?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="enf">${PARA_TI_ALL.has("enf")?"Ver menos":`Ver ${gs.length-3===1?"1 más":`${gs.length-3} más`}`}</button>`:""}</section>`;
 }
 
 // ---- 2. Con otros: a quién esperas (personas de fuera, con su organización, lo pendiente y las fechas) ----
@@ -1643,7 +1678,7 @@ function porPonerAlDia(){
 }
 function filaPonerAlDia(g){
   const nom = g.p ? `${irProy(g.p, "estatus", {sel:".corto"})}<span class="ctx">${esc(areaBy[g.p.area]?.nombre||"")}</span>` : `<button type="button" class="lnk" data-go-area="${esc(g.a.slug)}">${esc(g.a.nombre)}</button><span class="ctx">área</span>`;
-  return `<div class="pd"><b>${nom}</b><ul>${g.it.map(t=>`<li>${inline(t)}</li>`).join("")}</ul><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(g.frase)}">Copiar frase para Claude</button>${g.detalle?`<button type="button" class="chip" data-mt-open="${esc(g.id)}">Ver detalle</button>`:""}<button type="button" class="chip ghost" data-mt-pos="${esc(g.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador.")}>Ahora no</button></span></div>`;
+  return `<div class="pd"><b>${nom}</b><ul>${g.it.map(t=>`<li>${inline(t)}</li>`).join("")}</ul><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(g.frase)}">Revisar con Claude</button>${g.detalle?`<button type="button" class="chip" data-mt-open="${esc(g.id)}">Ver detalle</button>`:""}<button type="button" class="chip ghost" data-mt-pos="${esc(g.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador.")}>Ahora no</button></span></div>`;
 }
 // lo que se arregla en la guía o en cómo se escribe la carpeta: le toca a quien responde por el contexto
 function deLaCarpeta(){
@@ -1654,32 +1689,15 @@ function deLaCarpeta(){
   return {items: out, ctx};
 }
 function tabMant(){
-  // el número rojo cuenta lo que se contesta aquí (las sugerencias), los avisos que piden un clic y lo marcado aquí que ya no
-  // coincide con la carpeta; lo que se arregla en una sesión o en la guía lleva su número y enciende el punto (1.23.3)
-  const av = staleBanner(), nAv = (av.match(/class="stale/g)||[]).length, nAcc = (av.match(/ data-acc[ >]/g)||[]).length;
-  const sg = sugerencias(), pd = porPonerAlDia(), car = deLaCarpeta();
-  const vis = sg.slice(0, NC_N);
-  const sec1 = `<section class="due"><div class="top"><h2>Sugerencias de la memoria</h2><span class="c">${sg.length}</span><span class="c" style="margin-left:auto">Se contestan aquí</span></div>
-    ${sg.length ? `<p class="pt-n">Claude las vio al poner el tablero al día. Lo que aceptes lo hace la próxima sesión de ese proyecto.</p><div class="sgs">${vis.map(filaSugerencia).join("")}</div>${sg.length>5?`<button type="button" class="pg-more" style="padding-left:0" data-nc-mas>${NC_N>5?"Ver menos":`Ver ${sg.length-5===1?"la restante":`las ${sg.length-5} restantes`}`}</button>`:""}` : `<p class="empty">Nada que contestar.</p>`}</section>`;
-  const pdVis = MT_ALL ? pd.activas : pd.activas.slice(0,6), nPos = pd.todas.filter(g=>g.it.length).length - pd.activas.length;
-  const sec2 = pd.activas.length || nPos ? `<section class="due"><div class="top"><h2>Por poner al día</h2><span class="c">${cuantos(pd.activas.length,"sitio","sitios")}</span><span class="c" style="margin-left:auto">Se arregla en una sesión con Claude</span></div>
-    ${pd.activas.length ? `<div class="pds">${pdVis.map(filaPonerAlDia).join("")}</div>${pd.activas.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-mt-all>${MT_ALL?"Ver menos":`Ver ${pd.activas.length-6===1?"el restante":`los ${pd.activas.length-6} restantes`}`}</button>`:""}` : `<p class="empty">Nada más por ahora.</p>`}
-    ${nPos ? `<p class="hint">${cuantos(nPos,"pospuesto","pospuestos")} con «Ahora no». <button type="button" class="lnk" data-mt-unpos>Volver a mostrar${nPos===1?"lo":"los"}</button></p>` : ""}</section>` : "";
-  const sec3 = car.items.length ? `<section class="due"><div class="top"><h2>La carpeta</h2><span class="c">${car.items.length}</span><span class="c" style="margin-left:auto">${car.ctx ? "Respondes por el contexto" : "Lo arregla quien responde por el contexto"}</span></div>
-    <div class="pds">${car.items.map(x=>`<div class="pd"><span>${inline(x.t)}</span>${car.ctx ? `<span class="acc-b"><button type="button" class="chip" data-copy="${esc(x.frase)}">Copiar frase para Claude</button></span>` : ""}</div>`).join("")}</div></section>` : "";
-  const sec4 = av || permisosLinea() ? `<section class="due"><div class="top"><h2>El tablero</h2></div>${av ? `<div class="mt-list">${av}</div>` : ""}${permisosLinea()}</section>` : "";
-  // lo tocado aquí que la carpeta aún no refleja, y las sugerencias aceptadas, con su «Deshacer»
+  // dos secciones (1.24): lo que hay que arreglar ya, que es lo único que cuenta, y los proyectos por poner al día
+  const arr = arreglarYa(), pad = ponerAlDia();
   const acept = PROPUESTAS.filter(q=>q.estado==="aceptada" && q.clase!=="afirma" && byId[q.proyecto]);
   const nCola = cambiosVis().length + acept.length;
   const sinQuien = q => byId[q.proyecto].escribe===false;
   const filaAcept = q => `<div class="due-item static${sinQuien(q)?" orf":""}"><span class="pill ok">Aceptada</span><span class="t">${inline(notasDeTexto(textoPropLimpio(q)).t)}${sinQuien(q) ? `<span class="pend-note">Este tablero ya no escribe en ese proyecto: nadie la aplicará. Pásasela a ${esc(nombreCorto(byId[q.proyecto].dueno||""))} o descártala.</span>` : ""}</span><span class="w">${esc(byId[q.proyecto].nombre)}${CAN && OWNER ? ` · <button type="button" class="lnk" data-nc="${esc(q.id)}" data-v="${sinQuien(q)?"descartada":"pendiente"}">${sinQuien(q)?"Descartar":"Deshacer"}</button>` : ""}</span></div>`;
   const cola = nCola ? `<details class="card mas-c"><summary><h2 style="display:inline">Marcado aquí, por registrar</h2><span class="more"> · ${nCola} · lo pasa a la carpeta la próxima puesta al día o la sesión del proyecto</span></summary><div class="due-list" style="margin-top:10px">${acept.map(filaAcept).join("")}${colaRows()}</div></details>` : "";
-  const nOrf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length + acept.filter(sinQuien).length;
-  // lo marcado aquí que espera la puesta al día también enciende el punto (revisión 1.23.3)
-  const espera = pd.activas.length + car.items.length + (cambiosVis().length - cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length) + acept.filter(q=>!sinQuien(q)).length;
-  // de las sugerencias cuentan las que puedes contestar: las de un proyecto que no escribe tu cierre se pasan, no se contestan
-  const nSg = CAN && OWNER && DATOS_NUEVOS() ? sg.filter(q=>escribeAqui(byId[q.proyecto])).length : 0;
-  return {n: nAcc + nSg + nOrf, info: (nAv - nAcc) + espera + (sg.length - nSg), html: sec1 + sec2 + sec3 + sec4 + cola};
+  const ok = !arr.length && !pad.length ? `<p class="empty">Nada que arreglar ni por poner al día.</p>` : "";
+  return {n: arr.length, info: pad.length, html: seccionArreglar(arr) + seccionPonerAlDia(null) + ok + permisosLinea() + cola};
 }
 
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ini]"); if(!b) return; INI_TAB = b.dataset.ini; render(); window.scrollTo({top:0}); });
@@ -1808,12 +1826,12 @@ function seccionOtros(gs, conOrg, yaVenc){
     <div class="per-grid">${gs.slice(0, OTROS_N).map(tarjeta).join("")}</div>${gs.length>5?`<button type="button" class="pg-more" data-otros-mas>${OTROS_N>5?"Ver menos":`Ver las ${gs.length-5} personas restantes`}</button>`:""}</section>`;
 }
 function tabAcciones(){
-  // sin saber quién mira, no se sabe qué te afecta: no se enseña ni se cuenta (revisión 1.23.3)
-  const pt = paraTi(), afe = VIEWER() ? afectaDeOtros() : [], gs = juntaOtros(conOtros(), afe);
+  // por dónde empezar, lo que te toca decidir, las tareas críticas y lo que decidieron otros (1.24); «Con otros» se disuelve
+  const nDec = porDecidir().length, nCrit = tareasCriticas().length, afe = decisionesQueAfectan(), nAfe = afe.filter(x=>!respuestaDe(refDec(x.q,x.d))).length;
   const nCuest = ((META && META.cuestionamientos) || []).filter(cuestMio).length;
-  const tuyo = teToca(pt.decidir, pt.venc, true);
-  // el número cuenta también los cuestionamientos que esperan al lector y las decisiones de otros que te afectan (1.22.4)
-  return {n: pt.decidir.length + pt.venc.length + nCuest + afe.length, html: `${enfoque2()}<section class="due" id="te-toca"><div class="top"><h2>Te toca a ti</h2>${VIEWER()?`<span class="c">${esc(nombreCorto(VIEWER()))}</span>`:""}<span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${cuestAbiertos(cuestMio)}${tuyo || (nCuest ? "" : VIEWER() && PROJ.some(activo) && !PROJ.some(p=>activo(p) && esMio(p)) ? `<p class="empty">El tablero no encuentra ningún proyecto tuyo: tu correo no figura en la guía de la carpeta ni en la línea «Colabora:» de ningún proyecto, o figura con otro. Pide a quien responde por el área que lo corrija.</p>` : `<p class="empty">Nada te espera hoy.</p>`)}</section>${seccionOtros(gs, true, pt.venc)}`};
+  const tuyo = cuestAbiertos(cuestMio) + seccionDecidir(null, true) + seccionCriticas(null, true, "Las demás tareas están en «Qué hay» de su proyecto; las vencidas hace más de dos semanas, en Mantenimiento.") + seccionAfectan(null);
+  const vacio = VIEWER() && PROJ.some(activo) && !PROJ.some(p=>activo(p) && esMio(p)) ? `<p class="empty">El tablero no encuentra ningún proyecto tuyo: tu correo no figura en la guía de la carpeta ni en la línea «Colabora:» de ningún proyecto, o figura con otro. Pide a quien responde por el área que lo corrija.</p>` : `<p class="empty">Nada te espera hoy.</p>`;
+  return {n: nDec + nCrit + nAfe + nCuest, html: `${enfoque2()}${tuyo || vacio}`};
 }
 
 
@@ -1858,10 +1876,12 @@ function queHayTab(p){
   const pend = piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
   const top = `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un proyecto")}</h2>${indicadores(p, piezas)}
     <div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(R.ent)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(R.tal)}</p></div></div><p class="pt-n">${origen}</p>${notasQueHay(Q.r)}
-    ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una frase de resumen sugerida por la memoria a partir del título y el primer párrafo.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
-  const grupo = (t, list) => `<section class="card"><h3>${t} <span class="c">${list.length}</span></h3>${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</section>`;
+    ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una frase de resumen sugerida por la memoria a partir del título y el primer párrafo; la ves en cada pieza, en Entregables y Taller, marcada como provisional.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
+  // las listas enteras, plegadas: son para consultar (1.24)
+  const cuenta = list => { const n = {}; for(const z of list) n[z.estado||"otro"] = (n[z.estado||"otro"]||0)+1; return [n.vigente?`${n.vigente} publicados`:"", n.borrador?cuantos(n.borrador,"borrador","borradores"):"", n.reemplazado?cuantos(n.reemplazado,"reemplazado","reemplazados"):""].filter(Boolean).join(" · "); };
+  const grupo = (t, list) => `<details class="card mas-c"><summary><h2 style="display:inline">${t}</h2><span class="more"> · ${list.length}${cuenta(list)?` · ${cuenta(list)}`:""}</span></summary><div style="margin-top:10px">${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</div></details>`;
   return top + grupo("Entregables", piezas.filter(z=>z.tipo==="entregable")) + grupo("Taller", piezas.filter(z=>z.tipo==="taller"))
-    + `<section class="card"><h3>Trayectoria</h3>${trayHtml(d.trayectoria)}</section>`;
+    + `<details class="card mas-c"><summary><h2 style="display:inline">Trayectoria</h2></summary><div style="margin-top:10px">${trayHtml(d.trayectoria)}</div></details>`;
 }
 document.addEventListener("click", async e => { const b = e.target.closest && e.target.closest("[data-prov-ok]"); if(!b || !CAN || !OWNER) return;
   const p = byId[b.dataset.provOk]; if(!escribeAqui(p)) return;
@@ -2001,6 +2021,213 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 
 // Estatus sin el feed ni Personas; Inicio con cuatro pestañas
 let _NUM_INICIO = null;
+// ===================== 1.24: estatus, decisiones y tareas críticas primero; lo demás, para consultar =====================
+// Las mismas piezas en Inicio, área y proyecto, filtradas con «filtro» (un proyecto → si entra). Ver ayuda «tablero».
+const VENTANA = 14;   // días hacia atrás y hacia delante en los que una tarea con fecha es «de ahora»
+const PAL_NO = new Set("para como sobre entre desde hasta cada este esta estos estas esto that with from into when what which their there this have will would the and los las del una uno unos unas que con por sus más hacia ante tras antes después también otra otro otras otros todo toda todos todas solo sólo".split(" "));
+const palabras = t => new Set(((t||"").toLowerCase().replace(/`[^`]*`/g," ").match(/[a-záéíóúñü]{4,}/g)||[]).filter(w=>!PAL_NO.has(w)));
+const solapan = (a, b, n) => { let k = 0; for(const w of a) if(b.has(w) && ++k>=n) return true; return false; };
+function siguienteDe(p){ const c = cortoPartes(p); const it = c && c.items.find(i=>/^\**\s*siguiente/i.test(i)); return it ? it.replace(/^\**\s*siguiente\s*:?\s*\**\s*:?\s*/i,"") : ""; }
+const enSiguiente = (p, s) => { const sg = siguienteDe(p); if(!sg) return false; const w = palabras(s.texto); return sg.split(/;\s*/).some(x=>solapan(w, palabras(x), 3)); };
+// una tarea que es una decisión: empieza (tras su fecha, si la lleva) por decidir, elegir o definir; «confirmar» no
+const RE_DECIDIR = /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(decidir|decide|elegir|definir)\b/i;
+const esTareaDecidir = s => RE_DECIDIR.test(s.texto||"");
+const sinFechaDelante = t => (t||"").replace(/^\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*/,"");
+function porQueCritica(p, s){ return enSiguiente(p,s) ? "Siguiente del Estatus" : s.prioridad_area ? "prioridad del área" : s.cliente_o_dinero ? "cliente" : ""; }
+// crítica: con fecha en la ventana y además en «Siguiente», en una prioridad del área o de un cliente; por fecha, lo vencido arriba
+function tareasCriticas(filtro){
+  const lo = addDays(-VENTANA), hi = addDays(VENTANA), out = [];
+  for(const p of PROJ){ if(!activo(p) || !esMio(p) || (filtro && !filtro(p))) continue;
+    for(const s of stepsLive(p)){ const f = effDate(p,s); if(!f || f<lo || f>hi || esTareaDecidir(s) || effNat(p,s)==="espera") continue;
+      const why = porQueCritica(p,s); if(why) out.push({p, s, f, why}); } }
+  return out.sort((a,b)=>a.f.localeCompare(b.f));
+}
+// parada: vencida hace más de la ventana; se resuelve en «Por poner al día», no en Acciones
+function tareasParadas(p){ const lo = addDays(-VENTANA); return stepsLive(p).map(s=>({p, s, f:effDate(p,s)})).filter(x=>x.f && x.f<lo).sort((a,b)=>a.f.localeCompare(b.f)); }
+// lo que te toca decidir: «Falta decidir» de tus Estatus y tus tareas de decidir; la señal solo cuando frena algo
+function porDecidir(filtro){
+  const out = [];
+  for(const {p, txt} of paraTi().decidir){ if(filtro && !filtro(p)) continue; out.push({p, txt, fd:true, desde: fechaEstatus(p)}); }
+  for(const p of PROJ){ if(!activo(p) || !esMio(p) || (filtro && !filtro(p))) continue;
+    for(const s of stepsLive(p)){ if(!esTareaDecidir(s)) continue; const w = palabras(s.texto);
+      // la misma decisión en el Estatus y en una tarea sale una vez, con la fecha de la tarea
+      const x = out.find(o=>o.p===p && o.fd && solapan(w, palabras(o.txt), 2)); if(x){ x.tarea = s; continue; }
+      out.push({p, txt: sinFechaDelante(s.texto), tarea: s, desde: null}); } }
+  for(const x of out){ const ws = palabras(x.txt);
+    x.espera = nombresEn(x.txt).find(n=>!esYo(n)) || null;
+    x.bloquea = stepsLive(x.p).filter(s=>s!==x.tarea && !esTareaDecidir(s) && solapan(ws, palabras(s.texto), 3)).length; }
+  return out.sort((a,b)=>(!!b.espera - !!a.espera) || (b.bloquea - a.bloquea) || (a.desde||"9999").localeCompare(b.desde||"9999"));
+}
+// lo que otras personas te deben: el «te debe» de lo que antes era «Con otros»
+function esperasA(filtro){
+  const out = [];
+  for(const g of conOtros()) for(const x of g.deben){ if(filtro && !filtro(x.p)) continue; out.push({n: g.n, org: ORG_DE[g.n] || (g.dentro ? "" : ""), ...x}); }
+  return out.sort((a,b)=>(a.f||"9999").localeCompare(b.f||"9999"));
+}
+// lo que decidieron otros y toca un proyecto tuyo, con la respuesta que dejaste en la cola
+const respuestaDe = ref => CAMBIOS.find(c=>c.tipo==="respuesta" && c.decision===ref);
+function decisionesQueAfectan(filtro){ return VIEWER() ? afectaDeOtros().map(g=>({...g, a: filtro ? g.a.filter(filtro) : g.a})).filter(g=>g.a.length) : []; }
+
+// ---- piezas ----
+const PIE = (cl, t) => `<span class="pie-${cl}">${t}</span>`;
+function pieDe(ps){
+  const t = today(), d7 = addDays(-6), act = ps.filter(activo);
+  const nDec = act.filter(p=>faltaDecidir(p)).length + act.reduce((n,p)=>n+stepsLive(p).filter(esTareaDecidir).length, 0);
+  const nVen = act.reduce((n,p)=>n+stepsLive(p).filter(s=>{ const f = effDate(p,s); return f && f<t; }).length, 0);
+  const nSes = act.reduce((n,p)=>n+sesionesTodas(p).filter(s=>s.fecha>=d7).length, 0);
+  return [nDec ? PIE("d", `${nDec} por decidir`) : "", nVen ? PIE("v", cuantos(nVen,"vencida","vencidas")) : "", nSes ? PIE("q", `${cuantos(nSes,"sesión","sesiones")} esta semana`) : PIE("o", "sin sesiones esta semana")].join("");
+}
+function lineaSemana(filtro, irAct){
+  const ev = eventos(addDays(-6)).filter(e=>!filtro || filtro(e.p)), o = agrega(ev);
+  const partes = [o.ses ? `<b>${cuantos(o.ses,"sesión","sesiones")}</b>` : "ninguna sesión", o.dec ? cuantos(o.dec,"decisión","decisiones") : "ninguna decisión", o.pub ? cuantos(o.pub,"documento publicado","documentos publicados") : "nada publicado"];
+  return `<p class="hoy-linea semana"><span class="more">Últimos 7 días:</span> ${partes.join('<span class="sep">·</span>')}${irAct?` <span class="sep">·</span> ${irAct}`:""}</p>`;
+}
+let ESP_FORM = null;
+function filaEspera(x){
+  const st = x.row ? stepsLive(x.p).find(s=>key(x.p.id,s.texto)===x.row) || (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
+  const k = x.row || ("fd:"+x.p.id+":"+x.n), hecho = st ? pend(x.p.id, st.texto).hecho : null;
+  const nota = !st ? CAMBIOS.find(c=>c.tipo==="nota" && c.proyecto===x.p.id && (c.nota||"").startsWith(`Espera a ${x.n}: `)) : null, r = hecho || nota;
+  const dias = x.f ? diasDesde(x.f) : null;
+  const pill = dias!==null && dias>0 ? `<span class="pill ${dias>7?"late":"none"}">${cuantos(dias,"día","días")}</span>` : `<span class="pill none">${x.f ? fmtD(x.f) : "sin fecha"}</span>`;
+  const esDec = /^Decide:/.test(x.t);
+  const acts = !puedeMarcar() ? "" : r ? `<span class="toast-i">${/Ya no aplica/.test(r.nota||"") ? "Ya no aplica" : "Ya llegó"} · lo pasa a ${esc(x.p.nombre)} la próxima puesta al día</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
+    : `<button type="button" class="chip" data-esp-ok="${esc(k)}">Ya llegó</button><button type="button" class="chip ghost" data-esp-drop="${esc(k)}">Ya no aplica</button>`;
+  const form = ESP_FORM===k ? `<form class="hecho-form" data-esp-form="${esc(k)}"><label class="sr" for="esp-nota">${esDec?"Qué decidió":"Qué llegó"}</label><input id="esp-nota" class="search" type="text" maxlength="240" placeholder="${esDec?"¿Qué decidió? Con esto, la sesión registra su decisión":"Algo que apuntar, por ejemplo dónde quedó (opcional)"}"><button type="submit" class="btn">Marcar que llegó</button><button type="button" class="chip ghost" data-esp-cancel>Cancelar</button></form>` : "";
+  return `<div class="due-item static acc-i${r?" resp":""}" data-esp="${esc(k)}">${pill}<span class="t"><span><b>${esc(x.n)}</b>${x.org?` <span class="pill org">${esc(x.org)}</span>`:""} · ${inline(corta(x.t))}</span><span class="w">${irProy(x.p, x.tab||"estatus", x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}${x.f?` · desde el ${fmtD(x.f)}`:""}${r && r.nota && !/^Ya no aplica$/.test(r.nota) ? ` · «${esc(r.nota.replace(/^Espera a [^:]+: /,""))}»` : ""}</span></span>${acts?`<span class="acc-b">${acts}</span>`:""}${form}</div>`;
+}
+function seccionEsperas(filtro){
+  const xs = esperasA(filtro); if(!xs.length) return "";
+  return `<section class="due" id="esperas"><div class="top"><h2>Esperas a</h2><span class="c">${cuantos(new Set(xs.map(x=>x.n)).size,"persona","personas")}</span><span class="c" style="margin-left:auto">Lo que otras personas te deben</span></div><div class="due-list">${xs.map(filaEspera).join("")}</div></section>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-esp-ok],[data-esp-drop],[data-esp-cancel]"); if(!b || !puedeMarcar()) return;
+  if(b.hasAttribute("data-esp-cancel")){ ESP_FORM = null; render(); return; }
+  const k = b.dataset.espOk || b.dataset.espDrop, x = esperasA().find(x=>(x.row || ("fd:"+x.p.id+":"+x.n))===k); if(!x) return;
+  if(b.dataset.espOk){ ESP_FORM = ESP_FORM===k ? null : k; render(); const i = document.getElementById("esp-nota"); if(i) i.focus(); return; }
+  b.disabled = true; cerrarEspera(x, "Ya no aplica");
+});
+document.addEventListener("submit", e => { const f = e.target.closest && e.target.closest("[data-esp-form]"); if(!f) return; e.preventDefault();
+  const k = f.dataset.espForm, x = esperasA().find(x=>(x.row || ("fd:"+x.p.id+":"+x.n))===k); ESP_FORM = null; if(x) cerrarEspera(x, f.querySelector("#esp-nota").value.trim() || "Llegó"); });
+async function cerrarEspera(x, nota){
+  const st = x.row ? (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
+  if(st){ await marcarHecho(x.p, st, nota); return; }
+  await anotar(x.p, `Espera a ${x.n}: ${nota==="Ya no aplica" ? "Ya no aplica" : nota}`);
+}
+function filaPorDecidir(x, conArea){
+  // con quién se decide, si nombra a alguien; si frena tareas del proyecto, cuántas (1.24)
+  const senal = [x.bloquea ? `Bloquea ${cuantos(x.bloquea,"tarea","tareas")}` : "", x.espera ? `con ${esc(x.espera)}` : ""].filter(Boolean).join(" · ");
+  return `<div class="due-item static acc-i np"><span class="t">${inline(comoPregunta(x.txt))}${x.tarea && !x.fd?` <span class="tag-t">de una tarea</span>`:""}<span class="w">${senal?`<b class="senal">${senal}</b> · `:""}${irProy(x.p, "estatus", {sel:".corto-l li", texto:"Falta decidir"})}${conArea?` · ${esc(areaBy[x.p.area]?.nombre||"")}`:""}${x.desde?` · desde el ${fmtD(x.desde)}`:""}</span></span><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(fraseDecidir(x.p, x.txt))}">Decidir con Claude</button></span></div>`;
+}
+function seccionDecidir(filtro, conArea){
+  const xs = porDecidir(filtro); if(!xs.length) return "";
+  return ptGrupoSec("te-toca-decidir", "Te toca decidir", "Lo que no avanza hasta que decides", xs.map(x=>filaPorDecidir(x, conArea)), 5);
+}
+function filaCritica(x, conArea){
+  const k = key(x.p.id, x.s.texto), d = diasDesde(x.f), t = today();
+  const pill = x.f<t ? `<span class="pill late">Hace ${cuantos(d,"día","días")}</span>` : x.f===t ? `<span class="pill soon">Hoy</span>` : x.f===addDays(1) ? `<span class="pill soon">Mañana</span>` : `<span class="pill ok">${fmtD(x.f)}</span>`;
+  const quien = (()=>{ const md = x.s.texto.match(RE_DEBES); if(!md) return ""; const n = nombreEn(x.s.texto, md.index + md[0].length - md[2].length, md[2]); return n && !esYo(n) ? `con ${esc(n)}` : ""; })();
+  return `<div class="due-item static acc-i" data-row="${esc(k)}">${pill}<span class="t">${inline(corta(x.s.texto))} <span class="tag-t">${esc(quien || x.why)}</span><span class="w">${irProy(x.p, "quehay", {row:k})}${conArea?` · ${esc(areaBy[x.p.area]?.nombre||"")}`:""}${x.f<t?` · venció el ${fmtD(x.f)}`:""}</span></span>${puedeMarcar() ? `<span class="acc-b"><button type="button" class="chip" data-acc-hecho="${esc(k)}">Hecha</button><button type="button" class="chip" data-acc-fecha="${esc(k)}" aria-expanded="${EDIT===k}">Nueva fecha</button><button type="button" class="chip ghost" data-acc-drop="${esc(k)}">Ya no aplica</button></span>` : ""}${EDIT===k ? dueForm(x.p, x.s) : ""}${HECHO===k ? hechoForm(k) : ""}</div>`;
+}
+function seccionCriticas(filtro, conArea, nota){
+  const xs = tareasCriticas(filtro); if(!xs.length) return "";
+  return ptGrupoSec("tareas-criticas", "Tareas críticas", "Con fecha cerca, y en el Estatus, en una prioridad o con un cliente", xs.map(x=>filaCritica(x, conArea)), 5, nota);
+}
+let RESP_FORM = null;
+function filaAfecta(x){
+  const p0 = x.a[0], ref = refDec(x.q, x.d), r = respuestaDe(ref), quien = persona(x.d.decidio||"") || "otra persona", org = ORG_DE[quien];
+  const acts = !puedeMarcar() ? `<button type="button" class="chip" data-copy="${esc(`abre sesión en ${p0.nombre}: quiero cuestionar la decisión de ${quien} «${x.d.titulo}»`)}">Cuestionar con Claude</button>`
+    : r ? `<span class="toast-i">${r.valor==="aceptada"?"Aceptada":"Cuestionada"} · la registra tu próxima sesión de ${esc((byId[r.proyecto]||p0).nombre)}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
+    : `<button type="button" class="chip" data-resp-ok="${esc(ref)}">Aceptar</button><button type="button" class="chip" data-resp-q="${esc(ref)}" aria-expanded="${RESP_FORM===ref}">Cuestionar</button>`;
+  const mios = PROJ.filter(p=>activo(p) && esMio(p));
+  const form = RESP_FORM===ref ? `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(p=>`<option value="${esc(p.id)}"${p===p0?" selected":""}>${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>` : "";
+  return `<div class="due-item static acc-i${r?" resp":""}"><span class="pill none">${fmtD(x.d.fecha)}</span><span class="t">${inline(x.d.titulo)}<span class="w">decidió ${esc(quien)}${org?` (${esc(org)})`:""} · ${esc(x.q.nombre)} · toca a ${x.a.map(p=>irProy(p, "estatus", {sel:"dl.facts dt", texto:"Le afectan", af:true, pid:p.id})).join(", ")}${r && r.porque?` · «${esc(r.porque)}»`:""}</span></span><span class="acc-b">${acts}</span>${form}</div>`;
+}
+function seccionAfectan(filtro){
+  const xs = decisionesQueAfectan(filtro); if(!xs.length) return "";
+  return `<section class="due" id="te-afectan"><div class="top"><h2>Decisiones que te afectan</h2><span class="c">${xs.length}</span><span class="c" style="margin-left:auto">Las tomó otra persona y tocan un proyecto tuyo</span></div><p class="pt-n">Aceptar o cuestionar se deshace hasta que tu próxima sesión del proyecto lo registra.</p><div class="due-list">${xs.map(filaAfecta).join("")}</div></section>`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest && e.target.closest("[data-resp-ok],[data-resp-q],[data-resp-cancel]"); if(!b || !puedeMarcar()) return;
+  if(b.hasAttribute("data-resp-cancel")){ RESP_FORM = null; render(); return; }
+  if(b.dataset.respQ){ RESP_FORM = RESP_FORM===b.dataset.respQ ? null : b.dataset.respQ; render(); const t = document.getElementById("resp-why"); if(t) t.focus(); return; }
+  const x = decisionesQueAfectan().find(x=>refDec(x.q,x.d)===b.dataset.respOk); if(!x) return; b.disabled = true;
+  await addCambio({tipo:"respuesta", proyecto:x.a[0].id, decision:refDec(x.q,x.d), titulo:x.d.titulo, decidio:x.d.decidio||null, valor:"aceptada"}); render();
+});
+function decPorRef(ref){ for(const q of PROJ){ if(q.restringido) continue; for(const d of decisionesTodas(q)) if(d.id && refDec(q,d)===ref) return {q, d}; } return null; }
+document.addEventListener("submit", async e => { const f = e.target.closest && e.target.closest("[data-resp-form]"); if(!f) return; e.preventDefault();
+  const ref = f.dataset.respForm, x = decPorRef(ref); RESP_FORM = null; if(!x){ render(); return; }
+  await addCambio({tipo:"respuesta", proyecto:f.querySelector("#resp-from").value, decision:ref, titulo:x.d.titulo, decidio:x.d.decidio||null, valor:"cuestionada", porque:f.querySelector("#resp-why").value.trim()||null}); render(); });
+// un grupo con su número y cinco a la vista
+function ptGrupoSec(id, titulo, sub, filas, n, nota){
+  const abierto = PARA_TI_ALL.has(id), vis = abierto ? filas : filas.slice(0, n);
+  return `<section class="due" id="${id}"><div class="top"><h2>${titulo}</h2><span class="c">${filas.length}</span><span class="c" style="margin-left:auto">${sub}</span></div><div class="due-list">${vis.join("")}</div>${filas.length>n?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="${id}">${abierto?"Ver menos":`Ver ${filas.length-n===1?"1 más":`las ${filas.length}`}`}</button>`:""}${nota?`<p class="pt-n">${nota}</p>`:""}</section>`;
+}
+
+// ---- Mantenimiento: lo que deja a alguien fuera o hace que el tablero se equivoque, y los proyectos por poner al día ----
+function arreglarYa(){
+  const out = [];
+  if(OWNER && PERMISOS && (PERMISOS.cambios||[]).length){
+    const txt = "Cambios de permisos en la carpeta compartida de " + ((META && META.organizacion) || "la organización") + " (revisados el " + (PERMISOS.revisado||"").slice(0,10) + "):\n" + PERMISOS.cambios.map(x => "- " + x).join("\n") + (PERMISOS.acciones ? "\n\nPara «aplica los permisos» en tu sesión (ACCIONES de permisos.py):\n" + JSON.stringify(PERMISOS.acciones) : "");
+    for(const c of PERMISOS.cambios) out.push({k:"Permisos", t:c, w:`revisado el ${fmtD((PERMISOS.revisado||"").slice(0,10))} · lo arregla quien administra la carpeta`, b:[["Aplicar con Claude","aplica los permisos",true],["Copiar para quien administra",txt,false]]});
+  }
+  const car = deLaCarpeta();
+  for(const x of car.items) out.push({k:"Guía", t:x.t, w: car.ctx ? "lo arreglas tú, como responsable del contexto" : "lo arregla quien responde por el contexto", b: car.ctx ? [["Revisar con Claude", x.frase, true]] : []});
+  const orf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length;
+  if(orf) out.push({k:"Tablero", t:`${cuantos(orf,"cosa marcada aquí ya no coincide","cosas marcadas aquí ya no coinciden")} con la carpeta: la puesta al día no ${orf===1?"la":"las"} aplicará.`, w:"deshazlas o resuélvelas en una sesión, abajo en «Marcado aquí, por registrar»", b:[]});
+  if(META && META.tarea_desfasada) out.push({k:"Tablero", t:"La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación.", w:"en una sesión con la carpeta conectada", b:[["Revisar con Claude","actualiza el tablero",true]]});
+  return out;
+}
+function seccionArreglar(xs){
+  if(!xs.length) return "";
+  return `<section class="due lead-sec" id="arreglar"><div class="top"><h2>Arreglar ya</h2><span class="c">${xs.length}</span><span class="c" style="margin-left:auto">Deja a alguien fuera o hace que el tablero se equivoque</span></div><div class="due-list">${xs.map(x=>`<div class="due-item static acc-i"><span class="pill late">${esc(x.k)}</span><span class="t">${inline(x.t)}<span class="w">${esc(x.w)}</span></span>${x.b.length?`<span class="acc-b">${x.b.map(([l,f,pri])=>`<button type="button" class="chip${pri?" pri":""}" data-copy="${esc(f)}">${esc(l)}</button>`).join("")}</span>`:""}</div>`).join("")}</div></section>`;
+}
+const PAD_OPEN = new Set();
+function ponerAlDia(filtro){
+  const pd = porPonerAlDia(), por = new Map();
+  const g = (id, base) => { if(!por.has(id)) por.set(id, {id, ...base, it:[], sg:[], par:[], frase:"", detalle:false}); return por.get(id); };
+  for(const x of pd.activas){ if(filtro && !(x.p ? filtro(x.p) : false)) continue; const o = g(x.id, x.p ? {p:x.p} : {a:x.a}); o.it = x.it; o.frase = x.frase; o.detalle = x.detalle; }
+  for(const q of sugerencias()){ const p = byId[q.proyecto]; if(filtro && !filtro(p)) continue; g(p.id, {p}).sg.push(q); }
+  for(const p of PROJ){ if(!activo(p) || !esMio(p) || (filtro && !filtro(p))) continue; const par = tareasParadas(p); if(par.length) g(p.id, {p}).par = par; }
+  return [...por.values()].filter(o=>o.it.length || o.sg.length || o.par.length);
+}
+function filaPonerAlDia2(o){
+  const nom = o.p ? `${irProy(o.p, "estatus", {sel:".corto"})}<span class="ctx">${esc(areaBy[o.p.area]?.nombre||"")}</span>` : `<button type="button" class="lnk" data-go-area="${esc(o.a.slug)}">${esc(o.a.nombre)}</button><span class="ctx">área</span>`;
+  const lis = [...o.it.map(t=>`<li>${inline(t)}</li>`)];
+  if(o.par.length) lis.push(`<li>${cuantos(o.par.length,"tarea vencida","tareas vencidas")} hace más de dos semanas. <button type="button" class="lnk" data-pad="${esc(o.id)}|par">${PAD_OPEN.has(o.id+"|par")?"Cerrar":"Ver"}</button></li>`);
+  if(o.sg.length) lis.push(`<li class="sgg">La memoria sugiere ${cuantos(o.sg.length,"cambio","cambios")}. <button type="button" class="lnk" data-pad="${esc(o.id)}|sg">${PAD_OPEN.has(o.id+"|sg")?"Cerrar":`Ver ${o.sg.length===1?"la sugerencia":`las ${o.sg.length}`}`}</button></li>`);
+  const frase = o.frase || (o.p ? `abre sesión en ${o.p.area}/${o.p.slug} y pon al día su memoria: revisa las tareas vencidas hace más de dos semanas` : "");
+  const par = PAD_OPEN.has(o.id+"|par") ? `<div class="due-list pad-sub">${o.par.map(({p,s,f})=>filaVencida(p, s, f, false)).join("")}</div>` : "";
+  const sg = PAD_OPEN.has(o.id+"|sg") ? `<div class="sgs pad-sub">${o.sg.map(filaSugerencia).join("")}</div>` : "";
+  return `<div class="pd"><b>${nom}</b><ul>${lis.join("")}</ul><span class="acc-b">${frase?`<button type="button" class="chip pri" data-copy="${esc(frase)}">Revisar con Claude</button>`:""}${o.detalle?`<button type="button" class="chip" data-mt-open="${esc(o.id)}">Ver detalle</button>`:""}${o.it.length?`<button type="button" class="chip ghost" data-mt-pos="${esc(o.id)}" ${tip("Lo quita de la lista 7 días, solo en este navegador.")}>Ahora no</button>`:""}</span>${par}${sg}</div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pad]"); if(!b) return; const k = b.dataset.pad; PAD_OPEN.has(k) ? PAD_OPEN.delete(k) : PAD_OPEN.add(k); render(); });
+function seccionPonerAlDia(filtro, titulo){
+  const xs = ponerAlDia(filtro); if(!xs.length) return "";
+  // seis a la vista, los que más tienen arriba
+  xs.sort((a,b)=>(b.it.length+b.sg.length+b.par.length)-(a.it.length+a.sg.length+a.par.length));
+  const id = "pad-"+(titulo?"x":"i"), ab = PARA_TI_ALL.has(id), vis = ab ? xs : xs.slice(0,6);
+  return `<section class="due" id="poner-al-dia"><div class="top"><h2>${titulo||"Proyectos por poner al día"}</h2><span class="c">${xs.length}</span><span class="c" style="margin-left:auto">Lo que quedó viejo o ya parece resuelto</span></div><p class="pt-n">Lo que la memoria ya redactó se acepta aquí; lo que pide criterio, en una sesión, con la frase.</p><div class="pds">${vis.map(filaPonerAlDia2).join("")}</div>${xs.length>6?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="${id}">${ab?"Ver menos":`Ver los ${xs.length}`}</button>`:""}</section>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-alarma]"); if(!b) return; INI_TAB = "mant"; render(); window.scrollTo({top:0}); });
+function lineaArreglar(xs){
+  if(!xs.length) return "";
+  const tipos = [...new Set(xs.map(x=>({Permisos:"permisos de Drive", "Guía":"la guía de la carpeta", Tablero:"la tarea del tablero"}[x.k]||x.k)))];
+  return `<button type="button" class="alarma" data-alarma><span aria-hidden="true">⚠</span><span><b>Arreglar ya: ${xs.length}</b> · ${esc(tipos.join(", "))}</span><span class="ir">Ver</span></button>`;
+}
+// ---- «Relevante ahora»: los documentos que nombran las decisiones y tareas de arriba ----
+function relevantes(filtro){
+  const txts = [...porDecidir(filtro).map(x=>({p:x.p, t:x.txt})), ...tareasCriticas(filtro).map(x=>({p:x.p, t:x.s.texto}))], out = [], vistos = new Set();
+  for(const {p, t} of txts){ if(p.restringido) continue;
+    for(const e of (p.entregables||[])){ if(e.estado==="reemplazado") continue; const k = p.id+"|"+e.archivo; if(vistos.has(k)) continue;
+      const base = (e.archivo||"").replace(/\.\w+$/,""), tit = palabras(e.titulo||base.replace(/-/g," "));
+      if((base && t.includes(base)) || solapan(palabras(t), tit, Math.min(3, tit.size||3))){ vistos.add(k); out.push({p, e, t}); } } }
+  return out;
+}
+function seccionRelevante(filtro){
+  const xs = relevantes(filtro); if(!xs.length) return "";
+  return `<section class="card"><h2>Relevante ahora</h2><p class="pt-n">Lo que nombran las decisiones y tareas de Acciones.</p><div class="ents">${xs.map(({p,e,t})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(ESTADO_E[e.estado]||e.estado||"")}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}${filtro && filtro.unico ? "" : ` · ${esc(p.nombre)}`}</span><span class="d">Para: ${inline(corta(sinFechaDelante(t)))}</span></div>`).join("")}</div></section>`;
+}
+
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   head.innerHTML = cabeceraRaiz();
@@ -2017,9 +2244,8 @@ function renderRoot(){
   const tabs = [["estatus","Estatus",0],["acciones","Acciones",T.acciones.n],["actividad","Actividad",0],["mant","Mantenimiento",T.mant.n]];
   // Mantenimiento: número rojo con lo que pide una acción; sin eso, un punto amarillo si hay avisos que solo informan; si no, nada (1.22.5)
   const marca = (k,n) => k==="mant" ? (n ? `<span class="n badge" aria-hidden="true">${n}</span><span class="sr">: ${n} por hacer</span>` : T.mant.info ? `<span class="n punto" aria-hidden="true"></span><span class="sr">: hay algo que revisar</span>` : "") : n ? `<span class="n">${n}</span>` : "";
-  main.innerHTML = `<div class="tabs ini-tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-ini="${k}" aria-selected="${INI_TAB===k}">${t}${marca(k,n)}</button>`).join("")}</div>${T[INI_TAB].html}`;
-  // los permisos de Drive, arriba y en ámbar solo si algo no cuadra
-  const pc = permisosCard(); if(pc) main.insertAdjacentHTML("afterbegin", pc);
+  main.innerHTML = `${lineaArreglar(arreglarYa())}<div class="tabs ini-tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-ini="${k}" aria-selected="${INI_TAB===k}">${t}${marca(k,n)}</button>`).join("")}</div>${T[INI_TAB].html}`;
+  // los permisos de Drive que no cuadran van a Mantenimiento › Arreglar ya, con una línea arriba (1.24)
 }
 
 // ---- Voz: la primera frase no empieza por el nombre del área o del proyecto, ni dice «hoy» ----
@@ -2101,13 +2327,13 @@ function ficha({nombre, fecha, tit, sig, meta, attrs, vacio}){
 function fichaProyecto(p){
   const s = sesionesTodas(p)[0], q = s ? quienSes(p,s) : "", t = titEstatus(p), tit = t ? (t.match(/^.+?[.!?](?=\s|$)/)||[t])[0] : "";
   return ficha({nombre: p.nombre + (p.cerrado?" · cerrado":""), fecha: fechaEstatus(p), tit, sig: p.cerrado ? "" : primerSiguiente(p.en_corto),
-    meta: `${esc(persona(p.dueno))}${p.ultima_sesion?` · movió ${fmtD(p.ultima_sesion)}${q&&nombreCorto(q)!==nombreCorto(p.dueno)?` (${esc(nombreCorto(q))})`:""}`:" · sin sesiones"}`,
+    meta: pieDe([p]),
     attrs: `data-go-proj="${esc(p.id)}"`});
 }
 function rumboAreas(){
   return `<div class="area-cards">${areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>{
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(activo), ta = titArea(a), mov = ps.map(p=>p.ultima_sesion).filter(Boolean).sort().pop(), p1 = (a.prioridades||[])[0];
-    return ficha({nombre:a.nombre, fecha:ta.fecha, tit:ta.t, sig: ta.fecha ? (primerSiguiente(a.en_corto) || (p1 ? p1.split(/(?<=\.)\s/)[0] : "")) : "", meta:`${cuantos(ps.length,"proyecto","proyectos")} · ${esc(soloNombre(a.dueno))}${mov?` · movió ${fmtD(mov)}`:""}`, attrs:`data-go-area="${esc(a.slug)}"`}); }).join("")}</div>`;
+    return ficha({nombre:a.nombre, fecha:ta.fecha, tit:ta.t, sig: ta.fecha ? (primerSiguiente(a.en_corto) || (p1 ? p1.split(/(?<=\.)\s/)[0] : "")) : "", meta: pieDe(ps), attrs:`data-go-area="${esc(a.slug)}"`}); }).join("")}</div>`;
 }
 
 // ---- Área en cuatro pestañas ----
@@ -2117,7 +2343,9 @@ function estatusAreaCompleto(a){
   const tit = m ? sinSujeto(m[2].replace(/\*\*/g,"").trim(), a.nombre, m[1]) : "";
   const items = [], sig = [];
   for(const l of (m ? ls.slice(1) : ls)){ if(/^\s{2,}-/.test(l)) sig.push(l.replace(/^\s*-\s*/,"")); else if(/^\s*-/.test(l)) items.push(l.replace(/^\s*-\s*/,"")); }
-  const lis = items.filter(i=>!/^`[^`]+\/`/.test(i)).map(i=>/^\*\*Siguiente/.test(i) && sig.length ? `<li>${inline(i)}<ol>${sig.map(s=>`<li>${inline(s)}</li>`).join("")}</ol></li>` : `<li>${inline(i)}</li>`).join("");
+  // las prioridades del área son su «Siguiente»: se atienden aquí, con su ventana (1.24: antes, arriba de Acciones)
+  const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean), prios = (a.prioridades||[]).length ? a.prioridades : sig;
+  const lis = items.filter(i=>!/^`[^`]+\/`/.test(i)).map(i=>/^\*\*Siguiente/.test(i) && prios.length ? `<li>${inline(i)}<ol class="prio-l">${prios.map((x,k)=>prioItem(a, ps, x, k)).join("")}</ol></li>` : `<li>${inline(i)}</li>`).join("");
   if(!m && !a.en_corto && a.panorama && a.panorama.texto) return `<section class="card pan"><p class="corto-t">${panTxt(a)}</p><p class="more">Es el resumen del área en su forma de antes: el próximo cierre del área lo reescribe.</p></section>`;
   if(!m) return `<section class="card pan"><p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p>${lis?`<p class="more">Mientras tanto, lo escrito en su sección:</p><ul class="corto-l">${lis}</ul>`:""}</section>`;
   if(!tit && !lis) return `<section class="card pan"><p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p></section>`;
@@ -2141,13 +2369,16 @@ function renderArea(a){
   let body = "";
   if(tab==="estatus"){
     const act = ps.filter(p=>!p.cerrado && !p.restringido).sort((x,y)=>(y.ultima_sesion||"").localeCompare(x.ultima_sesion||"")), cer = ps.filter(p=>p.cerrado), res = ps.filter(p=>p.restringido);
-    body = estatusAreaCompleto(a) + `<section class="rumbo-sec"><div class="area-cards">${act.map(fichaProyecto).join("")}</div>
+    const est = estatusAreaCompleto(a), prioCard = !/prio-l/.test(est) && (a.prioridades||[]).length ? `<section class="prios card"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2><ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol></section>` : "";
+    body = lineaSemana(p=>p.area===a.slug, `<button type="button" class="lnk" data-atab="actividad">Ver actividad ›</button>`) + est + prioCard + `<section class="rumbo-sec"><div class="area-cards">${act.map(fichaProyecto).join("")}</div>
       ${cer.length||res.length?`<p class="more">${cer.length?`Cerrados: ${cer.map(p=>`<button type="button" class="lnk" data-go-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join(", ")}. `:""}${res.length?`Restringidos: ${res.map(p=>esc(p.nombre)).join(", ")}.`:""}</p>`:""}</section>
+      ${seccionEsperas(p=>p.area===a.slug)}
       ${a.que_largo && a.que_largo.trim().replace(/\.$/,"")!==(a.que||"").trim().replace(/\.$/,"")?`<details class="card mas-c"><summary><h3 style="display:inline">Qué es el área</h3></summary><div class="md" style="margin-top:8px">${md(a.que_largo)}</div></details>`:""}`;
   } else if(tab==="acciones"){
-    // las mismas piezas que Acciones de Inicio, filtradas al área; sus prioridades hacen de «Por dónde empezar» (1.23.3)
-    const tuyo = teToca(T.dec, T.venc, false);
-    body = `<section class="prios card"><h2>Prioridades${hq("del-tablero","Prioridades del área")}</h2>${a.prioridades?.length?`<ol class="prio-l">${a.prioridades.map((x,i)=>prioItem(a, ps, x, i)).join("")}</ol>`:`<p class="empty">Sin prioridades escritas.</p>`}</section><section class="due"><div class="top"><h2>Te toca a ti</h2><span class="c" style="margin-left:auto">Lo que solo avanza si tú lo haces</span></div>${tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`}</section>${seccionOtros(juntaOtros(T.otros, VIEWER() ? T.afe : []), false, T.venc)}`;
+    // las mismas piezas que Acciones de Inicio, filtradas al área; sus prioridades van en Estatus, que es su «Siguiente» (1.24)
+    const enA = p => p && p.area===a.slug;
+    const tuyo = seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA);
+    body = enfoque2(enA) + (tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`);
   } else if(tab==="actividad"){
     const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
@@ -2155,10 +2386,11 @@ function renderArea(a){
   } else {
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     const nc = T.nc.length ? `<section class="due"><div class="top"><h2>Lo que no cuadra en el área</h2><span class="c">${T.nc.length}</span></div><div class="nc">${T.nc.map(x=>`<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}">${esc(x.p.nombre)} ›</button>`:esc(a.nombre)}</span>${ncAcciones(x)}</div>`).join("")}</div></section>` : "";
-    body = `<section class="card"><h2>Publicado</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p><div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>` + queHayArea(a, ps) + nc;
+    body = seccionPonerAlDia(p=>p && p.area===a.slug, "Por poner al día") + seccionRelevante(p=>p && p.area===a.slug) + `<section class="card"><h2>Publicado</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p><div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>` + queHayArea(a, ps);
   }
-  const nA = T.dec.length + T.venc.length + T.afe.length;
-  const tabs = [["estatus","Estatus",""],["acciones","Acciones",nA||""],["actividad","Actividad",""],["quehay","Qué hay",T.nc.length||""]];
+  const enA_ = p => p && p.area===a.slug;
+  const nA = porDecidir(enA_).length + tareasCriticas(enA_).length + decisionesQueAfectan(enA_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length, nQ = ponerAlDia(enA_).length;
+  const tabs = [["estatus","Estatus",""],["acciones","Acciones",nA||""],["actividad","Actividad",""],["quehay","Qué hay",nQ||""]];
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-atab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n${k==="quehay"?" warn":""}">${n}</span>`:""}</button>`).join("")}</div>${body}`;
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-atab]"); if(!b) return; setNTAB(b.dataset.atab); render(); });
@@ -2231,11 +2463,10 @@ function lineaHoy(){
   const pt = paraTi(), partes = [];
   if(!VIEWER() && META && META.sin_cuenta) partes.push(`<span class="more">Esta puesta al día corrió sin saber con qué cuenta trabajas, así que el tablero no sabe qué es tuyo. Vuelve a sincronizarlo desde una sesión con tu cuenta.</span>`);
   else if(!VIEWER()) partes.push(`<span class="more">La carpeta no dice tu nombre junto a tu cuenta, así que el tablero no sabe quién eres: pide que te pongan como «Nombre (correo)» en la línea «Colabora:» de un proyecto o en «Quién responde por qué».</span>`);
-  const n = pt.decidir.length + pt.venc.length;
-  partes.push(`<button type="button" class="lnk" data-ini="acciones">${n ? `Te toca: ${[pt.decidir.length?cuantos(pt.decidir.length,"por decidir","por decidir"):"", pt.venc.length?cuantos(pt.venc.length,"tarea vencida","tareas vencidas"):""].filter(Boolean).join(" · ")}` : "Nada te toca ahora"} ›</button>`);
+  if(!partes.length) return "";
   return `<p class="hoy-linea">${partes.join('<span class="sep">·</span>')}</p>`;
 }
-function tabEstatus(){ return {n: 0, html: `${lineaHoy()}<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${premisasCard()}`}; }
+function tabEstatus(){ return {n: 0, html: `${lineaHoy()}${lineaSemana(null, `<button type="button" class="lnk" data-ini="actividad">Ver actividad ›</button>`)}<section class="rumbo-sec">${bandaRaiz()}${rumboAreas()}</section>${seccionEsperas(null)}${premisasCard()}`}; }
 // Mantenimiento: sin el título repetido dentro del desplegable
 // actividad del área: solo quien escribe en la carpeta
 
@@ -2309,6 +2540,14 @@ function olvidarTextos(nuevos){ for(const n of nuevos){ const v = byId[n.id]; if
 // el estado completo: null mientras llega
 function estadoDe(p){ if(!p.estado_aparte) return p.estado_actual||""; if(!TEXTOS[p.id]){ traerTextos(p.id); return null; } return sinDetalle(p) ? false : TEXTOS[p.id].estado_actual||""; }
 // las sesiones de la bitácora: la última viene con el proyecto y las demás, del detalle
+// «Cuestionar» en el registro: la decisión de otra persona, con el porqué a la cola (1.24)
+function cuestDec(d, p){
+  if(d.tipo==="cuestionamiento" || !d.id || !puedeMarcar() || !VIEWER() || persona(d.decidio||"")===persona(VIEWER())) return "";
+  const ref = refDec(p, d), r = respuestaDe(ref), mios = PROJ.filter(x=>activo(x) && esMio(x)); if(!mios.length) return "";
+  if(r) return `<p class="acc-b izq"><span class="toast-i">${r.valor==="aceptada"?"Aceptada":"Cuestionada"} · la registra tu próxima sesión de ${esc((byId[r.proyecto]||{}).nombre||"")}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button></p>`;
+  if(RESP_FORM!==ref) return `<p class="acc-b izq"><button type="button" class="chip" data-resp-q="${esc(ref)}">Cuestionar</button></p>`;
+  return `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(x=>`<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>`;
+}
 function decItem(d, p, conProy){
   const k = decKey(p, d), open = DEC_OPEN.has(k);
   if(open && d.texto_aparte && !TEXTOS[p.id]) traerTextos(p.id);
@@ -2317,7 +2556,7 @@ function decItem(d, p, conProy){
   const esC = d.tipo==="cuestionamiento", cqA = (d.cuestionado_por||[]).filter(c=>c.abierto);
   const w = [esC?`<span class="pill ${d.abierto?"soon":"closed"}">cuestionamiento${d.abierto?" abierto":" respondido"}</span>`:"", cqA.length?`<span class="pill soon">cuestionada</span>`:"", isNew("d", p.id, decKey(p,d))?`<span class="pill new">nueva</span>`:"", d.por_confirmar?`<span class="pill soon" ${tip("La decisión dice que está pendiente de confirmar por su responsable. Se confirma en una sesión del proyecto.")}>por confirmar</span>`:"", conProy?`<span>${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span>`:""].filter(Boolean).join("");
   return `<div class="dl-i"><button type="button" class="dl-b" data-dec-open="${esc(k)}" aria-expanded="${open}"><time>${d.fecha?fmtD(d.fecha):""}</time><span class="dl-t">${inline(d.titulo)}</span><span class="dl-c" aria-hidden="true">${open?"−":"+"}</span>${w?`<span class="dl-w">${w}</span>`:""}</button>
-    ${open?`<article class="dec"><dl>${d.archivada && !d.porque && !esC?`<dt>Archivada</dt><dd>El porqué y lo descartado siguen en el registro archivado del proyecto, con este identificador.</dd>`:""}${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartado</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}</article>`:""}</div>`;
+    ${open?`<article class="dec"><dl>${d.archivada && !d.porque && !esC?`<dt>Archivada</dt><dd>El porqué y lo descartado siguen en el registro archivado del proyecto, con este identificador.</dd>`:""}${d.id?`<dt>Se cita como</dt><dd><code>${esc(refDec(p,d))}</code></dd>`:""}${d.planteo?`<dt>Planteó</dt><dd>${inline(d.planteo)}</dd>`:""}${d.cuestiona?`<dt>Cuestiona a</dt><dd>${inline(d.cuestiona)}</dd>`:""}${d.responde?`<dt>Responde a</dt><dd>${inline(d.responde)}</dd>`:""}${(d.cuestionado_por||[]).map(c=>`<dt>${c.abierto?"Cuestionada":"Cuestionada y respondida"}</dt><dd>${esc(c.planteo||"Alguien")}, ${fmtD(c.fecha)}: ${inline(c.titulo)}</dd>`).join("")}${d.decidio?`<dt>Decidió</dt><dd>${inline(d.decidio)}</dd>`:""}${d.porque?`<dt>Por qué</dt><dd>${inline(d.porque)}</dd>`:""}${d.descartamos?`<dt>Descartado</dt><dd>${inline(d.descartamos)}</dd>`:""}${falta?`<dt>Por qué</dt><dd class="more">Cargando…</dd>`:open && d.texto_aparte && sinDetalle(p) && !d.porque?`<dt>Por qué</dt><dd class="more">No se pudo traer: sincroniza el tablero.</dd>`:""}${d.afecta?`<dt>Afecta a</dt><dd>${inline(d.afecta)}</dd>`:""}</dl>${conProy?`<button type="button" class="lnk" style="font-size:13px" data-go-proj="${esc(p.id)}" data-tab="decisiones">Ir al proyecto ›</button>`:""}${cuestDec(d, p)}</article>`:""}</div>`;
 }
 function decList(items, conProy, limite){
   let mes = null, out = "";
@@ -3029,6 +3268,8 @@ function renderSide(){
 let tab = "resumen", EST_FULL = new Set(), AF_ALL = new Set();
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-af-all]"); if(!b) return; const id = b.dataset.afAll; AF_ALL.has(id) ? AF_ALL.delete(id) : AF_ALL.add(id); render(); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-est-full]"); if(!b) return; const id = b.dataset.estFull; EST_FULL.has(id) ? EST_FULL.delete(id) : EST_FULL.add(id); render(); });
+const OBJ_ABIERTO = new Set();
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-obj-mas]"); if(!b) return; const id = b.dataset.objMas; OBJ_ABIERTO.has(id) ? OBJ_ABIERTO.delete(id) : OBJ_ABIERTO.add(id); render(); });
 function renderProjOld(p, tab){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const a = areaBy[p.area];
@@ -3043,7 +3284,9 @@ function renderProjOld(p, tab){
   const ses = hace===null ? "sin sesiones" : hace===0 ? "hoy" : hace===1 ? "ayer" : `hace ${hace} días`;
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo o su alcance siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
-  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub">${inline(p.objetivo)}</p>
+  // el objetivo, en dos líneas con «más» si es largo: empuja las pestañas en el teléfono (1.24)
+  const objLargo = (p.objetivo||"").length > 220;
+  head.innerHTML = `<h1>${esc(p.nombre)}</h1><p class="sub${objLargo && !OBJ_ABIERTO.has(p.id) ? " clamp" : ""}">${inline(p.objetivo)}</p>${objLargo ? `<button type="button" class="lnk" data-obj-mas="${esc(p.id)}" style="font-size:13px">${OBJ_ABIERTO.has(p.id) ? "menos" : "más"}</button>` : ""}
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Responsable: <b>${esc(persona(p.dueno))}</b></span>${(p.colaboran||[]).length?`<span>Colabora: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   let body = "";
