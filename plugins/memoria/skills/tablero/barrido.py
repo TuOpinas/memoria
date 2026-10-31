@@ -619,8 +619,11 @@ def main():
         hoy = hoy or datetime.date.today().isoformat()
     if not fecha_ok(hoy):
         sys.exit("--hoy no es una fecha AAAA-MM-DD")
-    existentes = [d for d in cargar_cola(opt("--cola")) if d["data"].get("tipo") == "propuesta"]
-    ya = {d["id"]: d for d in existentes}
+    todas = [d for d in cargar_cola(opt("--cola")) if d["data"].get("tipo") == "propuesta"]
+    # una propuesta que un cierre ya aplicó (1.24.1: su marca en la base dice «aplicada») se retira sin más
+    aplicadas = [d for d in todas if d["data"].get("estado") == "aplicada"]
+    existentes = [d for d in todas if d["data"].get("estado") != "aplicada"]
+    ya = {d["id"]: d for d in todas}
     por_proyecto = {}
     for d in existentes:
         por_proyecto.setdefault(d["data"].get("proyecto"), []).append(d)
@@ -661,7 +664,7 @@ def main():
         p["data"]["creado"] = ahora
         (salida / "cambios" / f"{p['id']}.json").write_text(json.dumps(p["data"], ensure_ascii=False), encoding="utf-8")
         anadir.append({"id": p["id"], "archivo": f"cambios/{p['id']}.json"})
-    borrar = []
+    borrar = [{"id": d["id"], "if_version": d["version"]} for d in aplicadas]
     for d in existentes:
         # una aceptada desde el tablero la espera el cierre, aunque lo mecánico deje de proponerla (1.22.3). Solo se retira la
         # aceptada de «aportacion» cuya pieza ya la tiene (la escribió el cierre o alguien a mano): ya no hay nada que aplicar

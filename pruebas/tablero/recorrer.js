@@ -371,9 +371,9 @@ const path = require('path');
     p.on('pageerror', e => errores.push(`abierto: ${e.message}`));
     await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(600);
     await p.evaluate(() => {
-      window.__D.meta.estado.sincronizado = new Date(Date.now() - 3600000).toISOString();
+      META.sincronizado = new Date(Date.now() - 3600000).toISOString();   // desde la 1.24.1 viene del archivo, no de la base
       (window.__D.cierres = window.__D.cierres || {})['ventas--cuentas--x'] = { proyecto: 'ventas--cuentas', nombre: 'Cuentas', hora: new Date(Date.now() - 120000).toISOString().slice(0, 16) + 'Z', cuenta: 'ana@ejemplo.test' };
-      window.__emitir('meta/estado'); window.__emitir('cierres');
+      window.__emitir('cierres');
     });
     await p.waitForTimeout(400); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
     await p.evaluate(() => window.dispatchEvent(new Event('focus')));
@@ -389,7 +389,10 @@ const path = require('path');
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
     p.on('pageerror', e => errores.push(`detalle: ${e.message}`));
+    // un tablero que aún no tiene sus archivos (su primera sincronización con la 1.24.1 no corrió) se lee de la base, en vivo
+    await p.addInitScript(() => { window.__SIN_ARCHIVOS = true; });
     await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(800);
+    if(await p.evaluate(() => ARCHIVOS)) errores.push('detalle: sin archivos, la página tenía que leer de la base');
     // desde la 1.24 el registro enseña el periodo y «Ver anteriores» trae lo demás
     await p.evaluate(() => { REG_TODO.add('ventas--cuentas'); render(); }); await p.waitForTimeout(200);
     const fechas = () => p.evaluate(() => [...document.querySelectorAll('#main article.dec.ses time')].map(t => t.textContent));
@@ -412,6 +415,39 @@ const path = require('path');
     await p.waitForTimeout(600);
     const txt = await p.evaluate(() => document.querySelector('#main').textContent);
     if(!/No se pudo traer el detalle/.test(txt)) errores.push(`detalle: sin el documento de detalle, la bitácora tenía que decirlo y no pintarse vacía`);
+    await ctx.close();
+  }
+  // con los archivos (1.24.1): el detalle llega de detalle.json, una sola vez, y si un proyecto no lo tiene se dice
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`archivos: ${e.message}`));
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(800);
+    await p.evaluate(() => { REG_TODO.add('ventas--cuentas'); render(); }); await p.waitForTimeout(300);
+    const r = await p.evaluate(() => ({ archivos: ARCHIVOS, ses: document.querySelectorAll('#main article.dec.ses').length }));
+    if(!r.archivos) errores.push('archivos: la página no leyó sus archivos datos/*.json');
+    if(r.ses !== 2) errores.push(`archivos: la bitácora de Cuentas tenía que enseñar dos sesiones, una del proyecto y otra de detalle.json (${r.ses})`);
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-operacion--soporte-t-registro'); await p.waitForTimeout(600);
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(600);
+    // un proyecto sin detalle en el archivo lo dice, en vez de pintarse vacío
+    await p.evaluate(() => { DETALLE_PROM = Promise.resolve({}); delete TEXTOS['ventas--cuentas']; render(); }); await p.waitForTimeout(400);
+    if(!/No se pudo traer el detalle/.test(await p.evaluate(() => document.querySelector('#main').textContent))) errores.push('archivos: sin el detalle del proyecto en detalle.json, la bitácora tenía que decirlo');
+    // una propuesta del archivo que nadie tocó se acepta creando su marca en la base, con su texto
+    const marca = await p.evaluate(async () => {
+      PROP_ARCHIVO['prop-solo-archivo'] = {tipo: 'propuesta', clase: 'paso-hecho', proyecto: 'ventas--cuentas', texto: 'T', estado: 'pendiente'}; mezclarPropuestas();
+      const q = PROPUESTAS.find(c => c.id === 'prop-solo-archivo'); await marcarPropuesta(q, {estado: 'descartada'});
+      await new Promise(r => setTimeout(r, 50));
+      const d = window.__D.cambios['prop-solo-archivo']; return { d, visto: (PROPUESTAS.find(c => c.id === 'prop-solo-archivo') || {}).estado };
+    });
+    if(!(marca.d && marca.d.tipo === 'propuesta' && marca.d.estado === 'descartada' && marca.d.texto === 'T' && marca.visto === 'descartada')) errores.push(`archivos: descartar una propuesta del archivo no dejó su marca en la base (${JSON.stringify(marca)})`);
+    // la marca «aplicada» de un cierre la quita de la página hasta que la puesta al día la retira
+    const oculta = await p.evaluate(async () => { await DB.doc('cambios/prop-solo-archivo').update({estado: 'aplicada'}); await new Promise(r => setTimeout(r, 50)); return !PROPUESTAS.some(c => c.id === 'prop-solo-archivo'); });
+    if(!oculta) errores.push('archivos: una propuesta marcada «aplicada» seguía en la página');
+    const n = await p.evaluate(() => (window.__pedidos || []).filter(u => /datos\/detalle\.json$/.test(u)).length);
+    if(n !== 1) errores.push(`archivos: detalle.json se tenía que pedir una sola vez (${n})`);
+    // una publicación más nueva que la que enseña la página: se dice, y el botón deja de esperar
+    const aviso = await p.evaluate(async () => { const t = new Date(Date.now() + 60000).toISOString(); (window.__D.publicado = window.__D.publicado || {})['p1'] = {sincronizado: t}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return HAY_NUEVO; });
+    if(!aviso) errores.push('archivos: una puesta al día publicada con la página abierta no se avisó');
     await ctx.close();
   }
   await b.close();

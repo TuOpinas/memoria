@@ -1276,7 +1276,7 @@ if INV is not None:
 
 # ---------- lo que se reutiliza de la base: proyectos y carpetas sueltas que no cambiaron desde la última puesta al día ----------
 def _de_la_base(col, doc):
-    """El documento tal como lo dejó ArtifactData con out_dir (a veces envuelto en «data»), o None."""
+    """El documento tal como lo dejó datos.py base (envuelto en «data»; antes de la 1.24.1, ArtifactData con out_dir), o None."""
     try:
         d = json.loads((PREVIOS / col / f"{doc}.json").read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):

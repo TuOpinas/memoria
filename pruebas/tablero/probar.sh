@@ -72,6 +72,8 @@ python3 "$AQUI/aplicar.py" "$TABLERO/aplicar_cambios.py" "$OUT/raiz-cola"
 # el barrido de lo que las sesiones olvidaron y las propuestas que deja en la cola
 python3 "$AQUI/probar_barrido.py"
 python3 "$AQUI/probar_plan.py"
+# los datos del tablero como archivos publicados (1.24.1)
+python3 "$AQUI/probar_datos.py"
 python3 "$AQUI/probar_que_hay.py"
 python3 "$AQUI/probar_que_es.py"
 python3 "$AQUI/probar_resumenes.py"
