@@ -908,12 +908,18 @@ PALABRAS_SIG = lambda t: {w for w in re.findall(r"[a-záéíóúñ]{4,}", t.lowe
 
 # una línea que cuenta lo que ya pasó, escrita entre las tareas: «2026-10-19: Juanjo activó el plan Odoo…» (1.24). Un nombre
 # con mayúscula (o «Se») y un verbo en pretérito al empezar; las tareas empiezan por infinitivo
-RE_HECHO = re.compile(r"^(?:(?:[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+\s+(?:(?:y|e|de|del|con)\s+)?){1,4}|Se\s+|Ya\s+se\s+)(?:[a-záéíóúñü]+(?:ó|aron|ieron))\b")
+# El nombre no puede ser un infinitivo ni una palabra de enlace («Si Agustín aprobó…, mandar» es una tarea), y la línea no
+# sigue con otra tarea («…: revisarlo», «; esperar respuesta») ni lleva una fecha que aún no llega (revisión de la 1.24).
+_NO_SUJETO = r"(?!(?:Si|Cuando|Tras|Una|Un|Al|En|Con|Para|Por|Desde|Antes|Después|Hasta|Mientras|Aunque|Como|Que)\b)"
+RE_HECHO = re.compile(r"^(?:(?:" + _NO_SUJETO + r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]*[^\Wr\d_]\s+(?:(?:y|e|de|del|con)\s+)?){1,4}|Se\s+|Ya\s+se\s+)(?:[a-záéíóúñü]{2,}(?:ó|aron|ieron))\b")
+RE_SIGUE_TAREA = re.compile(r"[:;,]\s*(?:y\s+)?[a-záéíóúñ]+(?:ar|er|ir)(?:l[oa]s?|le|les)?\b")
+_PREFIJO = lambda t: re.sub(r"^\*\*[^*]+\*\*[.:]?\s*", "", re.sub(r"^(20\d\d-\d\d-\d\d\s*[·:—-]?\s*)", "", t.strip()))
 def naturaleza(texto):
-    if RE_HECHO.match(re.sub(r"^\*\*[^*]+\*\*[.:]?\s*", "", re.sub(r"^(20\d\d-\d\d-\d\d:?\s*)", "", texto.strip()))):
+    limpio = _PREFIJO(texto)
+    if RE_HECHO.match(limpio) and not RE_SIGUE_TAREA.search(limpio) and not any(f_ >= HOY for f_ in re.findall(r"20\d\d-\d\d-\d\d", limpio)):
         return "hecho"
-    t = texto.strip().lower()
-    t = re.sub(r"^(20\d\d-\d\d-\d\d:?\s*)", "", t)
+    # el prefijo en negrita («**Alta de proveedor.** Esperar…») no decide qué es la tarea (revisión de la 1.24)
+    t = limpio.lower()
     if re.match(r"^(sostener|mantener|seguir |continuar|cada (semana|mes|lunes|viernes))", t): return "rutina"
     if re.search(r"(según su caducidad|caducidad|vence en (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)|se revisa en \w+ de 20\d\d|revisión (fijada|trimestral|anual))", t): return "caducidad"
     if re.match(r"^(esperar|recoger la respuesta|a la espera|aguardar)", t) or re.search(r"\bsi no (escribe|contesta|responde|llama|ha llamado|hay respuesta)\b", t) or re.match(r"^(cuando|en cuanto) \w+ (conteste|responda|escriba|confirme|mande|envíe)", t): return "espera"
@@ -969,14 +975,28 @@ def plazos_en(texto):
             out.append(f); previa = True
     return out
 
+# raíces de palabras: el Estatus va en presente («Ana escribe el informe») y la tarea en infinitivo («Escribir el
+# informe»); con las cinco primeras letras sin acentos coinciden (revisión de la 1.24)
+_SIN_ACENTO = str.maketrans("áéíóúü", "aeiouu")
+RAICES = lambda t: {w.translate(_SIN_ACENTO)[:5] for w in PALABRAS_SIG(t or "")}
+def siguiente_de(estatus):
+    """Lo que dice «Siguiente» de un Estatus, partido en sus frases."""
+    m_ = re.search(r"\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*(.+)", estatus or "", re.I)
+    return [x for x in re.split(r";\s+|\.\s+(?=[A-ZÁÉÍÓÚÑ])", m_.group(1)) if x.strip()] if m_ else []
 def senales(paso_texto, area_doc, pdoc):
-    """Señales objetivas de importancia. Vencido no cuenta, por decisión del 2026-10-08."""
-    sig = PALABRAS_SIG(paso_texto)
+    """Señales objetivas de importancia. Vencido no cuenta, por decisión del 2026-10-08. Desde la 1.24, por raíces y no por
+    palabras exactas, y también contra el «Siguiente» del proyecto y del área."""
+    sig = RAICES(paso_texto)
     prio = None
     for i, pr in enumerate(area_doc.get("prioridades", [])):
-        if len(sig & PALABRAS_SIG(pr)) >= 3: prio = i + 1; break
-    cliente = pdoc["area"] == "clientes" or bool(re.search(r"\b(cliente|propuesta|contrato|firma|factur\w*|cobro|precio|impi|acuerdo de confidencialidad)\b", paso_texto.lower()))
-    return {"prioridad_area": prio, "cliente_o_dinero": cliente}
+        if len(sig & RAICES(pr)) >= 2: prio = i + 1; break
+    en_sig = any(len(sig & RAICES(x)) >= 2 for x in siguiente_de(pdoc.get("en_corto")))
+    if not prio and any(len(sig & RAICES(x)) >= 3 for x in siguiente_de(area_doc.get("en_corto"))):
+        prio = 1   # el «Siguiente» del área es su prioridad de ahora
+    # cliente: el área de clientes, alguien de fuera escrito con su organización, o dinero y firmas
+    fuera = any(persona_fuera(m_.group(1), m_.group(2)) for m_ in PERSONA_FUERA.finditer(paso_texto))
+    cliente = pdoc["area"] == "clientes" or fuera or bool(re.search(r"\b(cliente|propuesta|contrato|firma|factur\w*|cobro|precio|impi|acuerdo de confidencialidad)\b", paso_texto.lower()))
+    return {"prioridad_area": prio, "cliente_o_dinero": cliente, **({"en_siguiente": True} if en_sig else {})}
 
 def sin_sesion_de(pc, ses, cerrado):
     """Trabajo sin sesión de un proyecto, mirando solo fechas de archivo (nunca contenido), o None.

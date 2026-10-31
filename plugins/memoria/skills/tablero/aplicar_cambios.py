@@ -5,7 +5,8 @@ La cola ("cambios" en la base de la página) trae siete tipos:
 - fecha: cambio de fecha de un paso de «Siguientes pasos». Se aplica aquí, en la línea del paso.
 - hecho: un paso marcado como hecho, con nota opcional. NO se aplica: cerrarlo bien pide
   quitar el paso, contar qué pasó en sesiones.md y a veces una decisión. Se reporta.
-- nota: algo anotado para la próxima sesión. NO se aplica. Se reporta.
+- nota: algo anotado para la próxima sesión. NO se aplica. Se reporta. Desde la 1.24, la de «Esperas a» lleva «espera» (a quién
+  se esperaba) y, si era una decisión, «decision» (cuál); la sesión la registra como decisión de esa persona.
 - prioridad: una prioridad del área marcada como cumplida o retirada. NO se aplica: area.md lo reescribe
   la sesión del responsable del área. Se reporta.
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
@@ -254,10 +255,11 @@ for c in cargar():
             estado, detalle = "errores", f"{type(e).__name__}: {e}"
         rep[estado].append({"id": c["id"], "proyecto": c.get("proyecto"), "detalle": detalle})
     elif t in ("hecho", "nota", "corregir", "prioridad", "respuesta"):
-        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto", "porque", "titulo", "decidio") if c.get(k) not in (None, "")):
+        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto", "porque", "titulo", "decidio", "espera", "decision") if c.get(k) not in (None, "")):
             rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta, texto o porqué con saltos de línea"})
             continue
-        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")} | ({k: c.get(k) for k in ("decision", "valor", "porque", "titulo", "decidio")} if t == "respuesta" else {}))
+        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")} | ({k: c.get(k) for k in ("decision", "valor", "porque", "titulo", "decidio")} if t == "respuesta" else {})
+                                   | ({k: c[k] for k in ("espera", "decision") if c.get(k)} if t == "nota" else {}))
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})
 print(json.dumps(rep, ensure_ascii=False, indent=1))

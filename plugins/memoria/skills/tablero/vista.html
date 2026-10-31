@@ -1720,13 +1720,27 @@ function bandaRaiz(){
 // el verbo vale con mayúscula inicial («Revisar con Diego…», al principio del paso); el nombre sigue pidiendo mayúscula (1.23)
 const VERBOS_DEBES = "mandar mandarle manda enviar enviarle envía avisar avisarle avisa pedir pedirle pide preguntar preguntarle pregunta escribir escribirle responder responderle llamar presentar proponer compartir agendar confirmar acordar revisar buscar".split(" ");
 const RE_DEBES = new RegExp("\\b(" + VERBOS_DEBES.map(v=>`[${v[0].toUpperCase()}${v[0]}]${v.slice(1)}`).join("|") + ")(?:le)?\\s+(?:a|con)\\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)");
-const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
+const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b|^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?(?:que\s+[A-ZÁÉÍÓÚÑ]|recibir\b)/i;
+// lo que no es esperar a alguien aunque lo diga: una reunión sin fecha o una decisión tuya (revisión de la 1.24)
+const RE_NO_ESPERA = /pendiente de (?:fecha|agendar)|\b(?:sesión|reunión|junta|llamada)\b[^.;]{0,40}\bpendiente\b/i;
+// a quién se espera: el complemento del verbo («esperar la confirmación de X», «a que X…», «recibir … de X») o el sujeto
+// de «Que X haga…»; no la primera persona que el texto nombre (revisión de la 1.24)
+const RE_ESPERADO = [/\b(?:esperar|espera|esperando|pendiente de)\s+(?:(?:a\s+)?que\s+|a\s+)?(?:(?:la|el|los|las|su|sus)\s+)?(?:[a-záéíóúñ]+\s+){0,4}?(?:de\s+|a\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/,
+  /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?que\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i,
+  /\brecibir\b[^.;]{0,60}?\bde\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i];
+const esEspera = (p, s) => !esTareaDecidir(s) && !RE_NO_ESPERA.test(s.texto||"") && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto||""));
+function esperadoEn(p, t){
+  for(const re of RE_ESPERADO){ const m = (t||"").match(re); if(!m) continue; const i = m.index + m[0].length - m[1].length;
+    const f = (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && t.startsWith(n, i)); if(f) return f;
+    const n = nombreEn(t, i, m[1], p); if(n) return n; }
+  return null;
+}
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
 const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy_contexto !== undefined ? META.soy_contexto === true : !!VIEWER() && persona(META && META.contexto_comun)===persona(VIEWER())) : !!(byId[c.a_proyecto] && esMio(byId[c.a_proyecto])));
 // pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
 // un paso citado en una línea: sin la fecha de delante, sin su punto final ni sus comillas, cortado a 70 caracteres
 const citaPaso = t => { const c = corta(t).replace(/[«»]/g,"").replace(/[.\s]+$/,""); return `«${c.length>70 ? c.slice(0,69).replace(/\s+\S*$/,"")+"…" : c}»`; };
-const sinQuienDe = p => stepsLive(p).filter(s=>(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !fueraEn(p, s.texto) && !nombresEn(s.texto, p).length);
+const sinQuienDe = p => stepsLive(p).filter(s=>esEspera(p, s) && !esperadoEn(p, s.texto) && !fueraEn(p, s.texto) && !nombresEn(s.texto, p).length);
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
@@ -1745,9 +1759,10 @@ function conOtros(){
       // («Tras hablar con Bea, pedir a…») no lo hace. Por el nombre completo: con dos Anas, la otra no eres tú (revisión 1.23.4)
       const ms = md && s.texto.slice(0, md.index).match(/(?:^|[^\wáéíóúñü,;:.])([A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){0,3})\s*$/);
       const sujeto = ms ? nombresEn(ms[1]) : [], soyYo = x => !!yoN && persona(x)===yoN, deOtro = sujeto.some(x=>!soyYo(x)), deMi = sujeto.some(soyYo);
-      if(mio && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto))){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto, p).find(fuera); }
+      if(mio && esEspera(p, s)){ lado = "deben"; const e = esperadoEn(p, s.texto); n = e && fuera(e) ? e : e ? null : (fueraEn(p, s.texto) || nombresEn(s.texto, p).find(fuera)); }
       else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2], p); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"quehay", row:key(p.id,s.texto)}); }
+    if(mio) for(const s of stepsLive(p)){ if(!esTareaDecidir(s)) continue; const dd = decisorFd(s.texto); if(dd && (yo ? persona(dd)!==yoN : !esc_.has(persona(dd)))) add(dd, "deben", {p, t:"Decide: "+sinFechaDelante(s.texto), f:effDate(p,s), tab:"quehay", row:key(p.id,s.texto)}); }
     const fd = mio ? faltaDecidir(p) : null; if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
@@ -1993,15 +2008,15 @@ const solapan = (a, b, n) => { let k = 0; for(const w of a) if(b.has(w) && ++k>=
 function siguienteDe(p){ const c = cortoPartes(p); const it = c && c.items.find(i=>/^\**\s*siguiente/i.test(i)); return it ? it.replace(/^\**\s*siguiente\s*:?\s*\**\s*:?\s*/i,"") : ""; }
 const enSiguiente = (p, s) => { const sg = siguienteDe(p); if(!sg) return false; const w = palabras(s.texto); return sg.split(/;\s*/).some(x=>solapan(w, palabras(x), 3)); };
 // una tarea que es una decisión: empieza (tras su fecha, si la lleva) por decidir, elegir o definir; «confirmar» no
-const RE_DECIDIR = /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(decidir|decide|elegir|definir)\b/i;
+const RE_DECIDIR = /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?(decidir|decide|elegir|definir)\b/i;
 const esTareaDecidir = s => RE_DECIDIR.test(s.texto||"");
 const sinFechaDelante = t => (t||"").replace(/^\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*/,"");
-function porQueCritica(p, s){ return enSiguiente(p,s) ? "Siguiente del Estatus" : s.prioridad_area ? "prioridad del área" : s.cliente_o_dinero ? "cliente" : ""; }
+function porQueCritica(p, s){ return (s.en_siguiente || enSiguiente(p,s)) ? "Siguiente del Estatus" : s.prioridad_area ? "prioridad del área" : s.cliente_o_dinero ? "cliente" : ""; }
 // crítica: con fecha en la ventana y además en «Siguiente», en una prioridad del área o de un cliente; por fecha, lo vencido arriba
 function tareasCriticas(filtro){
   const lo = addDays(-VENTANA), hi = addDays(VENTANA), out = [];
   for(const p of PROJ){ if(!activo(p) || !esMio(p) || (filtro && !filtro(p))) continue;
-    for(const s of stepsLive(p)){ const f = effDate(p,s); if(!f || f<lo || f>hi || esTareaDecidir(s) || effNat(p,s)==="espera") continue;
+    for(const s of stepsLive(p)){ const f = effDate(p,s); if(!f || f<lo || f>hi || esTareaDecidir(s) || esEspera(p, s)) continue;
       const why = porQueCritica(p,s); if(why) out.push({p, s, f, why}); } }
   return out.sort((a,b)=>a.f.localeCompare(b.f));
 }
@@ -2013,18 +2028,29 @@ function porDecidir(filtro){
   for(const {p, txt} of paraTi().decidir){ if(filtro && !filtro(p)) continue; out.push({p, txt, fd:true, desde: fechaEstatus(p)}); }
   for(const p of PROJ){ if(!activo(p) || !esMio(p) || (filtro && !filtro(p))) continue;
     for(const s of stepsLive(p)){ if(!esTareaDecidir(s)) continue; const w = palabras(s.texto);
+      // una decisión que el texto da a otra persona («… (Abril del Castillo, con Marco)», «lo decide Ana») no es tuya
+      const dd = decisorFd(s.texto); if(dd && !esYo(dd)) continue;
       // la misma decisión en el Estatus y en una tarea sale una vez, con la fecha de la tarea
       const x = out.find(o=>o.p===p && o.fd && solapan(w, palabras(o.txt), 2)); if(x){ x.tarea = s; continue; }
       out.push({p, txt: sinFechaDelante(s.texto), tarea: s, desde: null}); } }
+  const t = today();
   for(const x of out){ const ws = palabras(x.txt);
     x.espera = nombresEn(x.txt, x.p).find(n=>!esYo(n)) || null;
-    x.bloquea = stepsLive(x.p).filter(s=>s!==x.tarea && !esTareaDecidir(s) && solapan(ws, palabras(s.texto), 3)).length; }
-  return out.sort((a,b)=>(!!b.espera - !!a.espera) || (b.bloquea - a.bloquea) || (a.desde||"9999").localeCompare(b.desde||"9999"));
+    x.bloquea = stepsLive(x.p).filter(s=>s!==x.tarea && !esTareaDecidir(s) && solapan(ws, palabras(s.texto), 3)).length;
+    // lo que más frena primero: en «Siguiente» o en una prioridad del área, luego vencida o con fecha, luego lo que bloquea
+    // (revisión de la 1.24)
+    x.f = x.tarea ? effDate(x.p, x.tarea) : null;
+    x.imp = !!(x.tarea && (x.tarea.en_siguiente || x.tarea.prioridad_area)) || (x.fd && solapan(ws, palabras(siguienteDe(x.p)), 2)); }
+  return out.sort((a,b)=>(b.imp - a.imp) || (!!(b.f && b.f<t) - !!(a.f && a.f<t)) || (a.f||"9999").localeCompare(b.f||"9999") || (b.bloquea - a.bloquea) || (a.desde||"9999").localeCompare(b.desde||"9999"));
 }
 // lo que otras personas te deben: el «te debe» de lo que antes era «Con otros»
 function esperasA(filtro){
-  const out = [];
-  for(const g of conOtros()) for(const x of g.deben){ if(filtro && !filtro(x.p)) continue; out.push({n: g.n, org: ORG_DE[g.n] || (g.dentro ? "" : ""), ...x}); }
+  const out = [], ks = new Set();
+  for(const g of conOtros()) for(const x of g.deben){ if(filtro && !filtro(x.p)) continue; out.push({n: g.n, org: ORG_DE[g.n] || "", ...x}); ks.add(x.row || ("fd:"+x.p.id+":"+g.n)); }
+  // lo cerrado aquí cuya marca sigue en la cola: se queda a la vista para poder deshacerlo
+  for(const [k, x] of ESP_CERRADAS){ if(ks.has(k) || (filtro && !filtro(x.p))) continue;
+    const sigue = CAMBIOS.some(c=>c.proyecto===x.p.id && ((c.tipo==="hecho" && x.row && key(x.p.id,c.paso||"")===x.row) || (c.tipo==="nota" && (c.nota||"").startsWith(`Espera a ${x.n}: `))));
+    if(sigue) out.push({...x, org: ORG_DE[x.n] || ""}); else ESP_CERRADAS.delete(k); }
   return out.sort((a,b)=>(a.f||"9999").localeCompare(b.f||"9999"));
 }
 // lo que decidieron otros y toca un proyecto tuyo, con la respuesta que dejaste en la cola
@@ -2052,11 +2078,11 @@ let ESP_FORM = null;
 function filaEspera(x){
   const st = x.row ? stepsLive(x.p).find(s=>key(x.p.id,s.texto)===x.row) || (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
   const k = x.row || ("fd:"+x.p.id+":"+x.n), hecho = st ? pend(x.p.id, st.texto).hecho : null;
-  const nota = !st ? CAMBIOS.find(c=>c.tipo==="nota" && c.proyecto===x.p.id && (c.nota||"").startsWith(`Espera a ${x.n}: `)) : null, r = hecho || nota;
+  const nota = CAMBIOS.find(c=>c.tipo==="nota" && c.proyecto===x.p.id && (c.nota||"").startsWith(`Espera a ${x.n}: `)) || null, r = hecho || nota;
   const dias = x.f ? diasDesde(x.f) : null;
   const pill = dias!==null && dias>0 ? `<span class="pill ${dias>7?"late":"none"}">${cuantos(dias,"día","días")}</span>` : `<span class="pill none">${x.f ? fmtD(x.f) : "sin fecha"}</span>`;
   const esDec = /^Decide:/.test(x.t);
-  const acts = !puedeMarcar() ? "" : r ? `<span class="toast-i">${/Ya no aplica/.test(r.nota||"") ? "Ya no aplica" : "Ya llegó"} · lo pasa a ${esc(x.p.nombre)} la próxima puesta al día</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
+  const acts = !puedeMarcar() ? "" : r ? `<span class="toast-i">${/Ya no aplica/.test(r.nota||"") ? "Ya no aplica" : "Ya llegó"} · lo registra ${r.tipo==="hecho" && r.nota ? "la próxima puesta al día" : `tu próxima sesión de ${esc(x.p.nombre)}`}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
     : `<button type="button" class="chip" data-esp-ok="${esc(k)}">Ya llegó</button><button type="button" class="chip ghost" data-esp-drop="${esc(k)}">Ya no aplica</button>`;
   const form = ESP_FORM===k ? `<form class="hecho-form" data-esp-form="${esc(k)}"><label class="sr" for="esp-nota">${esDec?"Qué decidió":"Qué llegó"}</label><input id="esp-nota" class="search" type="text" maxlength="240" placeholder="${esDec?"¿Qué decidió? Con esto, la sesión registra su decisión":"Algo que apuntar, por ejemplo dónde quedó (opcional)"}"><button type="submit" class="btn">Marcar que llegó</button><button type="button" class="chip ghost" data-esp-cancel>Cancelar</button></form>` : "";
   return `<div class="due-item static acc-i${r?" resp":""}" data-esp="${esc(k)}">${pill}<span class="t"><span><b>${esc(x.n)}</b>${x.org?` <span class="pill org">${esc(x.org)}</span>`:""} · ${inline(corta(x.t))}</span><span class="w">${irProy(x.p, x.tab||"estatus", x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}${x.f?` · desde el ${fmtD(x.f)}`:""}${r && r.nota && !/^Ya no aplica$/.test(r.nota) ? ` · «${esc(r.nota.replace(/^Espera a [^:]+: /,""))}»` : ""}</span></span>${acts?`<span class="acc-b">${acts}</span>`:""}${form}</div>`;
@@ -2074,15 +2100,24 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("submit", e => { const f = e.target.closest && e.target.closest("[data-esp-form]"); if(!f) return; e.preventDefault();
   const k = f.dataset.espForm, x = esperasA().find(x=>(x.row || ("fd:"+x.p.id+":"+x.n))===k); ESP_FORM = null; if(x) cerrarEspera(x, f.querySelector("#esp-nota").value.trim() || "Llegó"); });
+// lo cerrado aquí sigue en «Esperas a», con «Deshacer», mientras la carpeta no lo registre (revisión de la 1.24)
+const ESP_CERRADAS = new Map();
 async function cerrarEspera(x, nota){
+  ESP_CERRADAS.set(x.row || ("fd:"+x.p.id+":"+x.n), x);
   const st = x.row ? (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
-  if(st){ await marcarHecho(x.p, st, nota); return; }
-  await anotar(x.p, `Espera a ${x.n}: ${nota==="Ya no aplica" ? "Ya no aplica" : nota}`);
+  // una decisión que se esperaba no es una tarea hecha: la nota dice a quién se esperaba y que era una decisión, y la
+  // registra la sesión del proyecto como decisión (cerrar.md, paso 0)
+  const esDec = /^Decide:/.test(x.t);
+  if(st && !esDec){ await marcarHecho(x.p, st, nota); return; }
+  const txt = `Espera a ${x.n}: ${nota==="Ya no aplica" ? "Ya no aplica" : nota}`;
+  await addCambio({tipo:"nota", proyecto:x.p.id, nota:txt, espera:x.n, ...(esDec && nota!=="Ya no aplica" ? {decision:x.t.replace(/^Decide:\s*/,"")} : {}), ...(st ? {paso:st.texto} : {})}); render();
 }
 function filaPorDecidir(x, conArea){
   // con quién se decide, si nombra a alguien; si frena tareas del proyecto, cuántas (1.24)
-  const senal = [x.bloquea ? `Bloquea ${cuantos(x.bloquea,"tarea","tareas")}` : "", x.espera ? `con ${esc(x.espera)}` : ""].filter(Boolean).join(" · ");
-  return `<div class="due-item static acc-i np"><span class="t">${inline(comoPregunta(x.txt))}${x.tarea && !x.fd?` <span class="tag-t">de una tarea</span>`:""}<span class="w">${senal?`<b class="senal">${senal}</b> · `:""}${irProy(x.p, "estatus", {sel:".corto-l li", texto:"Falta decidir"})}${conArea?` · ${esc(areaBy[x.p.area]?.nombre||"")}`:""}${x.desde?` · desde el ${fmtD(x.desde)}`:""}</span></span><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(fraseDecidir(x.p, x.txt))}">Decidir con Claude</button></span></div>`;
+  // la señal solo cuando la decisión bloquea algo; con quién, junto a eso (revisión de la 1.24)
+  const t = today(), senal = x.bloquea ? [`Bloquea ${cuantos(x.bloquea,"tarea","tareas")}`, x.espera ? `con ${esc(x.espera)}` : ""].filter(Boolean).join(" · ") : "";
+  const plazo = x.f ? (x.f < t ? `<b class="senal">venció el ${fmtD(x.f)}</b> · ` : `para el ${fmtD(x.f)} · `) : "";
+  return `<div class="due-item static acc-i np"><span class="t">${inline(comoPregunta(x.txt))}${x.tarea && !x.fd?` <span class="tag-t">de una tarea</span>`:""}<span class="w">${plazo}${senal?`<b class="senal">${senal}</b> · `:""}${irProy(x.p, "estatus", {sel:".corto-l li", texto:"Falta decidir"})}${conArea?` · ${esc(areaBy[x.p.area]?.nombre||"")}`:""}${x.desde?` · desde el ${fmtD(x.desde)}`:""}</span></span><span class="acc-b"><button type="button" class="chip pri" data-copy="${esc(fraseDecidir(x.p, x.txt))}">Decidir con Claude</button></span></div>`;
 }
 function seccionDecidir(filtro, conArea){
   const xs = porDecidir(filtro); if(!xs.length) return "";

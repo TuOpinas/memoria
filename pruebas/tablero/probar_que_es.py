@@ -108,8 +108,13 @@ ok(pf("Contratar Microsoft Dynamics (Acme)") == [] and pf("Instalar Zendesk Sell
 ok(pf("Decidir los envíos a destiempo (Coordinador de Campo (Abril del Castillo y Juanjo, con Marco Herrero))") == [] and pf("Revisar con Ana Centeno (Acme, con Beto Prueba)") == [], "entre paréntesis va una organización, no una lista de personas (1.24)")
 hecho = _ns.get("RE_HECHO")
 if hecho is None:
-    import re as _re; exec(next(l for l in GV.read_text(encoding="utf-8").split("\n") if l.startswith("RE_HECHO")), {"re": _re}, _ns); hecho = _ns["RE_HECHO"]
+    import re as _re
+    for _l in GV.read_text(encoding="utf-8").split("\n"):
+        if _l.startswith(("_NO_SUJETO", "RE_HECHO", "RE_SIGUE_TAREA", "_PREFIJO")): exec(_l, {"re": _re, **_ns}, _ns)
+    hecho = _ns["RE_HECHO"]
 ok(bool(hecho.match("Juanjo activó el plan Odoo Estándar")) and bool(hecho.match("Agustín Torres firmó el acuerdo")) and bool(hecho.match("Se mandó la propuesta")), "una línea que cuenta lo que ya pasó se reconoce (1.24)")
+es_hecho = lambda x: bool(hecho.match(_ns["_PREFIJO"](x))) and not _ns["RE_SIGUE_TAREA"].search(_ns["_PREFIJO"](x))   # como naturaleza(), sin la fecha
+ok(not es_hecho("Luis Mejía envió el contrato: revisarlo antes del 2026-11-03") and not es_hecho("Si Agustín aprobó la propuesta, mandar el contrato") and not es_hecho("Consultar buró de crédito") and not es_hecho("Ya se pidió el acceso; esperar respuesta de Ana Centeno (Acme)"), "lo que sigue con una tarea, va tras «si» o empieza por un infinitivo no es un hecho pasado (revisión de la 1.24)")
 ok(not hecho.match("Llamar a Ana Centeno") and not hecho.match("Ana Prueba pide a Beto el contrato") and not hecho.match("Esperar a que Salvador mande el acta"), "una tarea con infinitivo o en presente sigue siendo tarea")
 print("Nombres que se quedan al reutilizar la base (revisión 1.22.4, hallazgo 5)")
 tmp = pathlib.Path(tempfile.mkdtemp()); raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
