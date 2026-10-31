@@ -75,7 +75,7 @@ const path = require('path');
     if(!(act.area && act.persona && act.dias)) errores.push(`${etiqueta}: Inicio › Actividad no trae «Por área», «Por persona» y el periodo (${JSON.stringify(act)})`);
     // «Por persona» (1.23) con un equipo inventado: quien colabora en un área sale; tres sesiones del mismo día son tres; un
     // documento cuenta escrito para quien lo escribió y publicado para quien lo publicó; los que no tuvieron sesión van abajo;
-    // las acciones planeadas cuentan los pasos que los nombran; el combo de área reduce la lista; «Con otros» los ve del equipo
+    // las tareas abiertas cuentan las de «Siguientes pasos» que los nombran; el combo de área reduce la lista; «Con otros» los ve del equipo
     if(etiqueta === 'completo-claro'){
       const pp = await p.evaluate(() => {
         const guardado = {AREAS, PROJ, areaBy, byId, META, ACT_AREA, ACT_DIAS};
@@ -117,12 +117,12 @@ const path = require('path');
       const fila = n => pp.filas.find(x=>x.startsWith(n)) || "", quieta = n => pp.quietas.find(x=>x.startsWith(n)) || "";
       // 1.23.3: el papel, al pasar por el nombre; lo que vale cero no se escribe
       const bien = pp.filas.length === 4 && /no figura en la carpeta/.test(fila("Fede")) && /2 sesiones/.test(fila("Bruno")) && /^Colabora en operación$/.test(pp.tips["Bruno Esquivel"]||"") && !/colabora/.test(fila("Bruno")) && /1 decisión/.test(fila("Bruno"))
-        && /3 escritos/.test(fila("Bruno")) && !/documentos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 acción planeada/.test(fila("Bruno"))
-        && /2 sesiones/.test(fila("Ana Lombardo")) && /1 publicado/.test(fila("Ana Lombardo")) && !/escrito/.test(fila("Ana Lombardo")) && !/planead/.test(fila("Ana Lombardo"))
+        && /3 escritos/.test(fila("Bruno")) && !/documentos/.test(fila("Bruno")) && !/publicado/.test(fila("Bruno")) && /1 tarea abierta/.test(fila("Bruno"))
+        && /2 sesiones/.test(fila("Ana Lombardo")) && /1 publicado/.test(fila("Ana Lombardo")) && !/escrito/.test(fila("Ana Lombardo")) && !/tarea abierta/.test(fila("Ana Lombardo"))
         && !/sesi/.test(fila("Carmen")) && /1 decisión/.test(fila("Carmen"))
-        && /· 2 sesiones/.test(pp.tipBruno) && pp.quietas.length === 4 && /1 acción planeada/.test(quieta("Diego")) && /1 acción planeada/.test(quieta("Ángel"))
-        && /1 acción planeada/.test(quieta("Ana Ruiz")) && /última sesión el/.test(quieta("Elena"))
-        && /^1 de 6 sesiones del periodo no dice quién la cerró/.test(pp.nota) && !/documento vigente/.test(pp.nota) && !/cuenta como escrito/.test(pp.nota) && /1 paso nombra a alguien solo por un nombre de pila/.test(pp.nota) && !/de antes/.test(pp.nota)
+        && /· 2 sesiones/.test(pp.tipBruno) && pp.quietas.length === 4 && /1 tarea abierta/.test(quieta("Diego")) && /1 tarea abierta/.test(quieta("Ángel"))
+        && /1 tarea abierta/.test(quieta("Ana Ruiz")) && /última sesión el/.test(quieta("Elena"))
+        && /^1 de 6 sesiones del periodo no dice quién la cerró/.test(pp.nota) && !/documento vigente/.test(pp.nota) && !/cuenta como escrito/.test(pp.nota) && /1 tarea nombra a alguien solo por un nombre de pila/.test(pp.nota) && !/de antes/.test(pp.nota)
         && pp.otros.some(g=>g.n==="Bruno Esquivel" && g.dentro) && pp.otros.some(g=>g.n==="Diego Antúnez" && g.dentro) && pp.otros.some(g=>g.n==="Ángel Ruiz" && g.dentro)
         && pp.otros.some(g=>g.n==="Ana Ruiz" && g.dentro) && !pp.otros.some(g=>g.n==="Ana Lombardo") && pp.decide === null && /en Alfa/.test(pp.nota)
         && pp.tec.length === 3 && /^Ana Lombardo/.test(pp.tec[0]) && /^Administra la carpeta · responsable de operación · trabajó en esta área$|^Responsable de operación · trabajó en esta área$/.test(pp.tipsTec["Ana Lombardo"]||"") && pp.sel;
