@@ -9,7 +9,7 @@
       "name": "memoria",
       "source": "./plugins/memoria",
       "description": "Memoria de la organizacion: metodo de trabajo y documentacion por proyecto que la IA lee y sobre el que los equipos construyen.",
-      "version": "1.24.4"
+      "version": "1.24.5"
     }
   ]
 }
