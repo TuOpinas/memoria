@@ -182,6 +182,25 @@ try:
        f"con --vista sale el código de esta versión y se quita el de la anterior ({prev} → {VER}: {r4.get('quitar')})")
     rc, out, err = corre(DATOS, "publicar", t2, "--vista", VISTA, "--portada", VISTA)
     ok(rc != 0 and "solo una" in err, "--vista y --portada no van juntas")
+    _vieja = t2 / "estado-vieja.json"
+    _vieja.write_text(json.dumps({"organizacion": "Ana & Co", "version_tablero": "1.24.3", "pagina_actualizada": {"version": "1.24.3"}, "publicado_id": "x"}), encoding="utf-8")
+    rc, out, err = corre(DATOS, "partir", _vieja, VISTA, t2 / "partir")
+    r5 = json.loads(out) if rc == 0 else {}
+    e5 = lee(t2 / "partir" / "datos" / "estado.json") if rc == 0 else {}
+    ok(rc == 0 and r5.get("partida") is False and [a["as"] for a in r5["archivos"]] == ["index.html", f"vista-{VER}.css", f"vista-{VER}.js", "datos/estado.json"]
+       and e5.get("pagina_actualizada", {}).get("version") == VER and e5.get("pagina_actualizada", {}).get("desde") == "1.24.3"
+       and e5.get("publicado_id") == "x" and r5.get("titulo") == "Tablero Ana & Co",
+       f"«partir» parte una página de una pieza y apunta su versión en estado.json sin tocar lo demás ({err[-200:]})")
+    _vieja.write_text(json.dumps({"organizacion": "X", "version_tablero": "1.24.10", "pagina_actualizada": {"version": "1.24.10"}}), encoding="utf-8")
+    rc, out, err = corre(DATOS, "partir", _vieja, VISTA, t2 / "partir")
+    ok(rc == 0 and json.loads(out) == {"partida": True}, "y con la página ya partida no hace nada")
+    _vieja.write_text(json.dumps({"organizacion": "X", "version_tablero": "1.24.3"}), encoding="utf-8")
+    for dest in ("", ".", "relativo", "/", str(pathlib.Path.cwd())):
+        rc, out, err = corre(DATOS, "partir", _vieja, VISTA, dest)
+        ok(rc != 0 and "absoluta" in err, f"«partir» no acepta «{dest}» como salida: la vacía antes de escribir")
+    _vieja.write_text("{}", encoding="utf-8")
+    rc, out, err = corre(DATOS, "partir", _vieja, VISTA, t2 / "partir")
+    ok(rc != 0 and "organizacion" in err, "«partir» no publica un estado.json sin organización ni versión")
     rc, out, err = corre(DATOS, "pagina", VISTA, t2 / "pagina", "--titulo", "Tablero <Ana & Co>")
     ok(rc == 0 and [a["as"] for a in json.loads(out)["archivos"]] == ["index.html", f"vista-{VER}.css", f"vista-{VER}.js"]
        and "<title>Tablero &lt;Ana &amp; Co&gt;</title>" in (t2 / "pagina" / "index.html").read_text(encoding="utf-8"),
