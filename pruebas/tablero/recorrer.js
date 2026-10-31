@@ -300,10 +300,10 @@ const path = require('path');
     if(!(h.nombre && h.h1 === h.nombre)) errores.push(`un proyecto cerrado en Estatus no pinta su cabecera (${JSON.stringify(h)})`);
     await ctx.close();
   }
-  // a 320 px: las pestañas que no caben se desvanecen por el lado que sigue; «Sincronizar ahora» va en la barra; y el número
+  // a 300 px (a 320, sin el margen de la 1.24.6, casi caben): las pestañas que no caben se desvanecen por el lado que sigue; «Sincronizar ahora» va en la barra; y el número
   // de Mantenimiento cuenta solo lo que pide una acción (1.22.5)
   {
-    const ctx = await b.newContext({ viewport: { width: 320, height: 700 } });
+    const ctx = await b.newContext({ viewport: { width: 300, height: 700 } });
     const p = await ctx.newPage(); p.on('pageerror', e => errores.push(`320: ${e.message}`));
     const url = 'file://' + path.resolve(dir, 'completo.html');
     await p.goto(url + '#p-ventas--cuentas-t-estatus'); await p.waitForTimeout(500);

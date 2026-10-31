@@ -49,6 +49,10 @@ Uso, en el orden de la puesta al día:
   datos.py partida <trabajo>
       Paso 1a, con las herramientas de antes (1.24.5): «si» si la página publicada ya va partida, «no» si aún es la de
       una sola pieza, que esas herramientas no pueden reemplazar (habría que leerla entera).
+  datos.py partir <estado.json> <vista.html> <directorio>
+      1.24.6: desde una sesión con el conector, parte una vez la página de un tablero que aún la tiene de una sola pieza.
+      Con la página ya partida imprime {"partida": true}; si no, deja la portada, su código y estado.json con la versión
+      nueva de la página e imprime «archivos» (van tal cual a publish_files) y «titulo».
   datos.py rutas <trabajo>
       Paso e (1.24.2): imprime en una línea la lista JSON de los archivos que hay que traer con read_file (tablero.json,
       propuestas.json, los proyectos y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
@@ -566,7 +570,8 @@ def rutas(trabajo):
 
 def version_pagina(estado):
     e = estado or {}
-    return str((e.get("pagina_actualizada") or {}).get("version") or e.get("version_tablero") or "")
+    pa = e.get("pagina_actualizada") if isinstance(e.get("pagina_actualizada"), dict) else {}
+    return str(pa.get("version") or e.get("version_tablero") or "")
 
 
 def _num(v):
@@ -579,6 +584,47 @@ def partida(trabajo):
     e = _datos(_json(pathlib.Path(trabajo) / "base" / "meta" / "estado.json"))
     v = version_pagina(e if isinstance(e, dict) else None)
     print("si" if _num(v) >= (1, 24, 5) else "no")
+
+
+def _hoy_org(e):
+    """La fecha de hoy en la zona de la organización, con la diferencia horaria de la última sincronización (que la
+    escribe en esa zona); sin ella, UTC. Nunca la del reloj del contenedor tal cual, que por la tarde ya dice mañana."""
+    import datetime
+    m = re.search(r"([+-])(\d{2}):?(\d{2})$", str(e.get("sincronizado") or ""))
+    off = datetime.timedelta(hours=int(m.group(2)), minutes=int(m.group(3))) * (1 if m and m.group(1) == "+" else -1) if m else datetime.timedelta(0)
+    return (datetime.datetime.now(datetime.timezone.utc) + off).date().isoformat()
+
+
+def partir(estado_json, vista, destino):
+    """Parte una vez la página de un tablero que aún la tiene de una sola pieza (1.24.6), desde una sesión con el conector
+    claude-artifacts, que publica sin leer la página. Lee datos/estado.json tal como lo trajo read_file. Si la página ya va
+    partida imprime {"partida": true} y nada más; si no, deja en <destino> la portada, su código y estado.json con la
+    versión nueva de la página (para que las corridas sin conector sigan solas) e imprime «archivos» y «titulo»."""
+    e = _datos(_json(pathlib.Path(estado_json)))
+    if not isinstance(e, dict):
+        sys.exit(f"No puedo leer {estado_json} como datos/estado.json del tablero.")
+    if not e.get("organizacion") or not e.get("version_tablero"):
+        sys.exit(f"{estado_json} no trae organizacion ni version_tablero: no parece el estado.json de un tablero; no lo parto.")
+    d = pathlib.Path(destino)
+    if not str(destino).strip() or not d.is_absolute() or d.resolve() in [pathlib.Path.cwd().resolve(), *pathlib.Path.cwd().resolve().parents] \
+            or d.resolve() == pathlib.Path.home().resolve() or len(d.resolve().parts) < 3:
+        sys.exit(f"El directorio de salida tiene que ser uno nuevo, con ruta absoluta, como <scratchpad>/partir (no «{destino}»): se vacía antes de escribir.")
+    if _num(version_pagina(e)) >= (1, 24, 5):
+        print(json.dumps({"partida": True}))
+        return
+    titulo = ("Tablero " + str(e.get("organizacion") or "").strip()).strip()
+    partes, ver = partir_vista(pathlib.Path(vista).read_text(encoding="utf-8"), titulo)
+    e = dict(e, pagina_actualizada={**(e.get("pagina_actualizada") if isinstance(e.get("pagina_actualizada"), dict) else {}),
+                                    "version": ver, "desde": version_pagina(e) or None, "fecha": _hoy_org(e)})
+    _vacia(d)
+    d.mkdir(parents=True, exist_ok=True)
+    archivos = []
+    for n, t in partes.items():
+        (d / n).write_text(t, encoding="utf-8")
+        archivos.append({"as": n, "path": str((d / n).resolve())})
+    _escribe(d / "datos" / "estado.json", e)
+    archivos.append({"as": "datos/estado.json", "path": str((d / "datos" / "estado.json").resolve())})
+    print(json.dumps({"partida": False, "archivos": archivos, "titulo": titulo}, ensure_ascii=False))
 
 
 def pagina(vista, destino, titulo):
@@ -604,6 +650,8 @@ def main():
         base(a[1], a[2:])
     elif len(a) >= 2 and a[0] == "publicar":
         publicar(a[1], a[2:])
+    elif len(a) == 4 and a[0] == "partir":
+        partir(a[1], a[2], a[3])
     elif len(a) == 5 and a[0] == "pagina" and a[3] == "--titulo":
         pagina(a[1], a[2], a[4])
     else:
