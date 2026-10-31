@@ -39,7 +39,7 @@ Uso, en el orden de la puesta al día:
       Las sugerencias de un proyecto, una por línea en JSON con su id, para la apertura de una sesión (skill sesion).
 No lee ni escribe nada de la carpeta de memoria.
 """
-import sys, json, pathlib, re, html, shutil
+import sys, json, pathlib, re, html, shutil, time
 
 ARCHIVO_COLS = ("areas", "proyectos", "resumenes")
 ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como id de documento
@@ -316,7 +316,8 @@ def publicar(trabajo, args):
     if not isinstance(estado.get("pagina_actualizada"), dict) and estado.get("version_tablero") and (vista or not primera):
         estado["pagina_actualizada"] = {"version": estado["version_tablero"]}
     sinc = estado.get("sincronizado")
-    marca = "p" + re.sub(r"[^0-9]", "", str(sinc))[:12] if sinc else None
+    # el id lleva el minuto del inventario y el instante de la corrida: dos puestas al día en el mismo minuto no comparten marca
+    marca = "p" + re.sub(r"[^0-9]", "", str(sinc))[:12] + "-" + format(int(time.time() * 1000) % 10**8, "08d") if sinc else None
     previas = [x for x in (_json(trabajo / "publicado.json") or []) if isinstance(x, dict) and x.get("id")]
     cambia = {k for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None and (primera or ahora[k] != antes[k])}
     # solo la hora: nada de los archivos ni de meta/estado cambió salvo lo de la corrida (una regeneración que deja la
@@ -360,6 +361,9 @@ def publicar(trabajo, args):
     base += _lotes([{"op": "delete", "path": f"publicado/{x['id']}", "ifVersion": x["version"]}
                     for x in previas if x["id"] != marca and x.get("version") is not None])
     salida_ = {"archivos": archivos, "base": base}
+    if archivos:
+        # el nombre del artifact: la publicación lo pasa como «title» si el de get_artifact es otro (« completo», de antes de la 1.18)
+        salida_["titulo"] = ("Tablero " + str(estado.get("organizacion") or "").strip()).strip()
     # el paso e trae tablero, propuestas y detalle en una llamada de 4 MiB como mucho: se mira cada uno y la suma
     pesos = {k: len(json.dumps(ahora[k], ensure_ascii=False, separators=(",", ":")).encode("utf-8")) for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None}
     grandes = [f"datos/{k}.json ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
