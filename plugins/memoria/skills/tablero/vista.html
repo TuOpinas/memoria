@@ -865,7 +865,7 @@ const isDone = (p, s) => !!pend(p.id, s.texto).hecho;
 const cambiosVis = () => OWNER ? CAMBIOS : CAMBIOS.filter(c => c.area && !c.proyecto ? (areaBy[c.area] && areaBy[c.area].legible!==false) : (byId[c.proyecto] && !byId[c.proyecto].restringido));
 const notasDe = pid => CAMBIOS.filter(c=>c.tipo==="nota" && c.proyecto===pid).sort((a,b)=>(b.creado||"").localeCompare(a.creado||""));
 const stepsLive = _memo1("vivos", p => (p.pasos||[]).filter(s=>!isHeader(s) && !isDone(p,s)));
-const CORR_OPC = [["rutina","Es una rutina, no un paso"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
+const CORR_OPC = [["rutina","Es una rutina, no una tarea"],["condicional","Depende de que pase algo"],["decision","Es una decisión, se toma en sesión"],["sin-plazo","La fecha del texto no es un plazo"]];
 async function addCambio(data){
   try{ await DB.collection("cambios").add({...data, creado: nowISO(), estado:"pendiente"});
     avisoAjeno(data.proyecto && byId[data.proyecto]); }
@@ -1122,10 +1122,10 @@ document.addEventListener("click", e => {
   addCambio({tipo:"prioridad", area, indice:Number(b.dataset.i)+1, texto:b.dataset.txt, proyecto:null, paso:null, propuesta, nota:null}).then(render);
 });
 // ---- naturaleza e importancia de un paso ----
-const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"depende de algo", rutina:"rutina", caducidad:"revisión con fecha"};
+const NAT = {accion:"acción", decision:"decisión", espera:"espera", condicional:"depende de algo", rutina:"rutina", caducidad:"revisión con fecha", hecho:"ya pasó"};
 const NAT_HINT = {
   accion:"Se hace una vez: ponle fecha", decision:"Hay que decidirlo, mejor en una sesión", espera:"Depende de alguien de fuera: ponle fecha para darle seguimiento",
-  condicional:"Se hace cuando pase algo: ponle la fecha en que toca mirarlo, o déjalo para después", rutina:"Se hace siempre, no una vez: va a las prioridades del área o se vuelve un hábito", caducidad:"Toca revisar algo en una fecha: no vence, se revisa"};
+  condicional:"Se hace cuando pase algo: ponle la fecha en que toca mirarlo, o déjalo para después", rutina:"Se hace siempre, no una vez: va a las prioridades del área o se vuelve un hábito", caducidad:"Toca revisar algo en una fecha: no vence, se revisa", hecho:"Cuenta algo que ya pasó: va a la bitácora en una sesión, no a las tareas"};
 function natPill(s, p){ if(!s.naturaleza) return ""; const n = p ? effNat(p, s) : s.naturaleza; const c = p ? pend(p.id, s.texto).corregir : null; return `${n==="accion" && !c ? "" : `<span class="pill nat ${n}" ${tip(NAT_HINT[n]||"")}>${NAT[n]||n}${c?" ⟳":""}</span>`}${(s.puntos||0)>=5?`<span class="pill imp" ${tip("Importante: "+[s.prioridad_area?"está en las prioridades del área":"", s.cliente_o_dinero?"toca cliente o dinero":"", s.desbloquea?"desbloquea otros proyectos":""].filter(Boolean).join(" · "))}>importante</span>`:""}`; }
 async function copiar(txt, btn){
   try{ await navigator.clipboard.writeText(txt); flash(btn && btn.dataset.copyMsg || "Copiado. Pégalo en una conversación con la carpeta conectada."); }
@@ -1138,10 +1138,10 @@ function regNecesita(p){
   // una revisión con fecha que ya tocó se avisa aparte («revisión por hacer»), no aquí
   const tday = today();
   for(const s of live){ if(s.revisar && s.revisar<=tday) continue; const n = effNat(p,s); by[n] = (by[n]||0)+1; }
-  const raros = ["rutina","condicional","caducidad"].filter(k=>by[k]);
+  const raros = ["hecho","rutina","condicional","caducidad"].filter(k=>by[k]);
   const nR = raros.reduce((n,k)=>n+by[k],0);
-  if(nR < 2 && live.length < 12) return null;
-  const PL = {accion:["acción","acciones"], decision:["decisión","decisiones"], espera:["espera","esperas"], condicional:["que depende de algo","que dependen de algo"], rutina:["rutina","rutinas"], caducidad:["revisión con fecha","revisiones con fecha"]};
+  if(nR < 2 && live.length < 12 && !by.hecho) return null;
+  const PL = {accion:["acción","acciones"], decision:["decisión","decisiones"], espera:["espera","esperas"], condicional:["que depende de algo","que dependen de algo"], rutina:["rutina","rutinas"], hecho:["que ya pasó","que ya pasaron"], caducidad:["revisión con fecha","revisiones con fecha"]};
   const pl = (k,n) => `${n} ${(PL[k]||[k,k])[n===1?0:1]}`;
   return {total: live.length, raros: raros.map(k=>pl(k,by[k])), nRaros: raros.reduce((n,k)=>n+by[k],0)};
 }
@@ -1395,7 +1395,7 @@ function colaRows(){
     return `<div class="due-item static${orf?" orf":""}"><span class="pill ${c.tipo==="nota"?"":orf?"late":"soon"}">${orf?"ya no coincide":c.tipo}</span><span class="t">${que}${orf?`<span class="pend-note" style="display:block">La tarea ya no está escrita así en la carpeta: la sincronización no lo aplicará. Deshazlo o resuélvelo en una sesión.</span>`:""}</span><span class="w">${esc((areaBy[p.area]?.nombre||""))} · <button type="button" class="lnk" data-go-proj="${esc(p.id)}">${esc(p.nombre)}</button> · ${esc((c.creado||"").slice(0,10))}${CAN?` · <button type="button" class="lnk" data-undo="${esc(c.id)}">Deshacer</button>`:""}</span></div>`;
   }).join("");
 }
-const NAT_ORD = {accion:0, decision:1, espera:2, condicional:3, rutina:4, caducidad:5};
+const NAT_ORD = {accion:0, decision:1, espera:2, condicional:3, rutina:4, caducidad:5, hecho:6};
 const stepOrder = p => (a,b) => ((b.puntos||0)-(a.puntos||0)) || ((NAT_ORD[effNat(p,a)]??9)-(NAT_ORD[effNat(p,b)]??9)) || ((effDate(p,a)||"9999").localeCompare(effDate(p,b)||"9999"));
 function dot(p){ const e = projStatus(p); return `<i class="dot ${e.dot}${e.riesgo?" risk":""}" ${tip(e.label+(e.riesgo?" · en riesgo":"")+": "+e.regla+(e.riesgo?"; "+e.riesgoRegla:"")+". "+((EST[e.k]||{}).desc||""))}></i>`; }
 // ===================== Inicio, área y proyecto en cuatro pestañas (1.22.3) =====================
@@ -1569,7 +1569,7 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
     for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
-    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d/i.test(m[2])) ORG_DE[m[1].trim()] = m[2].trim(); } }
+    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d|,|;|\s(?:y|e|con)\s/i.test(m[2]) && !PROJ.some(q=>q.nombre===m[1].trim())) ORG_DE[m[1].trim()] = m[2].trim(); } }
   const porNombre = {}, carpeta = escribenSet(), completos = {};
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
     // un nombre de pila es ambiguo solo entre quienes escriben hoy en la carpeta o están nombrados hoy como de fuera, no por
@@ -1589,13 +1589,16 @@ const RE_NOMBRE = new RegExp(`(?<![${LETRA}])([A-ZÁÉÍÓÚÑ][a-záéíóúñ�
 // los nombres completos que el texto trae, y las posiciones donde empiezan
 function completosEn(txt){ conocidos(); const out = []; if(!RE_COMPLETOS) return out; RE_COMPLETOS.lastIndex = 0; let m;
   while((m = RE_COMPLETOS.exec(txt||""))) out.push({f:m[1], i:m.index}); return out; }
-function nombresEn(txt){ const c = conocidos(), out = [], cs = completosEn(txt), ini = new Set(cs.map(x=>x.i));
+// con el proyecto (p), un nombre de pila no se atribuye a alguien de fuera que ese proyecto no nombra: la «Alejandra» de
+// Madema no es la Alejandra López de Smile Pill (1.24)
+const deFueraAjeno = (f, p) => !!p && !escribenSet().has(persona(f)) && !!ORG_DE[f] && !(p.personas_fuera||[]).some(x=>(typeof x==="string" ? x : x.nombre)===f);
+function nombresEn(txt, p){ const c = conocidos(), out = [], cs = completosEn(txt), ini = new Set(cs.map(x=>x.i));
   for(const {f} of cs) if(!out.includes(f)) out.push(f);
   const re = new RegExp(RE_NOMBRE.source, "g"); let m;
-  while((m = re.exec(txt||""))){ if(ini.has(m.index) || _AMBIGUOS.has(m[1])) continue; const f = c[m[1]]; if(f && !out.includes(f)) out.push(f); }
+  while((m = re.exec(txt||""))){ if(ini.has(m.index) || _AMBIGUOS.has(m[1])) continue; const f = c[m[1]]; if(f && !out.includes(f) && !deFueraAjeno(f, p)) out.push(f); }
   return out; }
 // el nombre que empieza en la posición i del texto: el completo si lo trae; el de pila si no es ambiguo; si no, nadie
-function nombreEn(txt, i, pila){ const c = conocidos(), x = completosEn(txt).find(x=>x.i===i); return x ? x.f : (_AMBIGUOS.has(pila) ? null : c[pila] || null); }
+function nombreEn(txt, i, pila, p){ const c = conocidos(), x = completosEn(txt).find(x=>x.i===i); if(x) return x.f; const f = _AMBIGUOS.has(pila) ? null : c[pila] || null; return f && deFueraAjeno(f, p) ? null : f; }
 // cuántas veces el texto nombra a alguien solo por un nombre de pila que llevan dos personas
 const ambiguosEn = txt => { conocidos(); if(!_AMBIGUOS.size) return 0; const ini = new Set(completosEn(txt).map(x=>x.i)), re = new RegExp(RE_NOMBRE.source, "g"); let n = 0, m;
   while((m = re.exec(txt||""))) if(_AMBIGUOS.has(m[1]) && !ini.has(m.index)) n++; return n; };
@@ -1626,7 +1629,7 @@ function enfoque2(filtro){
   const gs = ENFOQUE.grupos, vis = PARA_TI_ALL.has("enf") ? gs : gs.slice(0,3);
   return `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2><span class="c" style="margin-left:auto">Lo que más avanza con una sola sesión</span></div>
     <ol class="enf-mini">${vis.map(g=>{ const ps = (g.pasos||[]).filter(x=>byId[x.proyecto]); const p0 = ps[0] ? byId[ps[0].proyecto] : null;
-      return `<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${cuantos(ps.length,"paso","pasos")} · ${[...new Set(ps.map(x=>byId[x.proyecto].nombre))].map(esc).join(", ")}</span><span class="enf-acc">${g.sesion?`<button type="button" class="chip pri" data-copy="${esc(g.sesion)}">Empezar con Claude</button>`:""}${p0?`<button type="button" class="chip" data-go-proj="${esc(p0.id)}" data-tab="pasos" ${focoAttr({row:key(p0.id, ps[0].texto||""), prefijo:true})}>Ver la primera tarea</button>`:""}</span></li>`; }).join("")}</ol>${gs.length>3?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="enf">${PARA_TI_ALL.has("enf")?"Ver menos":`Ver ${gs.length-3===1?"1 más":`${gs.length-3} más`}`}</button>`:""}</section>`;
+      return `<li><b>${esc(g.titulo)}</b><span>${inline((g.razon||"").split(/(?<=\.)\s/)[0])}</span><span class="enf-mini-p">${cuantos(ps.length,"tarea","tareas")} · ${[...new Set(ps.map(x=>byId[x.proyecto].nombre))].map(esc).join(", ")}</span><span class="enf-acc">${g.sesion?`<button type="button" class="chip pri" data-copy="${esc(g.sesion)}">Empezar con Claude</button>`:""}${p0?`<button type="button" class="chip" data-go-proj="${esc(p0.id)}" data-tab="pasos" ${focoAttr({row:key(p0.id, ps[0].texto||""), prefijo:true})}>Ver la primera tarea</button>`:""}</span></li>`; }).join("")}</ol>${gs.length>3?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="enf">${PARA_TI_ALL.has("enf")?"Ver menos":`Ver ${gs.length-3===1?"1 más":`${gs.length-3} más`}`}</button>`:""}</section>`;
 }
 
 // ---- 2. Con otros: a quién esperas (personas de fuera, con su organización, lo pendiente y las fechas) ----
@@ -1742,7 +1745,7 @@ const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy
 // pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
 // un paso citado en una línea: sin la fecha de delante, sin su punto final ni sus comillas, cortado a 70 caracteres
 const citaPaso = t => { const c = corta(t).replace(/[«»]/g,"").replace(/[.\s]+$/,""); return `«${c.length>70 ? c.slice(0,69).replace(/\s+\S*$/,"")+"…" : c}»`; };
-const sinQuienDe = p => stepsLive(p).filter(s=>(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !fueraEn(p, s.texto) && !nombresEn(s.texto).length);
+const sinQuienDe = p => stepsLive(p).filter(s=>(effNat(p,s)==="espera" || RE_ESPERA.test(s.texto)) && !fueraEn(p, s.texto) && !nombresEn(s.texto, p).length);
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
@@ -1761,8 +1764,8 @@ function conOtros(){
       // («Tras hablar con Bea, pedir a…») no lo hace. Por el nombre completo: con dos Anas, la otra no eres tú (revisión 1.23.4)
       const ms = md && s.texto.slice(0, md.index).match(/(?:^|[^\wáéíóúñü,;:.])([A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]+){0,3})\s*$/);
       const sujeto = ms ? nombresEn(ms[1]) : [], soyYo = x => !!yoN && persona(x)===yoN, deOtro = sujeto.some(x=>!soyYo(x)), deMi = sujeto.some(soyYo);
-      if(mio && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto))){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto).find(fuera); }
-      else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2]); n = n_ && fuera(n_) ? n_ : null; }
+      if(mio && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto))){ lado = "deben"; n = fueraEn(p, s.texto) || nombresEn(s.texto, p).find(fuera); }
+      else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2], p); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"pasos", row:key(p.id,s.texto)}); }
     const fd = mio ? faltaDecidir(p) : null; if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
@@ -1970,7 +1973,7 @@ function accionesDe(areaSlug){
   // ella; un nombre de pila que llevan dos personas, sin apellido, no se atribuye y se cuenta aparte (n_ambiguos)
   const n = {}; let amb = 0; const ambP = new Set();
   for(const p of PROJ){ if(p.restringido || p.cerrado || (areaSlug && p.area!==areaSlug)) continue;
-    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto)){ const k = persona(f); n[k] = (n[k]||0) + 1; } if(ambiguosEn(s.texto)){ amb++; ambP.add(p.nombre); } } }
+    for(const s of stepsLive(p)){ for(const f of nombresEn(s.texto, p)){ const k = persona(f); n[k] = (n[k]||0) + 1; } if(ambiguosEn(s.texto)){ amb++; ambP.add(p.nombre); } } }
   return {n, amb, ambP:[...ambP]};
 }
 function actPersonas(ev, areaFija){
@@ -2068,7 +2071,7 @@ function porDecidir(filtro){
       const x = out.find(o=>o.p===p && o.fd && solapan(w, palabras(o.txt), 2)); if(x){ x.tarea = s; continue; }
       out.push({p, txt: sinFechaDelante(s.texto), tarea: s, desde: null}); } }
   for(const x of out){ const ws = palabras(x.txt);
-    x.espera = nombresEn(x.txt).find(n=>!esYo(n)) || null;
+    x.espera = nombresEn(x.txt, x.p).find(n=>!esYo(n)) || null;
     x.bloquea = stepsLive(x.p).filter(s=>s!==x.tarea && !esTareaDecidir(s) && solapan(ws, palabras(s.texto), 3)).length; }
   return out.sort((a,b)=>(!!b.espera - !!a.espera) || (b.bloquea - a.bloquea) || (a.desde||"9999").localeCompare(b.desde||"9999"));
 }
@@ -2141,7 +2144,7 @@ function seccionDecidir(filtro, conArea){
 function filaCritica(x, conArea){
   const k = key(x.p.id, x.s.texto), d = diasDesde(x.f), t = today();
   const pill = x.f<t ? `<span class="pill late">Hace ${cuantos(d,"día","días")}</span>` : x.f===t ? `<span class="pill soon">Hoy</span>` : x.f===addDays(1) ? `<span class="pill soon">Mañana</span>` : `<span class="pill ok">${fmtD(x.f)}</span>`;
-  const quien = (()=>{ const md = x.s.texto.match(RE_DEBES); if(!md) return ""; const n = nombreEn(x.s.texto, md.index + md[0].length - md[2].length, md[2]); return n && !esYo(n) ? `con ${esc(n)}` : ""; })();
+  const quien = (()=>{ const md = x.s.texto.match(RE_DEBES); if(!md) return ""; const n = nombreEn(x.s.texto, md.index + md[0].length - md[2].length, md[2], x.p); return n && !esYo(n) ? `con ${esc(n)}` : ""; })();
   return `<div class="due-item static acc-i" data-row="${esc(k)}">${pill}<span class="t">${inline(corta(x.s.texto))} <span class="tag-t">${esc(quien || x.why)}</span><span class="w">${irProy(x.p, "quehay", {row:k})}${conArea?` · ${esc(areaBy[x.p.area]?.nombre||"")}`:""}${x.f<t?` · venció el ${fmtD(x.f)}`:""}</span></span>${puedeMarcar() ? `<span class="acc-b"><button type="button" class="chip" data-acc-hecho="${esc(k)}">Hecha</button><button type="button" class="chip" data-acc-fecha="${esc(k)}" aria-expanded="${EDIT===k}">Nueva fecha</button><button type="button" class="chip ghost" data-acc-drop="${esc(k)}">Ya no aplica</button></span>` : ""}${EDIT===k ? dueForm(x.p, x.s) : ""}${HECHO===k ? hechoForm(k) : ""}</div>`;
 }
 function seccionCriticas(filtro, conArea, nota){
@@ -2979,7 +2982,7 @@ function ayudaArts(){
       <li>Proyectos parados, y decisiones pendientes de confirmar por su responsable.</li>
       <li>Documentos cuya base cambió después de escribirse, borradores de más de 30 días, y documentos publicados que el índice del área no describe.</li>
       <li>Decisiones de otros proyectos que le afectan y llegaron después de su última sesión.</li>
-      <li>Cosas marcadas aquí que esperan una sesión (pasos y prioridades de un área), y archivos que Claude dejó fuera de los proyectos.</li>
+      <li>Cosas marcadas aquí que esperan una sesión (tareas y prioridades de un área), y archivos que Claude dejó fuera de los proyectos.</li>
     </ul>
     <p class="hc-nota">«Ahora no» esconde una línea siete días, solo en este navegador.</p>`},
   {g:"El tablero", id:"que-ve-cada-quien", t:"Qué ve cada quien", h:`
