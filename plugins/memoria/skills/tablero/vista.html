@@ -2154,6 +2154,11 @@ function seccionCriticas(filtro, conArea, nota){
   return ptGrupoSec("tareas-criticas", "Tareas críticas", "Con fecha cerca, y en el Estatus, en una prioridad o con un cliente", xs.map(x=>filaCritica(x, conArea)), 5, nota);
 }
 let RESP_FORM = null;
+// el formulario de «Cuestionar», en «Decisiones que te afectan» y en el registro del proyecto: el porqué y el proyecto
+// desde el que se registra (sel, el que sale elegido)
+function formCuestionar(ref, mios, sel){
+  return `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(p=>`<option value="${esc(p.id)}"${p===sel?" selected":""}>${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>`;
+}
 function filaAfecta(x){
   const p0 = x.a[0], ref = refDec(x.q, x.d), r = respuestaDe(ref), quien = persona(x.d.decidio||"") || "otra persona", org = ORG_DE[quien];
   const acts = !puedeMarcar() ? `<button type="button" class="chip" data-copy="${esc(`abre sesión en ${p0.nombre}: quiero cuestionar la decisión de ${quien} «${x.d.titulo}»`)}">Cuestionar con Claude</button>`
@@ -2161,7 +2166,7 @@ function filaAfecta(x){
     : `<button type="button" class="chip" ${x.a.length>1 ? `data-resp-q="${esc("ok|"+ref)}" aria-expanded="${RESP_FORM==="ok|"+ref}"` : `data-resp-ok="${esc(ref)}"`}>Aceptar</button><button type="button" class="chip" data-resp-q="${esc(ref)}" aria-expanded="${RESP_FORM===ref}">Cuestionar</button>`;
   const mios = PROJ.filter(p=>activo(p) && esMio(p));
   const formOk = RESP_FORM==="ok|"+ref ? `<form class="q-form" data-resp-form="${esc("ok|"+ref)}"><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${x.a.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Aceptar</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>` : "";
-  const form = RESP_FORM===ref ? `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(p=>`<option value="${esc(p.id)}"${p===p0?" selected":""}>${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>` : "";
+  const form = RESP_FORM===ref ? formCuestionar(ref, mios, p0) : "";
   return `<div class="due-item static acc-i${r?" resp":""}"><span class="pill none">${fmtD(x.d.fecha)}</span><span class="t">${inline(x.d.titulo)}<span class="w">decidió ${esc(quien)}${org?` (${esc(org)})`:""} · ${x.a.length===1 && x.a[0]===x.q ? `en ${esc(x.q.nombre)}` : `${esc(x.q.nombre)} · toca a ${x.a.map(p=>irProy(p, "estatus", {sel:"dl.facts dt", texto:"Le afectan", af:true, pid:p.id})).join(", ")}`}${r && r.porque?` · «${esc(r.porque)}»`:""}</span></span><span class="acc-b">${acts}</span>${form}${formOk}</div>`;
 }
 function seccionAfectan(filtro){
@@ -2617,7 +2622,7 @@ function cuestDec(d, p){
   const ref = refDec(p, d), r = respuestaDe(ref), mios = PROJ.filter(x=>activo(x) && esMio(x)); if(!mios.length) return "";
   if(r) return `<p class="acc-b izq"><span class="toast-i">${r.valor==="aceptada"?"Aceptada":"Cuestionada"} · la registra tu próxima sesión de ${esc((byId[r.proyecto]||{}).nombre||"")}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button></p>`;
   if(RESP_FORM!==ref) return `<p class="acc-b izq"><button type="button" class="chip" data-resp-q="${esc(ref)}">Cuestionar</button></p>`;
-  return `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(x=>`<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>`;
+  return formCuestionar(ref, mios);
 }
 function decItem(d, p, conProy){
   const k = decKey(p, d), open = DEC_OPEN.has(k);
