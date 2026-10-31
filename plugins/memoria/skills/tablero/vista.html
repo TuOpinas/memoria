@@ -2347,7 +2347,9 @@ function afectaDeOtros(){
     // dentro de un proyecto tuyo, lo que registró la sesión de otra persona ese día: lo que registró la tuya ya lo viste,
     // aunque lo decidiera alguien de fuera (segunda vuelta de la revisión de la 1.24)
     for(const d of (p.decisiones||[])){ const ses = sesionesTodas(p).filter(x=>x.fecha===d.fecha);
-      if(ses.length && ses.every(x=>x.quien && persona(x.quien)!==yo)) suma(p, d, p); } }
+      // quien decidió cerró sesión ese día, o solo cerraron sesión otras personas
+      const quien = persona(d.decidio||""), otras = ses.filter(x=>x.quien && persona(x.quien)!==yo);
+      if(otras.some(x=>persona(x.quien)===quien) || (otras.length && otras.length===ses.length)) suma(p, d, p); } }
   const out = Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
   if(_M) _M.set("afo", out); return out;
 }
