@@ -3,7 +3,7 @@
 # comprueba el contrato y el README, regenera metodo.md y dice qué queda por hacer a mano.
 # Comprueba todo antes de tocar nada, y si algo falla a mitad deja los archivos como estaban.
 #
-#   ./release.sh 1.8.0 --revisada taller/revisiones-de-calidad/revision-de-calidad-1-8-0.md
+#   ./release.sh 1.8.0 --revisada taller/revisiones-de-calidad/revision-de-calidad-1-8-0.md [--formato-igual]
 #
 # Ninguna versión se publica sin su revisión de calidad (skill `calidad`), con el informe guardado en `taller/revisiones-de-calidad/` del
 # proyecto que mantiene el plugin (decisiones del 2026-10-23 y del 2026-10-24): a fondo, con las seis lentes, una versión
@@ -86,6 +86,16 @@ if [ -n "$PREV" ]; then
   # el bloque vivía en el contrato hasta la 1.12.5 y desde la 1.13 en su anexo montaje.md
   ANTES="$(git -C "$REPO_DIR" show "$PREV:$REL_MONTAJE" 2>/dev/null || git -C "$REPO_DIR" show "$PREV:$REL_CONTRATO/SKILL.md" 2>/dev/null || true)"
   if [ "$(bloque < "$MONTAJE")" != "$(printf '%s\n' "$ANTES" | bloque)" ]; then BLOQUE_CAMBIO=1; fi
+fi
+# generar_vista.py cambió y FORMATO_DATOS no (1.24.3): los tableros reutilizarán los proyectos que ya tenían. Se avisa para
+# que quien publica decida si lo que sale para un proyecto o un área cambió; si cambió, que lo suba antes de publicar
+if [ -n "$PREV" ] && ! git -C "$REPO_DIR" diff --quiet "$PREV" -- plugins/memoria/skills/tablero/generar_vista.py \
+   && ! git -C "$REPO_DIR" diff "$PREV" -- plugins/memoria/skills/tablero/generar_vista.py | grep -q '^[+-]FORMATO_DATOS = ' \
+   && [ "${4:-}" != "--formato-igual" ]; then
+  echo "generar_vista.py cambió y FORMATO_DATOS no: los tableros reutilizarán sus proyectos sin releerlos." >&2
+  echo "Si cambió lo que sale para un proyecto, un área o su taller, sube FORMATO_DATOS. Si no, confírmalo:" >&2
+  echo "  ./release.sh $VERSION --revisada $REVISADA --formato-igual" >&2
+  exit 1
 fi
 
 # --- cambios, con vuelta atrás si algo falla ---

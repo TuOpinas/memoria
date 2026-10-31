@@ -41,7 +41,7 @@ Compara huellas e imprime un JSON con:
            se dice en el resumen, y el resto se sube igual.
 No escribe nada.
 """
-import sys, json, pathlib, re
+import sys, json, pathlib, re, hashlib
 
 if "--guardada" in sys.argv:
     def _a(n):
@@ -56,11 +56,25 @@ if "--guardada" in sys.argv:
     vale = (bool(d.get("huella_raiz")) and d.get("version_tablero") == _a("--version")
             and (d.get("tarea") or None) == tarea and bool(d.get("tarea_manual")) == (bool(tarea) and "--manual" in sys.argv))
     print(d["huella_raiz"] if vale else "-")
-    # los documentos de la base se pueden reutilizar si los hizo esta misma versión; la tarea no entra en un proyecto
-    hs = d.get("huellas") if d.get("version_tablero") == _a("--version") else None
+    # los documentos de la base se pueden reutilizar si los hizo un generador con el mismo formato de datos (FORMATO_DATOS de
+    # generar_vista.py, junto a este archivo), aunque sea de otra versión del plugin (1.24.3); la tarea no entra en un proyecto
+    try:
+        _fm = re.search(r'^FORMATO_DATOS = "([^"]*)"', (pathlib.Path(__file__).with_name("generar_vista.py")).read_text(encoding="utf-8"), re.M)
+    except OSError:
+        _fm = None
+    # y con el mismo barrido: si barrido.py cambió (juicio.md no cuenta: un retoque de redacción no pide releer), se relee todo para que el barrido nuevo pase por todos
+    _hb = hashlib.sha1()
+    try:
+        for _n in ("barrido.py",):
+            _hb.update(pathlib.Path(__file__).with_name(_n).read_bytes())
+        _hb = _hb.hexdigest()[:12]
+    except OSError:
+        _hb = None
+    mismo = bool(_fm) and d.get("formato_datos") == _fm.group(1) and bool(_hb) and d.get("huella_barrido") == _hb
+    hs = d.get("huellas") if mismo else None
     print(",".join(hs) if isinstance(hs, list) and hs else "-")
-    # tercera línea: las huellas del taller de cada proyecto, para --taller-igual del inventario (mismo criterio de versión)
-    ht = d.get("huellas_taller") if d.get("version_tablero") == _a("--version") else None
+    # tercera línea: las huellas del taller de cada proyecto, para --taller-igual del inventario (mismo criterio)
+    ht = d.get("huellas_taller") if mismo else None
     print(",".join(f"{k}:{v}" for k, v in sorted(ht.items())) if isinstance(ht, dict) and ht else "-")
     sys.exit(0)
 
