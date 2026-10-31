@@ -27,10 +27,15 @@ window.__D = __DATA__;
   let cuerpo = {estado: (D.meta||{}).estado || {}, tablero: {areas: D.areas||{}, proyectos: D.proyectos||{}, resumenes: D.resumenes||{}, enfoque: (D.enfoque||{}).actual || null},
                   propuestas: props, detalle: D.detalle||{}}[m[1]];
   // desde la 1.24.2, datos/detalle/<área>.json: el de esa área; con window.__DETALLE_UNO (un tablero de la 1.24.1) no existe
+  // desde la 1.24.4, datos/proyectos/<área>.json, y tablero.json sin los proyectos; con window.__TABLERO_UNO, como antes
+  const areaDe = id => id.split("--")[0];
   if(m[2] !== undefined){
-   if(m[1] !== "detalle" || window.__DETALLE_UNO) return new Response("", {status: 404});
-   cuerpo = Object.fromEntries(Object.entries(D.detalle||{}).filter(([id]) => id.split("--")[0] === m[2]));
+   if(m[1] === "detalle" && !window.__DETALLE_UNO) cuerpo = Object.fromEntries(Object.entries(D.detalle||{}).filter(([id]) => areaDe(id) === m[2]));
+   else if(m[1] === "proyectos" && !window.__TABLERO_UNO) cuerpo = Object.fromEntries(Object.entries(D.proyectos||{}).filter(([id]) => areaDe(id) === m[2]));
+   else return new Response("", {status: 404});
   } else if(m[1] === "detalle" && !window.__DETALLE_UNO) return new Response("", {status: 404});
+  else if(m[1] === "tablero" && !window.__TABLERO_UNO){ cuerpo = {...cuerpo}; delete cuerpo.proyectos; }
+  else if(m[1] === "estado" && !window.__TABLERO_UNO) cuerpo = {...cuerpo, proyectos_areas: [...new Set(Object.keys(D.proyectos||{}).map(areaDe))].sort()};
   return cuerpo === undefined ? new Response("", {status: 404}) : new Response(JSON.stringify(cuerpo), {status: 200, headers: {"Content-Type": "application/json"}});
  };
  window.claude = { use: async n => n==='db'?db : n==='user'?user : n==='mcp'?mcp : null };

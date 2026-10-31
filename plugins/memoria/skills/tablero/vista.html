@@ -3419,7 +3419,16 @@ const conId = o => Object.entries(o || {}).map(([id, v]) => ({id, ...v}));
 async function cargarArchivos(){
   let est, tab, props;
   try{ [est, tab] = await Promise.all([leerArchivo("estado.json"), leerArchivo("tablero.json")]); }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
-  try{ props = await leerArchivo("propuestas.json"); }catch(e){ props = {}; }
+  // desde la 1.24.4 los proyectos van en un archivo por área (datos/proyectos/<área>.json), que dice estado.json; un tablero
+  // de antes los trae dentro de tablero.json
+  // en el orden de las áreas de la guía, como venían en tablero.json: el orden de los proyectos sale de ahí
+  const ordenA = (est && Array.isArray(est.areas)) ? est.areas : [], posA = a => { const i = ordenA.indexOf(a); return i < 0 ? 999 : i; };
+  const pa = est && Array.isArray(est.proyectos_areas) ? [...est.proyectos_areas].sort((x, y) => posA(x) - posA(y)) : null;
+  try{
+    const [p_, ...porArea] = await Promise.all([leerArchivo("propuestas.json").catch(() => ({})), ...(pa || []).map(a => leerArchivo("proyectos/" + a + ".json"))]);
+    props = p_;
+    if(pa){ tab = {...tab, proyectos: Object.assign({}, tab.proyectos || {}, ...porArea)}; }
+  }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
   META = est && typeof est === "object" ? est : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion;
   AREAS = conId(tab.areas).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a]));
   PROJ = conId(tab.proyectos).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p]));

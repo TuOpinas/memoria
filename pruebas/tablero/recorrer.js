@@ -401,6 +401,17 @@ const path = require('path');
     if(r.archivos || r.areas || !/todavía no tiene sus datos con la versión nueva/.test(r.txt)) errores.push(`sin archivos: la página tenía que decir que falta sincronizar, sin leer la base vieja (${JSON.stringify({archivos: r.archivos, areas: r.areas})})`);
     await ctx.close();
   }
+  // los proyectos, un archivo por área (1.24.4); un tablero de antes los trae dentro de tablero.json: los dos se leen igual
+  for(const uno of [false, true]){
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`proyectos por área (${uno}): ${e.message}`));
+    if(uno) await p.addInitScript(() => { window.__TABLERO_UNO = true; });
+    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(800);
+    const r = await p.evaluate(() => ({ n: PROJ.length, esperados: Object.keys(window.__D.proyectos || {}).length, pedidos: (window.__pedidos || []).filter(x => /datos\/proyectos\//.test(x)).length, sinDatos: SIN_DATOS }));
+    if(r.n !== r.esperados || r.sinDatos || (uno ? r.pedidos !== 0 : r.pedidos < 1)) errores.push(`proyectos por área (${uno ? "tablero de antes" : "1.24.4"}): la página no tiene todos los proyectos (${JSON.stringify(r)})`);
+    await ctx.close();
+  }
   // un tablero publicado con la 1.24.1 tiene un solo datos/detalle.json: la página nueva lo lee si no está el de su área (1.24.2)
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
