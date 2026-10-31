@@ -1697,7 +1697,7 @@ function tabMant(){
   const filaAcept = q => `<div class="due-item static${sinQuien(q)?" orf":""}"><span class="pill ok">Aceptada</span><span class="t">${inline(notasDeTexto(textoPropLimpio(q)).t)}${sinQuien(q) ? `<span class="pend-note">Este tablero ya no escribe en ese proyecto: nadie la aplicará. Pásasela a ${esc(nombreCorto(byId[q.proyecto].dueno||""))} o descártala.</span>` : ""}</span><span class="w">${esc(byId[q.proyecto].nombre)}${CAN && OWNER ? ` · <button type="button" class="lnk" data-nc="${esc(q.id)}" data-v="${sinQuien(q)?"descartada":"pendiente"}">${sinQuien(q)?"Descartar":"Deshacer"}</button>` : ""}</span></div>`;
   const cola = nCola ? `<details class="card mas-c"><summary><h2 style="display:inline">Marcado aquí, por registrar</h2><span class="more"> · ${nCola} · lo pasa a la carpeta la próxima puesta al día o la sesión del proyecto</span></summary><div class="due-list" style="margin-top:10px">${acept.map(filaAcept).join("")}${colaRows()}</div></details>` : "";
   const ok = !arr.length && !pad.length ? `<p class="empty">Nada que arreglar ni por poner al día.</p>` : "";
-  return {n: arr.length, info: pad.length, html: seccionArreglar(arr) + seccionPonerAlDia(null) + ok + permisosLinea() + cola};
+  return {n: arr.length, info: pad.length, html: seccionArreglar(arr) + seccionPonerAlDia(null) + ok + permisosLinea() + versionLinea() + cola};
 }
 
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ini]"); if(!b) return; INI_TAB = b.dataset.ini; render(); window.scrollTo({top:0}); });
@@ -1725,7 +1725,9 @@ function bandaRaiz(){
 // el verbo vale con mayúscula inicial («Revisar con Diego…», al principio del paso); el nombre sigue pidiendo mayúscula (1.23)
 const VERBOS_DEBES = "mandar mandarle manda enviar enviarle envía avisar avisarle avisa pedir pedirle pide preguntar preguntarle pregunta escribir escribirle responder responderle llamar presentar proponer compartir agendar confirmar acordar revisar buscar".split(" ");
 const RE_DEBES = new RegExp("\\b(" + VERBOS_DEBES.map(v=>`[${v[0].toUpperCase()}${v[0]}]${v.slice(1)}`).join("|") + ")(?:le)?\\s+(?:a|con)\\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)");
-const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b|^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?(?:que\s+[A-ZÁÉÍÓÚÑ]|recibir\b)/i;
+const RE_ESPERA_V = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:confirme|responda|firme|mande|envíe|apruebe|valide|decida))\b/i;
+const RE_ESPERA_QUE = /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?(?:[Qq]ue\s+[A-ZÁÉÍÓÚÑ]|[Rr]ecibir\b)/;
+const RE_ESPERA = {test: t => RE_ESPERA_V.test(t||"") || RE_ESPERA_QUE.test(t||"")};
 // lo que no es esperar a alguien aunque lo diga: una reunión sin fecha o una decisión tuya (revisión de la 1.24)
 const RE_NO_ESPERA = /pendiente de (?:fecha|agendar)|\b(?:sesión|reunión|junta|llamada)\b[^.;]{0,40}\bpendiente\b/i;
 // a quién se espera: el complemento del verbo («esperar la confirmación de X», «a que X…», «recibir … de X») o el sujeto
@@ -2049,7 +2051,7 @@ function porDecidir(filtro){
     // lo que más frena primero: en «Siguiente» o en una prioridad del área, luego vencida o con fecha, luego lo que bloquea
     // (revisión de la 1.24)
     x.f = x.tarea ? effDate(x.p, x.tarea) : null;
-    x.imp = !!(x.tarea && (x.tarea.en_siguiente || x.tarea.prioridad_area)) || (x.fd && solapan(ws, palabras(siguienteDe(x.p)), 2)); }
+    x.imp = !!((x.tarea && (x.tarea.en_siguiente || x.tarea.prioridad_area)) || (x.fd && solapan(ws, palabras(siguienteDe(x.p)), 2))); }
   return out.sort((a,b)=>(b.imp - a.imp) || (!!(b.f && b.f<t) - !!(a.f && a.f<t)) || (a.f||"9999").localeCompare(b.f||"9999") || (b.bloquea - a.bloquea) || (a.desde||"9999").localeCompare(b.desde||"9999"));
 }
 // lo que otras personas te deben: el «te debe» de lo que antes era «Con otros»
@@ -2058,7 +2060,7 @@ function esperasA(filtro){
   for(const g of conOtros()) for(const x of g.deben){ if(filtro && !filtro(x.p)) continue; out.push({n: g.n, org: ORG_DE[g.n] || "", ...x}); ks.add(x.row || ("fd:"+x.p.id+":"+g.n)); }
   // lo cerrado aquí cuya marca sigue en la cola: se queda a la vista para poder deshacerlo
   for(const [k, x] of ESP_CERRADAS){ if(ks.has(k) || (filtro && !filtro(x.p))) continue;
-    const sigue = CAMBIOS.some(c=>c.proyecto===x.p.id && ((c.tipo==="hecho" && x.row && key(x.p.id,c.paso||"")===x.row) || (c.tipo==="nota" && (c.nota||"").startsWith(`Espera a ${x.n}: `))));
+    const sigue = CAMBIOS.some(c=>c.proyecto===x.p.id && ((c.tipo==="hecho" && x.row && key(x.p.id,c.paso||"")===x.row) || (c.tipo==="nota" && c.fila===k)));
     if(sigue) out.push({...x, org: ORG_DE[x.n] || ""}); else ESP_CERRADAS.delete(k); }
   return out.sort((a,b)=>(a.f||"9999").localeCompare(b.f||"9999"));
 }
@@ -2087,11 +2089,12 @@ let ESP_FORM = null;
 function filaEspera(x){
   const st = x.row ? stepsLive(x.p).find(s=>key(x.p.id,s.texto)===x.row) || (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
   const k = x.row || ("fd:"+x.p.id+":"+x.n), hecho = st ? pend(x.p.id, st.texto).hecho : null;
-  const nota = CAMBIOS.find(c=>c.tipo==="nota" && c.proyecto===x.p.id && (c.nota||"").startsWith(`Espera a ${x.n}: `)) || null, r = hecho || nota;
+  // la nota de esta fila, por su clave; las de antes de la segunda vuelta, por la persona y solo en una fila sin tarea
+  const nota = CAMBIOS.find(c=>c.tipo==="nota" && c.proyecto===x.p.id && (c.fila ? c.fila===k : !x.row && (c.nota||"").startsWith(`Espera a ${x.n}: `))) || null, r = hecho || nota;
   const dias = x.f ? diasDesde(x.f) : null;
   const pill = dias!==null && dias>0 ? `<span class="pill ${dias>7?"late":"none"}">${cuantos(dias,"día","días")}</span>` : `<span class="pill none">${x.f ? fmtD(x.f) : "sin fecha"}</span>`;
   const esDec = /^Decide:/.test(x.t);
-  const acts = !puedeMarcar() ? "" : r ? `<span class="toast-i">${/Ya no aplica/.test(r.nota||"") ? "Ya no aplica" : "Ya llegó"} · lo registra ${r.tipo==="hecho" && r.nota ? "la próxima puesta al día" : `tu próxima sesión de ${esc(x.p.nombre)}`}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
+  const acts = !puedeMarcar() ? "" : r ? `<span class="toast-i">${/Ya no aplica/.test(r.nota||"") ? "Ya no aplica" : "Ya llegó"} · lo registra ${r.tipo==="hecho" && r.nota && !/\b(decid|defin|acord|eleg|confirm|aprob)/i.test(r.paso||"") ? "la próxima puesta al día" : `tu próxima sesión de ${esc(x.p.nombre)}`}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button>`
     : `<button type="button" class="chip" data-esp-ok="${esc(k)}">Ya llegó</button><button type="button" class="chip ghost" data-esp-drop="${esc(k)}">Ya no aplica</button>`;
   const form = ESP_FORM===k ? `<form class="hecho-form" data-esp-form="${esc(k)}"><label class="sr" for="esp-nota">${esDec?"Qué decidió":"Qué llegó"}</label><input id="esp-nota" class="search" type="text" maxlength="240" placeholder="${esDec?"¿Qué decidió? Con esto, la sesión registra su decisión":"Algo que apuntar, por ejemplo dónde quedó (opcional)"}"><button type="submit" class="btn">Marcar que llegó</button><button type="button" class="chip ghost" data-esp-cancel>Cancelar</button></form>` : "";
   return `<div class="due-item static acc-i${r?" resp":""}" data-esp="${esc(k)}">${pill}<span class="t"><span><b>${esc(x.n)}</b>${x.org?` <span class="pill org">${esc(x.org)}</span>`:""} · ${inline(corta(x.t))}</span><span class="w">${irProy(x.p, x.tab||"estatus", x.row?{row:x.row}:{sel:".corto-l li", texto:"Falta decidir"})}${x.f?` · desde el ${fmtD(x.f)}`:""}${r && r.nota && !/^Ya no aplica$/.test(r.nota) ? ` · «${esc(r.nota.replace(/^Espera a [^:]+: /,""))}»` : ""}</span></span>${acts?`<span class="acc-b">${acts}</span>`:""}${form}</div>`;
@@ -2114,14 +2117,14 @@ document.addEventListener("submit", e => { const f = e.target.closest && e.targe
 // lo cerrado aquí sigue en «Esperas a», con «Deshacer», mientras la carpeta no lo registre (revisión de la 1.24)
 const ESP_CERRADAS = new Map();
 async function cerrarEspera(x, nota){
-  ESP_CERRADAS.set(x.row || ("fd:"+x.p.id+":"+x.n), x);
+  const fila = x.row || ("fd:"+x.p.id+":"+x.n); ESP_CERRADAS.set(fila, x);
   const st = x.row ? (x.p.pasos||[]).find(s=>key(x.p.id,s.texto)===x.row) : null;
   // una decisión que se esperaba no es una tarea hecha: la nota dice a quién se esperaba y que era una decisión, y la
   // registra la sesión del proyecto como decisión (cerrar.md, paso 0)
   const esDec = /^Decide:/.test(x.t);
   if(st && !esDec){ await marcarHecho(x.p, st, nota); return; }
   const txt = `Espera a ${x.n}: ${nota==="Ya no aplica" ? "Ya no aplica" : nota}`;
-  await addCambio({tipo:"nota", proyecto:x.p.id, nota:txt, espera:x.n, ...(esDec && nota!=="Ya no aplica" ? {decision:x.t.replace(/^Decide:\s*/,"")} : {}), ...(st ? {paso:st.texto} : {})}); render();
+  await addCambio({tipo:"nota", proyecto:x.p.id, nota:txt, espera:x.n, fila, ...(esDec && nota!=="Ya no aplica" ? {decision:x.t.replace(/^Decide:\s*/,"")} : {}), ...(st ? {paso:st.texto} : {})}); render();
 }
 function filaPorDecidir(x, conArea){
   // con quién se decide, si nombra a alguien; si frena tareas del proyecto, cuántas (1.24)
@@ -2195,10 +2198,9 @@ function arreglarYa(){
   if(META && META.tarea_desfasada) out.push({k:"Tablero", et:"la tarea del tablero", t:"La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación.", w:"en una sesión con la carpeta conectada", b:[["Revisar con Claude","actualiza el tablero",true]]});
   // lo que antes avisaba la franja de arriba (1.19–1.23): sesiones que el tablero aún no muestra, datos de otra
   // versión, días sin ponerse al día; con el botón de sincronizar si quien mira lo montó (revisión de la 1.24)
-  if(META && META.sincronizado && !SYNC_STATE){
+  if(META && META.sincronizado && !SYNC_STATE && OWNER && !syncFalta()){
     const sync = OWNER && !syncFalta(), pc = cierresPend();
     if(pc.length) out.push({k:"Tablero", et:"sesiones sin mostrar", t:`Hay ${cuantos(pc.length,"sesión cerrada","sesiones cerradas")} que el tablero aún no muestra (${nombresCierres(pc)}).`, w: sync ? "se ven al sincronizar" : "se verán cuando quien lo montó lo ponga al día", b:[], sync});
-    if(META.version_tablero && META.version_tablero !== VERSION_TABLERO) out.push({k:"Tablero", et:"datos de otra versión", t:`Los datos del tablero son de la versión ${META.version_tablero} y la página es la ${VERSION_TABLERO}.`, w:"se ponen a la par en la próxima sincronización", b:[], sync});
     const dias = Math.floor((Date.now() - new Date(META.sincronizado).getTime())/DAY), umbral = META.tarea && !META.tarea_manual ? 2 : 7;
     if(dias >= umbral) out.push({k:"Tablero", et:"tablero sin poner al día", t:`El tablero lleva ${dias} días sin ponerse al día: lo que otras personas cerraron desde entonces no sale.`, w: sync ? "sincronízalo" : OWNER ? syncFalta() : "lo pone al día quien lo montó", b:[], sync});
   }
@@ -2342,10 +2344,10 @@ function afectaDeOtros(){
     const k = q.id+"#"+d.id; const g = por[k] = por[k] || {q, d, a: []}; if(!g.a.includes(p)) g.a.push(p); };
   for(const p of PROJ){ if(p.restringido || p.cerrado || !esMio(p)) continue;
     for(const {q,d} of afectan(p)) suma(q, d, p);
-    // dentro de un proyecto tuyo, solo lo que decidió alguien que escribe en la carpeta: lo que decidió alguien de fuera lo
-    // registró tu propia sesión, que ya lo vio
-    const esc_ = escribenSet();
-    for(const d of (p.decisiones||[])) if(esc_.has(persona(d.decidio||""))) suma(p, d, p); }
+    // dentro de un proyecto tuyo, lo que registró la sesión de otra persona ese día: lo que registró la tuya ya lo viste,
+    // aunque lo decidiera alguien de fuera (segunda vuelta de la revisión de la 1.24)
+    for(const d of (p.decisiones||[])){ const ses = sesionesTodas(p).filter(x=>x.fecha===d.fecha);
+      if(ses.length && ses.every(x=>x.quien && persona(x.quien)!==yo)) suma(p, d, p); } }
   const out = Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
   if(_M) _M.set("afo", out); return out;
 }
@@ -2554,13 +2556,6 @@ function tabEstatus(){ return {n: 0, html: `${lineaHoy()}${lineaSemana(null, `<b
 // ---- lo que no cuadra: una propuesta de la cola se acepta o se descarta aquí; lo demás se arregla en su sitio ----
 // quien monta el tablero solo acepta lo que su próximo cierre puede aplicar: lo de proyectos donde escribe
 const escribeAqui = p => !!p && p.escribe===true;   // sin el dato (datos de antes de la 1.22.3) no se acepta: no se sabe si el cierre podrá aplicarlo
-function ncAcciones(x){
-  if(!x.id.startsWith("prop:") || !CAN || !OWNER || !DATOS_NUEVOS()) return "";
-  const id = x.id.slice(5);
-  if(x.aceptada) return escribeAqui(x.p) ? `<span class="nc-a more">Te la enseña la próxima sesión del proyecto, para tu sí</span>` : `<span class="nc-a"><span class="more">Pásasela a ${esc(nombreCorto(x.p.dueno||""))}</span><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">Descartar</button></span>`;
-  if(!escribeAqui(x.p)) return `<span class="nc-a more">Pásaselo a ${esc(nombreCorto(x.p.dueno||""))}</span>`;
-  return `<span class="nc-a"><button type="button" class="chip" data-nc="${esc(id)}" data-v="aceptada">${esc(x.accion)}</button><button type="button" class="chip ghost" data-nc="${esc(id)}" data-v="descartada">No</button></span>`;
-}
 document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !OWNER || !DB) return;
   n.disabled = true;
   const q = PROPUESTAS.find(c=>c.id===n.dataset.nc);
@@ -2569,6 +2564,10 @@ document.addEventListener("click", async e => { const n = e.target.closest && e.
   catch(x){ n.disabled = false; flash("No se pudo guardar. Vuelve a intentarlo."); }
 });
 
+// lo que solo informa del tablero, al final de Mantenimiento (segunda vuelta de la revisión de la 1.24)
+function versionLinea(){
+  return META && META.version_tablero && META.version_tablero !== VERSION_TABLERO ? `<p class="more" style="margin-top:8px">Los datos del tablero son de la versión ${esc(META.version_tablero)} y la página es la ${esc(VERSION_TABLERO)}: se ponen a la par en la próxima sincronización.</p>` : "";
+}
 function permisosLinea(){
   if(!OWNER || !PERMISOS) return "";
   const comp = PERMISOS.comprobar||[], rev = fmtL((PERMISOS.revisado||"").slice(0,10));
@@ -2658,7 +2657,7 @@ function renderBuscar(){
   main.innerHTML = n ? sec("Proyectos", r.proyectos, p=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}"><span class="pill">${esc(areaBy[p.area]?.nombre||"")}</span><span class="t">${esc(p.nombre)}</span><span class="w">${inline(p.objetivo||"")}</span></button>`)
     + sec("Decisiones", r.decisiones, ({p,d})=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="decisiones"><span class="pill ok">${fmtD(d.fecha)}</span><span class="t">${inline(d.titulo)}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span></button>`)
     + sec("Entregables", r.entregables, ({p,e})=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="entregables"><span class="pill ${e.estado==="vigente"?"ok":"none"}">${esc(e.estado||e.formato)}</span><span class="t">${inline(e.titulo||e.nombre)}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}${e.descripcion?` · ${inline(e.descripcion)}`:""}</span></button>`)
-    + sec("Acciones", r.acciones, ({p,s})=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="quehay"><span class="pill ${effDate(p,s)?due(effDate(p,s)).cls:"none"}">${effDate(p,s)?due(effDate(p,s)).label:"Sin fecha"}</span><span class="t">${inline(s.texto)}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span></button>`)
+    + sec("Tareas", r.acciones, ({p,s})=>`<button type="button" class="due-item" data-go-proj="${esc(p.id)}" data-tab="quehay"><span class="pill ${effDate(p,s)?due(effDate(p,s)).cls:"none"}">${effDate(p,s)?due(effDate(p,s)).label:"Sin fecha"}</span><span class="t">${inline(s.texto)}</span><span class="w">${esc(areaBy[p.area]?.nombre||"")} · ${esc(p.nombre)}</span></button>`)
     : `<p class="empty">Nada coincide con «${esc(QUERY)}».</p>`;
   if(r.pendientes) main.innerHTML += `<p class="more">Buscando también en el detalle de ${r.pendientes} proyecto${r.pendientes===1?"":"s"}…</p>`;
 }

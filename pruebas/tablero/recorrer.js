@@ -193,6 +193,8 @@ const path = require('path');
         const yo = persona(VIEWER()||""), mio = PROJ.find(x=>esMio(x) && !x.restringido && !x.cerrado), otro = [...escribenSet()].find(n=>n && n!==yo);
         if(!mio || !otro) return null;
         mio.decisiones = [{id: today(), fecha: today(), titulo: "PRUEBA-DECISION-AJENA", decidio: otro}, ...(mio.decisiones||[])];
+        // la registró la sesión de otra persona ese día: es lo que la hace salir (segunda vuelta de la 1.24)
+        mio.sesiones_recientes = [{fecha: today(), titulo: "PRUEBA-SESION-AJENA", quien: otro, n: 999}, ...(mio.sesiones_recientes||[])];
         render(); await new Promise(r=>setTimeout(r,150)); return {ref: refDec(mio, mio.decisiones[0]), pid: mio.id};
       });
       const fila = () => p.evaluate(() => { const r = [...document.querySelectorAll('#te-afectan .due-item')].find(x=>/PRUEBA-DECISION-AJENA/.test(x.textContent)); return r ? r.textContent : null; });
@@ -200,7 +202,7 @@ const path = require('path');
       let fl = {prep: !!prep};
       if(prep){
         fl.sale = !!(await fila());
-        await p.click(`#te-afectan [data-resp-ok="${prep.ref}"]`); await p.waitForTimeout(250);
+        await p.click(`#te-afectan [data-resp-ok="${prep.ref}"]`, {timeout: 3000}).catch(()=>{}); await p.waitForTimeout(250);
         const c1 = await cola(); fl.acepta = c1.length === 1 && c1[0].valor === "aceptada" && c1[0].decision === prep.ref && c1[0].proyecto === prep.pid; fl.toast = /Aceptada/.test(await fila() || "") && /Deshacer/.test(await fila() || "");
         await p.click('#te-afectan .due-item.resp [data-undo]'); await p.waitForTimeout(250);
         fl.deshace = (await cola()).length === 0 && !/Aceptada/.test(await fila() || "");

@@ -912,12 +912,14 @@ PALABRAS_SIG = lambda t: {w for w in re.findall(r"[a-záéíóúñ]{4,}", t.lowe
 # El nombre no puede ser un infinitivo ni una palabra de enlace («Si Agustín aprobó…, mandar» es una tarea), y la línea no
 # sigue con otra tarea («…: revisarlo», «; esperar respuesta») ni lleva una fecha que aún no llega (revisión de la 1.24).
 _NO_SUJETO = r"(?!(?:Si|Cuando|Tras|Una|Un|Al|En|Con|Para|Por|Desde|Antes|Después|Hasta|Mientras|Aunque|Como|Que)\b)"
-RE_HECHO = re.compile(r"^(?:(?:" + _NO_SUJETO + r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]*[^\Wr\d_]\s+(?:(?:y|e|de|del|con)\s+)?){1,4}|Se\s+|Ya\s+se\s+)(?:[a-záéíóúñü]{2,}(?:ó|aron|ieron))\b")
+RE_HECHO = re.compile(r"^(?:(?:" + _NO_SUJETO + r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]*\s+(?:(?:y|e|de|del|con)\s+)?){1,4}|Se\s+|Ya\s+se\s+)(?:[a-záéíóúñü]{2,}(?:ó|aron|ieron))\b")
 RE_SIGUE_TAREA = re.compile(r"[:;,]\s*(?:y\s+)?[a-záéíóúñ]+(?:ar|er|ir)(?:l[oa]s?|le|les)?\b")
 _PREFIJO = lambda t: re.sub(r"^\*\*[^*]+\*\*[.:]?\s*", "", re.sub(r"^(20\d\d-\d\d-\d\d\s*[·:—-]?\s*)", "", t.strip()))
 def naturaleza(texto):
     limpio = _PREFIJO(texto)
-    if RE_HECHO.match(limpio) and not RE_SIGUE_TAREA.search(limpio) and not any(f_ >= HOY for f_ in re.findall(r"20\d\d-\d\d-\d\d", limpio)):
+    w0 = (limpio.split() or [""])[0].strip(",.;:")
+    infinitivo = bool(re.fullmatch(r"[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:ar|er|ir)(?:l[oa]s?|le|les|se)?", w0)) and w0 not in NOMBRES_COMO_VERBO
+    if not infinitivo and RE_HECHO.match(limpio) and not RE_SIGUE_TAREA.search(limpio) and not any(f_ >= HOY for f_ in re.findall(r"20\d\d-\d\d-\d\d", limpio)):
         return "hecho"
     # el prefijo en negrita («**Alta de proveedor.** Esperar…») no decide qué es la tarea (revisión de la 1.24)
     t = limpio.lower()
@@ -979,7 +981,17 @@ def plazos_en(texto):
 # raíces de palabras: el Estatus va en presente («Ana escribe el informe») y la tarea en infinitivo («Escribir el
 # informe»); con las cinco primeras letras sin acentos coinciden (revisión de la 1.24)
 _SIN_ACENTO = str.maketrans("áéíóúü", "aeiouu")
-RAICES = lambda t: {w.translate(_SIN_ACENTO)[:5] for w in PALABRAS_SIG(t or "")}
+_MESES = set("enero febrero marzo abril mayo junio julio agosto septiembre setiembre octubre noviembre diciembre lunes martes miércoles jueves viernes sábado domingo semana".split())
+def RAICES(t):
+    """Raíces de las palabras que dicen qué se hace: sin nombres propios (con mayúscula en el texto, salvo la primera), ni meses
+    ni días, que unen tareas que no tienen nada que ver (segunda vuelta de la revisión de la 1.24)."""
+    t = t or ""
+    propios = {w.lower() for w in re.findall(r"(?<=[\s(«\"'])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)", t)}
+    return {w.translate(_SIN_ACENTO)[:5] for w in PALABRAS_SIG(t) if w not in propios and w not in _MESES}
+def coinciden(a, b):
+    """Dos textos tratan de lo mismo: tres raíces en común, o dos si el más corto tiene cuatro o menos."""
+    c = len(a & b)
+    return c >= 3 or (c >= 2 and min(len(a), len(b)) <= 4)
 def siguiente_de(estatus):
     """Lo que dice «Siguiente» de un Estatus, partido en sus frases."""
     m_ = re.search(r"\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*(.+)", estatus or "", re.I)
@@ -990,9 +1002,9 @@ def senales(paso_texto, area_doc, pdoc):
     sig = RAICES(paso_texto)
     prio = None
     for i, pr in enumerate(area_doc.get("prioridades", [])):
-        if len(sig & RAICES(pr)) >= 2: prio = i + 1; break
-    en_sig = any(len(sig & RAICES(x)) >= 2 for x in siguiente_de(pdoc.get("en_corto")))
-    if not prio and any(len(sig & RAICES(x)) >= 3 for x in siguiente_de(area_doc.get("en_corto"))):
+        if coinciden(sig, RAICES(pr)): prio = i + 1; break
+    en_sig = any(coinciden(sig, RAICES(x)) for x in siguiente_de(pdoc.get("en_corto")))
+    if not prio and any(coinciden(sig, RAICES(x)) for x in siguiente_de(area_doc.get("en_corto"))):
         prio = 1   # el «Siguiente» del área es su prioridad de ahora
     # cliente: el área de clientes, alguien de fuera escrito con su organización, o dinero y firmas
     fuera = any(persona_fuera(m_.group(1), m_.group(2)) for m_ in PERSONA_FUERA.finditer(paso_texto))
@@ -1510,7 +1522,9 @@ for a in areas_guia:
         # recorte de los Avances (revisión de la 1.24)
         _acep = []
         for s_ in reales:
-            for r_ in re.findall(r"Aceptad[ao]s?\s+`?([a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*#20\d\d-\d\d-\d\d(?:-\d+)?)`?", s_.get("avances") or ""):
+            for r_ in re.findall(r"Aceptad[ao]s?\s+`?((?:[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*)?#20\d\d-\d\d-\d\d(?:-\d+)?)`?", s_.get("avances") or ""):
+                if r_.startswith("#"):
+                    r_ = f"{pdoc['area']}/{pdoc['slug']}{r_}"   # dentro del mismo proyecto basta la fecha (escribir.md)
                 if {"ref": r_, "quien": s_.get("quien") or ""} not in _acep:
                     _acep.append({"ref": r_, "quien": s_.get("quien") or ""})
         if _acep:

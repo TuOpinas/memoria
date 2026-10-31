@@ -241,6 +241,17 @@ for c in cargar():
     if t == "respuesta" and (not partes(c)[0] or not REF_DEC.fullmatch(str(c.get("decision") or "")) or c.get("valor") not in ("aceptada", "cuestionada")):
         rep["rechazados"].append({"id": c["id"], "detalle": "respuesta sin proyecto «area--slug», sin identificador de decisión o con un valor que no es «aceptada» ni «cuestionada»"})
         continue
+    if t == "respuesta":
+        # la decisión tiene que existir: su proyecto y una entrada con esa fecha en sus decisiones (riesgos de la 1.24)
+        _ap, _fe = str(c["decision"]).split("#", 1)
+        _dd = RAIZ / _ap / "decisiones.md"
+        try:
+            _hay = _dd.is_file() and re.search(r"(?m)^##\s+" + re.escape(_fe[:10]) + r"\b", _dd.read_text(encoding="utf-8")) is not None
+        except (OSError, UnicodeError):
+            _hay = True   # no se pudo leer: que lo vea la sesión
+        if not _hay and not list((RAIZ / _ap).glob("decisiones-*.md")):
+            rep["rechazados"].append({"id": c["id"], "detalle": f"respuesta a una decisión que no está en la carpeta: {c['decision']}"})
+            continue
     if t in ("fecha", "hecho", "nota", "corregir", "prioridad", "respuesta") and c.get("proyecto") and not partes(c)[0]:
         rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
         continue

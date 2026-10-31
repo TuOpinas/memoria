@@ -74,19 +74,20 @@ ok({x["id"] for x in r7["para_sesion"]} == {"c3", "c4"} and {x["id"] for x in r7
 # «Aceptar» y «Cuestionar» (1.24): llegan a la sesión con la decisión y el porqué; las que no tienen la forma, fuera
 antes = (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
 cola.write_text(json.dumps([
-    {"id": "r1", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "cuestionada", "porque": "El tope deja fuera las compras recurrentes", "titulo": "Tope de 5.000 MXN", "decidio": "Beto Prueba"},
-    {"id": "r2", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02-2", "valor": "aceptada"},
+    {"id": "r1", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/soporte#2026-10-05", "valor": "cuestionada", "porque": "El tope deja fuera las compras recurrentes", "titulo": "Tope de 5.000 MXN", "decidio": "Beto Prueba"},
+    {"id": "r2", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/soporte#2026-10-03-2", "valor": "aceptada"},
     {"id": "r3", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras", "valor": "aceptada"},
     {"id": "r4", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "adoptada"},
     {"id": "r5", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "cuestionada", "porque": "uno\ndos"},
-    {"id": "r6", "tipo": "respuesta", "proyecto": "personas--nomina", "decision": "operacion/compras#2026-10-02", "valor": "aceptada"},
+    {"id": "r6", "tipo": "respuesta", "proyecto": "personas--nomina", "decision": "operacion/soporte#2026-10-05", "valor": "aceptada"},
+    {"id": "r7", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/soporte#2026-01-01", "valor": "aceptada"},
     {"id": "e1", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "Espera a Luis Romero: firmamos con Beta", "espera": "Luis Romero", "decision": "si firmamos con Beta"},
 ]), encoding="utf-8")
 r8 = corre("--cuenta", "ana@ejemplo.test")
 ps8 = {x["id"]: x for x in r8["para_sesion"]}
 ok(ps8.get("e1", {}).get("espera") == "Luis Romero" and ps8["e1"].get("decision") == "si firmamos con Beta", "la nota de «Ya llegó» lleva a quién se esperaba y qué decisión (revisión de la 1.24)")
 ps8.pop("e1", None)
-ok(set(ps8) == {"r1", "r2"} and ps8["r1"]["decision"] == "operacion/compras#2026-10-02" and ps8["r1"]["valor"] == "cuestionada" and ps8["r1"]["porque"].startswith("El tope") and not r8["aplicados"], "una respuesta llega a la sesión con su decisión, su valor y su porqué, sin aplicarse")
-ok({x["id"] for x in r8["rechazados"]} == {"r3", "r4", "r5"} and [x["id"] for x in r8["para_su_dueno"]] == ["r6"] and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "una respuesta sin identificador, con otro valor o con saltos de línea se rechaza; la de un área ajena espera a su dueño")
+ok(set(ps8) == {"r1", "r2"} and ps8["r1"]["decision"] == "operacion/soporte#2026-10-05" and ps8["r1"]["valor"] == "cuestionada" and ps8["r1"]["porque"].startswith("El tope") and not r8["aplicados"], "una respuesta llega a la sesión con su decisión, su valor y su porqué, sin aplicarse")
+ok({x["id"] for x in r8["rechazados"]} == {"r3", "r4", "r5", "r7"} and [x["id"] for x in r8["para_su_dueno"]] == ["r6"] and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "una respuesta sin identificador, con otro valor, con saltos de línea o a una decisión que no está se rechaza; la de un área ajena espera a su dueño")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)
