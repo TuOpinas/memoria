@@ -46,7 +46,7 @@ try:
                            vieja("prop-decision-sin-registrar-acep", "aceptada", 2), vieja("prop-decision-sin-registrar-pend", "pendiente", 1)])
     jl(t1 / "cierres.jsonl", [{"data": {"proyecto": "ventas--cuentas", "hora": "2000-01-01T09:00Z", "cuenta": "a@b.c"}, "id": "ventas--cuentas--200001010900", "version": 1}])
     rc, out, err = corre(DATOS, "base", t1, "--primera-vez", "--cola", t1 / "cola.jsonl", "--cierres", t1 / "cierres.jsonl", "--publicado", t1 / "no-hay.jsonl")
-    ok(rc == 0 and out == "", f"el paso 1a no imprime nada: la tarea lee cuatro líneas de los scripts que siguen ({out!r} {err[-200:]})")
+    ok(rc == 0 and out == "", f"el paso 1a no imprime nada: la tarea lee cinco líneas de los scripts que siguen ({out!r} {err[-200:]})")
     ok((t1 / "cola" / "c1.json").exists() and not (t1 / "cola" / "prop-decision-sin-registrar-acep.json").exists(), "en 1a la cola lleva lo marcado; las marcas de sugerencias se guardan aparte")
     rc, out, err = corre(PLAN, "--guardada", t1 / "base", "--version", "prueba")
     ok(rc == 0 and out.splitlines()[0] == "-", "sin archivos hay que regenerar")

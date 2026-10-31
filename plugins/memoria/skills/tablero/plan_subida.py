@@ -62,10 +62,10 @@ if "--guardada" in sys.argv:
         _fm = re.search(r'^FORMATO_DATOS = "([^"]*)"', (pathlib.Path(__file__).with_name("generar_vista.py")).read_text(encoding="utf-8"), re.M)
     except OSError:
         _fm = None
-    # y con el mismo barrido: si barrido.py o juicio.md cambiaron, se relee todo para que el barrido nuevo pase por todos
+    # y con el mismo barrido: si barrido.py cambió (juicio.md no cuenta: un retoque de redacción no pide releer), se relee todo para que el barrido nuevo pase por todos
     _hb = hashlib.sha1()
     try:
-        for _n in ("barrido.py", "juicio.md"):
+        for _n in ("barrido.py",):
             _hb.update(pathlib.Path(__file__).with_name(_n).read_bytes())
         _hb = _hb.hexdigest()[:12]
     except OSError:

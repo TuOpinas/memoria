@@ -1626,10 +1626,10 @@ enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candida
 fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
 def huella_barrido():
-    """La de barrido.py y juicio.md, junto a este archivo (1.24.3): si cambian, la siguiente puesta al día relee todos los
+    """La de barrido.py, junto a este archivo (1.24.3): si cambian, la siguiente puesta al día relee todos los
     proyectos para que el barrido nuevo pase por todos. En la computadora no están, y no hace falta: ahí no se escribe estado."""
     h = hashlib.sha1()
-    for n in ("barrido.py", "juicio.md"):
+    for n in ("barrido.py",):
         try:
             h.update(pathlib.Path(__file__).with_name(n).read_bytes())
         except OSError:

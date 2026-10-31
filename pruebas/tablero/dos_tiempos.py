@@ -225,7 +225,7 @@ ok(_i1["huellas"] == _i2["huellas"] and _i1.get("huellas_taller") == _i2.get("hu
 _g2 = TRAB / "guardada2"; (_g2 / "meta").mkdir(parents=True, exist_ok=True)
 _fmt = re.search(r'^FORMATO_DATOS = "([^"]*)"', pathlib.Path(PLAN).with_name("generar_vista.py").read_text(encoding="utf-8"), re.M).group(1)
 import hashlib as _hl
-_hb = _hl.sha1(b"".join(pathlib.Path(PLAN).with_name(n).read_bytes() for n in ("barrido.py", "juicio.md"))).hexdigest()[:12]
+_hb = _hl.sha1(b"".join(pathlib.Path(PLAN).with_name(n).read_bytes() for n in ("barrido.py",))).hexdigest()[:12]
 (_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "formato_datos": _fmt, "huella_barrido": _hb, "huellas": ["aa", "bb"]}}), encoding="utf-8")
 _o = lambda *a: subprocess.run([sys.executable, PLAN, "--guardada", _g2, *a], capture_output=True, text=True).stdout.split("\n")
 ok(_o("--version", "9.9.9")[:2] == ["h1", "aa,bb"], "huellas guardadas: con la misma versión salen la huella de la raíz y las de cada proyecto")
