@@ -9,6 +9,11 @@ sobre la raíz; que una copia incompleta o con archivos de más se rechaza; que 
 """
 import json, re, os, shutil, subprocess, sys, pathlib
 
+def _plan(txt):
+    """Desde la 1.24.1 plan_subida.py imprime un resumen y deja el plan entero en <salida>/plan.json."""
+    r = json.loads(txt)
+    return json.loads(open(r["plan"], encoding="utf-8").read()) if isinstance(r, dict) and r.get("plan") else r
+
 GEN, PLAN, RAIZ, TRAB = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3]), pathlib.Path(sys.argv[4])
 fallos = 0
 
@@ -221,22 +226,22 @@ salida = TRAB / "dos-completo"
 volcado = TRAB / "volcado"
 shutil.rmtree(volcado, ignore_errors=True)
 shutil.copytree(salida, volcado, ignore=shutil.ignore_patterns("indice.json", "enfoque-candidatos.json"))
-plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
+plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
 escr = [e for l in plan["lotes"] for e in l]
 ok([(e["collection"], e["doc_id"], e["op"]) for e in escr] == [("meta", "estado", "update")], "plan: sin cambios, solo se sube meta/estado (como update)")
 vacio = TRAB / "vacio"; vacio.mkdir(exist_ok=True)
-plan0 = json.loads(subprocess.run([sys.executable, PLAN, salida, vacio], capture_output=True, text=True).stdout)
+plan0 = _plan(subprocess.run([sys.executable, PLAN, salida, vacio], capture_output=True, text=True).stdout)
 e0 = [e for l in plan0["lotes"] for e in l]
 ok(all(e["op"] == "set" and not e["existe"] for e in e0) and len(e0) == len(json.loads((salida / "indice.json").read_text())), "plan: con la base vacía (al montar) todo va como set, también meta/estado")
 uno = sorted((volcado / "proyectos").glob("*.json"))[0]
 d = json.loads(uno.read_text(encoding="utf-8")); d["huella"] = "otra"; uno.write_text(json.dumps(d), encoding="utf-8")
 (volcado / "proyectos" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
-plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
+plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
 escr = [e for l in plan["lotes"] for e in l]
 ok(any(e["doc_id"] == uno.stem and e["op"] == "set" and e["existe"] for e in escr), "plan: un proyecto que cambió se sube entero, marcado como existente")
 ok(any(e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: un proyecto que ya no sale de la raíz se borra")
 (volcado / "detalle").mkdir(exist_ok=True); (volcado / "detalle" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
-plan = json.loads(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
+plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
 escr = [e for l in plan["lotes"] for e in l]
 ok(any(e["collection"] == "detalle" and e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: el detalle de un proyecto que ya no sale también se borra (1.19)")
 ids = [(e["collection"], e["doc_id"]) for e in e0]

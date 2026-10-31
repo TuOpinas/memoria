@@ -101,7 +101,7 @@ try:
     ind += [{"coleccion": "proyectos", "doc_id": p_.stem, "archivo": f"proyectos/{p_.stem}.json", "huella": "z", "bytes": p_.stat().st_size} for p_ in (sal / "proyectos").glob("*.json")]
     (sal / "indice.json").write_text(json.dumps(ind), encoding="utf-8")
     r2 = subprocess.run([sys.executable, str(PLAN), str(sal), str(vol)], capture_output=True, text=True)
-    txt = r2.stdout
+    txt = (sal / "plan.json").read_text(encoding="utf-8") if r2.returncode == 0 else ""   # desde la 1.24.1 el plan entero va a plan.json
     ok(r2.returncode == 0 and '"ventas--borrado"' in txt and '"ventas--igual"' not in txt.split('"delete"')[-1] if r2.returncode == 0 else False,
        "el resumen de un proyecto que ya no existe se borra; el de uno que sigue, no" + (f" ({r2.stderr[-200:]})" if r2.returncode else ""))
 finally:

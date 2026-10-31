@@ -763,7 +763,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.24.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.24.1"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1876,7 +1876,7 @@ document.addEventListener("click", async e => { const b = e.target.closest && e.
   const p = byId[b.dataset.provOk]; if(!escribeAqui(p)) return;
   const _p = p, d = (TEXTOS[p.id] && TEXTOS[p.id].que_hay) || {piezas:[]};
   const qs = d.piezas.filter(z=>!z.afirma).map(z=>provDe(rutaPieza(p,z))).filter(q=>q && q.estado==="pendiente");
-  try{ for(const q of qs) await DB.doc("cambios/"+q.id).update({estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
+  try{ for(const q of qs) await marcarPropuesta(q, {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null}); flash(`Aceptadas ${qs.length}: el próximo cierre del proyecto las escribe en las cabeceras.`); }catch(x){ flash("No se pudo guardar. Vuelve a intentarlo."); }
   render(); });
 
 // ===================== Actividad: por área, por proyecto, por persona =====================
@@ -2294,6 +2294,7 @@ function avanceProyecto(p){
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   head.innerHTML = cabeceraRaiz();
+  if(SIN_DATOS){ main.innerHTML = sinDatos(); return; }
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">Cargando la raíz…</p>`; return; }
   if(INI_TAB==="otros") INI_TAB = "acciones";
   // Acciones y Mantenimiento se calculan siempre por su número; Estatus y Actividad, que no llevan número, solo si se ven (1.22.4)
@@ -2488,6 +2489,7 @@ function renderPend(){
   const all = pendientes().filter(i=>i.f && (!PEND_AREA || i.p.area===PEND_AREA)), t = today(), lim = addDays(14), sinF = pendientes().filter(i=>!i.f).length;
   const late = all.filter(i=>i.f<t).sort((a,b)=>a.f.localeCompare(b.f)), soon = all.filter(i=>i.f>=t && i.f<=lim).sort((a,b)=>a.f.localeCompare(b.f)), later = all.filter(i=>i.f>lim).sort((a,b)=>a.f.localeCompare(b.f));
   head.innerHTML = `<h1>Agenda</h1><p class="sub">Lo que tiene fecha en toda la carpeta. ${sinF===1?"La tarea sin fecha está":`Las ${sinF} tareas sin fecha están`} en «Qué hay» de cada proyecto.</p>`;
+  if(SIN_DATOS){ main.innerHTML = sinDatos(); return; }
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">Cargando…</p>`; return; }
   const dias = []; for(let i=0;i<=14;i++){ const f = addDays(i); dias.push({f, n: all.filter(x=>x.f===f).length, hoy: f===t}); }
   const DIA = f => new Date(f+"T12:00:00").toLocaleDateString("es-MX",{weekday:"short"}).replace(".","");
@@ -2561,7 +2563,7 @@ const escribeAqui = p => !!p && p.escribe===true;   // sin el dato (datos de ant
 document.addEventListener("click", async e => { const n = e.target.closest && e.target.closest("[data-nc]"); if(!n || !CAN || !OWNER || !DB) return;
   n.disabled = true;
   const q = PROPUESTAS.find(c=>c.id===n.dataset.nc);
-  try{ await DB.doc("cambios/"+n.dataset.nc).update(n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null} : n.dataset.v==="pendiente" ? {estado:"pendiente", aceptada: null, por: null, creado: nowISO()} : {estado:"descartada", descartada: nowISO()});
+  try{ await marcarPropuesta(q, n.dataset.v==="aceptada" ? {estado:"aceptada", aceptada: nowISO(), por: VIEWER()||null} : n.dataset.v==="pendiente" ? {estado:"pendiente", aceptada: null, por: null, creado: nowISO()} : {estado:"descartada", descartada: nowISO()});
     flash(n.dataset.v==="pendiente" ? "Vuelve a las sugerencias." : n.dataset.v!=="aceptada" ? "Descartada: no se vuelve a proponer igual." : q && q.clase==="afirma" ? "Aceptada: la escribe el próximo cierre del proyecto." : "Aceptada: la próxima sesión del proyecto te la enseña con su texto, para tu sí."); }
   catch(x){ n.disabled = false; flash("No se pudo guardar. Vuelve a intentarlo."); }
 });
@@ -2589,19 +2591,15 @@ const TEXTOS = {}, TEXTOS_PIDIENDO = new Set();
 function traerTextos(pid){
   if(TEXTOS[pid] || TEXTOS_PIDIENDO.has(pid) || !DB) return;
   TEXTOS_PIDIENDO.add(pid);
-  // una sola lectura, con la misma suscripción que usa el resto de la página, y se suelta en cuanto llega
-  let fin = null, listo = false;
-  const llega = s => { if(listo) return; listo = true; const d = s && s.exists !== false && s.data ? s.data() : null; TEXTOS[pid] = d || {falta:true}; TEXTOS_PIDIENDO.delete(pid); DATA_SEQ++; try{ fin && fin(); }catch(e){} render(); };
-  try{ fin = DB.doc("detalle/"+pid).onSnapshot(llega, () => llega(null)); if(listo && fin) fin(); }
-  catch(e){ llega(null); }
+  // con los archivos (1.24.1), el detalle de todos los proyectos viene en uno, que se trae una vez
+  DETALLE_PROM = DETALLE_PROM || leerArchivo("detalle.json").catch(() => null);
+  DETALLE_PROM.then(todo => { const d = todo && todo[pid]; TEXTOS[pid] = d && typeof d === "object" ? d : {falta:true}; TEXTOS_PIDIENDO.delete(pid); DATA_SEQ++; render(); });
 }
 function conTexto(d, p){ if(!d.texto_aparte) return d; const x = ((TEXTOS[p.id]||{}).decisiones||{})[d.texto_aparte]; return x ? {...d, ...x} : d; }
 const CARGANDO = `<p class="more">Cargando…</p>`;
 // el detalle no llegó (la base lo rechazó o el lote falló): se dice, en vez de pintar el proyecto como vacío
 const SIN_DETALLE = `<p class="more">No se pudo traer el detalle de este proyecto: sincroniza el tablero.</p>`;
 const sinDetalle = p => !!(TEXTOS[p.id] && TEXTOS[p.id].falta);
-// un proyecto que cambió en la base (otra huella) deja viejo su detalle: se vuelve a pedir cuando haga falta (1.19)
-function olvidarTextos(nuevos){ for(const n of nuevos){ const v = byId[n.id]; if(v && v.huella !== n.huella) delete TEXTOS[n.id]; } for(const id in TEXTOS) if(!nuevos.some(n => n.id === id)) delete TEXTOS[id]; }
 // las sesiones de la bitácora: la última viene con el proyecto y las demás, del detalle
 // «Cuestionar» en el registro: la decisión de otra persona, con el porqué a la cola (1.24)
 function cuestDec(d, p){
@@ -2679,7 +2677,7 @@ async function sincronizar(){
   SYNC_STATE = "corriendo"; SYNC_DESDE = META.sincronizado || null; render();
   try{
     await MCP.callTool("Claude Code Remote", "fire_trigger", {trigger_id: META.tarea});
-    SYNC_STATE = "lanzada"; SYNC_LANZADA_EN = Date.now(); flash("Sincronización lanzada. Tarda unos minutos; el tablero se pone al día solo cuando termina.");
+    SYNC_STATE = "lanzada"; SYNC_LANZADA_EN = Date.now(); flash("Sincronización lanzada. Tarda unos minutos; al terminar, si trae algo nuevo, la página te pide volver a cargarla.");
   }catch(e){
     const code = e && e.code;
     SYNC_STATE = null;
@@ -2702,12 +2700,13 @@ function syncBtn(){
   const mec = CAMBIOS.filter(c => (c.tipo==="fecha" || (c.tipo==="hecho" && c.nota)) && !retenida.has(c.id)).length;
   const desfase = !!(META.version_tablero && META.version_tablero !== VERSION_TABLERO);
   const nCierres = cierresPend().length;
-  const pend = listo && (mec > 0 || desfase || nCierres > 0);
+  const pend = listo && !HAY_NUEVO && (mec > 0 || desfase || nCierres > 0);
   const min = META.sincronizado ? Math.max(0, Math.round((Date.now() - new Date(META.sincronizado).getTime())/60000)) : null;
   const cuando = min===null ? "" : haceMin(min);
   const tipTxt = !listo ? `Sincronizar ahora: ${falta}.`
     : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
-    : SYNC_STATE==="lanzada" ? "Sincronizando: tarda unos minutos y el tablero se actualiza solo al terminar; las flechas paran entonces. Si nada cambió en la carpeta, termina enseguida."
+    : HAY_NUEVO ? "Ya hay una versión más nueva del tablero: vuelve a cargar la página para verla."
+    : SYNC_STATE==="lanzada" ? "Sincronizando: tarda unos minutos; al terminar, las flechas paran y, si trae algo nuevo, la página te pide volver a cargarla. Si nada cambió en la carpeta, termina enseguida."
     : pend ? (nCierres && !mec ? `Hace falta sincronizar: ${nCierres} sesi${nCierres===1?"ón cerrada":"ones cerradas"} después de la última vez.` : mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: la página y los datos del tablero son de versiones distintas, y la sincronización los pone a la par.") + (cuando ? ` Última vez ${cuando}.` : "")
     : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
   // Un solo icono, las flechas: giran mientras se lanza la tarea y mientras corre, y paran cuando el tablero ya está al día.
@@ -2909,7 +2908,7 @@ function ayudaArts(){
       <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
     </figure>
     <dl class="hc-def">
-      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, la pestaña Mantenimiento de Inicio te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos y la página se actualiza sola al terminar. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
+      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, la pestaña Mantenimiento de Inicio te avisa de cuántas sesiones aún no muestra y de cuáles, con el botón para traerlas. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos; al terminar, si trae algo nuevo, la página te pide volver a cargarla. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
       <dt>Lo que escriben otras personas</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Para traerlo, el botón «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o dile a Claude ${F("sincroniza el tablero")}. El botón no corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día. No hace falta hacer nada.</dd>
@@ -3398,6 +3397,46 @@ function _render(){
   const f = document.getElementById("foot");
   f.innerHTML = META ? esc(`Al día del ${fmtL(META.snapshot)} · puesto al día desde la carpeta el ${new Date(META.sincronizado).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(/\.$/,"")}${META.duracion_min != null ? ` (la puesta al día tardó ${META.duracion_min < 1 ? "menos de un minuto" : `${Math.round(META.duracion_min)} min`}${META.llamadas ? `, ${META.llamadas} llamadas` : ""})` : ""}. Lee de la carpeta la guía, cada área y, de cada proyecto, cómo va, sus decisiones, sus sesiones, sus documentos y la lista de lo que hay en preparación; todo lo que tu cuenta puede leer, salvo el material de origen, el contenido de lo que está en preparación y lo restringido. La carpeta manda: lo que marcas aquí queda apuntado hasta la siguiente puesta al día, que lo pasa a la carpeta.`) : "";
 }
+// ---- de dónde vienen los datos (1.24.1) ----
+// Los archivos datos/*.json los publica la puesta al día junto con la página: estado.json (meta/estado), tablero.json
+// (áreas, proyectos, resúmenes de «Qué hay» y «Por dónde empezar»), propuestas.json (las sugerencias del barrido) y
+// detalle.json (lo que se trae al entrar en un proyecto). Lo que se marca en la página sigue en la base, en vivo. Un tablero
+// sin esos archivos (aún no se puso al día con la 1.24.1) no se lee de la base vieja: lo dice, y su sincronización los publica.
+// falta: el tablero aún no tiene sus archivos (se está montando, o no se sincronizó con la 1.24.1); error: no se pudieron traer
+const sinDatos = () => SIN_DATOS === "falta" ? `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>` : `<p class="empty">No se pudieron traer los datos del tablero. Vuelve a cargar la página; si sigue, dile a Claude «sincroniza el tablero».</p>`;
+let ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = null, HAY_NUEVO = false;
+const leerArchivo = async n => { const r = await fetch("datos/" + n, {cache: "no-store"}); if(!r.ok){ const e = new Error(n + " " + r.status); e.status = r.status; throw e; } return r.json(); };
+const conId = o => Object.entries(o || {}).map(([id, v]) => ({id, ...v}));
+async function cargarArchivos(){
+  let est, tab, props;
+  try{ [est, tab] = await Promise.all([leerArchivo("estado.json"), leerArchivo("tablero.json")]); }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
+  try{ props = await leerArchivo("propuestas.json"); }catch(e){ props = {}; }
+  META = est && typeof est === "object" ? est : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion;
+  AREAS = conId(tab.areas).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a]));
+  PROJ = conId(tab.proyectos).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p]));
+  for(const k of Object.keys(RESUMEN_GEN)) delete RESUMEN_GEN[k]; Object.assign(RESUMEN_GEN, tab.resumenes || {});
+  ENFOQUE = tab.enfoque || null;
+  PROP_ARCHIVO = props && typeof props === "object" ? props : {};
+  ready.a = ready.p = true; view = parseHash(); mezclarPropuestas(); datosNuevos();
+  return true;
+}
+// lo que una persona hizo con una propuesta (aceptarla, descartarla) vive en la base con el mismo id; el archivo trae su
+// texto. Una propuesta que el archivo ya no trae no se enseña aunque la base guarde su marca; una «aplicada» la resolvió
+// un cierre y espera a que la siguiente puesta al día la retire.
+function mezclarPropuestas(){
+  const base = Object.fromEntries(PROP_BASE.map(c => [c.id, c]));
+  const todas = Object.entries(PROP_ARCHIVO).map(([id, d]) => { const o = base[id]; return o ? {...d, id, estado: o.estado, aceptada: o.aceptada, descartada: o.descartada, por: o.por, _base: true} : {...d, id}; });
+  PROPUESTAS = todas.filter(c => c.estado !== "aplicada");
+}
+// cambia el estado de una propuesta: si la base ya tiene su marca, se actualiza; si no, se crea con su texto
+// La marca lleva solo lo que dice qué se hizo con ella: el texto ya está en el archivo. Volver a «pendiente» la borra.
+async function marcarPropuesta(q, campos){
+  if(!q) throw new Error("propuesta desconocida");
+  if(campos.estado === "pendiente") return q._base ? DB.doc("cambios/" + q.id).delete() : undefined;
+  const marca = {tipo: "propuesta", proyecto: q.proyecto || null, clase: q.clase || null, ...campos};
+  if(q._base) return DB.doc("cambios/" + q.id).update(marca);
+  return DB.doc("cambios/" + q.id).set(marca);
+}
 (async ()=>{
   render();
   const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
@@ -3409,15 +3448,24 @@ function _render(){
   // Conector de tareas programadas: sin él no existe «Sincronizar ahora». Se carga después del usuario y se repinta.
   try{ MCP = await window.claude.use("mcp"); }catch(e){ MCP = null; }
   render();
-  db.collection("areas").onSnapshot(snap=>{ AREAS = snap.docs.map(s=>({id:s.id, ...s.data()})).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); const pr = ready.a; ready.a = true; if(!pr) view = parseHash(); datosNuevos(); }, ()=>{ DB=false; datosNuevos(); });
-  db.collection("proyectos").onSnapshot(snap=>{ const nuevos = snap.docs.map(s=>({id:s.id, ...s.data()})); olvidarTextos(nuevos); PROJ = nuevos.sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p])); const pr = ready.p; ready.p = true; if(!pr) view = parseHash(); datosNuevos(); }, ()=>{ DB=false; datosNuevos(); });
-  db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROPUESTAS = todo.filter(c=>c.tipo==="propuesta"); datosNuevos(); }, ()=>{});   // las propuestas del barrido viven en la misma cola pero no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
-  // los resúmenes de «Qué hay» que escribe la puesta al día (1.22.4); valen mientras la huella de lo que hay no cambie
-  db.collection("resumenes").onSnapshot(snap=>{ for(const k of Object.keys(RESUMEN_GEN)) delete RESUMEN_GEN[k]; for(const d of snap.docs) RESUMEN_GEN[d.id] = d.data(); datosNuevos(); }, ()=>{});
+  // desde la 1.24.1, lo que la puesta al día genera de la carpeta llega como archivos del propio tablero, publicados con la
+  // página en cada sincronización; la base guarda solo lo que se marca aquí, los cierres, los permisos y la marca de cada
+  // publicación.
+  ARCHIVOS = await cargarArchivos();
+  if(!ARCHIVOS){ render(); return; }
+  db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROP_BASE = todo.filter(c=>c.tipo==="propuesta"); mezclarPropuestas(); datosNuevos(); }, ()=>{});   // las propuestas del barrido no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
   db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); datosNuevos(); }, ()=>{});
-  db.doc("meta/estado").onSnapshot(s=>{ META = s.exists ? s.data() : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion; datosNuevos(); }, ()=>{});
-  db.doc("enfoque/actual").onSnapshot(s=>{ ENFOQUE = s.exists ? s.data() : null; datosNuevos(); }, ()=>{});
   db.doc("meta/permisos").onSnapshot(s=>{ PERMISOS = s.exists ? s.data() : null; datosNuevos(); }, ()=>{});
+  // la puesta al día apunta en la base cuándo publicó: con la página abierta, los archivos nuevos no llegan hasta recargar
+  // (colección «publicado», un documento por publicación; la siguiente borra el anterior)
+  // una puesta al día que no cambió nada no publica: deja en su marca («solo_estado») la hora y lo que el pie y el botón enseñan
+  db.collection("publicado").onSnapshot(snap=>{ const t = x => { const v = new Date(x).getTime(); return isNaN(v) ? 0 : v; };
+    const mio = META && META.sincronizado ? t(META.sincronizado) : 0;
+    const nuevas = snap.docs.map(s => s.data() || {}).filter(d => t(d.sincronizado) > mio).sort((a, b) => t(a.sincronizado) - t(b.sincronizado));
+    let nuevo = false;
+    for(const d of nuevas){ if(d.solo_estado && d.publicado_id && META.publicado_id && d.publicado_id !== META.publicado_id) nuevo = true;
+      if(d.solo_estado){ for(const k of ["sincronizado", "duracion_min", "llamadas", "cola_retenida", "cola_ajena"]) if(k in d) META[k] = d[k]; datosNuevos(); } else nuevo = true; }
+    if(nuevo && !HAY_NUEVO){ HAY_NUEVO = true; SYNC_STATE = null; flash("El tablero se puso al día: vuelve a cargar la página para verlo."); datosNuevos(); } }, ()=>{});
 })();
 
 document.getElementById("side-toggle").addEventListener("click", ()=>{ SIDE_OPEN = !SIDE_OPEN; document.body.classList.toggle("side-open", SIDE_OPEN); renderSide(); });

@@ -15,5 +15,18 @@ window.__D = __DATA__;
  // simula que otra sesión escribe en una colección con la página abierta: vuelve a avisar a quien la escucha
  // name es una colección («cierres») o un documento («meta/estado»)
  window.__emitir = name => ((window.__subs||{})[name]||[]).forEach(cb => cb(snap(name)));
+ // los archivos que publica la puesta al día (1.24.1), servidos desde los mismos datos: la página los pide con fetch.
+ // Con window.__SIN_ARCHIVOS la página no los encuentra y lee de la base, como un tablero sin su primera sincronización 1.24.1.
+ const _fetch = window.fetch;
+ window.fetch = async (u, o) => {
+  const m = /(?:^|\/)datos\/(\w+)\.json$/.exec(String(u));
+  if(!m) return _fetch(u, o);
+  (window.__pedidos = window.__pedidos || []).push(String(u));
+  if(window.__SIN_ARCHIVOS) return new Response("", {status: 404});
+  const props = Object.fromEntries(Object.entries(D.cambios||{}).filter(([,v]) => v.tipo === "propuesta"));
+  const cuerpo = {estado: (D.meta||{}).estado || {}, tablero: {areas: D.areas||{}, proyectos: D.proyectos||{}, resumenes: D.resumenes||{}, enfoque: (D.enfoque||{}).actual || null},
+                  propuestas: props, detalle: D.detalle||{}}[m[1]];
+  return cuerpo === undefined ? new Response("", {status: 404}) : new Response(JSON.stringify(cuerpo), {status: 200, headers: {"Content-Type": "application/json"}});
+ };
  window.claude = { use: async n => n==='db'?db : n==='user'?user : n==='mcp'?mcp : null };
 })();

@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """plan_subida.py: lo que cierra la corrida va en el último lote con meta/estado, sin que nadie escriba una hora (1.21)."""
 import json, re, pathlib, subprocess, sys, tempfile, shutil, datetime
+
+def _plan(txt):
+    """Desde la 1.24.1 plan_subida.py imprime un resumen y deja el plan entero en <salida>/plan.json."""
+    r = json.loads(txt)
+    return json.loads(open(r["plan"], encoding="utf-8").read()) if isinstance(r, dict) and r.get("plan") else r
 AQUI = pathlib.Path(__file__).resolve().parent
 TABLERO = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "tablero"
 PLAN, PREPARAR = TABLERO / "plan_subida.py", TABLERO.parent.parent / "preparar.py"
@@ -35,7 +40,7 @@ try:
     escribir(tmp / "ret.json", '["c9"]'); escribir(tmp / "aj.json", "[]")
     rc, out, err = corre(PLAN, "--cierre", base, tmp / "salida", "--sincronizado", sinc, "--cierres", cierres.parent, "--inicio", trab / "inicio.json",
                          "--llamadas", "9", "--retenidos", tmp / "ret.json", "--ajenos", tmp / "aj.json", "--pagina", '{"version": "1.21.0", "desde": "1.20.1"}', "--tarea-desfasada", "false")
-    res = json.loads(out) if rc == 0 else {}
+    res = _plan(out) if rc == 0 else {}
     lote = (res.get("lotes") or [[]])[0]
     meta = json.loads((tmp / "salida" / "meta" / "estado.json").read_text(encoding="utf-8")) if rc == 0 else {}
     ok(rc == 0 and len(res["lotes"]) == 1 and lote[-1] == {"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str((tmp / "salida" / "meta" / "estado.json").resolve())}, f"un solo lote que termina en meta/estado como update sin if_version ({err[-200:]})")
@@ -44,7 +49,7 @@ try:
     ok(6.5 <= (meta.get("duracion_min") or 0) <= 8, f"la duración sale de inicio.json ({meta.get('duracion_min')} min)")
     ok("huella_raiz" not in meta and "huellas" not in meta, "no toca las huellas: es un update parcial")
     rc2, out2, _ = corre(PLAN, "--cierre", tmp / "base-vacia", tmp / "salida2", "--sincronizado", sinc)
-    ok(rc2 == 0 and json.loads(out2)["lotes"][0][-1]["op"] == "set" and json.loads((tmp / "salida2/meta/estado.json").read_text())["cola_retenida"] == [], "sin base ni archivos de cola, meta/estado va como set con la cola vacía")
+    ok(rc2 == 0 and _plan(out2)["lotes"][0][-1]["op"] == "set" and json.loads((tmp / "salida2/meta/estado.json").read_text())["cola_retenida"] == [], "sin base ni archivos de cola, meta/estado va como set con la cola vacía")
 
     print("plan_subida.py al regenerar: los cierres y lo que cierra van en el último lote, y dice si el enfoque cambió")
     sal = tmp / "sal"
@@ -53,7 +58,7 @@ try:
     escribir(sal / "indice.json", json.dumps([{"coleccion": "meta", "doc_id": "estado", "archivo": "meta/estado.json", "bytes": 10, "huella": "h"}]))
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-vieja"}, "version": 4}))
     rc, out, err = corre(PLAN, sal, base, "--cierres", cierres.parent, "--inicio", trab / "inicio.json", "--llamadas", "14", "--pagina", '{"version": "1.21.0"}')
-    res = json.loads(out) if rc == 0 else {}
+    res = _plan(out) if rc == 0 else {}
     ult = (res.get("lotes") or [[]])[-1]
     meta = json.loads((sal / "meta" / "estado.json").read_text(encoding="utf-8"))
     ok(rc == 0 and ult[-1]["collection"] == "meta" and [e["doc_id"] for e in ult if e["collection"] == "cierres"] == ["c-futura", "c-igual", "c-vieja"], f"los delete de cierres van justo antes de meta/estado, en el último lote ({err[-200:]})")

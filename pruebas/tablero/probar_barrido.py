@@ -4,6 +4,11 @@
 y que aplicar_cambios.py deja las propuestas en paz. No toca ninguna raíz real."""
 import os, sys, json, pathlib, subprocess, tempfile, shutil
 
+def _plan(txt):
+    """Desde la 1.24.1 plan_subida.py imprime un resumen y deja el plan entero en <salida>/plan.json."""
+    r = json.loads(txt)
+    return json.loads(open(r["plan"], encoding="utf-8").read()) if isinstance(r, dict) and r.get("plan") else r
+
 AQUI = pathlib.Path(__file__).resolve().parent
 TABLERO = AQUI.parent.parent / "plugins/memoria/skills/tablero"
 BARRIDO, APLICAR = TABLERO / "barrido.py", TABLERO / "aplicar_cambios.py"
@@ -269,7 +274,7 @@ try:
     escribir(cola2 / f"{idv}.json", json.dumps({"id": idv, "data": docs[idv], "version": 7}))
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sal), "--cola", str(cola2), "--hoy", "2026-10-23"], capture_output=True, text=True)
     r = subprocess.run([sys.executable, str(PLAN), str(sal), str(tmp / "volcado")], capture_output=True, text=True)
-    plan = json.loads(r.stdout)
+    plan = _plan(r.stdout)
     ops = [e for lote in plan["lotes"] for e in lote]
     sets = [e for e in ops if e["op"] == "set" and e["collection"] == "cambios"]
     dels = [e for e in ops if e["op"] == "delete" and e["collection"] == "cambios"]

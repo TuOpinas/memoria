@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qué hay que subir a la base del tablero, sin traer ningún documento a la conversación.
+"""Qué cambia en el tablero, sin traer ningún documento a la conversación (desde la 1.24.1 lo aplica datos.py publicar).
 
 Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000] [--cierres <volcado de «cierres»>]
                     [--inicio <trabajo>/inicio.json] [--llamadas <n>] [--pagina '<json de pagina_actualizada>']
@@ -27,7 +27,7 @@ regenerar. La segunda, las huellas de cada proyecto que guardó (separadas por c
 si los documentos de la base son de esta misma versión del plugin, o «-» si no hay ninguna que valga. La tercera, las
 huellas del taller de cada proyecto (pid:huella, separadas por comas, para --taller-igual del inventario), o «-».
 
-<volcado-de-la-base> es la carpeta donde ArtifactData dejó, con out_dir, lo que hay hoy en la base
+<volcado-de-la-base> es la carpeta donde datos.py base dejó lo publicado (desde la 1.24.1; antes, ArtifactData con out_dir)
 (<volcado>/areas/*.json, <volcado>/proyectos/*.json, <volcado>/meta/estado.json).
 Compara huellas e imprime un JSON con:
   «lotes»: listas de escrituras, cada una de menos de --max-bytes y de 50 entradas como mucho, con
@@ -155,14 +155,17 @@ if "--cierre" in sys.argv:
     (SALIDA / "meta").mkdir(parents=True, exist_ok=True)
     (SALIDA / "meta" / "estado.json").write_text(json.dumps(campos, ensure_ascii=False, indent=1), encoding="utf-8")
     lote = borrar + [{"op": "update" if base else "set", "collection": "meta", "doc_id": "estado", "file_path": str(SALIDA / "meta" / "estado.json")}]
-    print(json.dumps({"lotes": [lote], "cierres_borrados": len(borrar), "duracion_min": campos.get("duracion_min")}, ensure_ascii=False, indent=1))
+    plan = {"lotes": [lote], "cierres_borrados": len(borrar), "duracion_min": campos.get("duracion_min")}
+    (SALIDA / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
+    plan.pop("lotes"); plan["plan"] = str(SALIDA / "plan.json")
+    print(json.dumps(plan, ensure_ascii=False))
     sys.exit(0)
 
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
 MAX = int(sys.argv[sys.argv.index("--max-bytes") + 1]) if "--max-bytes" in sys.argv else 900_000
 COLECCIONES = ("areas", "proyectos", "detalle")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
-LIMITE = 1_000_000                                                    # un documento solo no puede pasar del cuerpo de un lote
+LIMITE = 3_500_000                                                    # lo que datos.py puede volver a traer en un archivo (read_file: 4 MiB)
 
 
 def huella_en_base(col, doc):
@@ -282,8 +285,12 @@ for e in orden:
 if actual:
     lotes.append(actual)
 
-print(json.dumps({"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar), "cierres_borrados": len(_borrar_cierres),
+plan = {"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar), "cierres_borrados": len(_borrar_cierres),
                   "enfoque_cambio": enfoque_cambio, "enfoque_meta": str(SALIDA / "meta" / "estado-enfoque.json") if enfoque_cambio else None,
                   "duracion_min": _campos.get("duracion_min"),
                   "propuestas": {"nuevas": sum(1 for e in propuestas if e["op"] == "set"), "retiradas": sum(1 for e in propuestas if e["op"] == "delete")},
-                  "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}, ensure_ascii=False, indent=1))
+                  "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}
+# el plan entero va a <salida>/plan.json, que aplica datos.py publicar (1.24.1): por la conversación solo pasa el resumen
+(SALIDA / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
+plan["escrituras"] = sum(len(l) for l in plan.pop("lotes")); plan["plan"] = str(SALIDA / "plan.json")
+print(json.dumps(plan, ensure_ascii=False))
