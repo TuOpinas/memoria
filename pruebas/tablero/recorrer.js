@@ -185,6 +185,11 @@ const path = require('path');
     const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, flecha: !document.querySelector('.qh-tray'), resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
     if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.flecha && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
+    // 1.24.2: el número de Acciones es el mismo cálculo en los tres niveles y no cuenta «Por poner al día», que va en Qué hay
+    const nums = await p.evaluate(() => { const n = k => { const t = document.querySelector(`#main .tab[data-tab="${k}"] .n`); return t ? +t.textContent : 0; };
+      const pr = byId["ventas--cuentas"], f = x=>x===pr, pad = ponerAlDia(f).length;
+      return { acc: n("pasos"), qh: n("quehay"), esperaAcc: nAcciones(f), pad, padEnQh: pad ? /Por poner al día/.test(document.getElementById('main').textContent) : true }; });
+    if(!(nums.acc === nums.esperaAcc && nums.qh === nums.pad && nums.padEnQh)) errores.push(`${etiqueta}: el número de Acciones o el de Qué hay del proyecto no van como en la 1.24.2 (${JSON.stringify(nums)})`);
     // los flujos de la fila de la 1.24, enteros: Aceptar → Deshacer → Cuestionar (con el porqué en dos líneas) y «Ya llegó»
     if(etiqueta === 'completo-claro'){
       await abre(p, url, '', '[data-ini="acciones"]');
