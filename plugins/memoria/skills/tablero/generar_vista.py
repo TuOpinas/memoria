@@ -1194,7 +1194,9 @@ if INVENTARIO:
             _reales = [s_ for s_ in ses if not es_sesion_de_tarea(s_["titulo"])]
             # igual que la generación: la última sesión es la primera de la lista aunque su fecha no sea válida
             sin_ref = not fecha_valida(_reales[0]["fecha"] if _reales else None) and not fecha_valida(fm_p.get("actualizado"))
-            h = _huella_proyecto(_script, MODO, a, ref, prioridades_, slug,
+            # el formato de datos y no el propio script (1.24.3): un cambio en el generador que no cambia lo que sale para un
+            # proyecto no obliga a releerlos todos; el que lo cambia sube FORMATO_DATOS
+            h = _huella_proyecto(FORMATO_DATOS, MODO, a, ref, prioridades_, slug,
                                  [(r_, os.path.getsize(RAIZ / r_), marca(RAIZ / r_)) for r_ in suyos],
                                  [], HOY if sin_ref else "", fe, ss_, tal, sub_)
             pid = f"{a['slug']}--{slug}"
@@ -1211,7 +1213,7 @@ if INVENTARIO:
             if fe:
                 inv["entregables"][rel(pc)] = fe
             if tal:
-                h_tal = hashlib.sha1(json.dumps(tal, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
+                h_tal = hashlib.sha1(json.dumps([FORMATO_DATOS, tal], ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:12]
                 huellas_taller[pid] = h_tal
                 if TALLER_IGUAL.get(pid) == h_tal:
                     inv.setdefault("taller_reusar", []).append(rel(pc))     # el taller no cambió: sus piezas salen de la base
@@ -1220,7 +1222,7 @@ if INVENTARIO:
             if sub_:
                 inv.setdefault("entregables_sub", {})[rel(pc)] = sub_
     fuera_ = fuera_de_la_memoria()
-    h_fuera = "f" + _huella_proyecto(_script, MODO, fuera_)[1:]
+    h_fuera = "f" + _huella_proyecto(FORMATO_DATOS, MODO, fuera_)[1:]
     huellas["meta/fuera"] = h_fuera
     if h_fuera in SIN_CAMBIOS:
         inv["fuera_reusar"] = True
@@ -1623,12 +1625,24 @@ enfoque_candidatos = {"generado": HOY, "huella": _huella_cand, "grupos": candida
 
 fuera = FUERA_PREVIO if (INV is not None and INV.get("fuera_reusar")) else fuera_de_la_memoria()
 
+def huella_barrido():
+    """La de barrido.py y juicio.md, junto a este archivo (1.24.3): si cambian, la siguiente puesta al día relee todos los
+    proyectos para que el barrido nuevo pase por todos. En la computadora no están, y no hace falta: ahí no se escribe estado."""
+    h = hashlib.sha1()
+    for n in ("barrido.py", "juicio.md"):
+        try:
+            h.update(pathlib.Path(__file__).with_name(n).read_bytes())
+        except OSError:
+            return None
+    return h.hexdigest()[:12]
+
+
 docs["meta"]["estado"] = {
     "organizacion": org, "snapshot": HOY, "sincronizado": (INV or {}).get("instante") or datetime.datetime.now(TZ).isoformat(timespec="minutes"), "zona": str(TZ),
     "huella_candidatos": _huella_cand,     # la de «Por dónde empezar» que esta corrida ofreció: si no cambia, no se renueva
     "version_metodo": version_metodo, "contexto_comun": contexto_comun, "administra": administra,
     "areas": [a["slug"] for a in areas_guia], "tarea": TAREA, "tarea_manual": TAREA_MANUAL,
-    "version_tablero": VERSION_PLUGIN, "formato_datos": FORMATO_DATOS, "modo": MODO,
+    "version_tablero": VERSION_PLUGIN, "formato_datos": FORMATO_DATOS, "huella_barrido": huella_barrido(), "modo": MODO,
     "fuera": [f for f in (fuera or []) if not f.get("guia") and not f.get("que_es")] + [{"carpeta": "guia.md", "archivos": 0, "de_claude": False, "guia": t} for t in guia_avisos],
     "premisas": premisas, "cuestionamientos": cuestionamientos,
 }

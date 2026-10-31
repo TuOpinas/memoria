@@ -118,8 +118,8 @@ trap - ERR
 
 echo
 if [ -n "$FORMATO_AVISO" ]; then
-  echo "Aviso: generar_vista.py cambió y FORMATO_DATOS no. Si cambió lo que sale para un proyecto o un área, súbelo y vuelve a"
-  echo "publicar; si no, los tableros reutilizarán sus proyectos sin releerlos, que es lo que se quiere."
+  echo "Aviso: generar_vista.py cambió y FORMATO_DATOS no, así que los tableros reutilizarán sus proyectos sin releerlos. Si cambió"
+  echo "lo que sale para un proyecto, un área o su taller, sube FORMATO_DATOS y vuelve a publicar."
 fi
 echo "Publicada la versión $VERSION en el repo. Lo que no hace este script:"
 echo "  1. Commitear y llevar a main (pull request). La etiqueta v$VERSION la crea sola la acción de GitHub"

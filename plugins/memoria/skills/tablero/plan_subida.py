@@ -41,7 +41,7 @@ Compara huellas e imprime un JSON con:
            se dice en el resumen, y el resto se sube igual.
 No escribe nada.
 """
-import sys, json, pathlib, re
+import sys, json, pathlib, re, hashlib
 
 if "--guardada" in sys.argv:
     def _a(n):
@@ -62,7 +62,15 @@ if "--guardada" in sys.argv:
         _fm = re.search(r'^FORMATO_DATOS = "([^"]*)"', (pathlib.Path(__file__).with_name("generar_vista.py")).read_text(encoding="utf-8"), re.M)
     except OSError:
         _fm = None
-    mismo = bool(_fm) and d.get("formato_datos") == _fm.group(1)
+    # y con el mismo barrido: si barrido.py o juicio.md cambiaron, se relee todo para que el barrido nuevo pase por todos
+    _hb = hashlib.sha1()
+    try:
+        for _n in ("barrido.py", "juicio.md"):
+            _hb.update(pathlib.Path(__file__).with_name(_n).read_bytes())
+        _hb = _hb.hexdigest()[:12]
+    except OSError:
+        _hb = None
+    mismo = bool(_fm) and d.get("formato_datos") == _fm.group(1) and bool(_hb) and d.get("huella_barrido") == _hb
     hs = d.get("huellas") if mismo else None
     print(",".join(hs) if isinstance(hs, list) and hs else "-")
     # tercera línea: las huellas del taller de cada proyecto, para --taller-igual del inventario (mismo criterio)

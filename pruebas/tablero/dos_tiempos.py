@@ -214,16 +214,28 @@ _i2 = json.loads(subprocess.run([sys.executable, GEN, R4, "--inventario", "--sin
 ok(_pid not in _i["inventario"]["huellas"] and _pid not in _i2["inventario"].get("reusar", []) and f"{_area.name}/diseño/proyecto.md" in _i2["leer"],
    "un proyecto con acentos en su carpeta no guarda huella y se trae siempre")
 
+# 1.24.3: otro generador con el mismo FORMATO_DATOS (una versión que cambia algo que no toca lo que sale para un proyecto)
+# deja las mismas huellas de proyecto y de taller; la de la raíz sí cambia, para regenerar
+_gen2 = TRAB / "gen-otra-version" / "generar_vista.py"; _gen2.parent.mkdir(parents=True, exist_ok=True)
+_gen2.write_text(pathlib.Path(GEN).read_text(encoding="utf-8") + "\n# otra versión\n", encoding="utf-8")
+_inv = lambda g: json.loads(subprocess.run([sys.executable, str(g), RAIZ, "--inventario"], capture_output=True, text=True).stdout)["inventario"]
+_i1, _i2 = _inv(GEN), _inv(_gen2)
+ok(_i1["huellas"] == _i2["huellas"] and _i1.get("huellas_taller") == _i2.get("huellas_taller") and _i1["huella_raiz"] != _i2["huella_raiz"],
+   "otra versión del generador con el mismo formato de datos reutiliza los proyectos y regenera la raíz")
 _g2 = TRAB / "guardada2"; (_g2 / "meta").mkdir(parents=True, exist_ok=True)
 _fmt = re.search(r'^FORMATO_DATOS = "([^"]*)"', pathlib.Path(PLAN).with_name("generar_vista.py").read_text(encoding="utf-8"), re.M).group(1)
-(_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "formato_datos": _fmt, "huellas": ["aa", "bb"]}}), encoding="utf-8")
+import hashlib as _hl
+_hb = _hl.sha1(b"".join(pathlib.Path(PLAN).with_name(n).read_bytes() for n in ("barrido.py", "juicio.md"))).hexdigest()[:12]
+(_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "formato_datos": _fmt, "huella_barrido": _hb, "huellas": ["aa", "bb"]}}), encoding="utf-8")
 _o = lambda *a: subprocess.run([sys.executable, PLAN, "--guardada", _g2, *a], capture_output=True, text=True).stdout.split("\n")
 ok(_o("--version", "9.9.9")[:2] == ["h1", "aa,bb"], "huellas guardadas: con la misma versión salen la huella de la raíz y las de cada proyecto")
 ok(_o("--version", "9.9.9", "--tarea", "trig_y")[:2] == ["-", "aa,bb"], "huellas guardadas: si cambió la tarea hay que regenerar, pero los proyectos se reutilizan")
 ok(_o("--version", "9.9.10")[:2] == ["-", "aa,bb"], "huellas guardadas: con otra versión del plugin hay que regenerar, pero con el mismo formato de datos los proyectos se reutilizan (1.24.3)")
 _e = json.loads((_g2 / "meta" / "estado.json").read_text(encoding="utf-8")); _e["data"]["formato_datos"] = "otro"; (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
 ok(_o("--version", "9.9.9")[1:3] == ["-", "-"], "huellas guardadas: con otro formato de datos no se reutiliza ningún proyecto")
-_e["data"].pop("formato_datos"); (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
+_e["data"]["formato_datos"] = _fmt; _e["data"]["huella_barrido"] = "otro"; (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
+ok(_o("--version", "9.9.9")[1] == "-", "huellas guardadas: si cambió el barrido se relee todo, para que pase por todos los proyectos")
+_e["data"]["huella_barrido"] = _hb; _e["data"].pop("formato_datos"); (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
 ok(_o("--version", "9.9.9")[1] == "-", "huellas guardadas: un tablero de antes de la 1.24.3, sin formato de datos, se relee entero una vez")
 
 # plan de subida: con la base igual a la salida, solo meta/estado; con un proyecto cambiado, ese y meta; lo que sobra se borra
