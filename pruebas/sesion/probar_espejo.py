@@ -260,6 +260,23 @@ _, out4, _ = corre(ESPEJO, "rutas", C2, ACTIVO, "--listado", lst)
 ok(out4.split() == ["ventas/cuentas/decisiones-2018.md"], f"con --listado pide los archivados que faltan, de cualquier año, aunque «Archivado:» no los nombre ({out4.split()})")
 ok("(ninguna)" not in o2.split("=== DECISIONES")[1].split("=== SESIONES")[0], "y la apertura sin consola ve las decisiones archivadas")
 
+print("El año de la cuarta ronda, en la zona de la organización (1.24.2)")
+import importlib.util as _iu, datetime as _dt2
+from zoneinfo import ZoneInfo as _ZI
+_sp = _iu.spec_from_file_location("espejo_mod", ESPEJO); _em = _iu.module_from_spec(_sp)
+_argv = sys.argv; sys.argv = ["espejo.py"]
+try:
+    _sp.loader.exec_module(_em)
+except SystemExit:
+    pass
+sys.argv = _argv
+_c = pathlib.Path(tempfile.mkdtemp())
+for _z in ("Pacific/Kiritimati", "Pacific/Pago_Pago"):
+    (_c / "guia.md").write_text(f"# X · esta carpeta\n\nZona horaria: {_z}\n", encoding="utf-8")
+    ok(_em.anio_de_la_organizacion(_c) == _dt2.datetime.now(_ZI(_z)).year, f"con «Zona horaria: {_z}» el año es el de esa zona")
+(_c / "guia.md").write_text("# X · esta carpeta\n", encoding="utf-8")
+ok(_em.anio_de_la_organizacion(_c) == _dt2.datetime.now(_ZI("America/Mexico_City")).year, "sin la línea, el de Ciudad de México")
+
 print()
 print("Todo bien." if not fallos else f"{fallos} fallos.")
 shutil.rmtree(tmp, ignore_errors=True)

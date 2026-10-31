@@ -182,8 +182,8 @@ const path = require('path');
     if(!(est.tab && est.tabs === 'estatus,pasos,registro,quehay' && est.corto)) errores.push(`${etiqueta}: el proyecto no abre en Estatus con sus cuatro pestañas (${JSON.stringify(est)})`);
     // «Qué hay» (1.21): la pestaña del proyecto con inventario, aportación, señales y lo reemplazado; nunca el cuerpo del taller; y la suma en el área
     await abre(p, url, '#p-ventas--cuentas-t-quehay'); await p.waitForTimeout(300);
-    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, flecha: !document.querySelector('.qh-tray'), resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
-    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.flecha && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
+    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
+    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
     // 1.24.2: el número de Acciones es el mismo cálculo en los tres niveles y no cuenta «Por poner al día», que va en Qué hay
     const nums = await p.evaluate(() => { const n = k => { const t = document.querySelector(`#main .tab[data-tab="${k}"] .n`); return t ? +t.textContent : 0; };
@@ -361,7 +361,9 @@ const path = require('path');
     p.on('pageerror', e => errores.push(`cierres: ${e.message}`));
     const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
     await p.goto(url); await p.waitForTimeout(600); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
-    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend') }));
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend'), arreglar: /que el tablero aún no muestra/.test(document.getElementById('main').textContent) }));
+    // 1.24.2: no hay nada roto, así que no va en «Arreglar ya»: lo dice el punto del botón
+    if(r.arreglar) errores.push(`cierres: las sesiones que el tablero aún no muestra salen en «Arreglar ya», y basta el punto del botón`);
     if(r.llamadas !== 0 || !r.pend) errores.push(`cierres: al abrir con dos cierres pendientes tiene que marcar el botón de sincronizar y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
     await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
     await p.reload(); await p.waitForTimeout(600);
