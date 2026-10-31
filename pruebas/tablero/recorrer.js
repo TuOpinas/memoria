@@ -187,7 +187,7 @@ const path = require('path');
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
     // 1.24.2: el número de Acciones es el mismo cálculo en los tres niveles y no cuenta «Por poner al día», que va en Qué hay
     const nums = await p.evaluate(() => { const n = k => { const t = document.querySelector(`#main .tab[data-tab="${k}"] .n`); return t ? +t.textContent : 0; };
-      const pr = byId["ventas--cuentas"], f = x=>x===pr, pad = ponerAlDia(f).length;
+      const pr = byId["ventas--cuentas"], f = x=>x===pr, pad = nPonerAlDia(f);
       return { acc: n("pasos"), qh: n("quehay"), esperaAcc: nAcciones(f), pad, padEnQh: pad ? /Por poner al día/.test(document.getElementById('main').textContent) : true }; });
     if(!(nums.acc === nums.esperaAcc && nums.qh === nums.pad && nums.padEnQh)) errores.push(`${etiqueta}: el número de Acciones o el de Qué hay del proyecto no van como en la 1.24.2 (${JSON.stringify(nums)})`);
     // los flujos de la fila de la 1.24, enteros: Aceptar → Deshacer → Cuestionar (con el porqué en dos líneas) y «Ya llegó»
