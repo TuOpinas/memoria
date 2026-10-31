@@ -99,13 +99,13 @@ const path = require('path');
                    sesiones_recientes:[{fecha:d0, titulo:d0, n:9, quien:"Ana Lombardo"}], ultima_por_persona:{"Elena Reyes": viejo}, decisiones:[], entregables:[]}];
           areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); byId = Object.fromEntries(PROJ.map(x=>[x.id,x])); _CONOCIDOS = null;
           META = {...(guardado.META||{}), tablero_de:"Ana Lombardo", administra:"Ana Lombardo"}; ACT_AREA = ""; ACT_DIAS = 7;
-          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6)));
+          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6), true));
           const filas = [...div.querySelectorAll(".per:not(.quiet)")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           const quietas = [...div.querySelectorAll(".per.quiet")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           const tipBruno = [...div.querySelectorAll(".per:not(.quiet)")].find(x=>/Bruno/.test(x.textContent)).querySelector(".tira i.on").dataset.t;
           const nota = (div.querySelector(".nota")||{}).textContent || "";
           const otros = conOtros().map(g=>({n:g.n, dentro:g.dentro}));
-          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6)));
+          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6), true));
           const tec = [...div2.querySelectorAll(".per")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           // el papel va al pasar por el nombre (1.23.3)
           const tipsDe = d => Object.fromEntries([...d.querySelectorAll(".per b[data-tip]")].map(x=>[x.textContent, x.dataset.tip]));
@@ -158,7 +158,7 @@ const path = require('path');
           const soloMios = co.every(g=>[...g.deben, ...g.debes].every(x=>esMio(x.p) || /^Ana Prueba pide/.test(x.t))) && textos.some(t=>/^Ana Prueba pide/.test(t))
             && !textos.some(t=>/pregunta a/.test(t)) && textos.some(t=>/^Tras hablar con Carla Prueba/.test(t)) && afectaDeOtros().every(g=>g.a.every(esMio));
           // un paso que espera a alguien sin decir a quién va a la tarjeta de su proyecto, no a «La carpeta» (1.23.5)
-          const pq = PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
+          const pq = PROJ.find(x=>!x.restringido && !x.cerrado && esMio(x) && sinQuienDe(x).length) || PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
           const tarjeta = porPonerAlDia().todas.find(g=>g.id===pq.id), cita = tarjeta && tarjeta.it.find(t=>/espera(?:n)? a alguien sin decir a quién/.test(t));
           // también con una sugerencia de reescribir su Estatus pendiente, y sin «.» ni «…» de más (revisión 1.23.5)
           const gpr = PROPUESTAS; PROPUESTAS = [...PROPUESTAS, {id:"t-ed", tipo:"propuesta", clase:"estado-desfasado", estado:"pendiente", proyecto:pq.id}]; _M = null;
@@ -399,6 +399,17 @@ const path = require('path');
     await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(800);
     const r = await p.evaluate(() => ({ archivos: ARCHIVOS, txt: document.querySelector('#main').textContent, areas: AREAS.length }));
     if(r.archivos || r.areas || !/todavía no tiene sus datos con la versión nueva/.test(r.txt)) errores.push(`sin archivos: la página tenía que decir que falta sincronizar, sin leer la base vieja (${JSON.stringify({archivos: r.archivos, areas: r.areas})})`);
+    await ctx.close();
+  }
+  // los proyectos, un archivo por área (1.24.4); un tablero de antes los trae dentro de tablero.json: los dos se leen igual
+  for(const uno of [false, true]){
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`proyectos por área (${uno}): ${e.message}`));
+    if(uno) await p.addInitScript(() => { window.__TABLERO_UNO = true; });
+    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(800);
+    const r = await p.evaluate(() => ({ n: PROJ.length, esperados: Object.keys(window.__D.proyectos || {}).length, pedidos: (window.__pedidos || []).filter(x => /datos\/proyectos\//.test(x)).length, sinDatos: SIN_DATOS }));
+    if(r.n !== r.esperados || r.sinDatos || (uno ? r.pedidos !== 0 : r.pedidos < 1)) errores.push(`proyectos por área (${uno ? "tablero de antes" : "1.24.4"}): la página no tiene todos los proyectos (${JSON.stringify(r)})`);
     await ctx.close();
   }
   // un tablero publicado con la 1.24.1 tiene un solo datos/detalle.json: la página nueva lo lee si no está el de su área (1.24.2)
