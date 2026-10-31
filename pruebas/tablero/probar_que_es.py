@@ -105,6 +105,23 @@ ok(pf("Carlos Mesa (Banco Azul)") == ["Carlos Mesa"], "un apellido que también 
 ok(pf("Esperar Visto Bueno de Juan Pérez (Acme)") == ["Juan Pérez"] and pf("Revisar el Diagrama de Flujo (Acme)") == [] and pf("La Secretaría de Hacienda (SAT)") == [], "las cosas de delante se quitan, y una cosa sola no es nadie")
 ok(pf("Configurar Salesforce Service Cloud (Acme)") == [] and pf("Migrar a Google Workspace (Banco Azul)") == [] and pf("Esperar a Ana Centeno (Acme)") == ["Ana Centeno"], "una herramienta con su cliente entre paréntesis no es una persona (1.22.5)")
 ok(pf("Contratar Microsoft Dynamics (Acme)") == [] and pf("Instalar Zendesk Sell (Acme)") == [] and pf("Llamar a Jordi Sales (Editorial Club)") == ["Jordi Sales"] and pf("Esperar de Ana Bot (Acme)") == ["Ana Bot"], "un apellido que también es una palabra de producto sigue siendo persona, salvo justo detrás de un verbo (1.22.5)")
+ok(pf("Decidir los envíos a destiempo (Coordinador de Campo (Abril del Castillo y Juanjo, con Marco Herrero))") == [] and pf("Revisar con Ana Centeno (Acme, con Beto Prueba)") == [], "entre paréntesis va una organización, no una lista de personas (1.24)")
+ok(pf("Esperar la carta de Rosa Pérez (Secretaría de Hacienda y Crédito Público)") == ["Rosa Pérez"], "una organización con «y» en el nombre sigue siendo una organización (riesgos de la 1.24)")
+hecho = _ns.get("RE_HECHO")
+if hecho is None:
+    import re as _re
+    for _l in GV.read_text(encoding="utf-8").split("\n"):
+        if _l.startswith(("_NO_SUJETO", "RE_HECHO", "RE_SIGUE_TAREA", "_PREFIJO", "NOMBRES_COMO_VERBO")): exec(_l, {"re": _re, **_ns}, _ns)
+    hecho = _ns["RE_HECHO"]
+ok(bool(hecho.match("Juanjo activó el plan Odoo Estándar")) and bool(hecho.match("Agustín Torres firmó el acuerdo")) and bool(hecho.match("Se mandó la propuesta")), "una línea que cuenta lo que ya pasó se reconoce (1.24)")
+import re as _re2
+def es_hecho(x):   # como naturaleza(), sin la fecha
+    l_ = _ns["_PREFIJO"](x); w0 = (l_.split() or [""])[0].strip(",.;:")
+    inf = bool(_re2.fullmatch(r"[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:ar|er|ir)(?:l[oa]s?|le|les|se)?", w0)) and w0 not in _ns["NOMBRES_COMO_VERBO"]
+    return not inf and bool(hecho.match(l_)) and not _ns["RE_SIGUE_TAREA"].search(l_)
+ok(es_hecho("Javier envió el acta") and es_hecho("Óscar Pérez firmó el NDA") and es_hecho("Luis Aguilar entregó el plan"), "un nombre que acaba como un infinitivo no impide reconocer un hecho (segunda vuelta de la 1.24)")
+ok(not es_hecho("Luis Mejía envió el contrato: revisarlo antes del 2026-11-03") and not es_hecho("Si Agustín aprobó la propuesta, mandar el contrato") and not es_hecho("Consultar buró de crédito") and not es_hecho("Ya se pidió el acceso; esperar respuesta de Ana Centeno (Acme)"), "lo que sigue con una tarea, va tras «si» o empieza por un infinitivo no es un hecho pasado (revisión de la 1.24)")
+ok(not hecho.match("Llamar a Ana Centeno") and not hecho.match("Ana Prueba pide a Beto el contrato") and not hecho.match("Esperar a que Salvador mande el acta"), "una tarea con infinitivo o en presente sigue siendo tarea")
 print("Nombres que se quedan al reutilizar la base (revisión 1.22.4, hallazgo 5)")
 tmp = pathlib.Path(tempfile.mkdtemp()); raiz = tmp / "raiz"; shutil.copytree(AQUI / "raiz", raiz)
 pp = raiz / "ventas" / "cuentas" / "proyecto.md"

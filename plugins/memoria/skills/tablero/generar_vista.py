@@ -403,6 +403,11 @@ def persona_fuera(nombre, org):
     descarta: «Carlos Mesa» es una persona (revisión 1.22.4, segunda vuelta)."""
     if re.search(r"@|\d", org):
         return None
+    # entre paréntesis va una organización, no quién hace el paso: «… (Abril del Castillo y Juanjo, con Marco Herrero)» (1.24).
+    # «y» o una coma no bastan para descartarla («Secretaría de Hacienda y Crédito Público»): lo que nombra a personas lo
+    # quita el filtro de después, que ya las conoce
+    if re.search(r";|(?:^|\s|,)con\s", org):
+        return None
     ws = nombre.split()
     verbo = lambda w: w not in NOMBRES_COMO_VERBO and bool(re.search(r"(?:ar|er|ir)$", w.lower()))
     tras_verbo = False   # el nombre va justo detrás de un verbo de paso, sin «a», «con» ni «de» por medio
@@ -902,9 +907,22 @@ def nombra_pieza(pz):
 
 PALABRAS_SIG = lambda t: {w for w in re.findall(r"[a-záéíóúñ]{4,}", t.lower()) if w not in STOP}
 
+# una línea que cuenta lo que ya pasó, escrita entre las tareas: «2026-10-19: Juanjo activó el plan Odoo…» (1.24). Un nombre
+# con mayúscula (o «Se») y un verbo en pretérito al empezar; las tareas empiezan por infinitivo
+# El nombre no puede ser un infinitivo ni una palabra de enlace («Si Agustín aprobó…, mandar» es una tarea), y la línea no
+# sigue con otra tarea («…: revisarlo», «; esperar respuesta») ni lleva una fecha que aún no llega (revisión de la 1.24).
+_NO_SUJETO = r"(?!(?:Si|Cuando|Tras|Una|Un|Al|En|Con|Para|Por|Desde|Antes|Después|Hasta|Mientras|Aunque|Como|Que)\b)"
+RE_HECHO = re.compile(r"^(?:(?:" + _NO_SUJETO + r"[A-ZÁÉÍÓÚÑ][\wáéíóúñü-]*\s+(?:(?:y|e|de|del|con)\s+)?){1,4}|Se\s+|Ya\s+se\s+)(?:[a-záéíóúñü]{2,}(?:ó|aron|ieron))\b")
+RE_SIGUE_TAREA = re.compile(r"[:;,]\s*(?:y\s+)?[a-záéíóúñ]+(?:ar|er|ir)(?:l[oa]s?|le|les)?\b")
+_PREFIJO = lambda t: re.sub(r"^\*\*[^*]+\*\*[.:]?\s*", "", re.sub(r"^(20\d\d-\d\d-\d\d\s*[·:—-]?\s*)", "", t.strip()))
 def naturaleza(texto):
-    t = texto.strip().lower()
-    t = re.sub(r"^(20\d\d-\d\d-\d\d:?\s*)", "", t)
+    limpio = _PREFIJO(texto)
+    w0 = (limpio.split() or [""])[0].strip(",.;:")
+    infinitivo = bool(re.fullmatch(r"[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:ar|er|ir)(?:l[oa]s?|le|les|se)?", w0)) and w0 not in NOMBRES_COMO_VERBO
+    if not infinitivo and RE_HECHO.match(limpio) and not RE_SIGUE_TAREA.search(limpio) and not any(f_ >= HOY for f_ in re.findall(r"20\d\d-\d\d-\d\d", limpio)):
+        return "hecho"
+    # el prefijo en negrita («**Alta de proveedor.** Esperar…») no decide qué es la tarea (revisión de la 1.24)
+    t = limpio.lower()
     if re.match(r"^(sostener|mantener|seguir |continuar|cada (semana|mes|lunes|viernes))", t): return "rutina"
     if re.search(r"(según su caducidad|caducidad|vence en (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)|se revisa en \w+ de 20\d\d|revisión (fijada|trimestral|anual))", t): return "caducidad"
     if re.match(r"^(esperar|recoger la respuesta|a la espera|aguardar)", t) or re.search(r"\bsi no (escribe|contesta|responde|llama|ha llamado|hay respuesta)\b", t) or re.match(r"^(cuando|en cuanto) \w+ (conteste|responda|escriba|confirme|mande|envíe)", t): return "espera"
@@ -960,14 +978,38 @@ def plazos_en(texto):
             out.append(f); previa = True
     return out
 
+# raíces de palabras: el Estatus va en presente («Ana escribe el informe») y la tarea en infinitivo («Escribir el
+# informe»); con las cinco primeras letras sin acentos coinciden (revisión de la 1.24)
+_SIN_ACENTO = str.maketrans("áéíóúü", "aeiouu")
+_MESES = set("enero febrero marzo abril mayo junio julio agosto septiembre setiembre octubre noviembre diciembre lunes martes miércoles jueves viernes sábado domingo semana".split())
+def RAICES(t):
+    """Raíces de las palabras que dicen qué se hace: sin nombres propios (con mayúscula en el texto, salvo la primera), ni meses
+    ni días, que unen tareas que no tienen nada que ver (segunda vuelta de la revisión de la 1.24)."""
+    t = t or ""
+    propios = {w.lower() for w in re.findall(r"(?<=[\s(«\"'])([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)", t)}
+    return {w.translate(_SIN_ACENTO)[:5] for w in PALABRAS_SIG(t) if w not in propios and w not in _MESES}
+def coinciden(a, b):
+    """Dos textos tratan de lo mismo: tres raíces en común, o dos si el más corto tiene cuatro o menos."""
+    c = len(a & b)
+    return c >= 3 or (c >= 2 and min(len(a), len(b)) <= 4)
+def siguiente_de(estatus):
+    """Lo que dice «Siguiente» de un Estatus, partido en sus frases."""
+    m_ = re.search(r"\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*(.+)", estatus or "", re.I)
+    return [x for x in re.split(r";\s+|\.\s+(?=[A-ZÁÉÍÓÚÑ])", m_.group(1)) if x.strip()] if m_ else []
 def senales(paso_texto, area_doc, pdoc):
-    """Señales objetivas de importancia. Vencido no cuenta, por decisión del 2026-10-08."""
-    sig = PALABRAS_SIG(paso_texto)
+    """Señales objetivas de importancia. Vencido no cuenta, por decisión del 2026-10-08. Desde la 1.24, por raíces y no por
+    palabras exactas, y también contra el «Siguiente» del proyecto y del área."""
+    sig = RAICES(paso_texto)
     prio = None
     for i, pr in enumerate(area_doc.get("prioridades", [])):
-        if len(sig & PALABRAS_SIG(pr)) >= 3: prio = i + 1; break
-    cliente = pdoc["area"] == "clientes" or bool(re.search(r"\b(cliente|propuesta|contrato|firma|factur\w*|cobro|precio|impi|acuerdo de confidencialidad)\b", paso_texto.lower()))
-    return {"prioridad_area": prio, "cliente_o_dinero": cliente}
+        if coinciden(sig, RAICES(pr)): prio = i + 1; break
+    en_sig = any(coinciden(sig, RAICES(x)) for x in siguiente_de(pdoc.get("en_corto")))
+    if not prio and any(coinciden(sig, RAICES(x)) for x in siguiente_de(area_doc.get("en_corto"))):
+        prio = 1   # el «Siguiente» del área es su prioridad de ahora
+    # cliente: el área de clientes, alguien de fuera escrito con su organización, o dinero y firmas
+    fuera = any(persona_fuera(m_.group(1), m_.group(2)) for m_ in PERSONA_FUERA.finditer(paso_texto))
+    cliente = pdoc["area"] == "clientes" or fuera or bool(re.search(r"\b(cliente|propuesta|contrato|firma|factur\w*|cobro|precio|impi|acuerdo de confidencialidad)\b", paso_texto.lower()))
+    return {"prioridad_area": prio, "cliente_o_dinero": cliente, **({"en_siguiente": True} if en_sig else {})}
 
 def sin_sesion_de(pc, ses, cerrado):
     """Trabajo sin sesión de un proyecto, mirando solo fechas de archivo (nunca contenido), o None.
@@ -1422,6 +1464,8 @@ for a in areas_guia:
                 p_["naturaleza"] = naturaleza(texto)
                 p_["temas"] = sorted(tokens_tema(texto))
                 p_.update(senales(texto, area_doc, pdoc))
+                if p_["naturaleza"] == "hecho":
+                    p_["fecha"] = None   # lo que ya pasó no vence: va a la bitácora, y el tablero lo dice en «Por poner al día»
                 if p_["naturaleza"] in ("rutina", "caducidad") and p_["fecha"]:
                     # una revisión periódica o una caducidad no vence: se revisa; el tablero la muestra aparte
                     p_["revisar"] = p_["fecha"]; p_["fecha"] = None
@@ -1462,13 +1506,31 @@ for a in areas_guia:
         pdoc["sesiones_total"] = len(reales)   # las entradas «(tarea)» no son sesiones (contrato, sección 4)
         pdoc["sesiones"] = [s_ for s_ in ses if "(migracion)" not in (s_.get("titulo") or "")][:5]
         # las de las últimas cuatro semanas, ligeras (1.22.3): la Actividad de cada nivel cuenta quién trabajó en qué sin
-        # traer el detalle de cada proyecto. Solo la cabecera pública de la entrada (fecha, título, Tema y quién), su posición en el archivo y qué documentos escribió y publicó (1.23).
+        # traer el detalle de cada proyecto: la cabecera de la entrada (fecha, título, Tema y quién), su posición en el archivo,
+        # qué documentos escribió y publicó (1.23) y sus Avances recortados (1.24).
         _lim28 = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=28)).isoformat()
         pdoc["sesiones_recientes"] = [{k: v for k, v in {"fecha": s_["fecha"], "titulo": s_.get("titulo") or "", "quien": s_.get("quien") or "",
                                        "trabajamos": una_linea_(s_.get("trabajamos") or "", 220), "n": s_.get("n"),
+                                       # los Avances, cortos: «Avanzaron otros» cuenta en Estatus qué hizo otra persona en lo tuyo (1.24).
+                                       # Es cuerpo de la bitácora: viaja solo en el tablero de quien puede leer el proyecto, como su registro
+                                       "avances": una_linea_(s_.get("avances") or "", 300),
                                        "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
+        # las decisiones de otros proyectos que alguien aceptó desde este, con quién: el cierre lo cuenta en «Avances» como
+        # «Aceptada `area/proyecto#AAAA-MM-DD`» (cerrar.md, paso 0). Del texto entero, para que la página no dependa del
+        # recorte de los Avances (revisión de la 1.24)
+        _acep = []
+        for s_ in reales:
+            for r_ in re.findall(r"Aceptad[ao]s?\s+`?((?:[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*)?#20\d\d-\d\d-\d\d(?:-\d+)?)`?", s_.get("avances") or ""):
+                if r_.startswith("#"):
+                    r_ = f"{pdoc['area']}/{pdoc['slug']}{r_}"   # dentro del mismo proyecto basta la fecha (escribir.md)
+                if {"ref": r_, "quien": s_.get("quien") or ""} not in _acep:
+                    _acep.append({"ref": r_, "quien": s_.get("quien") or ""})
+        if _acep:
+            pdoc["aceptadas"] = _acep[:200]
+        else:
+            pdoc.pop("aceptadas", None)
         # la última sesión de cada persona en este proyecto, sobre toda la bitácora leída (con sus archivados): la banda
         # «Sin actividad» de «Por persona» no la saca de las cinco sesiones que viajan (1.23)
         _upp = {}
@@ -1756,6 +1818,27 @@ for pid, pd in docs["proyectos"].items():
         det["que_hay"] = qh; pd["que_hay_aparte"] = True
     if det:
         docs["detalle"][pid] = det
+
+# una «persona de fuera» que se llama como una organización, un proyecto o un área no es una persona, ni lo es la que lleva
+# entre paréntesis a alguien de la carpeta: en «Smile Pill (Luis Mejía)» y «Coordinador de Campo (Marco Herrero)» el
+# paréntesis dice quién lleva eso (1.24)
+_nombres_fuera_ = {x.get("nombre") for pd in docs["proyectos"].values() for x in pd.get("personas_fuera") or []}
+_solo_nombre_ = lambda t_: re.split(r"\s*[(,;·]", re.sub(r"\s+", " ", t_ or "").strip())[0].strip()
+_de_dentro_ = {_solo_nombre_(n_) for n_ in NOMBRE_DE_CUENTA.values()} | {_solo_nombre_(a_.get("dueno")) for a_ in areas_guia}
+# y quien cerró sesión o decidió en la carpeta: también es de dentro
+_de_dentro_ |= {_solo_nombre_(x.get("quien")) for pd in docs["proyectos"].values() for x in (pd.get("sesiones") or []) + (pd.get("sesiones_recientes") or [])}
+_de_dentro_ |= {_solo_nombre_(x.get("decidio")) for pd in docs["proyectos"].values() for x in pd.get("decisiones") or []}
+_de_dentro_.discard("")
+_personas_ = _nombres_fuera_ | _de_dentro_
+# una organización entre paréntesis que es en realidad una persona no cuenta como organización (riesgos de la 1.24)
+_orgs_ = {x.get("organizacion") for pd in docs["proyectos"].values() for x in pd.get("personas_fuera") or [] if x.get("organizacion") not in _personas_}
+_no_persona_ = {org} | _orgs_ | {pd.get("nombre") for pd in docs["proyectos"].values()} | {a_.get("nombre") for a_ in (docs.get("areas") or {}).values() if isinstance(a_, dict)}
+_nombra_persona_ = lambda o_: o_ in _personas_ or any(n_ and len(n_.split()) > 1 and n_ in o_ for n_ in _personas_)
+for pd in docs["proyectos"].values():
+    if pd.get("personas_fuera"):
+        pd["personas_fuera"] = [x for x in pd["personas_fuera"] if x.get("nombre") not in _no_persona_ and not _nombra_persona_(x.get("organizacion") or "")]
+        if not pd["personas_fuera"]:
+            pd.pop("personas_fuera")
 
 # un proyecto cuyo detalle la base rechazaría por tamaño tampoco guarda su huella: si se reutilizara, la página se quedaría
 # sin su detalle para siempre (revisión de la 1.23, hallazgo 6)
