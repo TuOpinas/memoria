@@ -1480,10 +1480,22 @@ for a in areas_guia:
                                        "trabajamos": una_linea_(s_.get("trabajamos") or "", 220), "n": s_.get("n"),
                                        # los Avances, cortos: «Avanzaron otros» cuenta en Estatus qué hizo otra persona en lo tuyo (1.24).
                                        # Es cuerpo de la bitácora: viaja solo en el tablero de quien puede leer el proyecto, como su registro
-                                       "avances": una_linea_(s_.get("avances") or "", 600),
+                                       "avances": una_linea_(s_.get("avances") or "", 300),
                                        "escribio": s_.get("escribio"), "publico": s_.get("publico")}.items() if v or v == 0}
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
+        # las decisiones de otros proyectos que alguien aceptó desde este, con quién: el cierre lo cuenta en «Avances» como
+        # «Aceptada `area/proyecto#AAAA-MM-DD`» (cerrar.md, paso 0). Del texto entero, para que la página no dependa del
+        # recorte de los Avances (revisión de la 1.24)
+        _acep = []
+        for s_ in reales:
+            for r_ in re.findall(r"Aceptad[ao]s?\s+`?([a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*#20\d\d-\d\d-\d\d(?:-\d+)?)`?", s_.get("avances") or ""):
+                if {"ref": r_, "quien": s_.get("quien") or ""} not in _acep:
+                    _acep.append({"ref": r_, "quien": s_.get("quien") or ""})
+        if _acep:
+            pdoc["aceptadas"] = _acep[:200]
+        else:
+            pdoc.pop("aceptadas", None)
         # la última sesión de cada persona en este proyecto, sobre toda la bitácora leída (con sus archivados): la banda
         # «Sin actividad» de «Por persona» no la saca de las cinco sesiones que viajan (1.23)
         _upp = {}
