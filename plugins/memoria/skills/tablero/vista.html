@@ -1729,13 +1729,13 @@ const RE_ESPERADO = [/\b(?:[Ee]sperar|[Ee]spera|[Ee]sperando|[Pp]endiente de)\s+
   /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?que\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i,
   /\brecibir\b[^.;]{0,60}?\bde\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i];
 const esEspera = (p, s) => !esTareaDecidir(s) && !RE_NO_ESPERA.test(s.texto||"") && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto||""));
-function esperadoEn(p, t){
+function esperadoEn(p, t, soloConocido){
   for(const re of RE_ESPERADO){ const m = (t||"").match(re); if(!m) continue; const i = m.index + m[0].length - m[1].length;
     const f = (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && t.startsWith(n, i)); if(f) return f;
     const n = nombreEn(t, i, m[1], p); if(n) return n;
     // alguien que la carpeta no conoce: se espera a quien el texto nombra, tal cual, y no a otra persona del mismo texto
     const raw = t.slice(i).match(new RegExp(`^[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)*[A-ZÁÉÍÓÚÑ][a-záéíóúñü-]+){0,3}`));
-    if(raw) return raw[0]; }
+    if(raw && !soloConocido) return raw[0]; }
   return null;
 }
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
@@ -1743,7 +1743,8 @@ const cuestMio = c => c.abierto && (c.a_proyecto==="premisa" ? (META && META.soy
 // pasos de espera sin nadie que el tablero reconozca: se cuentan para decir cómo escribirlos
 // un paso citado en una línea: sin la fecha de delante, sin su punto final ni sus comillas, cortado a 70 caracteres
 const citaPaso = t => { const c = corta(t).replace(/[«»]/g,"").replace(/[.\s]+$/,""); return `«${c.length>70 ? c.slice(0,69).replace(/\s+\S*$/,"")+"…" : c}»`; };
-const sinQuienDe = p => stepsLive(p).filter(s=>esEspera(p, s) && !esperadoEn(p, s.texto) && !fueraEn(p, s.texto) && !nombresEn(s.texto, p).length);
+// también la que nombra a alguien que la carpeta no conoce: sale en «Esperas a» tal cual, y aquí se pide su organización
+const sinQuienDe = p => stepsLive(p).filter(s=>esEspera(p, s) && !esperadoEn(p, s.texto, true) && !fueraEn(p, s.texto) && !nombresEn(s.texto, p).length);
 // la persona de fuera escrita tal cual en el paso va antes que el índice por nombre de pila, que puede caer en alguien de dentro
 const fueraEn = (p, t) => (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && (t||"").includes(n)) || null;
 function conOtros(){
