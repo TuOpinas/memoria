@@ -52,4 +52,11 @@ if "--cierres" in sys.argv:
     }
 pre = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "base-falsa.js"), encoding="utf-8").read().replace("__DATA__", json.dumps(D, ensure_ascii=False))
 pre = pre.replace("__USER__", "isOwner:false, canEdit:false" if "--lector" in sys.argv else "isOwner:true, canEdit:true")
-open(pagina, "w", encoding="utf-8").write("<script>\n" + pre + "\n</script>\n" + open(vista, encoding="utf-8").read())
+# la página como se publica desde la 1.24.5: la portada, con la base falsa delante, y su código en vista-<versión>.css y .js
+sys.path.insert(0, os.path.dirname(os.path.abspath(vista)))
+from datos import partir_vista
+partes, _ = partir_vista(open(vista, encoding="utf-8").read(), "Tablero")
+for n, t in partes.items():
+    if n != "index.html":
+        open(os.path.join(os.path.dirname(os.path.abspath(pagina)), n), "w", encoding="utf-8").write(t)
+open(pagina, "w", encoding="utf-8").write("<script>\n" + pre + "\n</script>\n" + partes["index.html"])

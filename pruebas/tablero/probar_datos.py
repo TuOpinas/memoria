@@ -67,12 +67,18 @@ try:
     nombres = [a["as"] for a in res["archivos"]]
     det_areas = sorted({p.stem.split("--")[0] for p in (t1 / "salida" / "detalle").glob("*.json")})
     pro_areas = sorted({p.stem.split("--")[0] for p in (t1 / "salida" / "proyectos").glob("*.json")})
-    ok(nombres == ["index.html", "datos/estado.json", "datos/tablero.json", "datos/propuestas.json"] + [f"datos/proyectos/{a}.json" for a in pro_areas] + [f"datos/detalle/{a}.json" for a in det_areas],
+    VER = __import__("re").search(r'VERSION_TABLERO = "([^"]+)"', VISTA.read_text(encoding="utf-8")).group(1)
+    ok(nombres == ["index.html", f"vista-{VER}.css", f"vista-{VER}.js", "datos/estado.json", "datos/tablero.json", "datos/propuestas.json"] + [f"datos/proyectos/{a}.json" for a in pro_areas] + [f"datos/detalle/{a}.json" for a in det_areas],
        f"la primera vez salen la página, los tres archivos, los proyectos (1.24.4) y el detalle (1.24.2) de cada área ({nombres})")
     ok(lee(t1 / "publicar" / "datos" / "estado.json").get("detalle_areas") == det_areas, "estado.json dice qué áreas tienen su archivo de detalle")
     pag = (t1 / "publicar" / "index.html").read_text(encoding="utf-8")
     est = lee(t1 / "publicar" / "datos" / "estado.json")
     ok(f"<title>Tablero {est.get('organizacion')}</title>" in pag, "la página lleva el título de su organización, tomado de meta/estado")
+    ok(len(pag.encode()) < 4000 and f'<script src="vista-{VER}.js"></script>' in pag and "<style>" not in pag and "const VERSION_TABLERO" not in pag,
+       f"la página es una portada corta que carga su código aparte (1.24.5: {len(pag.encode())} bytes)")
+    _js = (t1 / "publicar" / f"vista-{VER}.js").read_text(encoding="utf-8")
+    ok(f'const VERSION_TABLERO = "{VER}"' in _js and "<script" not in _js and "</style>" not in (t1 / "publicar" / f"vista-{VER}.css").read_text(encoding="utf-8"),
+       "el código y los estilos salen enteros y sin etiquetas")
     tab = lee(t1 / "publicar" / "datos" / "tablero.json")
     gen_proys = {p.stem for p in (t1 / "salida" / "proyectos").glob("*.json")}
     _pro = {k: v for a in pro_areas for k, v in lee(t1 / "publicar" / "datos" / "proyectos" / f"{a}.json").items()}
@@ -148,6 +154,38 @@ try:
     tab2 = lee(t2 / "publicar" / "datos" / "tablero.json"); est2 = lee(t2 / "publicar" / "datos" / "estado.json")
     ok(tab2["enfoque"]["grupos"][0]["titulo"] == "G" and est2.get("huella_candidatos") == "hc-nueva", "«Por dónde empezar» entra en tablero.json y su huella en estado.json")
     ok("proyectos" not in tab2 and not any(n.startswith("datos/proyectos") for n in nombres), "solo cambió «Por dónde empezar»: no se vuelve a publicar ningún archivo de proyectos")
+
+    print("La página partida (1.24.5)")
+    _ep = t2 / "base" / "meta" / "estado.json"; _eo = _ep.read_text(encoding="utf-8")
+    _e = json.loads(_eo); _d = _e.get("data", _e) if isinstance(_e.get("data"), dict) else _e
+    _d["pagina_actualizada"] = {"version": VER}; _ep.write_text(json.dumps(_e), encoding="utf-8")
+    rc, out, err = corre(DATOS, "publicar", t2, "--enfoque", enf, "--portada", VISTA)
+    n3 = [a["as"] for a in json.loads(out)["archivos"]] if rc == 0 else []
+    ok(rc == 0 and n3[0] == "index.html" and not any(n.startswith("vista-") for n in n3) and "datos/estado.json" in n3,
+       f"con las herramientas de antes, --portada añade solo la portada, que ya carga el código publicado ({n3})")
+    _ep = t2 / "base" / "meta" / "estado.json"; _eo = _ep.read_text(encoding="utf-8")
+    _e = json.loads(_eo); _d = _e.get("data", _e) if isinstance(_e.get("data"), dict) else _e
+    rc, out, err = corre(DATOS, "partida", t2)
+    for v_, r_ in (("1.24.4", "no"), ("1.24.5", "si"), ("1.24.10", "si"), ("1.25.0", "si")):
+        _d["pagina_actualizada"] = {"version": v_}; _ep.write_text(json.dumps(_e), encoding="utf-8")
+        rc, out, err = corre(DATOS, "partida", t2)
+        ok(rc == 0 and out.strip() == r_, f"«partida» compara en números: una página {v_} es «{r_}» ({out.strip()} {err[-150:]})")
+    _d["pagina_actualizada"] = {"version": "1.0.0"}; _ep.write_text(json.dumps(_e), encoding="utf-8")
+    rc, out, err = corre(DATOS, "publicar", t2, "--enfoque", enf, "--portada", VISTA)
+    ok(rc != 0 and "--vista" in err, "--portada no sale si la página publicada es de otra versión: cargaría un código que no está")
+    rc, out, err = corre(DATOS, "publicar", t2, "--enfoque", enf, "--vista", VISTA)
+    r4 = json.loads(out) if rc == 0 else {}
+    prev = "1.0.0"
+    _ep.write_text(_eo, encoding="utf-8")
+    ok(rc == 0 and f"vista-{VER}.js" in [a["as"] for a in r4.get("archivos", [])]
+       and {f"vista-{prev}.css", f"vista-{prev}.js"} <= set(r4.get("quitar") or []),
+       f"con --vista sale el código de esta versión y se quita el de la anterior ({prev} → {VER}: {r4.get('quitar')})")
+    rc, out, err = corre(DATOS, "publicar", t2, "--vista", VISTA, "--portada", VISTA)
+    ok(rc != 0 and "solo una" in err, "--vista y --portada no van juntas")
+    rc, out, err = corre(DATOS, "pagina", VISTA, t2 / "pagina", "--titulo", "Tablero <Ana & Co>")
+    ok(rc == 0 and [a["as"] for a in json.loads(out)["archivos"]] == ["index.html", f"vista-{VER}.css", f"vista-{VER}.js"]
+       and "<title>Tablero &lt;Ana &amp; Co&gt;</title>" in (t2 / "pagina" / "index.html").read_text(encoding="utf-8"),
+       "«pagina», al montar, deja los tres archivos con el título escapado")
 
     print("El detalle, un archivo por área (1.24.2)")
     rc, out, err = corre(DATOS, "rutas", t4)

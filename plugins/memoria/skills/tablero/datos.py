@@ -31,16 +31,24 @@ Uso, en el orden de la puesta al día:
       tenga (los que dice «datos.py rutas»; uno que read_file dijo que no existe, detalle:<área>=-), y detalle=… si aún tiene
       el datos/detalle.json de la 1.24.1; los proyectos, igual, con proyectos:<área>=… (un tablero de antes de la 1.24.4 los
       lleva dentro de tablero.json); si falta alguno, para. --sin-archivos, en la primera vez. No imprime nada.
-  datos.py publicar <trabajo> [--vista <vista.html>] [--enfoque <enfoque.json>]
+  datos.py publicar <trabajo> [--vista <vista.html> | --portada <vista.html>] [--enfoque <enfoque.json>]
       Aplica <trabajo>/salida/plan.json (plan_subida.py) sobre lo traído y deja en <trabajo>/publicar/ los archivos que
       cambian. Imprime un JSON con «archivos» (la lista {"as", "path"} que va tal cual a la publicación; vacía si no hay
       nada que publicar), «base» (lotes de escrituras con la forma de db_write, que se mandan después, en orden, uno cada
       vez), «quitar» si lo hay (los archivos que la publicación borra: el detalle o los proyectos de un área que ya no los
       tiene y el datos/detalle.json de la 1.24.1) y, si lo hay, «aviso». Del detalle solo salen las áreas que cambiaron. Con --vista la página va en la misma publicación, con el título de la organización que
-      dice meta/estado; la primera vez es obligatoria, porque la página de antes no sabe leer los archivos. Con --enfoque
+      dice meta/estado, partida en tres (1.24.5): index.html, una portada corta, y vista-<versión>.css y .js, y «quitar»
+      lleva los de la versión anterior; la primera vez es obligatoria, porque la página de antes no sabe leer los archivos.
+      --portada: solo index.html, si hay algo más que publicar (las herramientas de antes piden la página siempre). Con --enfoque
       (el «Por dónde empezar» que escribió el modelo), entra en tablero.json y la huella nueva de los candidatos en
       estado.json. Si lo único que cambia es meta/estado (una corrida al día), no publica: la marca de la base lleva la hora
       y lo que enseñan el pie y el botón.
+  datos.py pagina <vista.html> <directorio> --titulo "Tablero <organización>"
+      Al montar (1.24.5): deja en <directorio> la página partida en tres e imprime «archivos», que van tal cual a la
+      publicación.
+  datos.py partida <trabajo>
+      Paso 1a, con las herramientas de antes (1.24.5): «si» si la página publicada ya va partida, «no» si aún es la de
+      una sola pieza, que esas herramientas no pueden reemplazar (habría que leerla entera).
   datos.py rutas <trabajo>
       Paso e (1.24.2): imprime en una línea la lista JSON de los archivos que hay que traer con read_file (tablero.json,
       propuestas.json, los proyectos y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
@@ -301,9 +309,33 @@ def _lotes(ops, n=50):
     return [ops[i:i + n] for i in range(0, len(ops), n)]
 
 
+def partir_vista(txt, titulo):
+    """La página en tres archivos (1.24.5): una portada corta, index.html, que carga el código desde vista-<versión>.css y
+    vista-<versión>.js. Las herramientas de antes no publican una página sin haber leído entera la publicada, y la de una
+    sola pieza (unos 390 KB) no cabe en una corrida; la portada sí. El nombre lleva la versión para que el navegador no
+    sirva el código viejo con una portada nueva. Devuelve ({nombre: texto}, versión)."""
+    if not txt.startswith("<title>Tablero</title>"):
+        sys.exit("vista.html no empieza por <title>Tablero</title>: ¿es la del plugin?")
+    m = re.search(r'const VERSION_TABLERO = "([0-9][0-9.]*)"', txt)
+    i_st, f_st = txt.find("<style>\n"), txt.find("</style>")
+    i_sc, f_sc = txt.find("<script>\n"), txt.rfind("</script>")
+    if not m or min(i_st, f_st, i_sc, f_sc) < 0 or not (i_st < f_st < i_sc < f_sc) or txt.count("<script>") != 1:
+        sys.exit("vista.html no tiene la forma esperada (un <style>, un <script> y VERSION_TABLERO): no la parto.")
+    ver = m.group(1)
+    cabeza = txt[:i_st].replace("<title>Tablero</title>", f"<title>{html.escape(titulo)}</title>", 1)
+    cuerpo = txt[f_st + len("</style>"):i_sc]
+    # sin <!DOCTYPE>, como vista.html desde siempre: con él la página pasaría a modo estándar y cambiarían alturas y líneas
+    portada = (cabeza + f'<link rel="stylesheet" href="vista-{ver}.css">\n' + cuerpo.strip("\n") + "\n\n"
+               + f'<script src="vista-{ver}.js"></script>\n')
+    return {"index.html": portada, f"vista-{ver}.css": txt[i_st + len("<style>\n"):f_st],
+            f"vista-{ver}.js": txt[i_sc + len("<script>\n"):f_sc]}, ver
+
+
 def publicar(trabajo, args):
     trabajo = pathlib.Path(trabajo)
-    vals, flags, arch = _opciones(args, ("--vista", "--enfoque"), ())
+    vals, flags, arch = _opciones(args, ("--vista", "--portada", "--enfoque"), ())
+    if vals.get("--vista") and vals.get("--portada"):
+        sys.exit("--vista ya lleva la portada: pasa solo una de las dos.")
     if arch:
         sys.exit("publicar no lleva archivos: se arman con «datos.py base».")
     b, salida, pub = trabajo / "base", trabajo / "salida", trabajo / "publicar"
@@ -449,14 +481,21 @@ def publicar(trabajo, args):
             # el detalle.json de la 1.24.1 va siempre: si una publicación anterior no lo quitó, esta lo quita (quitar lo que
             # no existe no da error)
             quitar += [f"datos/detalle/{a_}.json" for a_ in sorted(ya - set(por_a))] + ["datos/detalle.json"]
-    if vista:
-        txt = pathlib.Path(vista).read_text(encoding="utf-8")
-        if "<title>Tablero</title>" not in txt:
-            sys.exit(f"{vista} no empieza por <title>Tablero</title>: ¿es la vista.html del plugin?")
+    portada = vals.get("--portada")
+    if vista or (portada and archivos):
+        # --portada: solo index.html, para las herramientas de antes, que piden la página en cada publicación (la versión
+        # de la página no cambia, así que el código que carga ya está publicado); sin nada más que publicar, no sale
         org = str(estado.get("organizacion") or "").strip()
-        txt = txt.replace("<title>Tablero</title>", f"<title>{html.escape(('Tablero ' + org).strip())}</title>", 1)
-        (pub / "index.html").write_text(txt, encoding="utf-8")
-        archivos.insert(0, {"as": "index.html", "path": str((pub / "index.html").resolve())})
+        partes, ver = partir_vista(pathlib.Path(vista or portada).read_text(encoding="utf-8"), ("Tablero " + org).strip())
+        nombres = list(partes) if vista else ["index.html"]
+        for n in reversed(nombres):
+            (pub / n).write_text(partes[n], encoding="utf-8")
+            archivos.insert(0, {"as": n, "path": str((pub / n).resolve())})
+        previa = version_pagina(antes["estado"])
+        if portada and previa and previa != ver:
+            sys.exit(f"La página publicada es la {previa} y esta portada carga el código de la {ver}, que no está publicado: va con --vista.")
+        if vista and previa and previa != ver:
+            quitar += [f"vista-{previa}.css", f"vista-{previa}.js"]
     # la base, en lotes que no se arrastran entre sí: primero la marca de esta publicación (un documento nuevo, que no
     # puede chocar con nada), después lo que borra esta corrida con las versiones que leyó, y al final las marcas viejas
     base = []
@@ -525,16 +564,48 @@ def rutas(trabajo):
     print(json.dumps(r, ensure_ascii=False))
 
 
+def version_pagina(estado):
+    e = estado or {}
+    return str((e.get("pagina_actualizada") or {}).get("version") or e.get("version_tablero") or "")
+
+
+def _num(v):
+    return tuple(int(x) for x in re.findall(r"\d+", v)) if v else ()
+
+
+def partida(trabajo):
+    """«si» si la página publicada ya va partida (1.24.5 o posterior), «no» si es la de una sola pieza; en números, no en
+    texto («1.24.10» es posterior a «1.24.5»). Lo mira la corrida con las herramientas de antes en el paso 1a."""
+    e = _datos(_json(pathlib.Path(trabajo) / "base" / "meta" / "estado.json"))
+    v = version_pagina(e if isinstance(e, dict) else None)
+    print("si" if _num(v) >= (1, 24, 5) else "no")
+
+
+def pagina(vista, destino, titulo):
+    d = pathlib.Path(destino)
+    d.mkdir(parents=True, exist_ok=True)
+    partes, _ = partir_vista(pathlib.Path(vista).read_text(encoding="utf-8"), titulo.strip() or "Tablero")
+    archivos = []
+    for n, t in partes.items():
+        (d / n).write_text(t, encoding="utf-8")
+        archivos.append({"as": n, "path": str((d / n).resolve())})
+    print(json.dumps({"archivos": archivos}, ensure_ascii=False))
+
+
 def main():
     a = sys.argv[1:]
     if len(a) == 2 and a[0] == "rutas":
         rutas(a[1])
+    elif len(a) == 2 and a[0] == "partida":
+        partida(a[1])
     elif len(a) == 3 and a[0] == "propuestas":
         propuestas(a[1], a[2])
     elif len(a) >= 2 and a[0] == "base":
         base(a[1], a[2:])
     elif len(a) >= 2 and a[0] == "publicar":
         publicar(a[1], a[2:])
+    elif len(a) == 5 and a[0] == "pagina" and a[3] == "--titulo":
+        pagina(a[1], a[2], a[4])
     else:
         sys.exit(__doc__)
 
