@@ -64,7 +64,7 @@ const path = require('path');
     // las propuestas del barrido viven en la cola pero no cuentan como lo marcado aquí; salen en el detalle de «Por poner al día», y las descartadas no
     const prop = await p.evaluate(async () => { const b = document.querySelector('[data-mt-open="ventas--cuentas"]'); if(!b) return null; b.click(); await new Promise(r => setTimeout(r, 250)); const m = document.querySelector('.modal'); return m ? m.textContent : ''; });
     await p.keyboard.press('Escape');
-    if(prop === null || !/Sugerencias de la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en el detalle de «Por poner al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
+    if(prop === null || !/Lo que sugiere la memoria/.test(prop) || !/PRUEBA-PROPUESTA-VIVA/.test(prop) || /PRUEBA-PROPUESTA-DESCARTADA/.test(prop) || !/2 cosas marcadas aquí/.test(prop)) errores.push(`${etiqueta}: las propuestas del barrido no salen en el detalle de «Por poner al día», o salen las descartadas, o cuentan como marcadas aquí (${prop === null ? 'sin ventana' : prop.slice(0, 120)})`);
     // Inicio › Acciones y Actividad
     await abre(p, url, '', '[data-ini="acciones"]');
     // 1.24: lo que te toca decidir y las tareas críticas, sin «Te toca a ti» ni «Con otros»

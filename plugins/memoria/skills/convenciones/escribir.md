@@ -136,7 +136,7 @@ Afecta a: entregables/x.md · otra-area/proyecto (qué le cambia, en media líne
 
 Las líneas van en este orden y solo están las que tienen algo que decir: `Descartado`, `Reemplaza` (o `Responde a`) y `Afecta a` son opcionales. `Afecta a` va siempre la última, porque es la que avisa a otros proyectos.
 
-Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`; una que sustituye a otra anterior añade `Reemplaza: <identificador de la sustituida> · <su título>` (la anterior no se edita: sigue en el registro, y el tablero encadena las dos en la trayectoria del proyecto); y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
+Una decisión que contesta a un cuestionamiento añade `Responde a: <identificador del cuestionamiento>`; una que sustituye a otra anterior añade `Reemplaza: <identificador de la sustituida> · <su título>` (la anterior no se edita: sigue en el registro); y una que se apoya en una premisa puede nombrarla en `Por qué` («premisa P2»).
 
 **Identificador de una entrada.** Cada entrada de `decisiones.md`, decisión o cuestionamiento, se cita como `area/proyecto#AAAA-MM-DD`, la fecha de su encabezado. Si ese día hay más de una en el mismo `decisiones.md`, la más antigua es `#AAAA-MM-DD` y las siguientes `#AAAA-MM-DD-2`, `-3`, contando desde la de más abajo, que es la más antigua; los cuestionamientos cuentan en la misma serie. Se deduce del registro: no se escribe en el encabezado, y como las entradas no se editan ni se reordenan, no cambia nunca. Una entrada sin fecha válida en el encabezado no tiene identificador y no se puede citar. Dentro del mismo proyecto basta `#AAAA-MM-DD`.
 

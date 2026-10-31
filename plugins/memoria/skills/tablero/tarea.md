@@ -52,4 +52,4 @@ LÍMITES
 - Esta carpeta es de una sola organización: nada de lo que leas aquí se lleva a ninguna otra carpeta ni a otro tablero.
 
 QUÉ ENTREGAS
-Un mensaje corto para quien creó esta tarea (con SendUserMessage si lo tienes): fechas aplicadas (una línea cada una), hechos cerrados, lo que quedó pendiente de cerrar en sesión y por qué (incluidas las correcciones), lo que espera a responsables de otras áreas, cuántos documentos cambiaron en el tablero, si «Por dónde empezar» cambió y en qué, y cuántos proyectos tienen pasos vencidos o están en riesgo. Si no hubo cambios en la cola ni en el enfoque, dilo en una línea y confirma que el tablero se regeneró.
+Un mensaje corto para quien creó esta tarea (con SendUserMessage si lo tienes): fechas aplicadas (una línea cada una), hechos cerrados, lo que quedó pendiente de cerrar en sesión y por qué (incluidas las correcciones), lo que espera a responsables de otras áreas, cuántos documentos cambiaron en el tablero, si «Por dónde empezar» cambió y en qué, y cuántos proyectos tienen tareas vencidas o están en riesgo. Si no hubo cambios en la cola ni en el enfoque, dilo en una línea y confirma que el tablero se regeneró.
