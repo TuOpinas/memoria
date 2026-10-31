@@ -403,9 +403,10 @@ def persona_fuera(nombre, org):
     descarta: «Carlos Mesa» es una persona (revisión 1.22.4, segunda vuelta)."""
     if re.search(r"@|\d", org):
         return None
-    # entre paréntesis va una organización, no una lista de personas: «Coordinador de Campo (Abril del Castillo y Juanjo,
-    # con Marco Herrero)» dice quién hace el paso (1.24)
-    if re.search(r",|;|\s(?:y|e|con)\s", org):
+    # entre paréntesis va una organización, no quién hace el paso: «… (Abril del Castillo y Juanjo, con Marco Herrero)» (1.24).
+    # «y» o una coma no bastan para descartarla («Secretaría de Hacienda y Crédito Público»): lo que nombra a personas lo
+    # quita el filtro de después, que ya las conoce
+    if re.search(r";|(?:^|\s|,)con\s", org):
         return None
     ws = nombre.split()
     verbo = lambda w: w not in NOMBRES_COMO_VERBO and bool(re.search(r"(?:ar|er|ir)$", w.lower()))
@@ -1807,17 +1808,21 @@ for pid, pd in docs["proyectos"].items():
 # una «persona de fuera» que se llama como una organización, un proyecto o un área no es una persona, ni lo es la que lleva
 # entre paréntesis a alguien de la carpeta: en «Smile Pill (Luis Mejía)» y «Coordinador de Campo (Marco Herrero)» el
 # paréntesis dice quién lleva eso (1.24)
-_no_persona_ = {org} | {x.get("organizacion") for pd in docs["proyectos"].values() for x in pd.get("personas_fuera") or []}
-_no_persona_ |= {pd.get("nombre") for pd in docs["proyectos"].values()} | {a_.get("nombre") for a_ in (docs.get("areas") or {}).values() if isinstance(a_, dict)}
+_nombres_fuera_ = {x.get("nombre") for pd in docs["proyectos"].values() for x in pd.get("personas_fuera") or []}
 _solo_nombre_ = lambda t_: re.split(r"\s*[(,;·]", re.sub(r"\s+", " ", t_ or "").strip())[0].strip()
 _de_dentro_ = {_solo_nombre_(n_) for n_ in NOMBRE_DE_CUENTA.values()} | {_solo_nombre_(a_.get("dueno")) for a_ in areas_guia}
 # y quien cerró sesión o decidió en la carpeta: también es de dentro
 _de_dentro_ |= {_solo_nombre_(x.get("quien")) for pd in docs["proyectos"].values() for x in (pd.get("sesiones") or []) + (pd.get("sesiones_recientes") or [])}
 _de_dentro_ |= {_solo_nombre_(x.get("decidio")) for pd in docs["proyectos"].values() for x in pd.get("decisiones") or []}
 _de_dentro_.discard("")
+_personas_ = _nombres_fuera_ | _de_dentro_
+# una organización entre paréntesis que es en realidad una persona no cuenta como organización (riesgos de la 1.24)
+_orgs_ = {x.get("organizacion") for pd in docs["proyectos"].values() for x in pd.get("personas_fuera") or [] if x.get("organizacion") not in _personas_}
+_no_persona_ = {org} | _orgs_ | {pd.get("nombre") for pd in docs["proyectos"].values()} | {a_.get("nombre") for a_ in (docs.get("areas") or {}).values() if isinstance(a_, dict)}
+_nombra_persona_ = lambda o_: o_ in _personas_ or any(n_ and len(n_.split()) > 1 and n_ in o_ for n_ in _personas_)
 for pd in docs["proyectos"].values():
     if pd.get("personas_fuera"):
-        pd["personas_fuera"] = [x for x in pd["personas_fuera"] if x.get("nombre") not in _no_persona_ and x.get("organizacion") not in _de_dentro_]
+        pd["personas_fuera"] = [x for x in pd["personas_fuera"] if x.get("nombre") not in _no_persona_ and not _nombra_persona_(x.get("organizacion") or "")]
         if not pd["personas_fuera"]:
             pd.pop("personas_fuera")
 

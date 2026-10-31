@@ -1000,6 +1000,10 @@ projStatus = _memo1("estado", projStatus);
 afectan = _memo1("afectan", afectan);
 mtDatos = _memo1("mt", mtDatos);
 entIdx = _memo1("ents", entIdx);
+// lo que cada render pedía muchas veces, una vez por render (eficiencia de la 1.24)
+sesionesTodas = _memo1("sesTodas", sesionesTodas);
+conOtros = _memo1("conOtros", conOtros);
+paraTi = _memo1("paraTi", paraTi);
 // por qué un área o un proyecto no se muestra: el generador lo dice en «motivo» (1.14; «restringido» cuando la carpeta
 // lo declara, 1.18.1); sin motivo, se supone restringido. Del responsable, solo el nombre: se quitan las notas entre paréntesis
 // de su celda en guia.md («Ana (escribe también Beto…)»), que empiezan en minúscula; «Dirección (Ana, Beto)» se queda
@@ -1413,7 +1417,8 @@ const persona = n => (soloNombre(n||"")||"").split(/,|\s+y\s+|\s+con\s+|\s+\(|;/
 // de «Sesión de:» o «Decidió:» (1.23: antes quedaban fuera de «Por persona» y de «Con otros»)
 const colaboranArea = a => "colaboran_ver" in a ? (a.colaboran_ver||[]) : (a.colaboran||[]).filter(c=>!/@/.test(c));
 // los mismos que «Por persona»: también quien responde por un proyecto sin responder por su área (segunda vuelta)
-const escribenSet = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>[persona(p.dueno), ...(p.colaboran||[]).map(persona)])].filter(Boolean));
+const escribenSet = () => { if(_M && _M.has("escriben")) return _M.get("escriben"); const r = escribenSet_(); if(_M) _M.set("escriben", r); return r; };
+const escribenSet_ = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>[persona(p.dueno), ...(p.colaboran||[]).map(persona)])].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
 const activo = p => p && !p.restringido && !p.cerrado;
 function sesionesTodas(p){
@@ -1554,7 +1559,7 @@ function conocidos(){ if(_CONOCIDOS && _CONOCIDOS_DE===PROJ) return _CONOCIDOS; 
   for(const p of PROJ){ for(const d of decisionesTodas(p)) for(const n of [d.decidio, d.planteo]) if(n) full.add(persona(n)); for(const x of sesionesTodas(p)) if(x.quien) full.add(persona(x.quien)); if(p.dueno) full.add(persona(p.dueno)); for(const c of (p.colaboran||[])) full.add(persona(c));
     // de fuera de la carpeta, solo quien está escrito como «Nombre Apellido (Organización)»: lo da la puesta al día (1.22.4)
     for(const x of (p.personas_fuera||[])){ const n = typeof x==="string" ? x : x.nombre; if(!n) continue; full.add(n); if(x.organizacion) ORG_DE[n] = x.organizacion; }
-    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d|,|;|\s(?:y|e|con)\s/i.test(m[2]) && !PROJ.some(q=>q.nombre===m[1].trim())) ORG_DE[m[1].trim()] = m[2].trim(); } }
+    for(const d of decisionesTodas(p)){ const m = (d.decidio||"").match(/^\s*([^()]+?)\s*\(([^)]+)\)/); if(m && !/pendiente|@|\d|;|(?:^|\s|,)con\s/i.test(m[2]) && !PROJ.some(q=>q.nombre===m[1].trim())) ORG_DE[m[1].trim()] = m[2].trim(); } }
   const porNombre = {}, carpeta = escribenSet(), completos = {};
   for(const f of full){ const k = f.split(" ")[0]; if(k.length<=2) continue; const hay = porNombre[k];
     // un nombre de pila es ambiguo solo entre quienes escriben hoy en la carpeta o están nombrados hoy como de fuera, no por
@@ -1576,7 +1581,7 @@ function completosEn(txt){ conocidos(); const out = []; if(!RE_COMPLETOS) return
   while((m = RE_COMPLETOS.exec(txt||""))) out.push({f:m[1], i:m.index}); return out; }
 // con el proyecto (p), un nombre de pila no se atribuye a alguien de fuera que ese proyecto no nombra: la «Alejandra» de
 // Madema no es la Alejandra López de Smile Pill (1.24)
-const deFueraAjeno = (f, p) => !!p && !escribenSet().has(persona(f)) && !!ORG_DE[f] && !(p.personas_fuera||[]).some(x=>(typeof x==="string" ? x : x.nombre)===f);
+const deFueraAjeno = (f, p) => !!p && !!ORG_DE[f] && !escribenSet().has(persona(f)) && !(p.personas_fuera||[]).some(x=>(typeof x==="string" ? x : x.nombre)===f);
 function nombresEn(txt, p){ const c = conocidos(), out = [], cs = completosEn(txt), ini = new Set(cs.map(x=>x.i));
   for(const {f} of cs) if(!out.includes(f)) out.push(f);
   const re = new RegExp(RE_NOMBRE.source, "g"); let m;
@@ -2093,7 +2098,9 @@ function filaEspera(x){
 }
 function seccionEsperas(filtro){
   const xs = esperasA(filtro); if(!xs.length) return "";
-  return `<section class="due" id="esperas"><div class="top"><h2>Esperas a</h2><span class="c">${cuantos(new Set(xs.map(x=>x.n)).size,"persona","personas")}</span><span class="c" style="margin-left:auto">Lo que otras personas te deben</span></div><div class="due-list">${xs.map(filaEspera).join("")}</div></section>`;
+  // cinco a la vista: con cientos de proyectos, Estatus no se vuelve un muro (riesgos y eficiencia de la 1.24)
+  const ab = PARA_TI_ALL.has("esperas"), vis = ab ? xs : xs.slice(0,5);
+  return `<section class="due" id="esperas"><div class="top"><h2>Esperas a</h2><span class="c">${cuantos(new Set(xs.map(x=>x.n)).size,"persona","personas")}</span><span class="c" style="margin-left:auto">Lo que otras personas te deben</span></div><div class="due-list">${vis.map(filaEspera).join("")}</div>${xs.length>5?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="esperas">${ab?"Ver menos":`Ver las ${xs.length}`}</button>`:""}</section>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest && e.target.closest("[data-esp-ok],[data-esp-drop],[data-esp-cancel]"); if(!b || !puedeMarcar()) return;
@@ -2237,10 +2244,13 @@ function lineaArreglar(xs){
 // ---- «Avanzaron otros» (1.24): lo que otra persona hizo en un proyecto desde tu última sesión en él ----
 // El ancla es tu última sesión en el proyecto (por su posición en la bitácora si está entre las recientes; si no, por fecha).
 // Sin sesión tuya en el proyecto, cuentan las dos últimas semanas.
-function avancesDeOtros(filtro){
+// todos una vez por render; cada ficha y cada nivel filtran lo suyo (eficiencia de la 1.24)
+function avancesDeOtros(filtro){ const t = avancesTodos(); return filtro ? t.filter(g=>filtro(g.p)) : t; }
+function avancesTodos(){
+  if(_M && _M.has("avances")) return _M.get("avances");
   const yo = persona(VIEWER()||""), out = [];
   if(!yo) return out;
-  for(const p of PROJ){ if(p.restringido || p.cerrado || (filtro && !filtro(p))) continue;
+  for(const p of PROJ){ if(p.restringido || p.cerrado) continue;
     const todas = sesionesTodas(p), mias = todas.filter(s=>persona(s.quien||"")===yo);
     let ancla = null; for(const [q,f] of Object.entries(p.ultima_por_persona||{})) if(persona(q)===yo && (!ancla || f>ancla)) ancla = f;
     const ult = mias[0], desde = ancla || addDays(-VENTANA);
@@ -2250,7 +2260,7 @@ function avancesDeOtros(filtro){
     const decs = decisionesTodas(p).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=primero && quienes.has(persona(d.decidio||"")));
     out.push({p, ses, decs, ancla, quienes:[...quienes]});
   }
-  return out.sort((a,b)=>(b.ses[0].fecha||"").localeCompare(a.ses[0].fecha||""));
+  out.sort((a,b)=>(b.ses[0].fecha||"").localeCompare(a.ses[0].fecha||"")); if(_M) _M.set("avances", out); return out;
 }
 const AV_ABIERTO = new Set();
 function filaAvance(g, conProy){
@@ -2261,6 +2271,9 @@ function filaAvance(g, conProy){
     <div class="av-pie">${mas?`<button type="button" class="lnk" data-av-mas="${esc(g.p.id)}">Ver las ${s.length} sesiones</button>`:""}${decs}</div></div>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-av-mas]"); if(!b) return; AV_ABIERTO.add(b.dataset.avMas); render(); });
+// lo plegado de «En otros proyectos» se pinta solo al abrirlo (eficiencia de la 1.24)
+let AV_OTROS_ABIERTO = false;
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-av-otros]"); if(!b) return; e.preventDefault(); AV_OTROS_ABIERTO = !AV_OTROS_ABIERTO; render(); });
 function seccionAvances(filtro, titulo){
   const gs = avancesDeOtros(filtro); if(!gs.length) return "";
   const mios = gs.filter(g=>esMio(g.p)), otros = gs.filter(g=>!esMio(g.p));
@@ -2268,8 +2281,8 @@ function seccionAvances(filtro, titulo){
   const quienes = [...new Set(mios.flatMap(g=>g.quienes))];
   const sub = mios.length ? `${quienes.map(esc).join(", ")} · ${cuantos(nSes(mios),"sesión","sesiones")} en ${cuantos(mios.length,"proyecto tuyo","proyectos tuyos")}` : "";
   return `<section class="due av-sec" id="avanzaron"><div class="top"><h2>${titulo||"Avanzaron otros"}</h2><span class="c" style="margin-left:auto">${sub || "En lo que no es tuyo"}</span></div>
-    ${mios.map(g=>filaAvance(g, true)).join("")}
-    ${otros.length ? (mios.length ? `<details class="av-otros"><summary>En otros proyectos: ${cuantos(nSes(otros),"sesión","sesiones")} de otras personas</summary>${otros.map(g=>filaAvance(g, true)).join("")}</details>` : otros.map(g=>filaAvance(g, true)).join("")) : ""}</section>`;
+    ${(PARA_TI_ALL.has("avanzaron") ? mios : mios.slice(0,5)).map(g=>filaAvance(g, true)).join("")}${mios.length>5?`<button type="button" class="pg-more" style="padding-left:0" data-pt-all="avanzaron">${PARA_TI_ALL.has("avanzaron")?"Ver menos":`Ver los ${mios.length} proyectos`}</button>`:""}
+    ${otros.length ? (mios.length ? `<details class="av-otros"${AV_OTROS_ABIERTO?" open":""}><summary data-av-otros>En otros proyectos: ${cuantos(nSes(otros),"sesión","sesiones")} de otras personas</summary>${AV_OTROS_ABIERTO ? otros.map(g=>filaAvance(g, true)).join("") : ""}</details>` : otros.slice(0,5).map(g=>filaAvance(g, true)).join("")) : ""}</section>`;
 }
 function avanceProyecto(p){
   const g = avancesDeOtros(x=>x===p)[0]; if(!g) return "";
@@ -2418,14 +2431,6 @@ function estatusAreaCompleto(a){
   if(!tit && !lis) return `<section class="card pan"><p class="empty">Sin Estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</p></section>`;
   return `<section class="card pan corto">${tit?`<p class="corto-t">${inline(tit)}</p>`:""}<ul class="corto-l">${lis}</ul>${m?`<p class="more">Firmado al cerrar la sesión del ${fmtD(m[1])}.</p>`:""}</section>`;
 }
-function areaTabs(a, ps){
-  const enArea = p => p && p.area===a.slug;
-  const pt = paraTi(), dec = pt.decidir.filter(x=>enArea(x.p)), venc = pt.venc.filter(x=>enArea(x.p));
-  const afe = afectaDeOtros().map(g=>({...g, a:g.a.filter(enArea)})).filter(g=>g.a.length);
-  const otros = conOtros().map(g=>({...g, deben:g.deben.filter(x=>enArea(x.p)), debes:g.debes.filter(x=>enArea(x.p))})).filter(g=>g.deben.length+g.debes.length);
-  const nc = noCuadra().filter(x=>x.p ? enArea(x.p) : x.a && x.a.slug===a.slug);
-  return {dec, venc, afe, otros, nc};
-}
 function renderArea(a){
   const head = document.getElementById("head"), main = document.getElementById("main");
   const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
@@ -2433,7 +2438,7 @@ function renderArea(a){
   head.innerHTML = `<h1>${esc(a.nombre)}</h1>${cabeceraTexto("a:"+a.slug, a.que, [{t:"", html:queL ? `<div class="md">${md(queL)}</div>` : ""}])}
     <div class="meta"><span>Responsable: <b>${esc(soloNombre(a.dueno))}</b></span>${(a.colaboran||[]).length?`<span>Colabora: <b>${[...(a.colaboran_ver||[]).map(esc), ...(a.colaboran_sin_nombre ? [cuantos(a.colaboran_sin_nombre,"colaborador sin nombre en la guía","colaboradores sin nombre en la guía")] : [])].join(", ") || cuantos(a.colaboran.length,"colaborador","colaboradores")}</b></span>`:""}<span>La lee: <b>${esc(a.lectores)}</b></span></div>`;
   if(a.legible===false){ main.innerHTML = `<div class="card">${avisoNoLeido(a, true, a.nombre)}</div>`; return; }
-  const T = areaTabs(a, ps), tab = ["estatus","acciones","actividad","quehay"].includes(NTAB) ? NTAB : "estatus";
+  const tab = ["estatus","acciones","actividad","quehay"].includes(NTAB) ? NTAB : "estatus";
   let body = "";
   if(tab==="estatus"){
     const act = ps.filter(p=>!p.cerrado && !p.restringido).sort((x,y)=>(y.ultima_sesion||"").localeCompare(x.ultima_sesion||"")), cer = ps.filter(p=>p.cerrado), res = ps.filter(p=>p.restringido);
@@ -2453,8 +2458,16 @@ function renderArea(a){
     body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev, a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
   } else {
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
-    const nc = T.nc.length ? `<section class="due"><div class="top"><h2>Lo que no cuadra en el área</h2><span class="c">${T.nc.length}</span></div><div class="nc">${T.nc.map(x=>`<div class="nc-i"><span class="pill soon">${esc(x.k)}</span><span class="t">${x.t}</span><span class="w">${x.p?`<button type="button" class="lnk" data-go-proj="${esc(x.p.id)}">${esc(x.p.nombre)} ›</button>`:esc(a.nombre)}</span>${ncAcciones(x)}</div>`).join("")}</div></section>` : "";
-    body = `<section class="card"><h2>Publicado</h2><p class="sub" style="font-size:13.5px">Sobre lo que otras áreas pueden construir hoy.</p><div class="ents">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></section>` + queHayArea(a, ps);
+    // la misma forma que Qué hay del proyecto: arriba «Lo publicado / En el taller» del área, y debajo, plegado, lo de
+    // cada proyecto (revisión de la 1.24)
+    const qs = ps.filter(p=>!p.restringido && p.que_hay), suma = (r, k) => r && r[k] ? Object.values(r[k]).reduce((x,y)=>x+y,0) : 0;
+    const nTal = qs.reduce((n,p)=>n+(p.que_hay.taller===null?0:suma(p.que_hay,"taller")),0), nBor = qs.reduce((n,p)=>n+((p.que_hay.entregables||{}).borrador||0),0);
+    const activos = qs.filter(p=>!p.cerrado && (suma(p.que_hay,"taller")+((p.que_hay.entregables||{}).borrador||0))).sort((x,y)=>(y.ultima_sesion||"").localeCompare(x.ultima_sesion||"")).slice(0,3);
+    const pub = vig.length ? `${cuantos(vig.length,"documento vigente","documentos vigentes")} en ${cuantos(new Set(vig.map(x=>x.p.id)).size,"proyecto","proyectos")}; lo último: ${vig.slice(0,2).map(({p,e})=>`«${e.titulo||e.nombre}» (${p.nombre}, ${fmtD(e.actualizado)})`).join(" y ")}.` : "Nada publicado todavía: lo que otras áreas pueden usar sale aquí cuando un documento pasa a vigente.";
+    const tal = nTal+nBor ? `${cuantos(nTal,"pieza de taller","piezas de taller")} y ${cuantos(nBor,"documento en borrador","documentos en borrador")}${activos.length?`; donde más se trabaja: ${activos.map(p=>p.nombre).join(", ")}`:""}.` : "Nada en preparación.";
+    body = `<section class="card"><h2>Qué hay${hq("que-hay","Qué hay en un área")}</h2><div class="qh-res2"><div class="qh-res"><h3>Lo publicado</h3><p>${esc(pub)}</p></div><div class="qh-res"><h3>En el taller</h3><p>${esc(tal)}</p></div></div></section>`
+      + `<details class="card mas-c"><summary><h2 style="display:inline">Lo publicado</h2><span class="more"> · ${vig.length}</span></summary><div class="ents" style="margin-top:10px">${vig.length ? vig.map(({p,e})=>`<div class="ent"><b>${entBtn(p,e)}</b><span class="f">${esc(p.nombre)}${e.actualizado?` · ${fmtD(e.actualizado)}`:""}</span>${aportacionDe(p,e)?`<span class="d">${inline(aportacionDe(p,e))}</span>`:""}</div>`).join("") : `<p class="empty">Ninguno todavía.</p>`}</div></details>`
+      + (queHayArea(a, ps) ? `<details class="card mas-c"><summary><h2 style="display:inline">Por proyecto</h2><span class="more"> · ${qs.length}</span></summary><div style="margin-top:10px">${queHayArea(a, ps).replace(/^<section class="card">/,"<div>").replace(/<\/section>$/,"</div>")}</div></details>` : "");
   }
   const enA_ = p => p && p.area===a.slug;
   const nA = porDecidir(enA_).length + tareasCriticas(enA_).length + decisionesQueAfectan(enA_).filter(x=>!respuestaDe(refDec(x.q,x.d))).length + ponerAlDia(enA_).length;

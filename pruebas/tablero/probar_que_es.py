@@ -106,6 +106,7 @@ ok(pf("Esperar Visto Bueno de Juan Pérez (Acme)") == ["Juan Pérez"] and pf("Re
 ok(pf("Configurar Salesforce Service Cloud (Acme)") == [] and pf("Migrar a Google Workspace (Banco Azul)") == [] and pf("Esperar a Ana Centeno (Acme)") == ["Ana Centeno"], "una herramienta con su cliente entre paréntesis no es una persona (1.22.5)")
 ok(pf("Contratar Microsoft Dynamics (Acme)") == [] and pf("Instalar Zendesk Sell (Acme)") == [] and pf("Llamar a Jordi Sales (Editorial Club)") == ["Jordi Sales"] and pf("Esperar de Ana Bot (Acme)") == ["Ana Bot"], "un apellido que también es una palabra de producto sigue siendo persona, salvo justo detrás de un verbo (1.22.5)")
 ok(pf("Decidir los envíos a destiempo (Coordinador de Campo (Abril del Castillo y Juanjo, con Marco Herrero))") == [] and pf("Revisar con Ana Centeno (Acme, con Beto Prueba)") == [], "entre paréntesis va una organización, no una lista de personas (1.24)")
+ok(pf("Esperar la carta de Rosa Pérez (Secretaría de Hacienda y Crédito Público)") == ["Rosa Pérez"], "una organización con «y» en el nombre sigue siendo una organización (riesgos de la 1.24)")
 hecho = _ns.get("RE_HECHO")
 if hecho is None:
     import re as _re
