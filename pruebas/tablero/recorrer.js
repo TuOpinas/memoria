@@ -52,12 +52,12 @@ const path = require('path');
     // Inicio › Estatus: qué es la organización (primer párrafo de la guía), una ficha por área con su titular y ningún aviso de la herramienta
     await abre(p, url, '', '[data-ini="estatus"]');
     const ini = await p.evaluate(() => { const fichas = [...document.querySelectorAll('#main .area-card')]; return { que: /Raíz inventada para probar el tablero/.test((document.querySelector('.org-q')||{}).textContent||''), fichas: fichas.length,
-      panorama: fichas.some(x => /una sola cuenta grande abierta/.test(x.textContent)), avisos: document.querySelectorAll('#main .stale').length, etiqueta: /Personal · no compartir/.test(document.body.textContent) }; });
+      panorama: fichas.some(x => /una sola cuenta grande abierta/.test(x.textContent)), avisos: document.querySelectorAll('#main .tab-body #arreglar, #main #arreglar').length, etiqueta: /Personal · no compartir/.test(document.body.textContent) }; });
     if(!(ini.que && ini.fichas >= 2 && ini.panorama && ini.avisos === 0 && !ini.etiqueta)) errores.push(`${etiqueta}: Inicio › Estatus no dice qué es la organización, le faltan fichas de área (el Panorama vale de titular), o enseña avisos o la etiqueta vieja (${JSON.stringify(ini)})`);
     // los avisos del tablero viven en Mantenimiento
     await abre(p, url, '', '[data-ini="mant"]');
     // la carpeta en una versión anterior del método se pone al día sola y no pide nada: no se avisa (1.23.3)
-    const atraso = await p.evaluate(() => [...document.querySelectorAll('#main .stale')].some(x => /La carpeta usa todavía la versión/.test(x.textContent)));
+    const atraso = await p.evaluate(() => /La carpeta usa todavía la versión/.test(document.getElementById('main').textContent));
     if(atraso) errores.push(`${etiqueta}: Mantenimiento avisa de algo que no pide nada (la versión del método de la carpeta)`);
     const boton = await p.evaluate(() => { const b = document.querySelector('.sync-ico'); return b ? { pend: b.classList.contains('pend'), off: b.classList.contains('off') } : null; });
     if(!boton || boton.off || boton.pend) errores.push(`${etiqueta}: el botón cuenta como pendiente un cambio que la sincronización dejó a propósito, o no está (${JSON.stringify(boton)})`);
@@ -185,6 +185,39 @@ const path = require('path');
     const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, flecha: !document.querySelector('.qh-tray'), resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
     if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.flecha && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
+    // los flujos de la fila de la 1.24, enteros: Aceptar → Deshacer → Cuestionar (con el porqué en dos líneas) y «Ya llegó»
+    if(etiqueta === 'completo-claro'){
+      await abre(p, url, '', '[data-ini="acciones"]');
+      const prep = await p.evaluate(async () => {
+        META = {...(META||{}), tablero_de: "Ana Prueba"};   // quien mira, como en la prueba de Acciones de arriba
+        const yo = persona(VIEWER()||""), mio = PROJ.find(x=>esMio(x) && !x.restringido && !x.cerrado), otro = [...escribenSet()].find(n=>n && n!==yo);
+        if(!mio || !otro) return null;
+        mio.decisiones = [{id: today(), fecha: today(), titulo: "PRUEBA-DECISION-AJENA", decidio: otro}, ...(mio.decisiones||[])];
+        render(); await new Promise(r=>setTimeout(r,150)); return {ref: refDec(mio, mio.decisiones[0]), pid: mio.id};
+      });
+      const fila = () => p.evaluate(() => { const r = [...document.querySelectorAll('#te-afectan .due-item')].find(x=>/PRUEBA-DECISION-AJENA/.test(x.textContent)); return r ? r.textContent : null; });
+      const cola = () => p.evaluate(() => Object.values(window.__D.cambios||{}).filter(c=>c.tipo==="respuesta"));
+      let fl = {prep: !!prep};
+      if(prep){
+        fl.sale = !!(await fila());
+        await p.click(`#te-afectan [data-resp-ok="${prep.ref}"]`); await p.waitForTimeout(250);
+        const c1 = await cola(); fl.acepta = c1.length === 1 && c1[0].valor === "aceptada" && c1[0].decision === prep.ref && c1[0].proyecto === prep.pid; fl.toast = /Aceptada/.test(await fila() || "") && /Deshacer/.test(await fila() || "");
+        await p.click('#te-afectan .due-item.resp [data-undo]'); await p.waitForTimeout(250);
+        fl.deshace = (await cola()).length === 0 && !/Aceptada/.test(await fila() || "");
+        await p.click(`#te-afectan [data-resp-q="${prep.ref}"]`); await p.waitForTimeout(200);
+        await p.fill('#resp-why', 'uno\ndos'); await p.click('#te-afectan form [type="submit"]'); await p.waitForTimeout(250);
+        const c2 = await cola(); fl.cuestiona = c2.length === 1 && c2[0].valor === "cuestionada" && c2[0].porque === "uno dos";
+      }
+      // «Ya llegó» en una espera: llega a la cola y la fila se queda con «Deshacer»
+      await abre(p, url, '', '[data-ini="estatus"]');
+      const esp = await p.evaluate(() => { const b = document.querySelector('#esperas [data-esp-ok]'); return b ? b.dataset.espOk : null; });
+      if(esp){ const antes = await p.evaluate(() => Object.keys(window.__D.cambios||{}).length);
+        await p.click(`#esperas [data-esp-ok="${esp}"]`); await p.waitForTimeout(200); await p.fill('#esp-nota', 'PRUEBA-LLEGO'); await p.click('#esperas form [type="submit"]'); await p.waitForTimeout(300);
+        fl.llego = await p.evaluate(n => Object.keys(window.__D.cambios||{}).length === n + 1 && !!document.querySelector('#esperas .due-item.resp [data-undo]'), antes); }
+      else fl.llego = 'sin esperas';
+      if(!(fl.prep && fl.sale && fl.acepta && fl.toast && fl.deshace && fl.cuestiona && fl.llego)) errores.push(`${etiqueta}: los flujos de la fila de la 1.24 no llegan enteros a la cola (${JSON.stringify(fl)})`);
+    }
+
     await abre(p, url, '#a-ventas', '[data-atab="quehay"]');
     const qha = await p.evaluate(() => ({ tabla: document.querySelectorAll('.qh-sum tbody tr').length, giro: /Cliente Uno se sigue atendiendo/.test((document.querySelector('.qh-sum')||{}).textContent||'') }));
     if(!(qha.tabla >= 2 && qha.giro)) errores.push(`${etiqueta}: el área no suma «Qué hay» de sus proyectos con el último cambio (${JSON.stringify(qha)})`);

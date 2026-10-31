@@ -3,9 +3,12 @@ window.__D = __DATA__;
 (function(){
  const D = window.__D;
  const snap = col => ({docs: Object.entries(D[col]||{}).map(([id,v])=>({id, data:()=>v}))});
+ // como la base de verdad, cada escritura avisa a quien escucha la colección (1.24: los flujos de la fila se prueban enteros)
+ const avisa = col => setTimeout(() => ((window.__subs||{})[col]||[]).forEach(cb => cb(snap(col))), 0);
+ let sec = 0;
  const db = {
-  collection: name => ({ onSnapshot:(cb)=>{ ((window.__subs = window.__subs || {})[name] = window.__subs[name] || []).push(cb); setTimeout(()=>cb(snap(name)),0); return ()=>{}; }, add: async v=>{ const id='n'+Date.now(); (D[name]=D[name]||{})[id]=v; return {id}; } }),
-  doc: path => { const [c,id]=path.split('/'); const ds = () => { const v=(D[c]||{})[id]; return {exists:!!v, data:()=>v}; }; return { onSnapshot:(cb)=>{ ((window.__subs = window.__subs || {})[path] = window.__subs[path] || []).push(()=>cb(ds())); setTimeout(()=>cb(ds()),0); return ()=>{}; }, delete: async()=>{ delete (D[c]||{})[id]; }, update: async u=>{ Object.assign(D[c][id],u); } }; }
+  collection: name => ({ onSnapshot:(cb)=>{ ((window.__subs = window.__subs || {})[name] = window.__subs[name] || []).push(cb); setTimeout(()=>cb(snap(name)),0); return ()=>{}; }, add: async v=>{ const id='n'+Date.now()+'-'+(++sec); (D[name]=D[name]||{})[id]=v; avisa(name); return {id}; } }),
+  doc: path => { const [c,id]=path.split('/'); const ds = () => { const v=(D[c]||{})[id]; return {exists:!!v, data:()=>v}; }; return { onSnapshot:(cb)=>{ ((window.__subs = window.__subs || {})[path] = window.__subs[path] || []).push(()=>cb(ds())); setTimeout(()=>cb(ds()),0); return ()=>{}; }, delete: async()=>{ delete (D[c]||{})[id]; avisa(c); }, update: async u=>{ Object.assign(D[c][id],u); avisa(c); }, set: async v=>{ (D[c]=D[c]||{})[id]=v; avisa(c); } }; }
  };
  const user = { me: async()=>({id:'u_1', __USER__}) };
  const mcp = { callTool: async(...a)=>{ (window.__llamadas = window.__llamadas || []).push(a); return {}; } };
