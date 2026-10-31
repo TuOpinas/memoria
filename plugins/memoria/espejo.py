@@ -89,6 +89,22 @@ FUERA = ("fuentes", "taller", "restringido")
 LOTE = 50
 
 
+def anio_de_la_organizacion(copia):
+    """El año de hoy en la zona de la organización («Zona horaria:» de guia.md; si no, Ciudad de México), no el del contenedor,
+    que va en UTC: la noche del 31 de diciembre ya diría el año siguiente y traería los archivados de otro año (1.24.2)."""
+    try:
+        from zoneinfo import ZoneInfo
+        import datetime
+        m = re.search(r"^\s*[-*]?\s*\**\s*zona horaria\s*\**\s*:\s*\**\s*`?\s*([A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+){0,2})", leer(pathlib.Path(copia) / "guia.md") or "", re.M | re.I)
+        try:
+            zona = ZoneInfo(m.group(1)) if m else ZoneInfo("America/Mexico_City")
+        except Exception:
+            zona = ZoneInfo("America/Mexico_City")
+        return datetime.datetime.now(zona).year
+    except Exception:
+        return time.localtime().tm_year
+
+
 def leer(p):
     try:
         return pathlib.Path(p).read_text(encoding="utf-8-sig", errors="replace")
@@ -203,7 +219,7 @@ def rutas(copia, activo, listado=None):
             # cuarta ronda, cuando ya están los registros: sus archivados de este año y del anterior, que abrir.py lee junto al
             # vivo (1.23). Los nombra la línea «Archivado:» del registro vivo; los que no existan se apuntan con «falta»
             if activo and not ronda:
-                anio = time.localtime().tm_year
+                anio = anio_de_la_organizacion(copia)
                 vivos = [f"{a}/{p}/decisiones.md" for a in areas for p in proyectos_de(leer(copia / a / "area.md"))] + [f"{activo}/sesiones.md", f"{activo}/decisiones.md"]
                 for r in dict.fromkeys(vivos):
                     m = re.search(r"^Archivado:(.*)$", leer(copia / r) or "", re.M)

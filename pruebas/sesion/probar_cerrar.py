@@ -18,6 +18,10 @@ def ok(c, t):
 def raiz_nueva():
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     shutil.copytree(AQUI.parent / "tablero" / "raiz", r)
+    # fechas de archivo fijas y viejas: recién clonado, todo parecería cambiado en los últimos minutos
+    viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+    for d, _, fs in os.walk(r):
+        for n in fs: os.utime(os.path.join(d, n), (viejo, viejo))
     return r
 
 
@@ -108,6 +112,19 @@ pb3.write_text(tb.replace("estado: borrador\n", 'estado: borrador\naportacion: "
 c, sv = corre(Rv3, {"otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador\naportacion", "a": f"estado: vigente\nactualizado: {HOY}\naportacion"}, {"de": "actualizado: 2026-08-01\n", "a": ""}]}], "area": {"linea": "- `cuentas/` — w", "entregables": [{"archivo": "borrador-viejo.md"}]}}, "--cuenta", "ana@ejemplo.test")
 av3 = (Rv3 / "ventas/area.md").read_text(encoding="utf-8")
 ok(c == 0 and f"  - borrador-viejo — Vale para publicar. · actualizado {HOY}" in av3, "la línea del entregable recién publicado lleva la fecha de hoy")
+# publicar y cerrar en una llamada (1.24.2): si «otros» no deja el documento vigente (aquí, lo rechaza porque lo encogería),
+# no se escribe nada más y se dice; repetida la llamada arreglada, la entrada sale una vez
+Rv5 = raiz_nueva()
+pb5 = Rv5 / "ventas/cuentas/entregables/borrador-viejo.md"
+pb5.write_text(pb5.read_text(encoding="utf-8") + "\n" + "Texto largo. " * 200, encoding="utf-8")
+c, sv5 = corre(Rv5, {"sesion": SESION, "publico": ["entregables/borrador-viejo.md"], "otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador", "a": "estado: vigente"}, {"de": "Texto largo. " * 200, "a": ""}]}]}, "--cuenta", "ana@ejemplo.test")
+s5 = (Rv5 / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+av5 = (Rv5 / "ventas/area.md").read_text(encoding="utf-8")
+ok(c == 1 and "estado: borrador" in pb5.read_text(encoding="utf-8") and "PRUEBA-CERRAR" not in s5 and sv5.get("no_publicado") == ["entregables/borrador-viejo.md"] and "borrador-viejo —" not in av5,
+   f"si el documento no quedó vigente, no se escribe la entrada ni la línea de area.md, y la salida lo dice ({sv5.get('no_publicado')}, {sv5.get('rechazados')})")
+c, sv5b = corre(Rv5, {"sesion": SESION, "publico": ["entregables/borrador-viejo.md"], "otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador", "a": "estado: vigente"}, {"de": "Texto largo. " * 200, "a": ""}]}]}, "--cuenta", "ana@ejemplo.test", "--forzar", "ventas/cuentas/entregables/borrador-viejo.md")
+s5 = (Rv5 / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+ok(c == 0 and s5.count("Avances: PRUEBA-CERRAR") == 1 and "Publicó: entregables/borrador-viejo.md" in s5, f"repetir la misma llamada arreglada escribe la entrada una sola vez, con «Publicó:» ({sv5b.get('error')})")
 # un Estatus de proyecto sobre una raíz con «En corto» y «Estatus» a la vez: queda solo el Estatus
 Rv4 = raiz_nueva()
 pp4 = Rv4 / "ventas/precios/proyecto.md"; pp4.write_text(pp4.read_text(encoding="utf-8").replace("## En corto\n", "## Estatus\n2026-10-01 · **VIEJO.**\n\n## En corto\n", 1), encoding="utf-8")

@@ -65,7 +65,10 @@ try:
     ok(rc == 0, f"se publica ({err[-300:]})")
     res = json.loads(out) if rc == 0 else {"archivos": [], "base": []}
     nombres = [a["as"] for a in res["archivos"]]
-    ok(nombres == ["index.html", "datos/estado.json", "datos/tablero.json", "datos/propuestas.json", "datos/detalle.json"], f"la primera vez salen la página y los cuatro archivos ({nombres})")
+    det_areas = sorted({p.stem.split("--")[0] for p in (t1 / "salida" / "detalle").glob("*.json")})
+    ok(nombres == ["index.html", "datos/estado.json", "datos/tablero.json", "datos/propuestas.json"] + [f"datos/detalle/{a}.json" for a in det_areas],
+       f"la primera vez salen la página, los tres archivos y el detalle de cada área (1.24.2) ({nombres})")
+    ok(lee(t1 / "publicar" / "datos" / "estado.json").get("detalle_areas") == det_areas, "estado.json dice qué áreas tienen su archivo de detalle")
     pag = (t1 / "publicar" / "index.html").read_text(encoding="utf-8")
     est = lee(t1 / "publicar" / "datos" / "estado.json")
     ok(f"<title>Tablero {est.get('organizacion')}</title>" in pag, "la página lleva el título de su organización, tomado de meta/estado")
@@ -86,6 +89,7 @@ try:
 
     print("La siguiente puesta al día, desde los archivos publicados")
     pub = t1 / "publicar" / "datos"
+    DET = [f"detalle:{p.stem}={p}" for p in sorted((pub / "detalle").glob("*.json"))]
     t2 = tmp / "t2"
     jl(t2 / "cola.jsonl", [{"data": {"tipo": "propuesta", "estado": "aplicada", "proyecto": "ventas--cuentas", "clase": "decision-sin-registrar"}, "id": "prop-decision-sin-registrar-acep", "version": 3}])
     jl(t2 / "publicado.jsonl", [{"data": {"sincronizado": est["sincronizado"]}, "id": est["publicado_id"], "version": 1}, {"data": {"sincronizado": "x"}, "id": "p20000101", "version": 4}])
@@ -109,7 +113,7 @@ try:
     ok(ops and ops[-1]["path"].startswith("publicado/") and res["base"][0][0]["op"] == "set", "la marca nueva va primero y las viejas al final, en su propio lote")
     # una regeneración que no cambia ningún documento pero sí la huella de la raíz publica estado.json: si no, la siguiente regeneraría otra vez
     t4 = tmp / "t4"; shutil.copytree(t2, t4)
-    rc, out, err = corre(DATOS, "base", t4, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={pub / 'detalle.json'}")
+    rc, out, err = corre(DATOS, "base", t4, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET)
     pl = {"lotes": [[{"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str(t4 / "e.json")}]]}
     (t4 / "e.json").write_text(json.dumps({"huella_raiz": "otra-huella", "sincronizado": "2026-10-31T10:00-06:00"}), encoding="utf-8")
     shutil.rmtree(t4 / "salida", ignore_errors=True); (t4 / "salida").mkdir(); (t4 / "salida" / "plan.json").write_text(json.dumps(pl), encoding="utf-8")
@@ -119,7 +123,7 @@ try:
        f"una regeneración con la huella nueva y los mismos documentos publica estado.json ({res.get('archivos')} {err[-200:]})")
     # una regeneración: el paso e trae los tres archivos; la aceptada que un cierre aplicó se retira
     for x in ("salida",): shutil.rmtree(t2 / x, ignore_errors=True)
-    rc, out, err = corre(DATOS, "base", t2, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={pub / 'detalle.json'}")
+    rc, out, err = corre(DATOS, "base", t2, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET)
     ok(rc == 0, f"paso e con los archivos ({err[-200:]})")
     c = lee(t2 / "cola" / "prop-decision-sin-registrar-acep.json")
     ok(c["version"] == 3 and c["data"]["estado"] == "aplicada" and c["data"]["texto"], "una sugerencia del archivo lleva encima su marca de la base, con la versión de la marca")
@@ -132,7 +136,7 @@ try:
     res = json.loads(out) if rc == 0 else {"archivos": [], "base": []}
     ok(rc == 0, f"se publica la regeneración ({err[-300:]})")
     nombres = [a["as"] for a in res["archivos"]]
-    ok("datos/detalle.json" not in nombres and "index.html" not in nombres and "datos/estado.json" in nombres, f"lo que no cambió no se vuelve a publicar ({nombres})")
+    ok(not any(n.startswith("datos/detalle") for n in nombres) and "index.html" not in nombres and "datos/estado.json" in nombres, f"lo que no cambió no se vuelve a publicar ({nombres})")
     props2 = lee(t2 / "publicar" / "datos" / "propuestas.json")
     ok("prop-decision-sin-registrar-acep" not in props2 and "prop-decision-sin-registrar-pend" in props2, "la sugerencia retirada sale del archivo; las demás se quedan")
     ops = [o for l in res["base"] for o in l]
@@ -140,6 +144,64 @@ try:
     tab2 = lee(t2 / "publicar" / "datos" / "tablero.json"); est2 = lee(t2 / "publicar" / "datos" / "estado.json")
     ok(tab2["enfoque"]["grupos"][0]["titulo"] == "G" and est2.get("huella_candidatos") == "hc-nueva", "«Por dónde empezar» entra en tablero.json y su huella en estado.json")
     ok(tab2["proyectos"] == tab["proyectos"], "los proyectos que no cambiaron salen idénticos")
+
+    print("El detalle, un archivo por área (1.24.2)")
+    rc, out, err = corre(DATOS, "rutas", t4)
+    ok(rc == 0 and json.loads(out) == ["datos/tablero.json", "datos/propuestas.json"] + [f"datos/detalle/{a}.json" for a in det_areas], f"«rutas» dice qué traer en el paso e ({out.strip()[:200]})")
+    def con_plan(t, ops):
+        shutil.rmtree(t / "salida", ignore_errors=True); (t / "salida").mkdir()
+        lot = []
+        for i, (op, col, doc, data) in enumerate(ops):
+            e = {"op": op, "collection": col, "doc_id": doc}
+            if data is not None:
+                f = t / f"op{i}.json"; f.write_text(json.dumps({"id": doc, "data": data}), encoding="utf-8"); e["file_path"] = str(f)
+            lot.append(e)
+        (t / "salida" / "plan.json").write_text(json.dumps({"lotes": [lot]}), encoding="utf-8")
+        rc, out, err = corre(DATOS, "publicar", t)
+        return rc, (json.loads(out) if rc == 0 else {"archivos": [], "base": []}), err
+    pid1 = next(p.stem for p in (t1 / "salida" / "detalle").glob("*.json"))
+    a1 = pid1.split("--")[0]
+    t5 = tmp / "t5"; shutil.copytree(t2, t5)
+    corre(DATOS, "base", t5, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET)
+    rc, res, err = con_plan(t5, [("set", "detalle", pid1, {"estado_actual": "CAMBIADO"})])
+    nombres = [x["as"] for x in res["archivos"]]
+    ok(rc == 0 and [n for n in nombres if n.startswith("datos/detalle")] == [f"datos/detalle/{a1}.json"] and "quitar" not in res,
+       f"si cambia el detalle de un proyecto, solo se publica el archivo de su área ({nombres} {err[-200:]})")
+    otras = [a for a in det_areas if a != a1]
+    if otras:
+        quita = [p.stem for p in (t1 / "salida" / "detalle").glob("*.json") if p.stem.split("--")[0] == otras[0]]
+        t6 = tmp / "t6"; shutil.copytree(t2, t6)
+        corre(DATOS, "base", t6, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET)
+        rc, res, err = con_plan(t6, [("delete", "detalle", x, None) for x in quita])
+        ok(rc == 0 and res.get("quitar") == [f"datos/detalle/{otras[0]}.json"] and otras[0] not in lee(t6 / "publicar" / "datos" / "estado.json").get("detalle_areas", []),
+           f"el archivo de un área que se queda sin detalle se quita al publicar ({res.get('quitar')} {err[-200:]})")
+    # un tablero de la 1.24.1: un solo datos/detalle.json
+    uno = tmp / "detalle-uno.json"
+    uno.write_text(json.dumps({p.stem: lee(p).get("data", lee(p)) for p in (t1 / "salida" / "detalle").glob("*.json")}), encoding="utf-8")
+    e_viejo = tmp / "estado-viejo.json"; ev = lee(pub / "estado.json"); ev.pop("detalle_areas", None); e_viejo.write_text(json.dumps(ev), encoding="utf-8")
+    t7 = tmp / "t7"; t7.mkdir()
+    corre(DATOS, "base", t7, f"estado={e_viejo}", "--cola", t7 / "no.jsonl", "--cierres", t7 / "no.jsonl", "--publicado", t7 / "no.jsonl")
+    rc, out, err = corre(DATOS, "rutas", t7)
+    ok(rc == 0 and json.loads(out)[-1] == "datos/detalle.json", f"en un tablero de la 1.24.1, «rutas» pide el detalle.json único ({out.strip()})")
+    rc, out, err = corre(DATOS, "base", t7, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={uno}")
+    ok(rc == 0, f"el paso e acepta el detalle.json de la 1.24.1 ({err[-200:]})")
+    rc, res, err = con_plan(t7, [])
+    nombres = [x["as"] for x in res["archivos"]]
+    ok(rc == 0 and [n for n in nombres if n.startswith("datos/detalle")] == [f"datos/detalle/{a}.json" for a in det_areas] and res.get("quitar") == ["datos/detalle.json"]
+       and lee(t7 / "publicar" / "datos" / "estado.json").get("detalle_areas") == det_areas,
+       f"en la primera regeneración se publica por áreas y se quita el detalle.json de la 1.24.1, aunque nada cambie ({nombres} {res.get('quitar')} {err[-200:]})")
+    # el paso e tiene que traer todo el detalle que el tablero tiene
+    t8 = tmp / "t8"; shutil.copytree(t2, t8)
+    rc, out, err = corre(DATOS, "base", t8, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET[1:])
+    ok(rc != 0 and "Faltan detalles" in err, f"si falta el detalle de un área que el tablero tiene, el paso e para ({err[-200:]})")
+    rc, out, err = corre(DATOS, "base", t8, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET[1:], DET[0].split("=")[0] + "=-")
+    ok(rc == 0, f"uno que read_file dijo que no existe se pasa como detalle:<área>=- ({err[-200:]})")
+    rc, res, err = con_plan(t8, [])
+    ok(rc == 0 and "aviso_detalle" in res, f"y si sus proyectos se quedan sin detalle, publicar lo avisa ({res.get('aviso_detalle')} {err[-200:]})")
+    t9 = tmp / "t9"; t9.mkdir()
+    corre(DATOS, "base", t9, f"estado={e_viejo}", "--cola", t9 / "no.jsonl", "--cierres", t9 / "no.jsonl", "--publicado", t9 / "no.jsonl")
+    rc, out, err = corre(DATOS, "base", t9, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}")
+    ok(rc != 0 and "detalle=" in err, f"un tablero de la 1.24.1 sin su detalle.json en el paso e, para ({err[-200:]})")
 
     print("Lo que no se puede hacer")
     t3 = tmp / "t3"

@@ -19,13 +19,18 @@ window.__D = __DATA__;
  // Con window.__SIN_ARCHIVOS la página no los encuentra y lee de la base, como un tablero sin su primera sincronización 1.24.1.
  const _fetch = window.fetch;
  window.fetch = async (u, o) => {
-  const m = /(?:^|\/)datos\/(\w+)\.json$/.exec(String(u));
+  const m = /(?:^|\/)datos\/(\w+)(?:\/([\w.~-]+))?\.json$/.exec(String(u));
   if(!m) return _fetch(u, o);
   (window.__pedidos = window.__pedidos || []).push(String(u));
   if(window.__SIN_ARCHIVOS) return new Response("", {status: 404});
   const props = Object.fromEntries(Object.entries(D.cambios||{}).filter(([,v]) => v.tipo === "propuesta"));
-  const cuerpo = {estado: (D.meta||{}).estado || {}, tablero: {areas: D.areas||{}, proyectos: D.proyectos||{}, resumenes: D.resumenes||{}, enfoque: (D.enfoque||{}).actual || null},
+  let cuerpo = {estado: (D.meta||{}).estado || {}, tablero: {areas: D.areas||{}, proyectos: D.proyectos||{}, resumenes: D.resumenes||{}, enfoque: (D.enfoque||{}).actual || null},
                   propuestas: props, detalle: D.detalle||{}}[m[1]];
+  // desde la 1.24.2, datos/detalle/<área>.json: el de esa área; con window.__DETALLE_UNO (un tablero de la 1.24.1) no existe
+  if(m[2] !== undefined){
+   if(m[1] !== "detalle" || window.__DETALLE_UNO) return new Response("", {status: 404});
+   cuerpo = Object.fromEntries(Object.entries(D.detalle||{}).filter(([id]) => id.split("--")[0] === m[2]));
+  } else if(m[1] === "detalle" && !window.__DETALLE_UNO) return new Response("", {status: 404});
   return cuerpo === undefined ? new Response("", {status: 404}) : new Response(JSON.stringify(cuerpo), {status: 200, headers: {"Content-Type": "application/json"}});
  };
  window.claude = { use: async n => n==='db'?db : n==='user'?user : n==='mcp'?mcp : null };

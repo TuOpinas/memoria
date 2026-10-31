@@ -182,9 +182,14 @@ const path = require('path');
     if(!(est.tab && est.tabs === 'estatus,pasos,registro,quehay' && est.corto)) errores.push(`${etiqueta}: el proyecto no abre en Estatus con sus cuatro pestañas (${JSON.stringify(est)})`);
     // «Qué hay» (1.21): la pestaña del proyecto con inventario, aportación, señales y lo reemplazado; nunca el cuerpo del taller; y la suma en el área
     await abre(p, url, '#p-ventas--cuentas-t-quehay'); await p.waitForTimeout(300);
-    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, flecha: !document.querySelector('.qh-tray'), resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
-    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.flecha && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
+    const qh = await p.evaluate(() => { const t = document.getElementById('main').textContent; return { tab: !!document.querySelector('.tab[data-tab="quehay"][aria-selected="true"]'), pz: document.querySelectorAll('.qh-pz').length, taller: /Precio de la fase 2/.test(t), afirma: /por encima del piloto/.test(t), sinAf: /Sin aportación/.test(t), tray: [...document.querySelectorAll('.qh-pz')].filter(x=>/Reemplazado por/.test(x.textContent)).length, resumen: /Lo publicado/.test(t) && /En el taller/.test(t), fuga: /TALLER-PRIVADO/.test(document.documentElement.outerHTML), cuerpo: /Cuerpo que el tablero no lee/.test(t) }; });
+    if(!(qh.tab && qh.pz >= 5 && qh.taller && qh.afirma && qh.sinAf && qh.tray >= 1 && qh.resumen && !qh.fuga && !qh.cuerpo)) errores.push(`${etiqueta}: la pestaña «Qué hay» no enseña el resumen, el inventario, la aportación y qué reemplazó a cada pieza, o filtra el cuerpo del taller (${JSON.stringify(qh)})`);
     if(etiqueta === 'completo-claro') await p.screenshot({ path: path.join(out, `${etiqueta}-que-hay.png`), fullPage: true });
+    // 1.24.2: el número de Acciones es el mismo cálculo en los tres niveles y no cuenta «Por poner al día», que va en Qué hay
+    const nums = await p.evaluate(() => { const n = k => { const t = document.querySelector(`#main .tab[data-tab="${k}"] .n`); return t ? +t.textContent : 0; };
+      const pr = byId["ventas--cuentas"], f = x=>x===pr, pad = nPonerAlDia(f);
+      return { acc: n("pasos"), qh: n("quehay"), esperaAcc: nAcciones(f), pad, padEnQh: pad ? /Por poner al día/.test(document.getElementById('main').textContent) : true }; });
+    if(!(nums.acc === nums.esperaAcc && nums.qh === nums.pad && nums.padEnQh)) errores.push(`${etiqueta}: el número de Acciones o el de Qué hay del proyecto no van como en la 1.24.2 (${JSON.stringify(nums)})`);
     // los flujos de la fila de la 1.24, enteros: Aceptar → Deshacer → Cuestionar (con el porqué en dos líneas) y «Ya llegó»
     if(etiqueta === 'completo-claro'){
       await abre(p, url, '', '[data-ini="acciones"]');
@@ -356,7 +361,9 @@ const path = require('path');
     p.on('pageerror', e => errores.push(`cierres: ${e.message}`));
     const url = 'file://' + path.resolve(dir, 'completo-cierres.html');
     await p.goto(url); await p.waitForTimeout(600); await p.click('[data-ini="mant"]'); await p.waitForTimeout(300);
-    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend') }));
+    const r = await p.evaluate(() => ({ llamadas: (window.__llamadas || []).length, pend: !!document.querySelector('.sync-ico.pend'), arreglar: /que el tablero aún no muestra/.test(document.getElementById('main').textContent) }));
+    // 1.24.2: no hay nada roto, así que no va en «Arreglar ya»: lo dice el punto del botón
+    if(r.arreglar) errores.push(`cierres: las sesiones que el tablero aún no muestra salen en «Arreglar ya», y basta el punto del botón`);
     if(r.llamadas !== 0 || !r.pend) errores.push(`cierres: al abrir con dos cierres pendientes tiene que marcar el botón de sincronizar y no lanzar nada (${JSON.stringify(r).slice(0, 300)})`);
     await p.screenshot({ path: path.join(out, 'completo-cierres.png') });
     await p.reload(); await p.waitForTimeout(600);
@@ -394,7 +401,20 @@ const path = require('path');
     if(r.archivos || r.areas || !/todavía no tiene sus datos con la versión nueva/.test(r.txt)) errores.push(`sin archivos: la página tenía que decir que falta sincronizar, sin leer la base vieja (${JSON.stringify({archivos: r.archivos, areas: r.areas})})`);
     await ctx.close();
   }
-  // con los archivos (1.24.1): el detalle llega de detalle.json, una sola vez, y si un proyecto no lo tiene se dice
+  // un tablero publicado con la 1.24.1 tiene un solo datos/detalle.json: la página nueva lo lee si no está el de su área (1.24.2)
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errores.push(`detalle de la 1.24.1: ${e.message}`));
+    await p.addInitScript(() => { window.__DETALLE_UNO = true; });
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(800);
+    await p.evaluate(() => { REG_TODO.add('ventas--cuentas'); render(); }); await p.waitForTimeout(300);
+    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-operacion--soporte-t-registro'); await p.waitForTimeout(600);
+    const r = await p.evaluate(() => ({ ventas: !!(TEXTOS['ventas--cuentas'] && !TEXTOS['ventas--cuentas'].falta), uno: (window.__pedidos || []).filter(x => /datos\/detalle\.json$/.test(x)).length }));
+    if(!r.ventas || r.uno !== 1) errores.push(`detalle de la 1.24.1: sin el archivo del área, la página tenía que leer detalle.json una sola vez (${JSON.stringify(r)})`);
+    await ctx.close();
+  }
+  // con los archivos (1.24.1): el detalle llega del archivo de su área (1.24.2), una sola vez, y si un proyecto no lo tiene se dice
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
@@ -407,7 +427,7 @@ const path = require('path');
     await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-operacion--soporte-t-registro'); await p.waitForTimeout(600);
     await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(600);
     // un proyecto sin detalle en el archivo lo dice, en vez de pintarse vacío
-    await p.evaluate(() => { DETALLE_PROM = Promise.resolve({}); delete TEXTOS['ventas--cuentas']; render(); }); await p.waitForTimeout(400);
+    await p.evaluate(() => { DETALLE_PROM = {ventas: Promise.resolve({})}; delete TEXTOS['ventas--cuentas']; render(); }); await p.waitForTimeout(400);
     if(!/No se pudo traer el detalle/.test(await p.evaluate(() => document.querySelector('#main').textContent))) errores.push('archivos: sin el detalle del proyecto en detalle.json, la bitácora tenía que decirlo');
     // una propuesta del archivo que nadie tocó se acepta creando su marca en la base, con su texto
     const marca = await p.evaluate(async () => {
@@ -424,8 +444,8 @@ const path = require('path');
     // la marca «aplicada» de un cierre la quita de la página hasta que la puesta al día la retira
     const oculta = await p.evaluate(async () => { await DB.doc('cambios/prop-solo-archivo').update({estado: 'aplicada'}); await new Promise(r => setTimeout(r, 50)); return !PROPUESTAS.some(c => c.id === 'prop-solo-archivo'); });
     if(!oculta) errores.push('archivos: una propuesta marcada «aplicada» seguía en la página');
-    const n = await p.evaluate(() => (window.__pedidos || []).filter(u => /datos\/detalle\.json$/.test(u)).length);
-    if(n !== 1) errores.push(`archivos: detalle.json se tenía que pedir una sola vez (${n})`);
+    const n = await p.evaluate(() => { const u = window.__pedidos || []; return { ventas: u.filter(x => /datos\/detalle\/ventas\.json$/.test(x)).length, uno: u.filter(x => /datos\/detalle\.json$/.test(x)).length }; });
+    if(n.ventas !== 1 || n.uno !== 0) errores.push(`archivos: el detalle de un área se tenía que pedir una sola vez, y nunca el detalle.json de la 1.24.1 (${JSON.stringify(n)})`);
     // una publicación más nueva que la que enseña la página: se dice, y el botón deja de esperar
     const aviso = await p.evaluate(async () => { const t = new Date(Date.now() + 60000).toISOString(); (window.__D.publicado = window.__D.publicado || {})['p1'] = {sincronizado: t}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return HAY_NUEVO; });
     if(!aviso) errores.push('archivos: una puesta al día publicada con la página abierta no se avisó');

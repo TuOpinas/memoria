@@ -7,7 +7,8 @@ empezar», meta/estado y las propuestas del barrido) va como archivos del propio
   datos/estado.json      meta/estado
   datos/tablero.json     {"areas": {id: doc}, "proyectos": {id: doc}, "resumenes": {id: doc}, "enfoque": doc | null}
   datos/propuestas.json  {id: doc}   las sugerencias del barrido
-  datos/detalle.json     {id: doc}   lo que la página trae al entrar en un proyecto
+  datos/detalle/<área>.json  {id: doc}   lo que la página trae al entrar en un proyecto, un archivo por área (1.24.2;
+                                       en la 1.24.1 era un solo datos/detalle.json, que se sigue leyendo y se quita al publicar)
 
 La base guarda solo lo pequeño que se escribe a diario: lo que se marca en la página («cambios»; la marca de una sugerencia
 lleva su mismo id y solo dice qué se hizo con ella), los cierres de sesión («cierres»), los permisos («meta/permisos») y una
@@ -21,20 +22,26 @@ Uso, en el orden de la puesta al día:
       devolvió la herramienta, tal cual (un archivo que falta o está vacío es una consulta sin documentos). --primera-vez:
       el tablero aún no tiene archivos (read_file dijo que datos/estado.json no existe); nada más cuenta como primera vez.
       No imprime nada; sale con 2 si alguna línea no se pudo leer (se repite la copia).
-  datos.py base <trabajo> (tablero=<archivo> propuestas=<archivo> detalle=<archivo> | --sin-archivos)
+  datos.py base <trabajo> (tablero=<archivo> propuestas=<archivo> [detalle:<área>=<archivo> …] [detalle=<archivo>] | --sin-archivos)
       Paso e, al regenerar. Arma <trabajo>/base/<colección>/<id>.json, que leen generar_vista.py --previos y plan_subida.py,
       y pone cada marca de la base encima de su sugerencia en <trabajo>/cola. Una marca completa de la 1.24.0 (con su texto)
       cuya sugerencia no está en el archivo pasa al archivo; una «pendiente», o una que se queda sin sugerencia, se borra
-      de la base al publicar. --sin-archivos, en la primera vez. No imprime nada.
+      de la base al publicar. El detalle va con un detalle:<área>=… por cada archivo datos/detalle/<área>.json que el tablero
+      tenga (los que dice «datos.py rutas»; uno que read_file dijo que no existe, detalle:<área>=-), y detalle=… si aún tiene
+      el datos/detalle.json de la 1.24.1; si falta alguno, para. --sin-archivos, en la primera vez. No imprime nada.
   datos.py publicar <trabajo> [--vista <vista.html>] [--enfoque <enfoque.json>]
       Aplica <trabajo>/salida/plan.json (plan_subida.py) sobre lo traído y deja en <trabajo>/publicar/ los archivos que
       cambian. Imprime un JSON con «archivos» (la lista {"as", "path"} que va tal cual a la publicación; vacía si no hay
       nada que publicar), «base» (lotes de escrituras con la forma de db_write, que se mandan después, en orden, uno cada
-      vez) y, si lo hay, «aviso». Con --vista la página va en la misma publicación, con el título de la organización que
+      vez), «quitar» si lo hay (los archivos que la publicación borra: el detalle de un área que ya no tiene proyectos y el
+      datos/detalle.json de la 1.24.1) y, si lo hay, «aviso». Del detalle solo salen las áreas que cambiaron. Con --vista la página va en la misma publicación, con el título de la organización que
       dice meta/estado; la primera vez es obligatoria, porque la página de antes no sabe leer los archivos. Con --enfoque
       (el «Por dónde empezar» que escribió el modelo), entra en tablero.json y la huella nueva de los candidatos en
       estado.json. Si lo único que cambia es meta/estado (una corrida al día), no publica: la marca de la base lleva la hora
       y lo que enseñan el pie y el botón.
+  datos.py rutas <trabajo>
+      Paso e (1.24.2): imprime en una línea la lista JSON de los archivos que hay que traer con read_file (tablero.json,
+      propuestas.json y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
   datos.py propuestas <propuestas.json> <area>--<proyecto>
       Las sugerencias de un proyecto, una por línea en JSON con su id, para la apertura de una sesión (skill sesion).
 No lee ni escribe nada de la carpeta de memoria.
@@ -131,13 +138,23 @@ def _opciones(args, nombres, banderas):
         if a in banderas:
             flags.add(a); i += 1; continue
         k, _, v = a.partition("=")
-        if k not in ("estado", "tablero", "propuestas", "detalle") or not v:
-            sys.exit(f"No entiendo «{a}»: los archivos van como estado=<ruta>, tablero=<ruta>, propuestas=<ruta> o detalle=<ruta>.")
+        area = k.split(":", 1)[1] if k.startswith("detalle:") else None
+        if (k not in ("estado", "tablero", "propuestas", "detalle") and not (area and ID_VALIDO.match(area))) or not v:
+            sys.exit(f"No entiendo «{a}»: los archivos van como estado=<ruta>, tablero=<ruta>, propuestas=<ruta>, detalle:<área>=<ruta> "
+                     "(uno por área, 1.24.2) o detalle=<ruta> (el único de un tablero de la 1.24.1).")
+        nombre = f"detalle/{area}.json" if area else f"{k}.json"
+        if area and v == "-":
+            arch.setdefault("detalle_areas", {})[area] = None     # read_file dijo «no file at»: el área no tiene archivo
+            i += 1; continue
         if not pathlib.Path(v).exists():
-            sys.exit(f"No encuentro {v}: pasa la ruta donde la herramienta guardó datos/{k}.json.")
-        arch[k] = _json(v)
-        if not isinstance(arch[k], dict):
-            sys.exit(f"{v} no es el JSON de datos/{k}.json: vuelve a traerlo.")
+            sys.exit(f"No encuentro {v}: pasa la ruta donde la herramienta guardó datos/{nombre}.")
+        d = _json(v)
+        if not isinstance(d, dict):
+            sys.exit(f"{v} no es el JSON de datos/{nombre}: vuelve a traerlo.")
+        if area:
+            arch.setdefault("detalle_areas", {})[area] = d
+        else:
+            arch[k] = d
         i += 1
     return vals, flags, arch
 
@@ -182,9 +199,22 @@ def base(trabajo, args):
     if (b / ".primera-vez").exists() and arch:
         sys.exit("Es la primera vez (el tablero no tenía datos/estado.json): el paso e va con --sin-archivos.")
     if not (b / ".primera-vez").exists() and "--sin-archivos" in flags:
-        sys.exit("El tablero tiene datos/estado.json: el paso e trae tablero.json, propuestas.json y detalle.json.")
-    if arch and set(arch) != {"tablero", "propuestas", "detalle"}:
-        sys.exit("El paso e trae los tres archivos: tablero=…, propuestas=… y detalle=….")
+        sys.exit("El tablero tiene datos/estado.json: el paso e trae tablero.json, propuestas.json y el detalle.")
+    if arch and not {"tablero", "propuestas"} <= set(arch):
+        sys.exit("El paso e trae tablero=…, propuestas=… y el detalle: detalle:<área>=… de cada área que tenga su archivo, o detalle=… si el tablero es de la 1.24.1.")
+    if arch:
+        # el detalle que se trae tiene que ser el que el tablero tiene: sin uno, la publicación lo daría por vacío y la
+        # página perdería el detalle de los proyectos de esa área que no cambiaron (revisión de la 1.24.2)
+        est_ = _datos(_json(b / "meta" / "estado.json")) or {}
+        deben = est_.get("detalle_areas")
+        traidos = arch.get("detalle_areas") or {}
+        if isinstance(deben, list):
+            faltan = [a_ for a_ in deben if a_ not in traidos]
+            if faltan:
+                sys.exit("Faltan detalles del paso e: " + ", ".join(f"detalle:{a_}=<ruta>" for a_ in faltan) + " (los dice «datos.py rutas»; "
+                         "si read_file dijo que uno no existe, pásalo como detalle:<área>=-).")
+        elif "detalle" not in arch:
+            sys.exit("Este tablero tiene aún el detalle de la 1.24.1: el paso e trae también detalle=<ruta de datos/detalle.json> (lo dice «datos.py rutas»).")
     for x in ARCHIVO_COLS + ("detalle", "propuestas", "enfoque"):
         _vacia(b / x)
     tab = arch.get("tablero") or {}
@@ -194,9 +224,16 @@ def base(trabajo, args):
                 _escribe(b / col / f"{id_}.json", {"id": id_, "data": d})
     if isinstance(tab.get("enfoque"), dict):
         _escribe(b / "enfoque" / "actual.json", {"id": "actual", "data": tab["enfoque"]})
-    for id_, d in (arch.get("detalle") or {}).items():
+    # el detalle, por área desde la 1.24.2 (datos/detalle/<área>.json) o entero en un tablero de la 1.24.1 (datos/detalle.json):
+    # los dos son {proyecto: doc}. Se apunta qué archivos había, para quitar al publicar los que ya no tocan
+    det = dict(arch.get("detalle") or {})
+    for _a, d_ in (arch.get("detalle_areas") or {}).items():
+        det.update(d_ or {})
+    for id_, d in det.items():
         if isinstance(d, dict):
             _escribe(b / "detalle" / f"{id_}.json", {"id": id_, "data": d})
+    _escribe(b / ".detalle-archivos.json", {"uno": "detalle" in arch, "areas": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is not None),
+                                            "vacias": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is None)})
     (b / ".con-archivos").write_text("1", encoding="utf-8")
     props = {k: v for k, v in (arch.get("propuestas") or {}).items() if isinstance(v, dict)}
     marcas = {m["id"]: m for m in (_json(trabajo / "marcas.json") or []) if isinstance(m, dict) and m.get("id")}
@@ -229,6 +266,14 @@ def _cargar(b, col):
         v = _datos(_json(p))
         if isinstance(v, dict):
             out[p.stem] = v
+    return out
+
+
+def _por_area(det):
+    """{área: {proyecto: doc}}: el detalle partido por el área de cada proyecto (su id es <área>--<proyecto>)."""
+    out = {}
+    for pid, d in (det or {}).items():
+        out.setdefault(str(pid).split("--", 1)[0], {})[pid] = d
     return out
 
 
@@ -320,6 +365,16 @@ def publicar(trabajo, args):
     marca = "p" + re.sub(r"[^0-9]", "", str(sinc))[:12] + "-" + format(int(time.time() * 1000) % 10**8, "08d") if sinc else None
     previas = [x for x in (_json(trabajo / "publicado.json") or []) if isinstance(x, dict) and x.get("id")]
     cambia = {k for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None and (primera or ahora[k] != antes[k])}
+    # qué archivos de detalle tiene el tablero (1.24.2), para que el paso e de la siguiente corrida sepa cuáles traer
+    # («datos.py rutas»); un tablero que sigue con el detalle.json de la 1.24.1 no lo lleva hasta que su detalle cambie
+    # un tablero que sigue con el detalle.json único de la 1.24.1 pasa a un archivo por área en la primera regeneración,
+    # cambie o no su detalle: si no, ese archivo podría crecer sin aviso hasta no poder traerse (revisión de la 1.24.2)
+    previos_det = _json(b / ".detalle-archivos.json") or {}
+    if con_archivos and ahora["detalle"] is not None and previos_det.get("uno"):
+        cambia.add("detalle")
+    por_a = _por_area(ahora["detalle"]) if ahora["detalle"] is not None else {}
+    if con_archivos and ahora["detalle"] is not None:
+        estado["detalle_areas"] = sorted(por_a)
     # solo la hora: nada de los archivos ni de meta/estado cambió salvo lo de la corrida (una regeneración que deja la
     # huella de la raíz nueva sí publica estado.json, o la siguiente volvería a regenerar)
     resto = lambda e: {k: v for k, v in (e or {}).items() if k not in CAMPOS_AL_DIA + ("publicado_id",)}
@@ -335,11 +390,21 @@ def publicar(trabajo, args):
         _escribe(pub / "datos" / nombre, obj)
         archivos.append({"as": f"datos/{nombre}", "path": str((pub / "datos" / nombre).resolve())})
 
+    quitar = []
     if not solo_estado:
         sale("estado.json", estado)
-        for k in ("tablero", "propuestas", "detalle"):
+        for k in ("tablero", "propuestas"):
             if k in cambia:
                 sale(f"{k}.json", ahora[k])
+        if "detalle" in cambia:
+            # un archivo por área (1.24.2): solo salen las áreas cuyo detalle cambió, y se quitan las que ya no tienen y el
+            # detalle.json único de la 1.24.1
+            por_a0 = _por_area(antes["detalle"] or {})
+            ya = set(previos_det.get("areas") or [])
+            for a_, d_ in sorted(por_a.items()):
+                if primera or a_ not in ya or d_ != por_a0.get(a_):
+                    sale(f"detalle/{a_}.json", d_)
+            quitar = [f"datos/detalle/{a_}.json" for a_ in sorted(ya - set(por_a))] + (["datos/detalle.json"] if previos_det.get("uno") else [])
     if vista:
         txt = pathlib.Path(vista).read_text(encoding="utf-8")
         if "<title>Tablero</title>" not in txt:
@@ -361,17 +426,27 @@ def publicar(trabajo, args):
     base += _lotes([{"op": "delete", "path": f"publicado/{x['id']}", "ifVersion": x["version"]}
                     for x in previas if x["id"] != marca and x.get("version") is not None])
     salida_ = {"archivos": archivos, "base": base}
+    if quitar:
+        salida_["quitar"] = quitar
     if archivos:
         # el nombre del artifact: la publicación lo pasa como «title» si el de get_artifact es otro (« completo», de antes de la 1.18)
         salida_["titulo"] = ("Tablero " + str(estado.get("organizacion") or "").strip()).strip()
-    # el paso e trae tablero, propuestas y detalle en una llamada de 4 MiB como mucho: se mira cada uno y la suma
-    pesos = {k: len(json.dumps(ahora[k], ensure_ascii=False, separators=(",", ":")).encode("utf-8")) for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None}
-    grandes = [f"datos/{k}.json ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
+    # el paso e trae tablero, propuestas y el detalle de cada área en llamadas de 4 MiB como mucho: se mira cada archivo
+    _peso = lambda o: len(json.dumps(o, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    pesos = {f"datos/{k}.json": _peso(ahora[k]) for k in ("tablero", "propuestas") if ahora[k] is not None}
+    pesos.update({f"datos/detalle/{a_}.json": _peso(d_) for a_, d_ in por_a.items()})
+    grandes = [f"{k} ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
     if not grandes and sum(pesos.values()) > TOPE_LECTURA:
-        grandes = [f"los tres juntos ({sum(pesos.values()) // 1024} KB: el paso e los traerá uno por llamada)"]
+        # cada uno cabe, pero el paso e los trae juntos: se partirá en dos o más llamadas (revisión de la 1.24.2)
+        salida_["aviso_llamadas"] = f"Lo que trae el paso e suma {sum(pesos.values()) // 1024} KB: la siguiente regeneración lo trae en dos o más llamadas de read_file. No hace falta decirlo."
+    sin_det = sorted(pid for pid in ((ahora["tablero"] or {}).get("proyectos") or {}) if str(pid).split("--", 1)[0] in set(previos_det.get("vacias") or [])
+                     and pid not in (ahora["detalle"] or {})) if con_archivos and ahora["tablero"] else []
+    if sin_det:
+        salida_["aviso_detalle"] = ("Se quedan sin detalle " + ", ".join(sin_det[:5]) + (" y más" if len(sin_det) > 5 else "") + ": su área se pasó como "
+                                    "detalle:<área>=- y no se regeneraron. Si read_file no dijo que el archivo no existe, no publiques: repite desde el paso e con él.")
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
-                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: hay que partir el detalle.")
+                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: esa área tiene demasiado detalle para un archivo, y hay que partirla en la versión siguiente del plugin (avísalo a quien lo mantiene).")
     print(json.dumps(salida_, ensure_ascii=False, indent=1))
 
 
@@ -387,9 +462,23 @@ def propuestas(archivo, pid):
         print(f"Ninguna sugerencia para {pid}.")
 
 
+def rutas(trabajo):
+    """Paso e: los archivos que hay que traer, como lista JSON de rutas para read_file (paths), desde el meta/estado del paso
+    1a: tablero.json, propuestas.json y el detalle de cada área que dice «detalle_areas»; sin esa clave (un tablero de la
+    1.24.1), el detalle.json único."""
+    est = _datos(_json(pathlib.Path(trabajo) / "base" / "meta" / "estado.json"))
+    if not isinstance(est, dict):
+        sys.exit("Falta el paso 1a (o es la primera vez, que no trae nada: --sin-archivos).")
+    det = est.get("detalle_areas")
+    r = ["datos/tablero.json", "datos/propuestas.json"] + ([f"datos/detalle/{a}.json" for a in det if ID_VALIDO.match(str(a))] if isinstance(det, list) else ["datos/detalle.json"])
+    print(json.dumps(r, ensure_ascii=False))
+
+
 def main():
     a = sys.argv[1:]
-    if len(a) == 3 and a[0] == "propuestas":
+    if len(a) == 2 and a[0] == "rutas":
+        rutas(a[1])
+    elif len(a) == 3 and a[0] == "propuestas":
         propuestas(a[1], a[2])
     elif len(a) >= 2 and a[0] == "base":
         base(a[1], a[2:])
