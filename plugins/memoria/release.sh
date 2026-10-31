@@ -87,6 +87,12 @@ if [ -n "$PREV" ]; then
   ANTES="$(git -C "$REPO_DIR" show "$PREV:$REL_MONTAJE" 2>/dev/null || git -C "$REPO_DIR" show "$PREV:$REL_CONTRATO/SKILL.md" 2>/dev/null || true)"
   if [ "$(bloque < "$MONTAJE")" != "$(printf '%s\n' "$ANTES" | bloque)" ]; then BLOQUE_CAMBIO=1; fi
 fi
+# generar_vista.py cambió y FORMATO_DATOS no (1.24.3): los tableros reutilizarán los proyectos que ya tenían. Se avisa para
+# que quien publica decida si lo que sale para un proyecto o un área cambió; si cambió, que lo suba antes de publicar
+FORMATO_AVISO=""
+if [ -n "$PREV" ] && ! git -C "$REPO_DIR" diff --quiet "$PREV" -- plugins/memoria/skills/tablero/generar_vista.py; then
+  if ! git -C "$REPO_DIR" diff "$PREV" -- plugins/memoria/skills/tablero/generar_vista.py | grep -q '^[+-]FORMATO_DATOS = '; then FORMATO_AVISO=1; fi
+fi
 
 # --- cambios, con vuelta atrás si algo falla ---
 COPIA="$(mktemp -d)"
@@ -111,6 +117,10 @@ bash "$PLUGIN_DIR/build-metodo.sh"
 trap - ERR
 
 echo
+if [ -n "$FORMATO_AVISO" ]; then
+  echo "Aviso: generar_vista.py cambió y FORMATO_DATOS no. Si cambió lo que sale para un proyecto o un área, súbelo y vuelve a"
+  echo "publicar; si no, los tableros reutilizarán sus proyectos sin releerlos, que es lo que se quiere."
+fi
 echo "Publicada la versión $VERSION en el repo. Lo que no hace este script:"
 echo "  1. Commitear y llevar a main (pull request). La etiqueta v$VERSION la crea sola la acción de GitHub"
 echo "     .github/workflows/etiquetar.yml al llegar a main; es de donde las sesiones descargan los scripts del tablero."

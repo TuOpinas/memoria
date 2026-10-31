@@ -215,11 +215,16 @@ ok(_pid not in _i["inventario"]["huellas"] and _pid not in _i2["inventario"].get
    "un proyecto con acentos en su carpeta no guarda huella y se trae siempre")
 
 _g2 = TRAB / "guardada2"; (_g2 / "meta").mkdir(parents=True, exist_ok=True)
-(_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "huellas": ["aa", "bb"]}}), encoding="utf-8")
+_fmt = re.search(r'^FORMATO_DATOS = "([^"]*)"', pathlib.Path(PLAN).with_name("generar_vista.py").read_text(encoding="utf-8"), re.M).group(1)
+(_g2 / "meta" / "estado.json").write_text(json.dumps({"data": {"huella_raiz": "h1", "version_tablero": "9.9.9", "formato_datos": _fmt, "huellas": ["aa", "bb"]}}), encoding="utf-8")
 _o = lambda *a: subprocess.run([sys.executable, PLAN, "--guardada", _g2, *a], capture_output=True, text=True).stdout.split("\n")
 ok(_o("--version", "9.9.9")[:2] == ["h1", "aa,bb"], "huellas guardadas: con la misma versión salen la huella de la raíz y las de cada proyecto")
 ok(_o("--version", "9.9.9", "--tarea", "trig_y")[:2] == ["-", "aa,bb"], "huellas guardadas: si cambió la tarea hay que regenerar, pero los proyectos se reutilizan")
-ok(_o("--version", "9.9.10")[:2] == ["-", "-"], "huellas guardadas: con otra versión del plugin no se reutiliza nada")
+ok(_o("--version", "9.9.10")[:2] == ["-", "aa,bb"], "huellas guardadas: con otra versión del plugin hay que regenerar, pero con el mismo formato de datos los proyectos se reutilizan (1.24.3)")
+_e = json.loads((_g2 / "meta" / "estado.json").read_text(encoding="utf-8")); _e["data"]["formato_datos"] = "otro"; (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
+ok(_o("--version", "9.9.9")[1:3] == ["-", "-"], "huellas guardadas: con otro formato de datos no se reutiliza ningún proyecto")
+_e["data"].pop("formato_datos"); (_g2 / "meta" / "estado.json").write_text(json.dumps(_e), encoding="utf-8")
+ok(_o("--version", "9.9.9")[1] == "-", "huellas guardadas: un tablero de antes de la 1.24.3, sin formato de datos, se relee entero una vez")
 
 # plan de subida: con la base igual a la salida, solo meta/estado; con un proyecto cambiado, ese y meta; lo que sobra se borra
 salida = TRAB / "dos-completo"
