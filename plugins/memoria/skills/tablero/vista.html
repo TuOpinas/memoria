@@ -1891,13 +1891,14 @@ let ACT_DIAS = 7; try{ ACT_DIAS = +(localStorage.getItem("tablero-actividad-dias
 // Quién escribió y quién publicó cada documento lo dicen «Escribió:» y «Publicó:» de la entrada de la sesión (1.23). Un
 // entregable publicado en el periodo que ninguna sesión dice haber publicado cuenta sin atribuir (q vacío).
 const docNombre = r => (r||"").replace(/^(entregables|taller)\//,"");
-function eventos(desde){
+// conEscritos: también un evento «esc» por documento de «Escribió:», que solo cuenta «Por persona»; los demás no lo piden
+function eventos(desde, conEscritos){
   const ev = [];
   for(const p of PROJ){ if(p.restringido) continue;
     const nombrados = new Set(), publicados = {};
     for(const s of sesionesTodas(p)){ if(s.fecha<desde) continue; const q = persona(quienSes(p,s));
       ev.push({k:"ses", f:s.fecha, p, q, t:s.trabajamos||""});
-      for(const r of new Set(s.escribio||[])){ nombrados.add(r); ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
+      for(const r of new Set(s.escribio||[])){ nombrados.add(r); if(conEscritos) ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
       // publicado es lo que una entrada dice en «Publicó:», una vez por documento: la fecha del entregable no lo dice (1.23)
       for(const r of new Set(s.publico||[])){ nombrados.add(r); const e = (p.entregables||[]).find(e=>"entregables/"+(e.archivo||e.nombre||"")===r);
         if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:(e && (e.titulo||e.nombre)) || docNombre(r), doc:r}; } }
@@ -2154,6 +2155,11 @@ function seccionCriticas(filtro, conArea, nota){
   return ptGrupoSec("tareas-criticas", "Tareas críticas", "Con fecha cerca, y en el Estatus, en una prioridad o con un cliente", xs.map(x=>filaCritica(x, conArea)), 5, nota);
 }
 let RESP_FORM = null;
+// el formulario de «Cuestionar», en «Decisiones que te afectan» y en el registro del proyecto: el porqué y el proyecto
+// desde el que se registra (sel, el que sale elegido)
+function formCuestionar(ref, mios, sel){
+  return `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(p=>`<option value="${esc(p.id)}"${p===sel?" selected":""}>${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>`;
+}
 function filaAfecta(x){
   const p0 = x.a[0], ref = refDec(x.q, x.d), r = respuestaDe(ref), quien = persona(x.d.decidio||"") || "otra persona", org = ORG_DE[quien];
   const acts = !puedeMarcar() ? `<button type="button" class="chip" data-copy="${esc(`abre sesión en ${p0.nombre}: quiero cuestionar la decisión de ${quien} «${x.d.titulo}»`)}">Cuestionar con Claude</button>`
@@ -2161,7 +2167,7 @@ function filaAfecta(x){
     : `<button type="button" class="chip" ${x.a.length>1 ? `data-resp-q="${esc("ok|"+ref)}" aria-expanded="${RESP_FORM==="ok|"+ref}"` : `data-resp-ok="${esc(ref)}"`}>Aceptar</button><button type="button" class="chip" data-resp-q="${esc(ref)}" aria-expanded="${RESP_FORM===ref}">Cuestionar</button>`;
   const mios = PROJ.filter(p=>activo(p) && esMio(p));
   const formOk = RESP_FORM==="ok|"+ref ? `<form class="q-form" data-resp-form="${esc("ok|"+ref)}"><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${x.a.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Aceptar</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>` : "";
-  const form = RESP_FORM===ref ? `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(p=>`<option value="${esc(p.id)}"${p===p0?" selected":""}>${esc(p.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>` : "";
+  const form = RESP_FORM===ref ? formCuestionar(ref, mios, p0) : "";
   return `<div class="due-item static acc-i${r?" resp":""}"><span class="pill none">${fmtD(x.d.fecha)}</span><span class="t">${inline(x.d.titulo)}<span class="w">decidió ${esc(quien)}${org?` (${esc(org)})`:""} · ${x.a.length===1 && x.a[0]===x.q ? `en ${esc(x.q.nombre)}` : `${esc(x.q.nombre)} · toca a ${x.a.map(p=>irProy(p, "estatus", {sel:"dl.facts dt", texto:"Le afectan", af:true, pid:p.id})).join(", ")}`}${r && r.porque?` · «${esc(r.porque)}»`:""}</span></span><span class="acc-b">${acts}</span>${form}${formOk}</div>`;
 }
 function seccionAfectan(filtro){
@@ -2382,7 +2388,7 @@ function resumenCalculado(p, piezas){
 // ---- Inicio: Actividad sin «Por proyecto»; el área recibe «Por proyecto» como su sección de actividad. «Personas» pasa a «Quién aporta». ----
 const selPeriodo = (o) => `<div class="hoy-sel" role="group" aria-label="Periodo">${[[7,"Últimos 7 días"],[28,"Últimos 28 días"]].map(([d,l])=>`<button type="button" class="chip${ACT_DIAS===d?" on":""}" data-act-dias="${d}">${l}</button>`).join("")}<span class="more">del ${fmtD(addDays(-(ACT_DIAS-1)))} al ${fmtD(today())}, hoy incluido</span><span class="more" style="margin-left:auto">${kTxt(o)} · ${cuantos(o.proy.size,"proyecto","proyectos")}</span></div>`;
 function tabActividad(){
-  const ev = eventos(addDays(-(ACT_DIAS-1))), o = agrega(ev);
+  const ev = eventos(addDays(-(ACT_DIAS-1)), true), o = agrega(ev);
   return {n: 0, html: selPeriodo(o) + actPorArea(ev) + actPersonas(ev)};
 }
 function actPorProyectoArea(ev, ps){
@@ -2466,7 +2472,7 @@ function renderArea(a){
     const tuyo = cuestAbiertos(c=>cuestMio(c) && enA(byId[c.a_proyecto])) + seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA);
     body = enfoque2(enA) + (tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`);
   } else if(tab==="actividad"){
-    const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
+    const ev = eventos(addDays(-(ACT_DIAS-1)), true).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
     body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev, a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
   } else {
@@ -2617,7 +2623,7 @@ function cuestDec(d, p){
   const ref = refDec(p, d), r = respuestaDe(ref), mios = PROJ.filter(x=>activo(x) && esMio(x)); if(!mios.length) return "";
   if(r) return `<p class="acc-b izq"><span class="toast-i">${r.valor==="aceptada"?"Aceptada":"Cuestionada"} · la registra tu próxima sesión de ${esc((byId[r.proyecto]||{}).nombre||"")}</span><button type="button" class="chip ghost" data-undo="${esc(r.id)}">Deshacer</button></p>`;
   if(RESP_FORM!==ref) return `<p class="acc-b izq"><button type="button" class="chip" data-resp-q="${esc(ref)}">Cuestionar</button></p>`;
-  return `<form class="hecho-form q-form" data-resp-form="${esc(ref)}"><label for="resp-why">¿Qué no cuadra? Una línea basta: tu sesión te lo enseña escrito para que lo completes con su dato o su fuente.</label><textarea id="resp-why" class="search" rows="2" maxlength="400"></textarea><span class="ln"><label for="resp-from">Lo registras desde</label><select id="resp-from">${mios.map(x=>`<option value="${esc(x.id)}">${esc(x.nombre)}</option>`).join("")}</select><button type="submit" class="btn">Dejar para mi próxima sesión</button><button type="button" class="chip ghost" data-resp-cancel>Cancelar</button></span></form>`;
+  return formCuestionar(ref, mios);
 }
 function decItem(d, p, conProy){
   const k = decKey(p, d), open = DEC_OPEN.has(k);
@@ -2752,7 +2758,7 @@ function ayudaArts(){
     <p>Cada conversación con Claude empieza de cero: lo que se le explicó ayer, en otra conversación o en la de un compañero, no lo sabe. La memoria hace que la siguiente conversación, la tuya o la de cualquiera de ${ORG}, empiece sabiendo lo que pasó. Cuesta dos frases por sesión, abrir y cerrar, y confirmar las decisiones al cerrar; a cambio, nadie vuelve a explicarle el contexto a nadie.</p>
     <dl class="hc-def">
       <dt>Claude es muchos agentes</dt><dd>En cada conversación Claude hace de un especialista distinto, según lo que le pidas: el abogado que revisa un contrato, el comercial que prepara una propuesta, el desarrollador que programa un cambio, el analista que compara opciones. Sin memoria, son desconocidos entre sí. Con ella, todos leen la misma carpeta: el contrato que revisó uno es el que cita el otro en la propuesta, y la decisión de producto de la semana pasada es la que el desarrollador respeta hoy. Trabajan como empleados de ${ORG} que comparten el mismo archivo.</dd>
-      <dt>Personas y agentes, coordinados</dt><dd>Cada persona trabaja con su propio Claude, en su área. Lo que una decide queda escrito donde la siguiente lo lee: al abrir sesión, Claude avisa de las decisiones de otras áreas que afectan al proyecto, y lo que no cuadra se cuestiona por escrito. Nadie escribe en el área de otro y ninguna decisión se registra sin que una persona la confirme. El punto de encuentro es la carpeta, no el chat: lo que no está escrito en ella no existe para la siguiente conversación.</dd>
+      <dt>Personas y agentes, coordinados</dt><dd>Cada persona trabaja con su propio Claude, en su área. Lo que una decide queda escrito donde la siguiente lo lee: al abrir sesión, Claude avisa de las decisiones de otras áreas que afectan al proyecto, y lo que no cuadra se cuestiona por escrito. El punto de encuentro es la carpeta, no el chat: lo que no está escrito en ella no existe para la siguiente conversación.</dd>
     </dl>
     <p>Con la memoria al día, estas peticiones salen en una conversación nueva, sin explicar nada antes:</p>
     <div class="hc-tbl"><table>
@@ -2768,7 +2774,7 @@ function ayudaArts(){
     </table></div>
     <p class="hc-nota">Funciona en la medida en que todos la usan: una sesión que no se cierra, o un acuerdo que se quedó en un chat, es un hueco que la siguiente conversación no puede llenar.</p>
     <dl class="hc-def">
-      <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. Al cerrar cada sesión, Claude escribe con la voz del director del área cómo va el proyecto (lo que se completó y lo que sigue) y el estatus del área (qué se movió, qué sigue y qué preocupa), y el tablero los enseña en Estatus, cada uno en su nivel; arriba de Acciones está «Por dónde empezar»: los grupos de tareas que avanzan varias cosas a la vez. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
+      <dt>Y este tablero</dt><dd>La memoria se lee desde Claude; el tablero la enseña entera sin abrirla. <button type="button" class="lnk" data-help="tablero">Tu tablero</button> · <button type="button" class="lnk" data-help="director">El director de cada área</button></dd>
     </dl>`},
   {g:"Para empezar", id:"conectarte", t:"Conéctate una vez", h:`
     <p>Se hace una sola vez y lleva unos 15 minutos. La receta completa, con lo que hay que pulsar en cada pantalla, está en la sección «Cómo conectarte» de <code>guia.md</code>, en la carpeta. Aquí va el resumen.</p>
@@ -2782,21 +2788,16 @@ function ayudaArts(){
       <li><b>Compruébalo con una sesión</b><span>Escribe ${F("abre sesión en")} y el nombre de un proyecto de tu área. La respuesta empieza con un recuadro, «Memoria de trabajo», con la organización y la versión del método, y solo las filas que te piden algo. Después te pone al día y te propone en qué trabajar.</span></li>
       <li><b>Monta tu tablero</b><span>Escribe ${F("monta el tablero")} y aprueba la tarea que te pide la app: es la del botón «Sincronizar ahora». Para tenerlo siempre a mano, ábrelo en Chrome desde <code>claude.ai/artifacts</code> y guárdalo en la barra de marcadores.</span></li>
     </ol>
-    <dl class="hc-def">
-      <dt>El código, aparte</dt><dd>Si trabajas con código, sus repositorios van en otra carpeta de tu computadora, con todos los de la organización dentro, y se conecta también al proyecto. Nunca dentro de la carpeta de la memoria: Drive le añade archivos que confunden a Git.</dd>
-      <dt>Para diseñar</dt><dd>Pídeselo a Claude en una conversación normal de tu proyecto: el diseño sale como un artifact y la memoria funciona como en cualquier otra conversación. No uses la interfaz aparte de Claude Design, que se retira en diciembre.</dd>
-    </dl>
     <p class="hc-nota">No hay nada que pegar en las instrucciones del proyecto: el plugin aplica el método en cuanto ve la carpeta. Para sumar a otra persona: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"sumar", t:"Sumar a un compañero", h:`
     <p>Para que otra persona trabaje con la memoria de ${ORG} hacen falta tres cosas. Las dos primeras las hace la organización; la tercera es mandarle un mensaje, y el resto lo hace esa persona siguiendo la guía de la carpeta.</p>
     <ol class="hc-pasos">
-      <li><b>Ponla en el mapa, como responsable o como colaboradora</b><span>Si va a llevar un área, su correo va en la columna Cuenta de esa área: ${F("añade a [nombre] con [correo] como responsable del área [área] en guia.md")}. Si va a trabajar en el área de otra persona, va en la misma celda como colaboradora: ${F("añade a [nombre] con [correo] como colaborador del área [área]")}. Si solo va a trabajar en un proyecto, se declara en ese proyecto: ${F("añade a [nombre] con [correo] como colaborador de este proyecto")}, en una sesión del responsable del área. La tabla de <code>guia.md</code> la escribe ${CTX}. Sin nada de eso, Claude le preguntará antes de escribir.</span></li>
-      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: «Lector» en toda la carpeta ${ORG}, y «Gestor de contenido» en la carpeta del área donde va a escribir (clic derecho › Compartir), o solo en la del proyecto si colabora en uno. «Colaborador» no sirve, porque no deja mover ni borrar archivos, y «Gestor de contenido» en la unidad entera le abriría la escritura en todas las áreas. Si la carpeta está en «Mi unidad» y no en una unidad compartida, los roles son «Lector» y «Editor». Si hay algo que esa persona no deba leer, se marca con acceso limitado antes de compartir.</span></li>
+      <li><b>Ponla en el mapa, como responsable o como colaboradora</b><span>Si va a llevar un área, su correo va en la columna Cuenta de esa área: ${F("añade a [nombre] con [correo] como responsable del área [área] en guia.md")}. Si va a trabajar en el área de otra persona, va en la misma celda como colaboradora: ${F("añade a [nombre] con [correo] como colaborador del área [área]")}. Si solo va a trabajar en un proyecto, se declara en ese proyecto: ${F("añade a [nombre] con [correo] como colaborador de este proyecto")}. La tabla de <code>guia.md</code> la escribe ${CTX}.</span></li>
+      <li><b>Compártele la carpeta</b><span>Lo hace ${ADM}, desde Google Drive en la web: «Lector» en toda la carpeta ${ORG}, y «Gestor de contenido» solo en la carpeta del área o del proyecto donde va a escribir. Los roles, en <button type="button" class="lnk" data-help="carpeta-drive">Montar la carpeta en Drive</button>.</span></li>
       <li><b>Mándale las instrucciones</b><span>Copia este mensaje y envíaselo por correo o por chat.</span></li>
     </ol>
     <div class="frase"><code class="frase-t" style="white-space:pre-line">${esc(MSG_SUMAR)}</code><button type="button" class="chip" data-copy="${esc(MSG_SUMAR)}">Copiar</button></div>
-    <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos, y el tablero sale vacío.</p>
-    <p class="hc-nota">Si dos personas escriben en la misma área, que no cierren sesión del mismo proyecto al mismo tiempo: las dos escrituras pueden pisarse.</p>`},
+    <p class="hc-nota">Si la carpeta de ${ORG} no vive en Google Drive, los pasos 2 y 3 del mensaje son los de su nube: aceptar la carpeta compartida y tenerla siempre descargada en la computadora. Con los archivos solo en la nube, Claude no puede leerlos, y el tablero sale vacío.</p>`},
   {g:"Para empezar", id:"carpeta-drive", t:"Montar la carpeta en Drive", h:`
     <p>Lo hace ${ADM}, una vez, antes de que nadie se conecte. El resto del equipo no tiene que hacer nada de esto.</p>
     <dl class="hc-def">
@@ -2821,14 +2822,14 @@ function ayudaArts(){
     <ul class="hc-l">
       <li><b>Al abrir</b>, Claude te dice dónde quedó todo, lo que llegó del tablero para ese proyecto, los avisos de otras áreas y dos o tres opciones para seguir. Espera a que elijas.</li>
       <li><b>Mientras trabajas</b>, todo lo que produce (un documento, un análisis, un PDF) se guarda en la carpeta del proyecto en ese momento, como borrador.</li>
-      <li><b>Al cerrar</b>, escribe la bitácora, te enseña las decisiones que detectó y no registra ninguna sin tu confirmación. Pone al día el estado y los siguientes pasos, deja apuntado el cierre para tu tablero y te dice si hay que avisar a otra área.</li>
+      <li><b>Al cerrar</b>, escribe la bitácora y el estado, no registra ninguna decisión sin tu sí y deja apuntado el cierre para tu tablero.</li>
       <li><b>Si te vas sin cerrar</b>, la siguiente sesión lo nota, te pregunta qué pasó y lo registra entonces.</li>
     </ul>`},
   {g:"Para empezar", id:"varias-memorias", t:"Más de una memoria", h:`
     <p>Una memoria es una carpeta por organización o por mundo, y conviene tener varias si trabajas en varios: una para el trabajo, que puede ser compartida con tu equipo; otra para tus temas personales; otra para la casa. Cada una tiene su propia <code>guia.md</code>, sus áreas y su tablero, y no se mezclan.</p>
     <ul class="hc-l">
       <li><b>Temas distintos en cada una.</b> Lo que va en una no tiene por qué saberse en otra: la memoria del trabajo no lee la de la casa, ni al revés.</li>
-      <li><b>Un proyecto de Claude por memoria.</b> Lo más cómodo es un proyecto por carpeta, con su tablero. Se pueden conectar dos carpetas a la misma sesión, pero no es recomendable: Claude trabaja en una a la vez, te pregunta en cuál antes de leer o escribir, y nada pasa de una a otra salvo que tú lo pidas y lo confirmes pieza a pieza.</li>
+      <li><b>Un proyecto de Claude por memoria</b>, cada uno con su tablero.</li>
       <li><b>Se montan igual.</b> ${F("monta la carpeta de…")} con una carpeta vacía crea la guía, el método y la primera área; para una memoria personal, tú eres la única cuenta y todas las áreas son tuyas.</li>
     </ul>`},
   {g:"Cada día", id:"frases", t:"Qué decirle a Claude", h:`
@@ -2843,26 +2844,25 @@ function ayudaArts(){
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
         <tr><td>${F("revisa X")}<br>${F("¿esto está listo?")}</td><td>Busca lo desfasado o sin fuente y te lo enseña.</td></tr>
         <tr><td>${F("ya lo aprobó…")} y el nombre del responsable</td><td>Lo publica como vigente, si cumple los requisitos.</td></tr>
-        <tr><td>${F("[nombre] con [correo] es el responsable del área [área]")}<br>${F("añade a [nombre] con [correo] como colaborador del área [área]")}</td><td>Solo el responsable del contexto: escribe en el mapa de la carpeta quién lleva cada área y quién colabora en ella. Falta además darles permiso en la carpeta compartida (<button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>).</td></tr>
-        <tr><td>${F("añade a [nombre] con [correo] como colaborador de este proyecto")}</td><td>Solo el responsable del área, en una sesión del proyecto: esa persona escribe en ese proyecto y en ningún otro.</td></tr>
-        <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas. Pide antes un responsable con nombre y apellido.</td></tr>
+        <tr><td>${F("[nombre] con [correo] es el responsable del área [área]")}<br>${F("añade a [nombre] con [correo] como colaborador del área [área]")}</td><td>Escribe en el mapa de la carpeta quién lleva cada área y quién colabora en ella. Falta además darles permiso en la carpeta compartida (<button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>).</td></tr>
+        <tr><td>${F("añade a [nombre] con [correo] como colaborador de este proyecto")}</td><td>Esa persona escribe en ese proyecto y en ningún otro.</td></tr>
+        <tr><td>${F("arranca un proyecto para…")}</td><td>Crea la carpeta del proyecto con todas sus piezas.</td></tr>
         <tr><td>${F("cierra el proyecto")}</td><td>Comprueba que está terminado y lo deja cerrado. No borra nada.</td></tr>
         <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su estatus, lo que pide atención y lo que no cuadra.</td></tr>
         <tr><td>${F("revisión de calidad de X")}<br>${F("audita la carpeta")}</td><td>Revisa a fondo un proyecto, un documento, un desarrollo o la carpeta entera contra su objetivo, y entrega lo que no cuadra, comprobado.</td></tr>
         <tr><td>${F("quiero cuestionar…")}</td><td>Deja escrito qué no cuadra de una decisión o una premisa, para que su responsable responda.</td></tr>
         <tr><td>${F("lo mantengo, porque…")}<br>${F("lo cambio: …")}</td><td>Responde a un cuestionamiento abierto a tu proyecto. Queda como decisión al cerrar y el cuestionamiento se cierra.</td></tr>
-        <tr><td>${F("registra como premisa que…")}<br>${F("la premisa P2 cambia a…")}</td><td>Solo el responsable del contexto: escribe la premisa que la dirección confirmó, o la que reemplaza a otra.</td></tr>
+        <tr><td>${F("registra como premisa que…")}<br>${F("la premisa P2 cambia a…")}</td><td>Escribe la premisa que la dirección confirmó, o la que reemplaza a otra.</td></tr>
         <tr><td>${F("sincroniza el tablero")}</td><td>Pone el tablero al día ahora, con lo que otras personas hayan escrito.</td></tr>
         <tr><td>${F("ordena Claude outputs")}</td><td>Lleva a su proyecto lo que la app dejó en la carpeta «Claude outputs».</td></tr>
       </tbody>
-    </table></div>
-    <p class="hc-nota"><b>Tres cosas que Claude no hace aunque se lo pidas de pasada:</b> dar un documento por aprobado sin que lo diga su responsable, cambiar lo ya registrado en decisiones o en la bitácora, y mover algo que parece confidencial. En los tres casos te lo dice y propone; decides tú o el responsable.</p>`},
+    </table></div>`},
   {g:"Cada día", id:"modelos", t:"Qué modelo usar", h:`
     <p>El modelo se elige abajo, junto a donde escribes. Para trabajar con la memoria conviene <b>Opus</b> para todo: abrir y cerrar sesión, preguntar cómo va algo, colocar material y el trabajo de cada proyecto.</p>
     <dl class="hc-def">
       <dt>Opus, por defecto</dt><dd>En la misma apertura de sesión, repetida tres veces con cada modelo, Opus tardó en promedio 40 segundos y Sonnet 57, con los mismos tokens y menos pasos. Opus siguió mejor las reglas del método; Sonnet llegó a dar un dato equivocado en el recuadro de apertura.</dd>
       <dt>Lo más difícil</dt><dd>Para una revisión de calidad a fondo, decisiones de estrategia o de arquitectura y tareas largas de muchos pasos, el modelo más capaz que tengas disponible.</dd>
-      <dt>Sonnet y Haiku</dt><dd>Sonnet funciona, pero en lo medido (la apertura) rindió menos: tardó más y se saltó una regla. Haiku no se ha probado con el método. El cierre de sesión y la puesta al día del tablero no se midieron: la recomendación sale de la apertura. Opus cuesta más por token que Sonnet; con los mismos tokens y menos pasos, la diferencia en una apertura es pequeña.</dd>
+      <dt>Sonnet y Haiku</dt><dd>Sonnet funciona, pero en la apertura rindió menos; Haiku no se ha probado con el método. El cierre y la puesta al día del tablero no se midieron.</dd>
     </dl>
     <p class="hc-nota">Si una conversación empezó con otro modelo, se puede cambiar a mitad: conserva todo lo hablado.</p>`},
   {g:"Cada día", id:"telefono", t:"Desde el teléfono", h:`
@@ -2882,24 +2882,20 @@ function ayudaArts(){
       <dt>Cambié de computadora y el botón «Sincronizar ahora» no hace nada.</dt><dd>El botón está ligado a la computadora donde montaste el tablero. En la nueva, con la carpeta conectada, dile a Claude ${F("cambié de computadora: pon al día la tarea del tablero")} y aprueba el cambio que te pide la app.</dd>
       <dt>No puedo instalar la app.</dt><dd>Lo más común es el disco lleno: la primera vez descarga más de 1 GB. Libera espacio y vuelve a intentarlo; en Windows Home puede no funcionar la parte de carpetas.</dd>
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su responsable.</dd>
-      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día: pulsa «Sincronizar ahora» o dile a Claude ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Tarda unos minutos. Si cerraste la sesión, el botón de sincronizar lleva un punto, y al pasar por él dice cuántas sesiones aún no muestra.</dd>
-      <dt>Pegué algo con datos personales, contratos o facturación.</dt><dd>Claude te lo dice antes de guardarlo y propone dejarlo en la parte restringida del proyecto. Decides tú; no mueve nada sin tu sí.</dd>
-      <dt>Claude quiere escribir en otra área.</dt><dd>No debería: escribe solo en las áreas y proyectos donde tu cuenta es responsable o colabora. Si algo le toca a otra, te dice a quién pedírselo.</dd>
+      <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día, con «Sincronizar ahora» o ${F("sincroniza el tablero")}: <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>.</dd>
     </dl>`},
   {g:"El tablero", id:"tablero", t:"Tu tablero", h:`
-    <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo desde su cuenta, con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</p>
+    <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo con ${F("monta el tablero")} (<button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien</button>).</p>
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas, y cada una contesta una pregunta: <b>Estatus</b>, cómo está y qué cambió; <b>Acciones</b>, qué te toca y por dónde empezar; <b>Actividad</b>, qué pasó y quién lo hizo; y <b>Qué hay</b>, qué ha producido el trabajo. En Inicio, la última es <b>Mantenimiento</b>, lo que estorba. Solo Acciones, Mantenimiento en Inicio y Qué hay en área y proyecto llevan un número. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda. En la cabecera de un área o un proyecto, su descripción ocupa dos líneas; «Ver más» la abre entera, con lo que el proyecto deja fuera.</dd>
       <dt>Estatus</dt><dd>Arriba, <b>Últimos 7 días</b>: sesiones, decisiones y documentos publicados de la última semana. Después, <b>Avanzaron otros</b>: lo que otras personas trabajaron en tus proyectos desde tu última sesión en cada uno, con el tema y los avances de cada sesión y las decisiones que registraron; lo que pasó en proyectos que no son tuyos va plegado. Solo sale lo que ya trajo la última puesta al día. En Inicio siguen qué es la organización (el primer párrafo de la guía de la carpeta), una ficha por área con el titular de su Estatus y su primer «Siguiente», y un pie que solo cuenta lo que pide algo: por decidir, vencidas, quién avanzó, y cuántas sesiones hubo esta semana o que no hubo ninguna. En el área, su Estatus entero, que firma su responsable al cerrar sesión, con sus prioridades debajo de «Siguiente» y «Atender» en cada una, y una ficha por proyecto. En el proyecto, su Estatus firmado: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa. Al final, <b>Esperas a</b>: una fila por persona que te debe algo, con «Ya llegó» (una línea opcional; si era una decisión, te pregunta qué se decidió) y «Ya no aplica». Las dos se pueden deshacer hasta que la carpeta las registre.</dd>
-      <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de tareas que más avanzan con una sola sesión, con «Empezar con Claude», que copia la frase para pegársela. Después, <b>Te toca decidir</b>: lo que falta decidir en tus proyectos y las tareas que empiezan por decidir, definir o elegir, leído como pregunta y con «Decidir con Claude»; solo lleva señal cuando la decisión bloquea algo («Bloquea 3 tareas», «con Ana Centeno»). Luego, <b>Tareas críticas</b>: las que tienen fecha a dos semanas de hoy, hacia atrás o hacia delante, y además están en «Siguiente», sirven a una prioridad del área o tocan a un cliente; las vencidas primero, de la más vieja a la más nueva. Cada una se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica» ahí mismo. Al final, <b>Decisiones que te afectan</b>: lo que otra persona decidió en otro proyecto y nombra a uno tuyo, o lo que alguien de la carpeta decidió dentro de uno tuyo, con «Aceptar» y «Cuestionar» (una línea con el porqué y el proyecto desde el que lo registras). Sale hasta que lo aceptas o lo cuestionas, o hasta que pasan 30 días. Las dos van a la cola y se pueden deshacer hasta que una sesión tuya las registre (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>). En el área y el proyecto, Acciones lleva lo mismo filtrado. Su número cuenta solo lo tuyo por hacer o decidir, igual en los tres niveles. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta: el responsable del área, o «Nombre (correo)» en una línea «Colabora:»; si no lo encuentra, te lo dice y no te atribuye nada. Alguien de fuera se reconoce cuando la tarea o el Estatus lo nombra como «Nombre Apellido (Organización)»; unas palabras con mayúscula no son una persona, ni un nombre de pila basta para alguien de fuera que ese proyecto no nombra.</dd>
+      <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de tareas que más avanzan con una sola sesión, con «Empezar con Claude», que copia la frase para pegársela. Después, <b>Te toca decidir</b>: lo que falta decidir en tus proyectos y las tareas que empiezan por decidir, definir o elegir, leído como pregunta y con «Decidir con Claude»; solo lleva señal cuando la decisión bloquea algo («Bloquea 3 tareas», «con Ana Centeno»). Luego, <b>Tareas críticas</b>: las que tienen fecha a dos semanas de hoy, hacia atrás o hacia delante, y además están en «Siguiente», sirven a una prioridad del área o tocan a un cliente; las vencidas primero, de la más vieja a la más nueva. Cada una se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica» ahí mismo. Al final, <b>Decisiones que te afectan</b>: lo que otra persona decidió en otro proyecto y nombra a uno tuyo, o lo que alguien de la carpeta decidió dentro de uno tuyo, con «Aceptar» y «Cuestionar» (una línea con el porqué y el proyecto desde el que lo registras). Sale hasta que lo aceptas o lo cuestionas, o hasta que pasan 30 días. Las dos se deshacen hasta que una sesión tuya las registra (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>). En el área y el proyecto, Acciones lleva lo mismo filtrado. Su número cuenta solo lo tuyo por hacer o decidir, igual en los tres niveles. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta; si no lo encuentra, te lo dice y no te atribuye nada.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, con el mismo arranque en los tres niveles: el periodo y sus cifras. En Inicio y el área, por área, por proyecto y por persona; en el proyecto, su registro de sesiones y decisiones del periodo, con «Ver anteriores» y «Cuestionar» en cada decisión de otra persona. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
-      <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos escritos y publicados y tareas abiertas; lo que vale cero no se escribe. Al pasar por el nombre dice su papel. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión. Una sesión que no dice quién la cerró no se le cuenta a nadie. Las tareas abiertas son las de «Siguientes pasos» que nombran a la persona. Un nombre de pila que llevan dos personas, sin apellido, no se le cuenta a ninguna.</dd>
-      <dt>Qué hay</dt><dd>En el área y el proyecto, lo que el trabajo ha producido. Primero, <b>Por poner al día</b>, si la memoria tiene algo flojo (un Estatus viejo, borradores viejos, tareas vencidas hace más de dos semanas, sugerencias), y su número es el de la pestaña. Después, un resumen de <b>Lo publicado</b> y de lo que hay <b>En el taller</b>, con cuántos documentos están vigentes y en borrador y cuáles se quedaron viejos frente a una decisión posterior. Debajo, plegados para consultar, los entregables, el taller y todas las tareas del proyecto. Cada pieza lleva su estado, su fecha y la línea de su cabecera que dice qué aporta; la reemplazada dice por cuál. Del taller solo se enseña el inventario: su contenido sigue siendo privado del área. Una frase de resumen que sugirió la memoria sale como provisional, y solo la acepta el dueño del tablero en los proyectos donde su cuenta escribe; la escribe el próximo cierre del proyecto.</dd>
+      <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos escritos y publicados y tareas abiertas; lo que vale cero no se escribe. Al pasar por el nombre dice su papel. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión. Una sesión que no dice quién la cerró no se le cuenta a nadie. Las tareas abiertas son las de «Siguientes pasos» que nombran a la persona.</dd>
+      <dt>Qué hay</dt><dd>En el área y el proyecto, lo que el trabajo ha producido. Primero, <b>Por poner al día</b>, si la memoria tiene algo flojo (un Estatus viejo, borradores viejos, tareas vencidas hace más de dos semanas, sugerencias), y su número es el de la pestaña. Después, un resumen de <b>Lo publicado</b> y de lo que hay <b>En el taller</b>, con cuántos documentos están vigentes y en borrador y cuáles se quedaron viejos frente a una decisión posterior. Debajo, plegados para consultar, los entregables, el taller y todas las tareas del proyecto. Cada pieza lleva su estado, su fecha y la línea de su cabecera que dice qué aporta; la reemplazada dice por cuál. Una frase de resumen que sugirió la memoria sale como «provisional» hasta que el próximo cierre del proyecto la escribe.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
-      <dt>Mantenimiento</dt><dd>Solo en Inicio. <b>Arreglar ya</b>: lo que estorba hoy y quién lo arregla (permisos de Drive que no cuadran, una línea de la guía que falta, si eres quien responde por el contexto o días sin ponerse al día, la tarea del tablero que pide aprobación); es el único número, y cuando trae algo sale además una línea amarilla encima de las pestañas. <b>Proyectos por poner al día</b>: una fila por proyecto con lo que su memoria tiene flojo (un Estatus viejo, borradores viejos, tareas vencidas hace más de dos semanas, lo que la memoria sugiere) y una sola frase para arreglarlo en una sesión; las frases de resumen sugeridas se ven antes de aceptarlas. Plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer».</dd>
-      <dt>Dos voces</dt><dd>La línea de estado de un proyecto la calcula el tablero con lo que hay escrito: fechas, decisiones, tareas. No inventa nada y no opina. El juicio (qué preocupa, hacia dónde va) es el Estatus, que se firma al cerrar sesión.</dd>
-      <dt>Actuar desde él</dt><dd>Puedes poner fecha a una tarea, marcarla hecha, anotar algo o corregir cómo lee el estado de un proyecto. Queda pendiente (⟳) hasta que está escrito en la carpeta.</dd>
-      <dt>No se comparte</dt><dd>Muestra todo lo que tu cuenta lee, incluido lo restringido, así que es solo para ti. Quien quiera ver la carpeta así monta el suyo con ${F("monta el tablero")}, y ve lo que su cuenta puede leer.</dd>
+      <dt>Mantenimiento</dt><dd>Solo en Inicio: <b>Arreglar ya</b>, lo que estorba hoy, que es el único número y, cuando trae algo, saca una línea amarilla encima de las pestañas; <b>Proyectos por poner al día</b>; y, plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». Lo explica <button type="button" class="lnk" data-help="por-donde-empezar">Lo que te propone Inicio</button>.</dd>
+      <dt>Actuar desde él</dt><dd>Lo que marcas aquí queda pendiente (⟳) hasta que está escrito en la carpeta: <button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>.</dd>
     </dl>`},
   {g:"El tablero", id:"ponerse-al-dia", t:"Cómo se pone al día", h:`
     <p>El tablero no lee la carpeta en vivo: muestra lo que había la última vez que se puso al día. El pie de la página dice cuándo fue.</p>
@@ -2917,8 +2913,8 @@ function ayudaArts(){
       <figcaption>La página nunca escribe en la carpeta: solo apunta. Escriben la puesta al día y las sesiones.</figcaption>
     </figure>
     <dl class="hc-def">
-      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Cada vez que cierras una sesión, Claude deja apuntado en el tablero que hubo un cierre, sin pedirte nada; al abrirlo, el botón de sincronizar lleva un punto y dice cuántas sesiones aún no muestra. Al pulsarlo trae lo que hay en la carpeta, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos; al terminar, si trae algo nuevo, la página te pide volver a cargarla. Si al cerrar le pides a Claude «cierra y pon al día el tablero», lo lanza en ese momento, y la app te pide permiso para hacerlo.</dd>
-      <dt>Lo que escriben otras personas</dt><dd>Los cierres que apunta Claude son los de tu cuenta; lo que cierran otras personas no llega a tu tablero solo. Para traerlo, el botón «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o dile a Claude ${F("sincroniza el tablero")}. El botón no corre nunca solo; cuando lo pulsas, tu computadora tiene que estar encendida con la app abierta. Si lleva un punto, hace falta sincronizar: hubo sesiones cerradas después de la última vez, hay cosas marcadas aquí que la sincronización pasa a la carpeta, o la página y los datos son de versiones distintas. A su lado dice cuánto hace de la última sincronización; lo que alguien escribió en la carpeta después no lo puede ver, pero si nada cambió, la sincronización lo comprueba al empezar y termina enseguida. Si sale apagado, al pasar por encima dice qué le falta.</dd>
+      <dt>Cuando tú lo pides</dt><dd>El tablero no se pone al día solo: cada puesta al día es una tarea que gasta de tu plan, y así decides cuándo. Se lanza con «Sincronizar ahora», junto al nombre arriba a la izquierda (lo ve solo quien montó el tablero), o con ${F("sincroniza el tablero")}, con tu computadora encendida y la app abierta. Trae lo que hay en la carpeta, también lo que escribieron otras personas, escribe lo mecánico que marcaste aquí y renueva «Por dónde empezar» si cambió algo. Tarda unos minutos, y si nada cambió termina enseguida; si trae algo nuevo, la página te pide volver a cargarla.</dd>
+      <dt>El punto del botón</dt><dd>Dice que hace falta sincronizar: cerraste sesiones después de la última vez (Claude lo apunta al cerrar, sin pedirte nada, y al pasar por el botón dice cuántas), hay cosas marcadas aquí por pasar a la carpeta, o la página y los datos son de versiones distintas. Solo cuenta los cierres de tu cuenta: lo de otras personas llega al sincronizar. A su lado dice cuánto hace de la última sincronización; si el botón sale apagado, al pasar por encima dice qué le falta.</dd>
       <dt>Cada mañana, si lo pides</dt><dd>En una carpeta donde escriben varias personas puede convenir que se ponga al día solo cada mañana: pídelo con ${F("pon el tablero al día cada mañana")}. Corre en tu computadora, que tiene que estar encendida con la app abierta a esa hora.</dd>
       <dt>Versiones nuevas</dt><dd>Cuando sale una versión del método, la página se actualiza sola la siguiente vez que se pone al día. No hace falta hacer nada.</dd>
     </dl>`},
@@ -2936,15 +2932,15 @@ function ayudaArts(){
         <tr><td>Marcar una prioridad del área como cumplida o retirada (en el Estatus del área)</td><td>el responsable del área</td><td>Una sesión suya la quita de las prioridades.</td></tr>
         <tr><td>«Ya llegó» o «Ya no aplica» en Esperas a</td><td>la puesta al día o la siguiente sesión</td><td>Como una tarea hecha o retirada; si lo que esperabas era una decisión, la sesión registra lo que se decidió.</td></tr>
         <tr><td>«Aceptar» una decisión que te afecta</td><td>tu siguiente sesión en el proyecto que elegiste</td><td>Una línea en la bitácora de esa sesión con la decisión aceptada, y una tarea si pide algo en tu proyecto.</td></tr>
-        <tr><td>«Cuestionar» una decisión</td><td>tu siguiente sesión en el proyecto que elegiste</td><td>Un cuestionamiento en sus decisiones: Claude te pide el dato o la fuente que lo sostiene, te lo enseña escrito y espera tu sí. Avisa a quien decidió.</td></tr>
+        <tr><td>«Cuestionar» una decisión</td><td>tu siguiente sesión en el proyecto que elegiste</td><td>Un cuestionamiento en sus decisiones, escrito con tu sí. Le llega a quien decidió.</td></tr>
       </tbody>
     </table></div>
-    <p class="hc-nota">Lo que aún no está escrito se ve en Mantenimiento de Inicio, en «Marcado aquí, por registrar». La puesta al día ocurre cuando pulsas «Sincronizar ahora» o cuando pides ${F("sincroniza el tablero")} (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
+    <p class="hc-nota">Lo que aún no está escrito se ve en Mantenimiento de Inicio, en «Marcado aquí, por registrar» (<button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>). Al abrir sesión en un proyecto, lo primero que Claude enseña es lo que llegó del tablero para ese proyecto.</p>`},
   {g:"El tablero", id:"estado-proyecto", t:"Cómo lee cada proyecto", h:`
     <p>De cada proyecto, el tablero enseña tres cosas: cómo va, en qué estado está y qué tareas tiene. Solo la primera la escribe una persona con Claude; las otras dos las calcula el tablero con lo que hay escrito.</p>
     <h3 class="hc-h">Cómo va</h3>
     <p>La pestaña Estatus de cada proyecto abre con su Estatus, el reporte del director: una frase con lo último que se completó y lo que sigue, y debajo lo que se completó, lo siguiente con quién y cuándo, lo que falta decidir y lo que preocupa. Si solo vas a leer una cosa, es esta.</p>
-    <p>Lo escribe Claude al cerrar cada sesión del proyecto, con la voz del director del área, y lo guarda con su fecha en la sección «Estatus» de su <code>proyecto.md</code>; el tablero solo lo muestra. Si la ficha cambió después, la tarjeta avisa de que puede no estar al día. Un proyecto que aún no tiene Estatus lo dice: lo escribe el cierre de su siguiente sesión.</p>
+    <p>Lo escribe Claude al cerrar cada sesión del proyecto; el tablero solo lo muestra, y no inventa ni opina. Si la ficha cambió después, la tarjeta avisa de que puede no estar al día. Un proyecto que aún no tiene Estatus lo dice: lo escribe el cierre de su siguiente sesión.</p>
     <h3 class="hc-h">El estado</h3>
     <p>Sale de lo que dice su ficha y de cuándo fue su última sesión. Si no te parece bien, tócalo para corregirlo: queda pendiente para la siguiente sesión.</p>
     <dl class="hc-def">
@@ -2972,9 +2968,9 @@ function ayudaArts(){
   {g:"El tablero", id:"por-donde-empezar", t:"Lo que te propone Inicio", h:`
     <p>Inicio te dice qué hacer, de dos maneras: por dónde empezar, arriba de Acciones, y qué arreglar para que la memoria siga sirviendo, en Mantenimiento. Junto a cada cosa hay una frase para copiar y pegarle a Claude.</p>
     <h3 class="hc-h">Por dónde empezar</h3>
-    <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de tareas de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige con tres criterios: que esté entre las prioridades del área, que toque a un cliente, una firma o dinero, y que desbloquee otros proyectos. Que una tarea esté vencida no la hace más importante. Es una sugerencia: la sesión decide.</p>
+    <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de tareas de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige por las prioridades del área, lo que toca a un cliente o a dinero y lo que desbloquea otros proyectos, no por lo vencido. Es una sugerencia: la sesión decide.</p>
     <h3 class="hc-h">Mantenimiento</h3>
-    <p>Primero, «Arreglar ya»: lo que estorba hoy, cada cosa con quién la arregla. Después, «Proyectos por poner al día»: una fila por proyecto con todo lo que su memoria tiene flojo y una sola frase para arreglarlo en una sesión; «Ahora no» la quita siete días. Plegado al final, lo que tocaste aquí y aún no está escrito. Cuenta como flojo:</p>
+    <p>Primero, «Arreglar ya»: lo que estorba hoy, cada cosa con quién la arregla. Después, «Proyectos por poner al día»: una fila por proyecto con todo lo que su memoria tiene flojo y una sola frase para arreglarlo en una sesión; «Ahora no» la esconde siete días, solo en este navegador. Plegado al final, lo que tocaste aquí y aún no está escrito. Cuenta como flojo:</p>
     <ul class="hc-l">
       <li>Un Estatus más viejo que el trabajo del proyecto, o archivos que cambiaron después de la última sesión registrada: hubo trabajo que nadie cerró.</li>
       <li>Tareas vencidas hace más de dos semanas, tareas abiertas sin fecha o mezcladas con rutinas y esperas, y líneas que cuentan algo que ya pasó en vez de una tarea.</li>
@@ -2983,8 +2979,7 @@ function ayudaArts(){
       <li>Documentos cuya base cambió después de escribirse, borradores de más de 30 días, y documentos publicados que el índice del área no describe.</li>
       <li>Lo que la memoria sugiere al ponerse al día: una decisión sin registrar, una tarea que parece hecha, una frase de resumen que falta.</li>
       <li>Cosas marcadas aquí que esperan una sesión, y archivos que Claude dejó fuera de los proyectos.</li>
-    </ul>
-    <p class="hc-nota">«Ahora no» esconde una línea siete días, solo en este navegador.</p>`},
+    </ul>`},
   {g:"El tablero", id:"que-ve-cada-quien", t:"Qué ve cada quien", h:`
     <dl class="hc-def">
       <dt>Tu tablero</dt><dd>Todo lo que tu cuenta puede leer en la carpeta, incluido lo restringido y las cinco sesiones más recientes de cada proyecto enteras. Cada persona ve en el suyo lo que su cuenta lee: por eso no se comparte, y quien quiera uno lo monta con ${F("monta el tablero")}.</dd>
@@ -2994,16 +2989,16 @@ function ayudaArts(){
   {g:"Para empezar", id:"permisos", t:"Los permisos de Drive", h:`
     <p>Que la carpeta diga quién escribe dónde no basta: lo que manda es Drive. Claude compara los permisos reales de la carpeta compartida con lo que declara la memoria (las áreas y sus responsables en <code>guia.md</code>, quién colabora, lo restringido) y dice qué no cuadra.</p>
     <dl class="hc-def">
-      <dt>Cómo se revisa</dt><dd>Quien responde por el contexto, o quien administra la carpeta, le dice a Claude ${F("revisa los permisos")}. Claude lee los permisos con el conector de Google Drive, sin cambiar nada, y lo propone solo al cerrar una sesión en la que cambió quién escribe o qué se restringe. Un grupo de Google no se mira por dentro: Claude lo avisa y pide comprobar quién está en él.</dd>
+      <dt>Cómo se revisa</dt><dd>Quien responde por el contexto, o quien administra la carpeta, le dice a Claude ${F("revisa los permisos")}. Claude los lee con el conector de Google Drive, sin cambiar nada.</dd>
       <dt>En el tablero</dt><dd>Si algo no cuadra, cada cambio sale en «Arreglar ya» de Mantenimiento, con una línea amarilla encima de las pestañas y un botón para aplicarlo con Claude o copiarlo para quien administra la carpeta. Lo que la revisión deja para comprobar a mano y, si todo cuadra, la fecha de la última revisión quedan al final de Mantenimiento. Solo lo ve el tablero de quien administra la carpeta.</dd>
-      <dt>Quién lo arregla</dt><dd>Quien administra la carpeta. Una parte la puede aplicar Claude en su sesión, con su sí a la lista exacta: compartir como «Lector» y marcar con acceso limitado lo que la carpeta declara restringido, solo cuando sabe a quién conservar el acceso (${F("aplica los permisos")}; el texto que copia el botón lleva lo que hace falta). Dar «Gestor de contenido», bajar un rol o quitar a alguien se hace desde la web: el conector de Drive no lo permite. Si alguien escribe sin estar declarado, la pregunta es para quien responde por el contexto: ¿debe escribir?</dd>
+      <dt>Quién lo arregla</dt><dd>Quien administra la carpeta. «Aplicar con Claude» copia ${F("aplica los permisos")} para su sesión: Claude aplica lo que el conector de Drive permite, con su sí a la lista exacta, y el resto se hace desde Drive en la web. «Copiar para quien administra» copia la lista entera.</dd>
       <dt>Los roles</dt><dd>Los que tiene que dar Drive a cada quien están en <button type="button" class="lnk" data-help="carpeta-drive">Montar la carpeta en Drive</button>.</dd>
     </dl>`},
   {g:"Anclar y cuestionar", id:"premisas", t:"Premisas y cuestionamientos", h:`
     <h3 class="hc-h">Las premisas</h3>
     <p>Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Salen en el Estatus de Inicio, después de las áreas, y Claude las tiene presentes en cada sesión.</p>
     <dl class="hc-def">
-      <dt>Dónde viven</dt><dd>En <code>base/premisas.md</code>, una por línea: su identificador (P1, P2…), qué dice, quién la confirmó y cuándo.</dd>
+      <dt>Dónde viven</dt><dd>En <code>base/premisas.md</code>, cada una con su identificador (P1, P2…).</dd>
       <dt>Quién las escribe</dt><dd>El responsable del contexto, en su sesión, cuando la dirección confirma una. Dile ${F("registra como premisa que…")}.</dd>
       <dt>Cuando cambian</dt><dd>No se corrigen: ${F("la premisa P1 cambia a…")} añade otra que dice «Reemplaza P1», y la anterior queda como historia.</dd>
       <dt>Si no estás de acuerdo</dt><dd>Se cuestiona como cualquier decisión: lo explica la parte de abajo.</dd>
@@ -3011,17 +3006,17 @@ function ayudaArts(){
     <h3 class="hc-h">Cuestionar algo</h3>
     <p>Cualquiera puede cuestionar una decisión de otro proyecto o una premisa. No es una queja: es dejar escrito qué no cuadra, con su dato, para que quien decidió lo confirme o lo cambie.</p>
     <ol class="hc-pasos">
-      <li><b>Lo planteas en una sesión tuya</b><span>Abre sesión en un proyecto de tu área y dile ${F("quiero cuestionar la decisión de … porque …")}. Claude lo redacta y te lo enseña; con tu sí, queda escrito en el registro de decisiones de tu proyecto. Nadie escribe en el área de otro.</span></li>
+      <li><b>Lo planteas en una sesión tuya</b><span>Abre sesión en un proyecto de tu área y dile ${F("quiero cuestionar la decisión de … porque …")}. Con tu sí, queda escrito en el registro de decisiones de tu proyecto. Desde el tablero, «Cuestionar» en la decisión lo deja para tu próxima sesión.</span></li>
       <li><b>Le llega a quien decidió</b><span>La próxima vez que el responsable abra sesión en su proyecto, Claude se lo enseña primero. Aquí sale en «Cuestionamientos abiertos», en Acciones de Inicio y arriba del Estatus del proyecto cuestionado.</span></li>
-      <li><b>Lo responde con una decisión</b><span>El responsable, en una sesión de ese proyecto, dice ${F("lo mantengo, porque…")} o ${F("lo cambio: …")}. Al cerrar queda como una decisión que dice a qué cuestionamiento responde, también cuando solo lo mantiene. Con eso se cierra, y a quien lo planteó se lo enseña Claude la próxima vez que abra sesión en su proyecto. Una premisa la responde el responsable del contexto: con una premisa nueva que la reemplaza, o manteniéndola.</span></li>
+      <li><b>Lo responde con una decisión</b><span>El responsable, en una sesión de ese proyecto, dice ${F("lo mantengo, porque…")} o ${F("lo cambio: …")}, y queda como una decisión que responde al cuestionamiento. Con eso se cierra. Una premisa la responde el responsable del contexto.</span></li>
     </ol>
     <p class="hc-nota">Una decisión cuestionada sigue valiendo hasta que su responsable responde, pero quien vaya a construir encima lo ve.</p>`},
   {g:"Anclar y cuestionar", id:"director", t:"El director de cada área", h:`
     <p>Cada área tiene un director: Claude mirando el área entera como la miraría quien la dirige.</p>
     <dl class="hc-def">
-      <dt>El estatus del área</dt><dd>Con la misma forma que el de un proyecto: fecha, una frase, qué se completó, las prioridades del área en «Siguiente», qué falta decidir, qué preocupa y una línea por proyecto. Antes de la 1.22 se llamaba «Panorama» y eran tres a cinco frases: cómo está el área, qué se movió y qué preocupa. Se escribe al cerrar una sesión en el área, o cuando su responsable dice ${F("actualiza el estatus del área")}. Su frase sale en la ficha del área, en Inicio, y entero, con «Siguiente» numerado, en el Estatus del área. Un área que aún no lo tiene enseña su Panorama de antes de la 1.22, si lo hay.</dd>
+      <dt>El estatus del área</dt><dd>Con la misma forma que el de un proyecto, con las prioridades del área en «Siguiente» y una línea por proyecto. Se escribe al cerrar una sesión en el área, o cuando su responsable dice ${F("actualiza el estatus del área")}. Su frase sale en la ficha del área, en Inicio, y entero en el Estatus del área. Un área que aún no lo tiene enseña su «Panorama» de antes de la 1.22, si lo hay.</dd>
       <dt>Pregúntale</dt><dd>${F("¿cómo va el área X?")} te da el resumen, cada proyecto en una frase y hasta cuatro cosas que piden atención.</dd>
-      <dt>Que cuestione</dt><dd>${F("cuestiona el área")} busca lo que no cuadra: decisiones que chocan con una premisa, decisiones sin porqué, proyectos sin final claro y trabajo que otra área ya hizo.</dd>
+      <dt>Que cuestione</dt><dd>${F("cuestiona el área")} busca lo que no cuadra en ella.</dd>
       <dt>Lo de otras áreas</dt><dd>${F("¿qué de otras áreas me afecta?")} reúne lo que otras áreas decidieron o publicaron que te toca, y te ayuda a cuestionarlo si hace falta.</dd>
     </dl>
     <p class="hc-nota">El director solo escribe el estatus del área. Decisiones, tareas y estados siguen siendo cosa de la sesión de cada proyecto.</p>`},
@@ -3065,7 +3060,7 @@ function ayudaArts(){
     </ul></div>`},
   {g:"Cómo funciona", id:"archivos", t:"Dos clases de archivos", h:`
     <dl class="hc-def">
-      <dt>Los de texto (.md)</dt><dd>Son la memoria. Texto con un formato mínimo (títulos, listas, tablas) que se abre con cualquier editor. Claude los escribe siempre con las mismas secciones, y por eso puede leer solo la parte que necesita.</dd>
+      <dt>Los de texto (.md)</dt><dd>Son la memoria. Texto con un formato mínimo (títulos, listas, tablas) que se abre con cualquier editor.</dd>
       <dt>Los de siempre</dt><dd>Excel, presentaciones, PDF, Word, imágenes. Conviven en las mismas carpetas. Lo que llega de fuera entra a <code>fuentes/</code> y no se edita; lo que el equipo arma con su herramienta va a <code>entregables/</code> o a <code>taller/</code>.</dd>
     </dl>
     <div class="hc-tbl"><table>
@@ -3081,22 +3076,14 @@ function ayudaArts(){
   {g:"Cómo funciona", id:"quien-escribe", t:"Quién escribe y cómo lee Claude", h:`
     <h3 class="hc-h">Quién escribe</h3>
     <dl class="hc-def">
-      <dt>Claude teclea</dt><dd>Las personas deciden qué dice cada archivo y lo piden; Claude es quien lo escribe, siempre con las mismas reglas. Nadie tiene que aprender el formato.</dd>
-      <dt>Durante una sesión</dt><dd>Lo que se produce se guarda en su proyecto en cuanto existe, como borrador. Al cerrar, Claude registra qué se hizo, qué se decidió y qué sigue.</dd>
+      <dt>Claude teclea</dt><dd>Las personas deciden qué dice cada archivo; Claude lo escribe. Nadie tiene que aprender el formato.</dd>
       <dt>Cada quien en lo suyo</dt><dd>Cada persona escribe solo en las áreas que el mapa asigna a su cuenta, como responsable o como colaboradora, y en los proyectos donde colabora. Si algo es de otra área, Claude lo dice para que se lo pidas a su responsable.</dd>
-      <dt>Responsable y colaboradores</dt><dd>Quien colabora abre y cierra sesión, guarda borradores y registra las decisiones de su propio trabajo con su nombre. Publicar un documento, escribir el estatus del área, con sus prioridades, y crear o cerrar proyectos es del responsable. Si el responsable no está de acuerdo con una decisión, la reemplaza con una suya o la cuestiona.</dd>
-      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez. Si pasa, Claude compara al cerrar la hora de cada registro con la que vio al abrir, y si otra persona escribió mientras tanto, relee y suma lo suyo encima. Reduce el riesgo, no lo elimina: si la escritura de la otra persona aún no bajó a tu computadora, no la ve.</dd>
+      <dt>Responsable y colaboradores</dt><dd>Quien colabora abre y cierra sesión y registra las decisiones de su trabajo. Publicar un documento, escribir el estatus del área y crear o cerrar proyectos es del responsable; el mapa de la carpeta y las premisas, del responsable del contexto.</dd>
+      <dt>Dos personas en el mismo proyecto</dt><dd>Mejor no cerrar sesión a la vez: las dos escrituras pueden pisarse.</dd>
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y tareas hechas con nota.</dd>
     </dl>
-    <p class="hc-nota"><b>Dónde guarda Claude algo:</b> cada cosa tiene un único sitio, y si no lo tiene claro pregunta antes de escribir. Si algo parece confidencial, avisa y propone dónde ponerlo; no lo mueve por su cuenta.</p>
     <h3 class="hc-h">Cómo lee Claude la carpeta</h3>
-    <p>Claude nunca lee la carpeta entera. Lee por niveles y se para en el primero que responde a lo que se le pide.</p>
-    <dl class="hc-def">
-      <dt>Al empezar, siempre</dt><dd>El mapa de la carpeta, la lista de proyectos del área en la que se va a trabajar y las premisas vigentes, si las hay. Cabe en una pantalla.</dd>
-      <dt>Al elegir un proyecto</dt><dd>Su ficha, sus cinco decisiones y sus tres sesiones más recientes, y los títulos de sus documentos, sin abrirlos.</dd>
-      <dt>Solo si hace falta</dt><dd>Un documento entero, todas las decisiones, el vocabulario de la casa, los sistemas o un archivo de origen, cada uno cuando el trabajo lo pide y por su nombre.</dd>
-    </dl>
-    <p>Así cada conversación empieza con el contexto justo, tarda menos y consume menos.</p>`},
+    <p>Claude nunca lee la carpeta entera: empieza por el mapa, el área y las premisas, sigue con la ficha y lo reciente del proyecto, y abre un documento solo cuando el trabajo lo pide. Así cada conversación empieza con el contexto justo.</p>`},
   ];
 }
 const _norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
