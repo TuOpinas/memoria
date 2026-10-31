@@ -102,10 +102,21 @@ try:
     ok(rc == 0 and res["archivos"] == [], f"una corrida al día no publica nada ({res.get('archivos')} {err[-200:]})")
     ops = [o for l in res["base"] for o in l]
     marca = next((o for o in ops if o["op"] == "set"), {})
-    ok(marca.get("data", {}).get("solo_estado") is True and marca["data"].get("sincronizado") == "2026-10-31T09:00-06:00", "su marca lleva la hora y dice que solo cambió el estado")
+    ok(marca.get("data", {}).get("solo_estado") is True and marca["data"].get("sincronizado") == "2026-10-31T09:00-06:00" and marca["data"].get("publicado_id") == est["publicado_id"],
+       "su marca lleva la hora, dice que solo cambió el estado y con qué publicación cuenta")
     ok({"op": "delete", "path": "publicado/p20000101", "ifVersion": 4} in ops and {"op": "delete", "path": f"publicado/{est['publicado_id']}", "ifVersion": 1} in ops,
        "las marcas anteriores se borran con la versión leída, no con una inventada")
     ok(ops and ops[-1]["path"].startswith("publicado/") and res["base"][0][0]["op"] == "set", "la marca nueva va primero y las viejas al final, en su propio lote")
+    # una regeneración que no cambia ningún documento pero sí la huella de la raíz publica estado.json: si no, la siguiente regeneraría otra vez
+    t4 = tmp / "t4"; shutil.copytree(t2, t4)
+    rc, out, err = corre(DATOS, "base", t4, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={pub / 'detalle.json'}")
+    pl = {"lotes": [[{"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str(t4 / "e.json")}]]}
+    (t4 / "e.json").write_text(json.dumps({"huella_raiz": "otra-huella", "sincronizado": "2026-10-31T10:00-06:00"}), encoding="utf-8")
+    shutil.rmtree(t4 / "salida", ignore_errors=True); (t4 / "salida").mkdir(); (t4 / "salida" / "plan.json").write_text(json.dumps(pl), encoding="utf-8")
+    rc, out, err = corre(DATOS, "publicar", t4)
+    res = json.loads(out) if rc == 0 else {"archivos": []}
+    ok(rc == 0 and [a["as"] for a in res["archivos"]] == ["datos/estado.json"] and lee(t4 / "publicar" / "datos" / "estado.json")["huella_raiz"] == "otra-huella",
+       f"una regeneración con la huella nueva y los mismos documentos publica estado.json ({res.get('archivos')} {err[-200:]})")
     # una regeneración: el paso e trae los tres archivos; la aceptada que un cierre aplicó se retira
     for x in ("salida",): shutil.rmtree(t2 / x, ignore_errors=True)
     rc, out, err = corre(DATOS, "base", t2, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={pub / 'detalle.json'}")
@@ -142,6 +153,9 @@ try:
     ok(rc == 2 and "vuelve a copiarlas" in err, "una línea mal copiada para el paso y pide repetir la copia")
     rc, out, err = corre(DATOS, "base", t3, "estado=/no/existe.json")
     ok(rc != 0 and "No encuentro" in err, "un archivo descargado que no está se dice")
+    jl(t3 / "grande.jsonl", [{"id": "c9", "version": 1, "tooLarge": True}])
+    rc, out, err = corre(DATOS, "base", t3, f"estado={pub / 'estado.json'}", "--cola", t3 / "grande.jsonl")
+    ok(rc == 2 and not (t3 / "cola" / "c9.json").exists(), "un documento que la consulta trae sin cuerpo no entra como un cambio vacío (se borraría)")
     rc, out, err = corre(DATOS, "propuestas", pub / "propuestas.json", "ventas--cuentas")
     ok(rc == 0 and "prop-decision-sin-registrar-acep" in out, "la sesión ve las sugerencias de su proyecto")
 finally:

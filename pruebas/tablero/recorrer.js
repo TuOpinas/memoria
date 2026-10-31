@@ -433,6 +433,10 @@ const path = require('path');
       const r = await p.evaluate(async () => { HAY_NUEVO = false; const t = new Date(Date.now() + 120000).toISOString(); window.__D.publicado = {p2: {sincronizado: t, solo_estado: true, llamadas: 13}}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return { nuevo: HAY_NUEVO, sinc: META.sincronizado === t, llamadas: META.llamadas }; });
       if(r.nuevo || !r.sinc || r.llamadas !== 13) errores.push(`archivos: una corrida al día (solo_estado) tenía que poner la hora sin pedir recargar (${JSON.stringify(r)})`);
     }
+    {
+      const r = await p.evaluate(async () => { HAY_NUEVO = false; META.publicado_id = 'p-vieja'; const t = new Date(Date.now() + 180000).toISOString(); window.__D.publicado = {p3: {sincronizado: t, solo_estado: true, publicado_id: 'p-nueva'}}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return HAY_NUEVO; });
+      if(!r) errores.push('archivos: una corrida al día que da por buena otra publicación que la que enseña la página tenía que pedir recargar');
+    }
     await ctx.close();
   }
   await b.close();

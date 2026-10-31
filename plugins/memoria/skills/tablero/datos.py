@@ -114,7 +114,9 @@ def _norm(d):
     id_ = d.get("id") or d.get("doc_id") or (str(d.get("path") or "").rsplit("/", 1)[-1] or None)
     if not id_ or not ID_VALIDO.match(str(id_)):
         return None
-    return {"id": str(id_), "version": d.get("version"), "data": _datos(d.get("data")) if isinstance(d.get("data"), dict) else {}}
+    if not isinstance(d.get("data"), dict):
+        return None             # sin cuerpo (la consulta lo dejó fuera por tamaño): no se toma por un cambio vacío
+    return {"id": str(id_), "version": d.get("version"), "data": _datos(d["data"])}
 
 
 def _opciones(args, nombres, banderas):
@@ -146,7 +148,7 @@ def base(trabajo, args):
     b = trabajo / "base"
     if "estado" in arch or "--primera-vez" in flags:
         # paso 1a: se parte de cero, también al repetir la corrida tras un conflicto
-        for x in (b, trabajo / "cola", trabajo / "cierres", trabajo / "marcas.json", trabajo / "publicado.json", trabajo / "publicar"):
+        for x in (b, trabajo / "cola", trabajo / "cierres", trabajo / "marcas.json", trabajo / "marcas-sobran.json", trabajo / "publicado.json", trabajo / "publicar"):
             _vacia(x)
         b.mkdir(parents=True, exist_ok=True)
         if "estado" in arch:
@@ -203,7 +205,7 @@ def base(trabajo, args):
         md = m.get("data") or {}
         if id_ not in props and md.get("texto") and md.get("clase") and md.get("proyecto"):
             # una sugerencia de la 1.24.0, que vivía entera en la base: pasa al archivo, y su marca se queda encima
-            props[id_] = {k: v for k, v in md.items() if k not in CAMPOS_MARCA}
+            props[id_] = {k: v for k, v in md.items() if k not in CAMPOS_MARCA + ("tipo",)}
             props[id_]["estado"] = "pendiente"
         if id_ not in props or md.get("estado") in (None, "pendiente"):
             sobran.append({"id": id_, "version": m.get("version")})     # sin sugerencia, o sin nada que decir: se borra
@@ -317,7 +319,10 @@ def publicar(trabajo, args):
     marca = "p" + re.sub(r"[^0-9]", "", str(sinc))[:12] if sinc else None
     previas = [x for x in (_json(trabajo / "publicado.json") or []) if isinstance(x, dict) and x.get("id")]
     cambia = {k for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None and (primera or ahora[k] != antes[k])}
-    solo_estado = not vista and not cambia and not primera
+    # solo la hora: nada de los archivos ni de meta/estado cambió salvo lo de la corrida (una regeneración que deja la
+    # huella de la raíz nueva sí publica estado.json, o la siguiente volvería a regenerar)
+    resto = lambda e: {k: v for k, v in (e or {}).items() if k not in CAMPOS_AL_DIA + ("publicado_id",)}
+    solo_estado = not vista and not cambia and not primera and resto(estado) == resto(antes["estado"])
     if not solo_estado:
         estado["publicado_id"] = marca
     ahora["estado"] = estado
@@ -348,14 +353,18 @@ def publicar(trabajo, args):
     if marca and not any(x["id"] == marca for x in previas):
         datos_marca = {"sincronizado": sinc}
         if solo_estado:
-            datos_marca.update({k: estado[k] for k in CAMPOS_AL_DIA if k in estado}, solo_estado=True)
+            # con la publicación que esta corrida dio por buena: si la página enseña otra, le toca recargar
+            datos_marca.update({k: estado[k] for k in CAMPOS_AL_DIA if k in estado}, solo_estado=True, publicado_id=estado.get("publicado_id"))
         base.append([{"op": "set", "path": f"publicado/{marca}", "data": datos_marca}])
     base += _lotes(ops_marcas)
     base += _lotes([{"op": "delete", "path": f"publicado/{x['id']}", "ifVersion": x["version"]}
                     for x in previas if x["id"] != marca and x.get("version") is not None])
     salida_ = {"archivos": archivos, "base": base}
-    grandes = [f"{a['as']} ({pathlib.Path(a['path']).stat().st_size // 1024} KB)" for a in archivos
-               if a["as"].startswith("datos/") and pathlib.Path(a["path"]).stat().st_size > TOPE_LECTURA]
+    # el paso e trae tablero, propuestas y detalle en una llamada de 4 MiB como mucho: se mira cada uno y la suma
+    pesos = {k: len(json.dumps(ahora[k], ensure_ascii=False, separators=(",", ":")).encode("utf-8")) for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None}
+    grandes = [f"datos/{k}.json ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
+    if not grandes and sum(pesos.values()) > TOPE_LECTURA:
+        grandes = [f"los tres juntos ({sum(pesos.values()) // 1024} KB: el paso e los traerá uno por llamada)"]
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
                             "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: hay que partir el detalle.")

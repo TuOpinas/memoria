@@ -2294,7 +2294,7 @@ function avanceProyecto(p){
 function renderRoot(){
   const head = document.getElementById("head"), main = document.getElementById("main");
   head.innerHTML = cabeceraRaiz();
-  if(SIN_DATOS){ main.innerHTML = `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>`; return; }
+  if(SIN_DATOS){ main.innerHTML = sinDatos(); return; }
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">Cargando la raíz…</p>`; return; }
   if(INI_TAB==="otros") INI_TAB = "acciones";
   // Acciones y Mantenimiento se calculan siempre por su número; Estatus y Actividad, que no llevan número, solo si se ven (1.22.4)
@@ -2489,7 +2489,7 @@ function renderPend(){
   const all = pendientes().filter(i=>i.f && (!PEND_AREA || i.p.area===PEND_AREA)), t = today(), lim = addDays(14), sinF = pendientes().filter(i=>!i.f).length;
   const late = all.filter(i=>i.f<t).sort((a,b)=>a.f.localeCompare(b.f)), soon = all.filter(i=>i.f>=t && i.f<=lim).sort((a,b)=>a.f.localeCompare(b.f)), later = all.filter(i=>i.f>lim).sort((a,b)=>a.f.localeCompare(b.f));
   head.innerHTML = `<h1>Agenda</h1><p class="sub">Lo que tiene fecha en toda la carpeta. ${sinF===1?"La tarea sin fecha está":`Las ${sinF} tareas sin fecha están`} en «Qué hay» de cada proyecto.</p>`;
-  if(SIN_DATOS){ main.innerHTML = `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>`; return; }
+  if(SIN_DATOS){ main.innerHTML = sinDatos(); return; }
   if(!(ready.a && ready.p)){ main.innerHTML = `<p class="empty">Cargando…</p>`; return; }
   const dias = []; for(let i=0;i<=14;i++){ const f = addDays(i); dias.push({f, n: all.filter(x=>x.f===f).length, hoy: f===t}); }
   const DIA = f => new Date(f+"T12:00:00").toLocaleDateString("es-MX",{weekday:"short"}).replace(".","");
@@ -2677,7 +2677,7 @@ async function sincronizar(){
   SYNC_STATE = "corriendo"; SYNC_DESDE = META.sincronizado || null; render();
   try{
     await MCP.callTool("Claude Code Remote", "fire_trigger", {trigger_id: META.tarea});
-    SYNC_STATE = "lanzada"; SYNC_LANZADA_EN = Date.now(); flash("Sincronización lanzada. Tarda unos minutos; al terminar, la página te pide volver a cargarla.");
+    SYNC_STATE = "lanzada"; SYNC_LANZADA_EN = Date.now(); flash("Sincronización lanzada. Tarda unos minutos; al terminar, si trae algo nuevo, la página te pide volver a cargarla.");
   }catch(e){
     const code = e && e.code;
     SYNC_STATE = null;
@@ -2706,7 +2706,7 @@ function syncBtn(){
   const tipTxt = !listo ? `Sincronizar ahora: ${falta}.`
     : SYNC_STATE==="corriendo" ? "Lanzando la sincronización…"
     : HAY_NUEVO ? "Ya hay una versión más nueva del tablero: vuelve a cargar la página para verla."
-    : SYNC_STATE==="lanzada" ? "Sincronizando: tarda unos minutos; al terminar, las flechas paran y la página te pide volver a cargarla. Si nada cambió en la carpeta, termina enseguida."
+    : SYNC_STATE==="lanzada" ? "Sincronizando: tarda unos minutos; al terminar, las flechas paran y, si trae algo nuevo, la página te pide volver a cargarla. Si nada cambió en la carpeta, termina enseguida."
     : pend ? (nCierres && !mec ? `Hace falta sincronizar: ${nCierres} sesi${nCierres===1?"ón cerrada":"ones cerradas"} después de la última vez.` : mec ? `Hace falta sincronizar: ${mec} cambio${mec===1?"":"s"} marcado${mec===1?"":"s"} aquí se pasa${mec===1?"":"n"} a la carpeta al sincronizar.` : "Hace falta sincronizar: la página y los datos del tablero son de versiones distintas, y la sincronización los pone a la par.") + (cuando ? ` Última vez ${cuando}.` : "")
     : `Sincronizar ahora: trae lo que se escribió en la carpeta y pasa a ella lo que marcaste aquí.${cuando ? ` Última vez ${cuando}.` : ""}`;
   // Un solo icono, las flechas: giran mientras se lanza la tarea y mientras corre, y paran cuando el tablero ya está al día.
@@ -3402,12 +3402,14 @@ function _render(){
 // (áreas, proyectos, resúmenes de «Qué hay» y «Por dónde empezar»), propuestas.json (las sugerencias del barrido) y
 // detalle.json (lo que se trae al entrar en un proyecto). Lo que se marca en la página sigue en la base, en vivo. Un tablero
 // sin esos archivos (aún no se puso al día con la 1.24.1) no se lee de la base vieja: lo dice, y su sincronización los publica.
+// falta: el tablero aún no tiene sus archivos (se está montando, o no se sincronizó con la 1.24.1); error: no se pudieron traer
+const sinDatos = () => SIN_DATOS === "falta" ? `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>` : `<p class="empty">No se pudieron traer los datos del tablero. Vuelve a cargar la página; si sigue, dile a Claude «sincroniza el tablero».</p>`;
 let ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = null, HAY_NUEVO = false;
-const leerArchivo = async n => { const r = await fetch("datos/" + n, {cache: "no-store"}); if(!r.ok) throw new Error(n + " " + r.status); return r.json(); };
+const leerArchivo = async n => { const r = await fetch("datos/" + n, {cache: "no-store"}); if(!r.ok){ const e = new Error(n + " " + r.status); e.status = r.status; throw e; } return r.json(); };
 const conId = o => Object.entries(o || {}).map(([id, v]) => ({id, ...v}));
 async function cargarArchivos(){
   let est, tab, props;
-  try{ [est, tab] = await Promise.all([leerArchivo("estado.json"), leerArchivo("tablero.json")]); }catch(e){ return false; }
+  try{ [est, tab] = await Promise.all([leerArchivo("estado.json"), leerArchivo("tablero.json")]); }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
   try{ props = await leerArchivo("propuestas.json"); }catch(e){ props = {}; }
   META = est && typeof est === "object" ? est : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion;
   AREAS = conId(tab.areas).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a]));
@@ -3450,7 +3452,7 @@ async function marcarPropuesta(q, campos){
   // página en cada sincronización; la base guarda solo lo que se marca aquí, los cierres, los permisos y la marca de cada
   // publicación.
   ARCHIVOS = await cargarArchivos();
-  if(!ARCHIVOS){ SIN_DATOS = true; render(); return; }
+  if(!ARCHIVOS){ render(); return; }
   db.collection("cambios").onSnapshot(snap=>{ const todo = snap.docs.map(s=>({id:s.id, ...s.data()})); CAMBIOS = todo.filter(c=>c.tipo!=="propuesta"); PROP_BASE = todo.filter(c=>c.tipo==="propuesta"); mezclarPropuestas(); datosNuevos(); }, ()=>{});   // las propuestas del barrido no son lo que alguien marcó aquí: no entran en ningún contador de CAMBIOS
   db.collection("cierres").onSnapshot(snap=>{ CIERRES = snap.docs.map(s=>({id:s.id, ...s.data()})); datosNuevos(); }, ()=>{});
   db.doc("meta/permisos").onSnapshot(s=>{ PERMISOS = s.exists ? s.data() : null; datosNuevos(); }, ()=>{});
@@ -3461,7 +3463,8 @@ async function marcarPropuesta(q, campos){
     const mio = META && META.sincronizado ? t(META.sincronizado) : 0;
     const nuevas = snap.docs.map(s => s.data() || {}).filter(d => t(d.sincronizado) > mio).sort((a, b) => t(a.sincronizado) - t(b.sincronizado));
     let nuevo = false;
-    for(const d of nuevas){ if(d.solo_estado){ for(const k of ["sincronizado", "duracion_min", "llamadas", "cola_retenida", "cola_ajena"]) if(k in d) META[k] = d[k]; datosNuevos(); } else nuevo = true; }
+    for(const d of nuevas){ if(d.solo_estado && d.publicado_id && META.publicado_id && d.publicado_id !== META.publicado_id) nuevo = true;
+      if(d.solo_estado){ for(const k of ["sincronizado", "duracion_min", "llamadas", "cola_retenida", "cola_ajena"]) if(k in d) META[k] = d[k]; datosNuevos(); } else nuevo = true; }
     if(nuevo && !HAY_NUEVO){ HAY_NUEVO = true; SYNC_STATE = null; flash("El tablero se puso al día: vuelve a cargar la página para verlo."); datosNuevos(); } }, ()=>{});
 })();
 
