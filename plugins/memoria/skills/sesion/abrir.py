@@ -78,13 +78,12 @@ _LEIDOS = {}
 def en_drive(origen):
     """Si la ruta de la raíz en la computadora (la de get_device_info) es de Google Drive para escritorio: en Mac, bajo
     Library/CloudStorage/GoogleDrive-… o /Volumes/GoogleDrive; en Mac y Windows, con una carpeta «Google Drive», «My Drive»
-    o su nombre en otro idioma, o la de las unidades compartidas. Una letra de unidad sola no lo dice (D: puede ser un disco
-    o un USB). iCloud, Dropbox, OneDrive o Box no lo son."""
+    o su nombre en otro idioma, o la de las unidades compartidas («G:/Mi unidad/…» entra por ahí). Una letra de unidad sola
+    no lo dice (D: puede ser un disco o un USB), ni una carpeta de iCloud, Dropbox, OneDrive o Box sin esos nombres."""
     o = (origen or "").replace("\\", "/")
     return bool(re.search(r"/Library/CloudStorage/GoogleDrive-|^/Volumes/GoogleDrive(/|$)|/Google Drive(/|$)|"
                           r"/(My Drive|Mi unidad|Meu Drive|Mon Drive|Meine Ablage|Il mio Drive|Mijn Drive|"
-                          r"Shared drives|Unidades compartidas|Drives partilhados|Drives partagés|Geteilte Ablagen|Drive condivisi)(/|$)", o, re.I)
-                or re.match(r"^[A-Za-z]:/(My Drive|Mi unidad|Meu Drive|Mon Drive|Meine Ablage|Il mio Drive|Shared drives|Unidades compartidas|Geteilte Ablagen|Drives partagés)(/|$)", o, re.I))
+                          r"Shared drives|Unidades compartidas|Drives partilhados|Drives partagés|Geteilte Ablagen|Drive condivisi)(/|$)", o, re.I))
 
 
 def zona_horaria(raiz, defecto="America/Mexico_City"):

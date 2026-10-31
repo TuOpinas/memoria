@@ -196,6 +196,8 @@ try:
     ok(rc != 0 and "Faltan detalles" in err, f"si falta el detalle de un área que el tablero tiene, el paso e para ({err[-200:]})")
     rc, out, err = corre(DATOS, "base", t8, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET[1:], DET[0].split("=")[0] + "=-")
     ok(rc == 0, f"uno que read_file dijo que no existe se pasa como detalle:<área>=- ({err[-200:]})")
+    rc, res, err = con_plan(t8, [])
+    ok(rc == 0 and "aviso_detalle" in res, f"y si sus proyectos se quedan sin detalle, publicar lo avisa ({res.get('aviso_detalle')} {err[-200:]})")
     t9 = tmp / "t9"; t9.mkdir()
     corre(DATOS, "base", t9, f"estado={e_viejo}", "--cola", t9 / "no.jsonl", "--cierres", t9 / "no.jsonl", "--publicado", t9 / "no.jsonl")
     rc, out, err = corre(DATOS, "base", t9, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}")

@@ -232,7 +232,8 @@ def base(trabajo, args):
     for id_, d in det.items():
         if isinstance(d, dict):
             _escribe(b / "detalle" / f"{id_}.json", {"id": id_, "data": d})
-    _escribe(b / ".detalle-archivos.json", {"uno": "detalle" in arch, "areas": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is not None)})
+    _escribe(b / ".detalle-archivos.json", {"uno": "detalle" in arch, "areas": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is not None),
+                                            "vacias": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is None)})
     (b / ".con-archivos").write_text("1", encoding="utf-8")
     props = {k: v for k, v in (arch.get("propuestas") or {}).items() if isinstance(v, dict)}
     marcas = {m["id"]: m for m in (_json(trabajo / "marcas.json") or []) if isinstance(m, dict) and m.get("id")}
@@ -437,7 +438,12 @@ def publicar(trabajo, args):
     grandes = [f"{k} ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
     if not grandes and sum(pesos.values()) > TOPE_LECTURA:
         # cada uno cabe, pero el paso e los trae juntos: se partirá en dos o más llamadas (revisión de la 1.24.2)
-        grandes = [f"todos juntos ({sum(pesos.values()) // 1024} KB: el paso e los traerá en dos o más llamadas)"]
+        salida_["aviso_llamadas"] = f"Lo que trae el paso e suma {sum(pesos.values()) // 1024} KB: la siguiente regeneración lo trae en dos o más llamadas de read_file. No hace falta decirlo."
+    sin_det = sorted(pid for pid in ((ahora["tablero"] or {}).get("proyectos") or {}) if str(pid).split("--", 1)[0] in set(previos_det.get("vacias") or [])
+                     and pid not in (ahora["detalle"] or {})) if con_archivos and ahora["tablero"] else []
+    if sin_det:
+        salida_["aviso_detalle"] = ("Se quedan sin detalle " + ", ".join(sin_det[:5]) + (" y más" if len(sin_det) > 5 else "") + ": su área se pasó como "
+                                    "detalle:<área>=- y no se regeneraron. Si read_file no dijo que el archivo no existe, no publiques: repite desde el paso e con él.")
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
                             "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: esa área tiene demasiado detalle para un archivo, y hay que partirla en la versión siguiente del plugin (avísalo a quien lo mantiene).")

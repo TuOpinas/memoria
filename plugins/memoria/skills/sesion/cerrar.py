@@ -66,7 +66,8 @@ el motivo), «ajenos» (archivos que alguien cambió desde --abierto, con la hor
 cierre escribía; nunca los que este mismo cierre escribió), «reintentos», «hora» (ahora, ISO 8601 en minutos UTC, para la
 marca del tablero), «documento» (el id de esa marca) y «escrito_en» (la hora de esta escritura, para pasar como --abierto si
 se repite la llamada); y, si alguno de «publico» no quedó vigente tras los reemplazos de «otros», «no_publicado» con
-esas rutas y un «error»: no se escribe nada más que «otros», y la misma llamada se repite cuando estén arreglados (1.24.2). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
+esas rutas y un «error»: no se escribe la entrada ni lo demás (solo «otros» y, si tocaba, la rotación de los registros), y la
+llamada se repite arreglada, sin los reemplazos de «otros» que ya salieron en «escritos» (1.24.2). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
 """
 import datetime
 import hashlib
@@ -812,7 +813,8 @@ def main(argv):
     if _quedo_borrador:
         s["no_publicado"] = _quedo_borrador
         print(json.dumps({"error": "no quedó vigente lo que se publica: " + ", ".join(_quedo_borrador) + ". No se escribió la entrada ni lo demás; "
-                          "arregla el reemplazo de «otros» (mira «sin_match» y «rechazados») y repite la misma llamada", **s}, ensure_ascii=False))
+                          "arregla el reemplazo de «otros» (mira «sin_match» y «rechazados») y repite la llamada sin los reemplazos de «otros» "
+                          "que ya se escribieron (los archivos de «escritos»)", **s}, ensure_ascii=False))
         return 1
     # 2. sesiones.md
     if ses:
