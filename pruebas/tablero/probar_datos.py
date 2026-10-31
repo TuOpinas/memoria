@@ -180,6 +180,15 @@ try:
     ok(rc == 0 and [n for n in nombres if n.startswith("datos/proyectos")] == [f"datos/proyectos/{a1}.json"] and "datos/tablero.json" not in nombres
        and lee(t5b / "publicar" / "datos" / "proyectos" / f"{a1}.json")[pid1]["nombre"] == "CAMBIADO",
        f"si cambia un proyecto, solo se publica el archivo de proyectos de su área, sin tablero.json (1.24.4) ({nombres} {err[-200:]})")
+    # dos versiones del plugin sobre el mismo tablero: si tablero.json vuelve a traer los proyectos, mandan esos y los
+    # archivos por área se rehacen desde ellos (revisión de la 1.24.4)
+    t5c = tmp / "t5c"; shutil.copytree(t2, t5c)
+    tab_mixto = tmp / "tablero-mixto.json"; _pm = {k: dict(v, nombre="DE-TABLERO") for k, v in _pro.items()}
+    tab_mixto.write_text(json.dumps({**lee(pub / "tablero.json"), "proyectos": _pm}), encoding="utf-8")
+    corre(DATOS, "base", t5c, f"tablero={tab_mixto}", f"propuestas={pub / 'propuestas.json'}", *PRO, *DET)
+    rc, res, err = con_plan(t5c, [])
+    _f = lee(t5c / "publicar" / "datos" / "proyectos" / f"{a1}.json") if (t5c / "publicar" / "datos" / "proyectos" / f"{a1}.json").exists() else {}
+    ok(rc == 0 and _f and all(v.get("nombre") == "DE-TABLERO" for v in _f.values()), f"si tablero.json trae los proyectos, mandan esos y no los archivos por área ({err[-200:]})")
     otras = [a for a in det_areas if a != a1]
     if otras:
         quita = [p.stem for p in (t1 / "salida" / "detalle").glob("*.json") if p.stem.split("--")[0] == otras[0]]

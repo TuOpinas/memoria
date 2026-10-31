@@ -158,7 +158,7 @@ const path = require('path');
           const soloMios = co.every(g=>[...g.deben, ...g.debes].every(x=>esMio(x.p) || /^Ana Prueba pide/.test(x.t))) && textos.some(t=>/^Ana Prueba pide/.test(t))
             && !textos.some(t=>/pregunta a/.test(t)) && textos.some(t=>/^Tras hablar con Carla Prueba/.test(t)) && afectaDeOtros().every(g=>g.a.every(esMio));
           // un paso que espera a alguien sin decir a quién va a la tarjeta de su proyecto, no a «La carpeta» (1.23.5)
-          const pq = PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
+          const pq = PROJ.find(x=>!x.restringido && !x.cerrado && esMio(x) && sinQuienDe(x).length) || PROJ.find(x=>!x.restringido && !x.cerrado); const gq = pq.pasos; pq.pasos = [...(pq.pasos||[]), {texto:"Esperar la respuesta del proveedor sobre el anexo"}]; _M = null;
           const tarjeta = porPonerAlDia().todas.find(g=>g.id===pq.id), cita = tarjeta && tarjeta.it.find(t=>/espera(?:n)? a alguien sin decir a quién/.test(t));
           // también con una sugerencia de reescribir su Estatus pendiente, y sin «.» ni «…» de más (revisión 1.23.5)
           const gpr = PROPUESTAS; PROPUESTAS = [...PROPUESTAS, {id:"t-ed", tipo:"propuesta", clase:"estado-desfasado", estado:"pendiente", proyecto:pq.id}]; _M = null;

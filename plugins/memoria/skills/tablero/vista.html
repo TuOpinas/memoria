@@ -2208,6 +2208,7 @@ function arreglarYa(){
   if(car.ctx) for(const x of car.items) out.push({k:"Guía", et:"la guía de la carpeta", t:x.t, w:"lo arreglas tú, como responsable del contexto", b:[["Revisar con Claude", x.frase, true]]});
   const orf = cambiosVis().filter(c => huerfano(c) && c.tipo!=="nota").length;
   if(orf) out.push({k:"Tablero", et:"marcas que ya no coinciden", t:`${cuantos(orf,"cosa marcada aquí ya no coincide","cosas marcadas aquí ya no coinciden")} con la carpeta: la puesta al día no ${orf===1?"la":"las"} aplicará.`, w:"deshazlas o resuélvelas en una sesión, abajo en «Marcado aquí, por registrar»", b:[]});
+  if(FALTAN_PROY.length) out.push({k:"Tablero", et:"proyectos sin traer", t:`No se pudieron traer los proyectos de ${FALTAN_PROY.map(a=>(areaBy[a]||{}).nombre||a).join(", ")}: la página los enseña como si no tuviera ninguno.`, w:"vuelve a cargar la página; si sigue, sincroniza el tablero", b:[]});
   if(META && META.tarea_desfasada) out.push({k:"Tablero", et:"la tarea del tablero", t:"La tarea que pone el tablero al día tiene que cambiar sus instrucciones una vez, y eso pide tu aprobación.", w:"en una sesión con la carpeta conectada", b:[["Revisar con Claude","actualiza el tablero",true]]});
   // lo que antes avisaba la franja de arriba (1.19–1.23): días sin ponerse al día; con el botón de sincronizar si quien mira lo montó (revisión de la 1.24)
   if(META && META.sincronizado && !SYNC_STATE && OWNER && !syncFalta()){
@@ -2856,7 +2857,8 @@ function ayudaArts(){
         <tr><td>${F("sincroniza el tablero")}</td><td>Pone el tablero al día ahora, con lo que otras personas hayan escrito.</td></tr>
         <tr><td>${F("ordena Claude outputs")}</td><td>Lleva a su proyecto lo que la app dejó en la carpeta «Claude outputs».</td></tr>
       </tbody>
-    </table></div>`},
+    </table></div>
+    <p class="more">Sumar a alguien como colaborador de un área o de un proyecto lo hace el responsable de esa área.</p>`},
   {g:"Cada día", id:"modelos", t:"Qué modelo usar", h:`
     <p>El modelo se elige abajo, junto a donde escribes. Para trabajar con la memoria conviene <b>Opus</b> para todo: abrir y cerrar sesión, preguntar cómo va algo, colocar material y el trabajo de cada proyecto.</p>
     <dl class="hc-def">
@@ -2896,6 +2898,7 @@ function ayudaArts(){
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
       <dt>Mantenimiento</dt><dd>Solo en Inicio: <b>Arreglar ya</b>, lo que estorba hoy, que es el único número y, cuando trae algo, saca una línea amarilla encima de las pestañas; <b>Proyectos por poner al día</b>; y, plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». Lo explica <button type="button" class="lnk" data-help="por-donde-empezar">Lo que te propone Inicio</button>.</dd>
       <dt>Actuar desde él</dt><dd>Lo que marcas aquí queda pendiente (⟳) hasta que está escrito en la carpeta: <button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>.</dd>
+      <dt>Personas de fuera y frases provisionales</dt><dd>Alguien de fuera de la organización sale en «Esperas a» y en «Por persona» cuando la tarea o el Estatus lo nombra como «Nombre Apellido (Organización)». Una frase de resumen que sugirió la memoria sale como provisional, y solo la acepta el dueño del tablero en los proyectos donde su cuenta escribe.</dd>
     </dl>`},
   {g:"El tablero", id:"ponerse-al-dia", t:"Cómo se pone al día", h:`
     <p>El tablero no lee la carpeta en vivo: muestra lo que había la última vez que se puso al día. El pie de la página dice cuándo fue.</p>
@@ -2970,7 +2973,7 @@ function ayudaArts(){
     <h3 class="hc-h">Por dónde empezar</h3>
     <p>Cuando el tablero se pone al día, y solo si algo cambió, Claude elige tres o cuatro grupos de tareas de proyectos distintos que comparten algo: una persona, una herramienta, un documento o un trámite. Elige por las prioridades del área, lo que toca a un cliente o a dinero y lo que desbloquea otros proyectos, no por lo vencido. Es una sugerencia: la sesión decide.</p>
     <h3 class="hc-h">Mantenimiento</h3>
-    <p>Primero, «Arreglar ya»: lo que estorba hoy, cada cosa con quién la arregla. Después, «Proyectos por poner al día»: una fila por proyecto con todo lo que su memoria tiene flojo y una sola frase para arreglarlo en una sesión; «Ahora no» la esconde siete días, solo en este navegador. Plegado al final, lo que tocaste aquí y aún no está escrito. Cuenta como flojo:</p>
+    <p>Primero, «Arreglar ya»: lo que estorba hoy, cada cosa con quién la arregla (permisos de Drive que no cuadran, una línea de la guía que falta, la tarea del tablero que pide aprobación, días sin ponerse al día, proyectos que la página no pudo traer y marcas que ya no coinciden con la carpeta). Después, «Proyectos por poner al día»: una fila por proyecto con todo lo que su memoria tiene flojo y una sola frase para arreglarlo en una sesión; «Ahora no» la esconde siete días, solo en este navegador. Plegado al final, lo que tocaste aquí y aún no está escrito. Cuenta como flojo:</p>
     <ul class="hc-l">
       <li>Un Estatus más viejo que el trabajo del proyecto, o archivos que cambiaron después de la última sesión registrada: hubo trabajo que nadie cerró.</li>
       <li>Tareas vencidas hace más de dos semanas, tareas abiertas sin fecha o mezcladas con rutinas y esperas, y líneas que cuentan algo que ya pasó en vez de una tarea.</li>
@@ -3395,12 +3398,13 @@ function _render(){
 }
 // ---- de dónde vienen los datos (1.24.1) ----
 // Los archivos datos/*.json los publica la puesta al día junto con la página: estado.json (meta/estado), tablero.json
-// (áreas, proyectos, resúmenes de «Qué hay» y «Por dónde empezar»), propuestas.json (las sugerencias del barrido) y
+// (áreas, resúmenes de «Qué hay» y «Por dónde empezar»; hasta la 1.24.3, también los proyectos), proyectos/<área>.json
+// (los proyectos de cada área, desde la 1.24.4), propuestas.json (las sugerencias del barrido) y
 // detalle/<área>.json (lo que se trae al entrar en un proyecto; hasta la 1.24.1, un solo detalle.json). Lo que se marca en la página sigue en la base, en vivo. Un tablero
 // sin esos archivos (aún no se puso al día con la 1.24.1) no se lee de la base vieja: lo dice, y su sincronización los publica.
 // falta: el tablero aún no tiene sus archivos (se está montando, o no se sincronizó con la 1.24.1); error: no se pudieron traer
 const sinDatos = () => SIN_DATOS === "falta" ? `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>` : `<p class="empty">No se pudieron traer los datos del tablero. Vuelve a cargar la página; si sigue, dile a Claude «sincroniza el tablero».</p>`;
-let ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = {}, HAY_NUEVO = false;
+let FALTAN_PROY = [], ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = {}, HAY_NUEVO = false;
 const leerArchivo = async n => { const r = await fetch("datos/" + n, {cache: "no-store"}); if(!r.ok){ const e = new Error(n + " " + r.status); e.status = r.status; throw e; } return r.json(); };
 const conId = o => Object.entries(o || {}).map(([id, v]) => ({id, ...v}));
 async function cargarArchivos(){
@@ -3408,14 +3412,12 @@ async function cargarArchivos(){
   try{ [est, tab] = await Promise.all([leerArchivo("estado.json"), leerArchivo("tablero.json")]); }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
   // desde la 1.24.4 los proyectos van en un archivo por área (datos/proyectos/<área>.json), que dice estado.json; un tablero
   // de antes los trae dentro de tablero.json
-  // en el orden de las áreas de la guía, como venían en tablero.json: el orden de los proyectos sale de ahí
-  const ordenA = (est && Array.isArray(est.areas)) ? est.areas : [], posA = a => { const i = ordenA.indexOf(a); return i < 0 ? 999 : i; };
-  const pa = est && Array.isArray(est.proyectos_areas) ? [...est.proyectos_areas].sort((x, y) => posA(x) - posA(y)) : null;
-  try{
-    const [p_, ...porArea] = await Promise.all([leerArchivo("propuestas.json").catch(() => ({})), ...(pa || []).map(a => leerArchivo("proyectos/" + a + ".json"))]);
-    props = p_;
-    if(pa){ tab = {...tab, proyectos: Object.assign({}, tab.proyectos || {}, ...porArea)}; }
-  }catch(e){ SIN_DATOS = e && e.status === 404 ? "falta" : "error"; return false; }
+  // se juntan por id, en orden alfabético, como salían en tablero.json: el orden de los proyectos que empatan en «orden» no cambia
+  const pa = est && Array.isArray(est.proyectos_areas) ? est.proyectos_areas : null;
+  const [p_, ...porArea] = await Promise.all([leerArchivo("propuestas.json").catch(() => ({})), ...(pa || []).map(a => leerArchivo("proyectos/" + a + ".json").catch(() => { FALTAN_PROY.push(a); return {}; }))]);
+  props = p_;
+  // la misma regla que datos.py: si tablero.json trae proyectos (lo publicó una versión de antes), mandan esos
+  if(pa && !Object.keys(tab.proyectos || {}).length){ const todos = Object.assign({}, ...porArea); tab = {...tab, proyectos: Object.fromEntries(Object.keys(todos).sort().map(k => [k, todos[k]]))}; }
   META = est && typeof est === "object" ? est : null; if(META && META.organizacion) document.title = "Tablero " + META.organizacion;
   AREAS = conId(tab.areas).sort((a,b)=>(a.orden??99)-(b.orden??99)); areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a]));
   PROJ = conId(tab.proyectos).sort((a,b)=>(a.orden??99)-(b.orden??99)); byId = Object.fromEntries(PROJ.map(p=>[p.id,p]));

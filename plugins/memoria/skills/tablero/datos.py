@@ -35,15 +35,15 @@ Uso, en el orden de la puesta al día:
       Aplica <trabajo>/salida/plan.json (plan_subida.py) sobre lo traído y deja en <trabajo>/publicar/ los archivos que
       cambian. Imprime un JSON con «archivos» (la lista {"as", "path"} que va tal cual a la publicación; vacía si no hay
       nada que publicar), «base» (lotes de escrituras con la forma de db_write, que se mandan después, en orden, uno cada
-      vez), «quitar» si lo hay (los archivos que la publicación borra: el detalle de un área que ya no tiene proyectos y el
-      datos/detalle.json de la 1.24.1) y, si lo hay, «aviso». Del detalle solo salen las áreas que cambiaron. Con --vista la página va en la misma publicación, con el título de la organización que
+      vez), «quitar» si lo hay (los archivos que la publicación borra: el detalle o los proyectos de un área que ya no los
+      tiene y el datos/detalle.json de la 1.24.1) y, si lo hay, «aviso». Del detalle solo salen las áreas que cambiaron. Con --vista la página va en la misma publicación, con el título de la organización que
       dice meta/estado; la primera vez es obligatoria, porque la página de antes no sabe leer los archivos. Con --enfoque
       (el «Por dónde empezar» que escribió el modelo), entra en tablero.json y la huella nueva de los candidatos en
       estado.json. Si lo único que cambia es meta/estado (una corrida al día), no publica: la marca de la base lleva la hora
       y lo que enseñan el pie y el botón.
   datos.py rutas <trabajo>
       Paso e (1.24.2): imprime en una línea la lista JSON de los archivos que hay que traer con read_file (tablero.json,
-      propuestas.json y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
+      propuestas.json, los proyectos y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
   datos.py propuestas <propuestas.json> <area>--<proyecto>
       Las sugerencias de un proyecto, una por línea en JSON con su id, para la apertura de una sesión (skill sesion).
 No lee ni escribe nada de la carpeta de memoria.
@@ -230,11 +230,14 @@ def base(trabajo, args):
     tab = dict(arch.get("tablero") or {})
     # los proyectos de cada área (1.24.4) se juntan con los que traiga tablero.json (un tablero de antes los lleva dentro)
     tab_uno = bool(tab.get("proyectos"))
-    if arch.get("proyectos_areas"):
+    # si tablero.json trae los proyectos (lo publicó una versión de antes de la 1.24.4, quizá después de una nueva), mandan
+    # esos: los archivos por área que haya serían más viejos, y se quitan al publicar (revisión de la 1.24.4)
+    if arch.get("proyectos_areas") and not tab_uno:
         tab["proyectos"] = dict(tab.get("proyectos") or {})
         for _a, d_ in arch["proyectos_areas"].items():
             tab["proyectos"].update(d_ or {})
-    _escribe(b / ".proyectos-archivos.json", {"uno": tab_uno, "areas": sorted(a_ for a_, d_ in (arch.get("proyectos_areas") or {}).items() if d_ is not None)})
+    _escribe(b / ".proyectos-archivos.json", {"uno": tab_uno, "areas": sorted(a_ for a_, d_ in (arch.get("proyectos_areas") or {}).items() if d_ is not None),
+                                              "vacias": sorted(a_ for a_, d_ in (arch.get("proyectos_areas") or {}).items() if d_ is None)})
     for col in ARCHIVO_COLS:
         for id_, d in (tab.get(col) or {}).items():
             if isinstance(d, dict):
@@ -483,12 +486,16 @@ def publicar(trabajo, args):
         salida_["aviso_llamadas"] = f"Lo que trae el paso e suma {sum(pesos.values()) // 1024} KB: la siguiente regeneración lo trae en dos o más llamadas de read_file. No hace falta decirlo."
     sin_det = sorted(pid for pid in ((ahora["tablero"] or {}).get("proyectos") or {}) if str(pid).split("--", 1)[0] in set(previos_det.get("vacias") or [])
                      and pid not in (ahora["detalle"] or {})) if con_archivos and ahora["tablero"] else []
+    sin_pro = sorted(a_ for a_ in (previos_pro.get("vacias") or []) if a_ not in pro_a) if con_archivos else []
+    if sin_pro:
+        salida_["aviso_proyectos"] = ("Se quedan sin proyectos " + ", ".join(sin_pro) + ": su área se pasó como proyectos:<área>=- y no se "
+                                      "regeneró ninguno. Si read_file no dijo que el archivo no existe, no publiques: repite desde el paso e con él.")
     if sin_det:
         salida_["aviso_detalle"] = ("Se quedan sin detalle " + ", ".join(sin_det[:5]) + (" y más" if len(sin_det) > 5 else "") + ": su área se pasó como "
                                     "detalle:<área>=- y no se regeneraron. Si read_file no dijo que el archivo no existe, no publiques: repite desde el paso e con él.")
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
-                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: esa área tiene demasiado detalle para un archivo, y hay que partirla en la versión siguiente del plugin (avísalo a quien lo mantiene).")
+                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: ese archivo es demasiado grande para traerlo, y hay que partirlo en la versión siguiente del plugin (avísalo a quien lo mantiene).")
     print(json.dumps(salida_, ensure_ascii=False, indent=1))
 
 
@@ -506,8 +513,8 @@ def propuestas(archivo, pid):
 
 def rutas(trabajo):
     """Paso e: los archivos que hay que traer, como lista JSON de rutas para read_file (paths), desde el meta/estado del paso
-    1a: tablero.json, propuestas.json y el detalle de cada área que dice «detalle_areas»; sin esa clave (un tablero de la
-    1.24.1), el detalle.json único."""
+    1a: tablero.json, propuestas.json, los proyectos de cada área que dice «proyectos_areas» (1.24.4) y el detalle de cada
+    área que dice «detalle_areas»; sin esa clave (un tablero de la 1.24.1), el detalle.json único."""
     est = _datos(_json(pathlib.Path(trabajo) / "base" / "meta" / "estado.json"))
     if not isinstance(est, dict):
         sys.exit("Falta el paso 1a (o es la primera vez, que no trae nada: --sin-archivos).")

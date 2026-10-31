@@ -1,7 +1,8 @@
 # Corre las pruebas en cada pull request contra main.
 # Los scripts del plugin corren en la computadora de cada persona con el Python que tenga (3.9 en un Mac de serie,
 # 3.10 en la consola de la app), y la 1.23.0 salió con un cierre que no arrancaba con ellos. Por eso las pruebas de
-# sesión corren con 3.9, 3.10 y el actual, y probar_compila.py tiene siempre python3.9 y python3.10 a mano.
+# sesión y los scripts del tablero que no necesitan navegador corren con 3.9, 3.10 y el actual, y probar_compila.py tiene
+# siempre python3.9 y python3.10 a mano.
 # El tablero (probar.sh) corre una vez, con el Python actual, Node 22 y Playwright con Chromium.
 name: Pruebas
 on:
@@ -37,6 +38,19 @@ jobs:
             python3 "$f" || fallos=$((fallos + 1))
           done
           [ "$fallos" -eq 0 ] || { echo "$fallos prueba(s) de sesión fallaron"; exit 1; }
+      # los scripts del tablero que no necesitan navegador, con el mismo Python: aplicar_cambios.py corre en la computadora
+      # de cada persona, y datos.py, plan_subida.py y barrido.py en la tarea
+      - name: Scripts del tablero
+        run: |
+          fallos=0
+          for f in pruebas/tablero/probar_datos.py pruebas/tablero/probar_plan.py pruebas/tablero/probar_barrido.py; do
+            echo "== $f"
+            python3 "$f" || fallos=$((fallos + 1))
+          done
+          copia="$RUNNER_TEMP/raiz-aplicar"; rm -rf "$copia"; cp -R pruebas/tablero/raiz "$copia"
+          echo "== pruebas/tablero/aplicar.py"
+          python3 pruebas/tablero/aplicar.py plugins/memoria/skills/tablero/aplicar_cambios.py "$copia" || fallos=$((fallos + 1))
+          [ "$fallos" -eq 0 ] || { echo "$fallos prueba(s) del tablero fallaron"; exit 1; }
   tablero:
     runs-on: ubuntu-latest
     steps:
