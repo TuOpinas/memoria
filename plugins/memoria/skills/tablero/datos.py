@@ -435,6 +435,9 @@ def publicar(trabajo, args):
     pesos = {f"datos/{k}.json": _peso(ahora[k]) for k in ("tablero", "propuestas") if ahora[k] is not None}
     pesos.update({f"datos/detalle/{a_}.json": _peso(d_) for a_, d_ in por_a.items()})
     grandes = [f"{k} ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
+    if not grandes and sum(pesos.values()) > TOPE_LECTURA:
+        # cada uno cabe, pero el paso e los trae juntos: se partirá en dos o más llamadas (revisión de la 1.24.2)
+        grandes = [f"todos juntos ({sum(pesos.values()) // 1024} KB: el paso e los traerá en dos o más llamadas)"]
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
                             "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: esa área tiene demasiado detalle para un archivo, y hay que partirla en la versión siguiente del plugin (avísalo a quien lo mantiene).")
