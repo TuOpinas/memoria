@@ -2596,9 +2596,11 @@ const TEXTOS = {}, TEXTOS_PIDIENDO = new Set();
 function traerTextos(pid){
   if(TEXTOS[pid] || TEXTOS_PIDIENDO.has(pid) || !DB) return;
   TEXTOS_PIDIENDO.add(pid);
-  // con los archivos (1.24.1), el detalle de todos los proyectos viene en uno, que se trae una vez
-  DETALLE_PROM = DETALLE_PROM || leerArchivo("detalle.json").catch(() => null);
-  DETALLE_PROM.then(todo => { const d = todo && todo[pid]; TEXTOS[pid] = d && typeof d === "object" ? d : {falta:true}; TEXTOS_PIDIENDO.delete(pid); DATA_SEQ++; render(); });
+  // desde la 1.24.2 el detalle va en un archivo por área (datos/detalle/<área>.json), que se trae una vez; un tablero
+  // publicado con la 1.24.1 lo tiene todo en datos/detalle.json, y se lee ese si el del área no está
+  const area = String(pid).split("--")[0];
+  DETALLE_PROM[area] = DETALLE_PROM[area] || leerArchivo("detalle/" + area + ".json").catch(e => e && e.status === 404 ? (DETALLE_PROM[""] = DETALLE_PROM[""] || leerArchivo("detalle.json").catch(() => null)) : null);
+  DETALLE_PROM[area].then(todo => { const d = todo && todo[pid]; TEXTOS[pid] = d && typeof d === "object" ? d : {falta:true}; TEXTOS_PIDIENDO.delete(pid); DATA_SEQ++; render(); });
 }
 function conTexto(d, p){ if(!d.texto_aparte) return d; const x = ((TEXTOS[p.id]||{}).decisiones||{})[d.texto_aparte]; return x ? {...d, ...x} : d; }
 const CARGANDO = `<p class="more">Cargando…</p>`;
@@ -3405,11 +3407,11 @@ function _render(){
 // ---- de dónde vienen los datos (1.24.1) ----
 // Los archivos datos/*.json los publica la puesta al día junto con la página: estado.json (meta/estado), tablero.json
 // (áreas, proyectos, resúmenes de «Qué hay» y «Por dónde empezar»), propuestas.json (las sugerencias del barrido) y
-// detalle.json (lo que se trae al entrar en un proyecto). Lo que se marca en la página sigue en la base, en vivo. Un tablero
+// detalle/<área>.json (lo que se trae al entrar en un proyecto; hasta la 1.24.1, un solo detalle.json). Lo que se marca en la página sigue en la base, en vivo. Un tablero
 // sin esos archivos (aún no se puso al día con la 1.24.1) no se lee de la base vieja: lo dice, y su sincronización los publica.
 // falta: el tablero aún no tiene sus archivos (se está montando, o no se sincronizó con la 1.24.1); error: no se pudieron traer
 const sinDatos = () => SIN_DATOS === "falta" ? `<p class="empty">Este tablero todavía no tiene sus datos con la versión nueva del plugin. Dile a Claude, con la carpeta conectada, «sincroniza el tablero», o espera a su puesta al día.</p>` : `<p class="empty">No se pudieron traer los datos del tablero. Vuelve a cargar la página; si sigue, dile a Claude «sincroniza el tablero».</p>`;
-let ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = null, HAY_NUEVO = false;
+let ARCHIVOS = false, SIN_DATOS = false, PROP_ARCHIVO = {}, PROP_BASE = [], DETALLE_PROM = {}, HAY_NUEVO = false;
 const leerArchivo = async n => { const r = await fetch("datos/" + n, {cache: "no-store"}); if(!r.ok){ const e = new Error(n + " " + r.status); e.status = r.status; throw e; } return r.json(); };
 const conId = o => Object.entries(o || {}).map(([id, v]) => ({id, ...v}));
 async function cargarArchivos(){
