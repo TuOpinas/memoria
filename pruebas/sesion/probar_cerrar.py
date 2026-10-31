@@ -112,6 +112,15 @@ pb3.write_text(tb.replace("estado: borrador\n", 'estado: borrador\naportacion: "
 c, sv = corre(Rv3, {"otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador\naportacion", "a": f"estado: vigente\nactualizado: {HOY}\naportacion"}, {"de": "actualizado: 2026-08-01\n", "a": ""}]}], "area": {"linea": "- `cuentas/` — w", "entregables": [{"archivo": "borrador-viejo.md"}]}}, "--cuenta", "ana@ejemplo.test")
 av3 = (Rv3 / "ventas/area.md").read_text(encoding="utf-8")
 ok(c == 0 and f"  - borrador-viejo — Vale para publicar. · actualizado {HOY}" in av3, "la línea del entregable recién publicado lleva la fecha de hoy")
+# publicar y cerrar en una llamada (1.24.2): si «otros» no deja el documento vigente (aquí, lo rechaza porque lo encogería),
+# la entrada no dice «Publicó:» de un borrador, y la salida dice cuál quedó sin publicar
+Rv5 = raiz_nueva()
+pb5 = Rv5 / "ventas/cuentas/entregables/borrador-viejo.md"
+pb5.write_text(pb5.read_text(encoding="utf-8") + "\n" + "Texto largo. " * 200, encoding="utf-8")
+c, sv5 = corre(Rv5, {"sesion": SESION, "publico": ["entregables/borrador-viejo.md"], "otros": [{"ruta": "ventas/cuentas/entregables/borrador-viejo.md", "reemplazos": [{"de": "estado: borrador", "a": "estado: vigente"}, {"de": "Texto largo. " * 200, "a": ""}]}]}, "--cuenta", "ana@ejemplo.test")
+s5 = (Rv5 / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+ok("estado: borrador" in pb5.read_text(encoding="utf-8") and "PRUEBA-CERRAR" in s5 and "Publicó: entregables/borrador-viejo.md" not in s5 and sv5.get("no_publicado") == ["entregables/borrador-viejo.md"],
+   f"si el documento no quedó vigente, la entrada no dice «Publicó:» y la salida lo dice ({sv5.get('no_publicado')}, {sv5.get('rechazados')})")
 # un Estatus de proyecto sobre una raíz con «En corto» y «Estatus» a la vez: queda solo el Estatus
 Rv4 = raiz_nueva()
 pp4 = Rv4 / "ventas/precios/proyecto.md"; pp4.write_text(pp4.read_text(encoding="utf-8").replace("## En corto\n", "## Estatus\n2026-10-01 · **VIEJO.**\n\n## En corto\n", 1), encoding="utf-8")

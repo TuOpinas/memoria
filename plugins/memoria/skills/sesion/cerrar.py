@@ -65,7 +65,8 @@ Imprime siempre un JSON: «escritos», «sin_match», «rechazados», «fallidos
 el motivo), «ajenos» (archivos que alguien cambió desde --abierto, con la hora; también los que cambiaron mientras este
 cierre escribía; nunca los que este mismo cierre escribió), «reintentos», «hora» (ahora, ISO 8601 en minutos UTC, para la
 marca del tablero), «documento» (el id de esa marca) y «escrito_en» (la hora de esta escritura, para pasar como --abierto si
-se repite la llamada). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
+se repite la llamada); y, si alguno de «publico» no quedó vigente (un reemplazo de «otros» que no se escribió),
+«no_publicado» con esas rutas, que la entrada no lleva en «Publicó:» (1.24.2). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
 """
 import datetime
 import hashlib
@@ -787,6 +788,28 @@ def main(argv):
         for nombre_, escribe in (("sesiones", bool(ses)), ("decisiones", bool(cambios.get("decisiones")))):
             if (pd / f"{nombre_}.md").is_file():
                 c.rotar(pd / f"{nombre_}.md", nombre_, por_anio=escribe)
+    # otros archivos del área, por reemplazos exactos. Van antes de la entrada de sesiones.md (1.24.2): al publicar y cerrar
+    # en una llamada, el «estado: vigente» del documento se escribe primero, y si no se pudo, la entrada no dice «Publicó:»
+    # de un borrador (revisión de la 1.23.0, segunda vuelta)
+    for r, o in otros:
+        p = raiz / r
+        if not p.is_file():
+            s["fallidos"].append({"ruta": r, "motivo": "no existe"}); continue
+        def f_otro(t, sm, o=o, r=r):
+            n = con_reemplazos(t, o.get("reemplazos"), sm, r)
+            return n, n != t
+        c.cambiar(p, f_otro)
+    def _vigente_ya(r):
+        if not r.endswith(".md"):
+            return True
+        try:
+            return clave_cabecera((pd / r).read_text(encoding="utf-8-sig").replace("\r\n", "\n"), "estado") == "vigente"
+        except (OSError, UnicodeDecodeError):
+            return False
+    _quedo_borrador = [x for x in publico if not _vigente_ya(x)]
+    if _quedo_borrador:
+        publico = [x for x in publico if x not in _quedo_borrador]
+        s["no_publicado"] = _quedo_borrador
     # 2. sesiones.md
     if ses:
         entrada = con_autoria(ses, escribio, publico)
@@ -810,15 +833,6 @@ def main(argv):
                 t = con_bloque(t, "Estatus", estatus, alias=("En corto",))
             return t, t != t0
         c.cambiar(pd / "proyecto.md", f_pro)
-    # otros archivos del área, por reemplazos exactos
-    for r, o in otros:
-        p = raiz / r
-        if not p.is_file():
-            s["fallidos"].append({"ruta": r, "motivo": "no existe"}); continue
-        def f_otro(t, sm, o=o, r=r):
-            n = con_reemplazos(t, o.get("reemplazos"), sm, r)
-            return n, n != t
-        c.cambiar(p, f_otro)
     # 5 y 10. area.md: la línea del proyecto (con las de sus entregables) y el Estatus del área
     ar = cambios.get("area") or {}
     if ar.get("linea") and not puede_area:
