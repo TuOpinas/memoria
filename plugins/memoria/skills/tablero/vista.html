@@ -1891,13 +1891,14 @@ let ACT_DIAS = 7; try{ ACT_DIAS = +(localStorage.getItem("tablero-actividad-dias
 // Quién escribió y quién publicó cada documento lo dicen «Escribió:» y «Publicó:» de la entrada de la sesión (1.23). Un
 // entregable publicado en el periodo que ninguna sesión dice haber publicado cuenta sin atribuir (q vacío).
 const docNombre = r => (r||"").replace(/^(entregables|taller)\//,"");
-function eventos(desde){
+// conEscritos: también un evento «esc» por documento de «Escribió:», que solo cuenta «Por persona»; los demás no lo piden
+function eventos(desde, conEscritos){
   const ev = [];
   for(const p of PROJ){ if(p.restringido) continue;
     const nombrados = new Set(), publicados = {};
     for(const s of sesionesTodas(p)){ if(s.fecha<desde) continue; const q = persona(quienSes(p,s));
       ev.push({k:"ses", f:s.fecha, p, q, t:s.trabajamos||""});
-      for(const r of new Set(s.escribio||[])){ nombrados.add(r); ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
+      for(const r of new Set(s.escribio||[])){ nombrados.add(r); if(conEscritos) ev.push({k:"esc", f:s.fecha, p, q, doc:r}); }
       // publicado es lo que una entrada dice en «Publicó:», una vez por documento: la fecha del entregable no lo dice (1.23)
       for(const r of new Set(s.publico||[])){ nombrados.add(r); const e = (p.entregables||[]).find(e=>"entregables/"+(e.archivo||e.nombre||"")===r);
         if(!(r in publicados) || s.fecha>publicados[r].f) publicados[r] = {f:s.fecha, q, t:(e && (e.titulo||e.nombre)) || docNombre(r), doc:r}; } }
@@ -2387,7 +2388,7 @@ function resumenCalculado(p, piezas){
 // ---- Inicio: Actividad sin «Por proyecto»; el área recibe «Por proyecto» como su sección de actividad. «Personas» pasa a «Quién aporta». ----
 const selPeriodo = (o) => `<div class="hoy-sel" role="group" aria-label="Periodo">${[[7,"Últimos 7 días"],[28,"Últimos 28 días"]].map(([d,l])=>`<button type="button" class="chip${ACT_DIAS===d?" on":""}" data-act-dias="${d}">${l}</button>`).join("")}<span class="more">del ${fmtD(addDays(-(ACT_DIAS-1)))} al ${fmtD(today())}, hoy incluido</span><span class="more" style="margin-left:auto">${kTxt(o)} · ${cuantos(o.proy.size,"proyecto","proyectos")}</span></div>`;
 function tabActividad(){
-  const ev = eventos(addDays(-(ACT_DIAS-1))), o = agrega(ev);
+  const ev = eventos(addDays(-(ACT_DIAS-1)), true), o = agrega(ev);
   return {n: 0, html: selPeriodo(o) + actPorArea(ev) + actPersonas(ev)};
 }
 function actPorProyectoArea(ev, ps){
@@ -2471,7 +2472,7 @@ function renderArea(a){
     const tuyo = cuestAbiertos(c=>cuestMio(c) && enA(byId[c.a_proyecto])) + seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA);
     body = enfoque2(enA) + (tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`);
   } else if(tab==="actividad"){
-    const ev = eventos(addDays(-(ACT_DIAS-1))).filter(e=>e.p.area===a.slug), o = agrega(ev);
+    const ev = eventos(addDays(-(ACT_DIAS-1)), true).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
     body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev, a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
   } else {

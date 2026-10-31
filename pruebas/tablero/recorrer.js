@@ -99,13 +99,13 @@ const path = require('path');
                    sesiones_recientes:[{fecha:d0, titulo:d0, n:9, quien:"Ana Lombardo"}], ultima_por_persona:{"Elena Reyes": viejo}, decisiones:[], entregables:[]}];
           areaBy = Object.fromEntries(AREAS.map(a=>[a.slug,a])); byId = Object.fromEntries(PROJ.map(x=>[x.id,x])); _CONOCIDOS = null;
           META = {...(guardado.META||{}), tablero_de:"Ana Lombardo", administra:"Ana Lombardo"}; ACT_AREA = ""; ACT_DIAS = 7;
-          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6)));
+          const div = document.createElement("div"); div.innerHTML = actPersonas(eventos(addDays(-6), true));
           const filas = [...div.querySelectorAll(".per:not(.quiet)")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           const quietas = [...div.querySelectorAll(".per.quiet")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           const tipBruno = [...div.querySelectorAll(".per:not(.quiet)")].find(x=>/Bruno/.test(x.textContent)).querySelector(".tira i.on").dataset.t;
           const nota = (div.querySelector(".nota")||{}).textContent || "";
           const otros = conOtros().map(g=>({n:g.n, dentro:g.dentro}));
-          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6)));
+          ACT_AREA = "tec"; const div2 = document.createElement("div"); div2.innerHTML = actPersonas(eventos(addDays(-6), true));
           const tec = [...div2.querySelectorAll(".per")].map(x=>x.textContent.replace(/\s+/g," ").trim());
           // el papel va al pasar por el nombre (1.23.3)
           const tipsDe = d => Object.fromEntries([...d.querySelectorAll(".per b[data-tip]")].map(x=>[x.textContent, x.dataset.tip]));
