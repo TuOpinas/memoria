@@ -186,13 +186,20 @@ try:
     rc, out, err = corre(DATOS, "base", t7, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", f"detalle={uno}")
     ok(rc == 0, f"el paso e acepta el detalle.json de la 1.24.1 ({err[-200:]})")
     rc, res, err = con_plan(t7, [])
-    ok(rc == 0 and not any(x["as"].startswith("datos/detalle") for x in res["archivos"]) and "quitar" not in res,
-       f"si su detalle no cambia, se queda como está y la página lo sigue leyendo ({res.get('archivos')} {err[-200:]})")
-    rc, res, err = con_plan(t7, [("set", "detalle", pid1, {"estado_actual": "CAMBIADO"})])
     nombres = [x["as"] for x in res["archivos"]]
     ok(rc == 0 and [n for n in nombres if n.startswith("datos/detalle")] == [f"datos/detalle/{a}.json" for a in det_areas] and res.get("quitar") == ["datos/detalle.json"]
        and lee(t7 / "publicar" / "datos" / "estado.json").get("detalle_areas") == det_areas,
-       f"en cuanto cambia, se publica por áreas y se quita el detalle.json de la 1.24.1 ({nombres} {res.get('quitar')} {err[-200:]})")
+       f"en la primera regeneración se publica por áreas y se quita el detalle.json de la 1.24.1, aunque nada cambie ({nombres} {res.get('quitar')} {err[-200:]})")
+    # el paso e tiene que traer todo el detalle que el tablero tiene
+    t8 = tmp / "t8"; shutil.copytree(t2, t8)
+    rc, out, err = corre(DATOS, "base", t8, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET[1:])
+    ok(rc != 0 and "Faltan detalles" in err, f"si falta el detalle de un área que el tablero tiene, el paso e para ({err[-200:]})")
+    rc, out, err = corre(DATOS, "base", t8, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *DET[1:], DET[0].split("=")[0] + "=-")
+    ok(rc == 0, f"uno que read_file dijo que no existe se pasa como detalle:<área>=- ({err[-200:]})")
+    t9 = tmp / "t9"; t9.mkdir()
+    corre(DATOS, "base", t9, f"estado={e_viejo}", "--cola", t9 / "no.jsonl", "--cierres", t9 / "no.jsonl", "--publicado", t9 / "no.jsonl")
+    rc, out, err = corre(DATOS, "base", t9, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}")
+    ok(rc != 0 and "detalle=" in err, f"un tablero de la 1.24.1 sin su detalle.json en el paso e, para ({err[-200:]})")
 
     print("Lo que no se puede hacer")
     t3 = tmp / "t3"

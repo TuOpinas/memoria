@@ -27,7 +27,8 @@ Uso, en el orden de la puesta al día:
       y pone cada marca de la base encima de su sugerencia en <trabajo>/cola. Una marca completa de la 1.24.0 (con su texto)
       cuya sugerencia no está en el archivo pasa al archivo; una «pendiente», o una que se queda sin sugerencia, se borra
       de la base al publicar. El detalle va con un detalle:<área>=… por cada archivo datos/detalle/<área>.json que el tablero
-      tenga, y detalle=… si aún tiene el datos/detalle.json de la 1.24.1. --sin-archivos, en la primera vez. No imprime nada.
+      tenga (los que dice «datos.py rutas»; uno que read_file dijo que no existe, detalle:<área>=-), y detalle=… si aún tiene
+      el datos/detalle.json de la 1.24.1; si falta alguno, para. --sin-archivos, en la primera vez. No imprime nada.
   datos.py publicar <trabajo> [--vista <vista.html>] [--enfoque <enfoque.json>]
       Aplica <trabajo>/salida/plan.json (plan_subida.py) sobre lo traído y deja en <trabajo>/publicar/ los archivos que
       cambian. Imprime un JSON con «archivos» (la lista {"as", "path"} que va tal cual a la publicación; vacía si no hay
@@ -142,6 +143,9 @@ def _opciones(args, nombres, banderas):
             sys.exit(f"No entiendo «{a}»: los archivos van como estado=<ruta>, tablero=<ruta>, propuestas=<ruta>, detalle:<área>=<ruta> "
                      "(uno por área, 1.24.2) o detalle=<ruta> (el único de un tablero de la 1.24.1).")
         nombre = f"detalle/{area}.json" if area else f"{k}.json"
+        if area and v == "-":
+            arch.setdefault("detalle_areas", {})[area] = None     # read_file dijo «no file at»: el área no tiene archivo
+            i += 1; continue
         if not pathlib.Path(v).exists():
             sys.exit(f"No encuentro {v}: pasa la ruta donde la herramienta guardó datos/{nombre}.")
         d = _json(v)
@@ -198,6 +202,19 @@ def base(trabajo, args):
         sys.exit("El tablero tiene datos/estado.json: el paso e trae tablero.json, propuestas.json y el detalle.")
     if arch and not {"tablero", "propuestas"} <= set(arch):
         sys.exit("El paso e trae tablero=…, propuestas=… y el detalle: detalle:<área>=… de cada área que tenga su archivo, o detalle=… si el tablero es de la 1.24.1.")
+    if arch:
+        # el detalle que se trae tiene que ser el que el tablero tiene: sin uno, la publicación lo daría por vacío y la
+        # página perdería el detalle de los proyectos de esa área que no cambiaron (revisión de la 1.24.2)
+        est_ = _datos(_json(b / "meta" / "estado.json")) or {}
+        deben = est_.get("detalle_areas")
+        traidos = arch.get("detalle_areas") or {}
+        if isinstance(deben, list):
+            faltan = [a_ for a_ in deben if a_ not in traidos]
+            if faltan:
+                sys.exit("Faltan detalles del paso e: " + ", ".join(f"detalle:{a_}=<ruta>" for a_ in faltan) + " (los dice «datos.py rutas»; "
+                         "si read_file dijo que uno no existe, pásalo como detalle:<área>=-).")
+        elif "detalle" not in arch:
+            sys.exit("Este tablero tiene aún el detalle de la 1.24.1: el paso e trae también detalle=<ruta de datos/detalle.json> (lo dice «datos.py rutas»).")
     for x in ARCHIVO_COLS + ("detalle", "propuestas", "enfoque"):
         _vacia(b / x)
     tab = arch.get("tablero") or {}
@@ -211,11 +228,11 @@ def base(trabajo, args):
     # los dos son {proyecto: doc}. Se apunta qué archivos había, para quitar al publicar los que ya no tocan
     det = dict(arch.get("detalle") or {})
     for _a, d_ in (arch.get("detalle_areas") or {}).items():
-        det.update(d_)
+        det.update(d_ or {})
     for id_, d in det.items():
         if isinstance(d, dict):
             _escribe(b / "detalle" / f"{id_}.json", {"id": id_, "data": d})
-    _escribe(b / ".detalle-archivos.json", {"uno": "detalle" in arch, "areas": sorted(arch.get("detalle_areas") or {})})
+    _escribe(b / ".detalle-archivos.json", {"uno": "detalle" in arch, "areas": sorted(a_ for a_, d_ in (arch.get("detalle_areas") or {}).items() if d_ is not None)})
     (b / ".con-archivos").write_text("1", encoding="utf-8")
     props = {k: v for k, v in (arch.get("propuestas") or {}).items() if isinstance(v, dict)}
     marcas = {m["id"]: m for m in (_json(trabajo / "marcas.json") or []) if isinstance(m, dict) and m.get("id")}
@@ -349,9 +366,14 @@ def publicar(trabajo, args):
     cambia = {k for k in ("tablero", "propuestas", "detalle") if ahora[k] is not None and (primera or ahora[k] != antes[k])}
     # qué archivos de detalle tiene el tablero (1.24.2), para que el paso e de la siguiente corrida sepa cuáles traer
     # («datos.py rutas»); un tablero que sigue con el detalle.json de la 1.24.1 no lo lleva hasta que su detalle cambie
+    # un tablero que sigue con el detalle.json único de la 1.24.1 pasa a un archivo por área en la primera regeneración,
+    # cambie o no su detalle: si no, ese archivo podría crecer sin aviso hasta no poder traerse (revisión de la 1.24.2)
     previos_det = _json(b / ".detalle-archivos.json") or {}
-    if con_archivos and ahora["detalle"] is not None and ("detalle" in cambia or not previos_det.get("uno")):
-        estado["detalle_areas"] = sorted(_por_area(ahora["detalle"]))
+    if con_archivos and ahora["detalle"] is not None and previos_det.get("uno"):
+        cambia.add("detalle")
+    por_a = _por_area(ahora["detalle"]) if ahora["detalle"] is not None else {}
+    if con_archivos and ahora["detalle"] is not None:
+        estado["detalle_areas"] = sorted(por_a)
     # solo la hora: nada de los archivos ni de meta/estado cambió salvo lo de la corrida (una regeneración que deja la
     # huella de la raíz nueva sí publica estado.json, o la siguiente volvería a regenerar)
     resto = lambda e: {k: v for k, v in (e or {}).items() if k not in CAMPOS_AL_DIA + ("publicado_id",)}
@@ -376,13 +398,12 @@ def publicar(trabajo, args):
         if "detalle" in cambia:
             # un archivo por área (1.24.2): solo salen las áreas cuyo detalle cambió, y se quitan las que ya no tienen y el
             # detalle.json único de la 1.24.1
-            previos = previos_det
-            por_a, por_a0 = _por_area(ahora["detalle"]), _por_area(antes["detalle"] or {})
-            ya = set(previos.get("areas") or [])
+            por_a0 = _por_area(antes["detalle"] or {})
+            ya = set(previos_det.get("areas") or [])
             for a_, d_ in sorted(por_a.items()):
                 if primera or a_ not in ya or d_ != por_a0.get(a_):
                     sale(f"detalle/{a_}.json", d_)
-            quitar = [f"datos/detalle/{a_}.json" for a_ in sorted(ya - set(por_a))] + (["datos/detalle.json"] if previos.get("uno") else [])
+            quitar = [f"datos/detalle/{a_}.json" for a_ in sorted(ya - set(por_a))] + (["datos/detalle.json"] if previos_det.get("uno") else [])
     if vista:
         txt = pathlib.Path(vista).read_text(encoding="utf-8")
         if "<title>Tablero</title>" not in txt:
@@ -412,11 +433,11 @@ def publicar(trabajo, args):
     # el paso e trae tablero, propuestas y el detalle de cada área en llamadas de 4 MiB como mucho: se mira cada archivo
     _peso = lambda o: len(json.dumps(o, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
     pesos = {f"datos/{k}.json": _peso(ahora[k]) for k in ("tablero", "propuestas") if ahora[k] is not None}
-    pesos.update({f"datos/detalle/{a_}.json": _peso(d_) for a_, d_ in _por_area(ahora["detalle"] or {}).items()})
+    pesos.update({f"datos/detalle/{a_}.json": _peso(d_) for a_, d_ in por_a.items()})
     grandes = [f"{k} ({v // 1024} KB)" for k, v in pesos.items() if v > TOPE_LECTURA]
     if grandes:
         salida_["aviso"] = ("Pasa de 3,5 MB y la siguiente puesta al día puede no poder traerlo (read_file admite 4 MiB por "
-                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen.")
+                            "llamada): " + ", ".join(grandes) + ". Dilo en el resumen: esa área tiene demasiado detalle para un archivo, y hay que partirla en la versión siguiente del plugin (avísalo a quien lo mantiene).")
     print(json.dumps(salida_, ensure_ascii=False, indent=1))
 
 
