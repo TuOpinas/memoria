@@ -36,13 +36,20 @@ c, o = corre(bien())
 ok(c == 0 and "Todo cuadra" in o and "Para cambiar" not in o and "No se pudo mirar personas/bonos/" in o, "con los permisos que declara la carpeta, todo cuadra, y dice qué no pudo mirar")
 d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "fileOrganizer"), u("carla@ejemplo.test", "reader"), u("eva@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader")]
 c, o = corre(d)
-ok("beto@ejemplo.test tiene «Gestor de contenido» en toda la carpeta" in o and "Cámbiale el rol a «Lector» en la raíz y dale «Gestor de contenido» solo en la carpeta de personas, legal" in o, "quien escribe en toda la unidad sin administrarla: bajarlo a Lector y darle su área")
+ok("beto@ejemplo.test tiene el rol de Drive «Gestor de contenido» en toda la carpeta" in o and "Cámbiale el rol de Drive a «Lector» en la raíz y dale el rol de Drive «Gestor de contenido» solo en la carpeta de personas, legal" in o, "quien escribe en toda la unidad sin administrarla: bajarlo a Lector y darle su área")
 d = bien(); d["areas"]["ventas"]["permisos"][2] = u("carla@ejemplo.test", "writer")
 c, o = corre(d)
-ok("carla@ejemplo.test (colabora en ventas) tiene «Colaborador»" in o and "cámbialo a «Gestor de contenido»" in o, "«Colaborador» en el área: no deja mover ni borrar")
+ok("carla@ejemplo.test (colabora en ventas) tiene el rol de Drive «Colaborador»" in o and "cámbialo a «Gestor de contenido»" in o, "«Colaborador» en el área: no deja mover ni borrar")
+# quien escribe en un área sin estar declarado: el rol se dice como de Drive, y si debe escribir, con «Colaborador» no le basta (1.24)
+d = bien(); d["areas"]["operacion"]["permisos"] = BASE[:4] + [u("eva@ejemplo.test", "writer")]
+c, o = corre(d)
+ok("eva@ejemplo.test puede escribir en operacion (rol de Drive «Colaborador») y guia.md no lo declara" in o and "súbele el rol a «Gestor de contenido» en esa carpeta" in o, "el «Si sí» de quien escribe sin estar declarado dice que «Colaborador» no basta")
+d = bien(); d["areas"]["operacion"]["permisos"] = BASE[:4] + [u("eva@ejemplo.test", "fileOrganizer")]
+c, o = corre(d)
+ok("eva@ejemplo.test puede escribir en operacion (rol de Drive «Gestor de contenido»)" in o and "súbele el rol" not in o, "con «Gestor de contenido» no pide subirlo")
 d = bien(); d["areas"]["ventas"]["permisos"][2] = u("carla@ejemplo.test", "reader")
 c, o = corre(d)
-ok("carla@ejemplo.test (colabora en ventas) no puede escribir en su área (tiene «Lector»)" in o, "quien colabora sin edición en su área")
+ok("carla@ejemplo.test (colabora en ventas) no puede escribir en su área (tiene el rol de Drive «Lector»)" in o, "quien colabora sin edición en su área")
 d = bien(); d["areas"]["ventas"]["permisos"].append(u("eva@ejemplo.test", "fileOrganizer"))
 c, o = corre(d)
 ok("eva@ejemplo.test puede escribir en ventas" in o, "quien escribe en un área sin ser de ella")
@@ -84,20 +91,20 @@ o2 = subprocess.run([sys.executable, str(P), str(R2), "--drive", str(f)], captur
 ok({"tipo": "limitar", "carpeta": "operacion/soporte", "conservan": ["dani@ejemplo.test"], "escriben": ["dani@ejemplo.test"]} in a2["con_conector"], "limitar un proyecto conserva a quien colabora y dice quién escribe (el dueño que administra no hace falta)")
 g = bien(); g["raiz"]["permisos"] = BASE + [{"email": "equipo@ejemplo.test", "role": "fileOrganizer", "type": "group"}, {"role": "reader", "type": "domain", "domain": "ejemplo.test"}]
 c, o = corre(g)
-ok("El grupo equipo@ejemplo.test tiene «Gestor de contenido»" in o and "la lee todo el dominio ejemplo.test" in o, "un grupo que escribe y un dominio que lee se ven, no se tiran")
+ok("El grupo equipo@ejemplo.test tiene el rol de Drive «Gestor de contenido»" in o and "la lee todo el dominio ejemplo.test" in o, "un grupo que escribe y un dominio que lee se ven, no se tiran")
 g["raiz"]["permisos"] = [x for x in g["raiz"]["permisos"] if x.get("email") != "carla@ejemplo.test"]
 c, o = corre(g); a = acciones(o)
 ok("carla@ejemplo.test aparece en guia.md o en un proyecto y no figura con su correo" in o and "puede entrar por un grupo" in o and not any(x["tipo"] == "compartir" for x in a["con_conector"]), "con un grupo o un dominio en la raíz, a quien no figura no se le comparte a ciegas")
 g = bien(); g["raiz"]["permisos"] = BASE + [{"role": "writer", "type": "anyone"}]
 c, o = corre(g)
-ok("está abierta a cualquiera con el enlace con «Colaborador»" in o, "«cualquiera con el enlace» que escribe es un cambio, no un silencio")
+ok("está abierta a cualquiera con el enlace con el rol de Drive «Colaborador»" in o, "«cualquiera con el enlace» que escribe es un cambio, no un silencio")
 R3 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R, R3)
 gm = R3 / "guia.md"; gm.write_text(gm.read_text().replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Juanjo").replace("| ana@ejemplo.test · colabora: carla@ejemplo.test |", "| ana@ejemplo.test, carla@ejemplo.test |", 1))
 d = bien(); d["areas"]["ventas"]["permisos"] = BASE[:1] + [u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "fileOrganizer")]
 f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
 o3 = subprocess.run([sys.executable, str(P), str(R3), "--drive", str(f)], capture_output=True, text=True).stdout
 ok("No se sabe la cuenta de quien administra la carpeta («Juanjo»" in o3 and "ana@ejemplo.test" in o3.split("se tomó por administrador")[1].split("\n")[0], "sin la cuenta de quien administra, se dice a quién se tomó por administrador")
-ok("La celda Cuenta del área ventas/ no se deja leer" in o3 and "cámbiale el rol a «Lector» ahí" not in o3 and "corrige la celda antes de tocar su rol" in o3, "una celda Cuenta que no se deja leer no manda bajar a nadie: pide corregirla")
+ok("La celda Cuenta del área ventas/ no se deja leer" in o3 and "cámbiale el rol de Drive a «Lector» ahí" not in o3 and "corrige la celda antes de tocar su rol" in o3, "una celda Cuenta que no se deja leer no manda bajar a nadie: pide corregirla")
 d = bien(); d["raiz"]["permisos"][1] = u("beto@ejemplo.test", "fileOrganizer")
 c, o = corre(d); a = acciones(o)
 ok(a["con_conector"] == [] and a["a_mano"] >= 1, "bajar un rol no se puede con el conector: queda a mano")
@@ -127,7 +134,7 @@ ok("Para cambiar" not in o4, f"con la cuenta de Drive declarada y el dueño «, 
 ok("gabi@empresa.test escribe en operacion" in o4 and "el área no declara ninguna cuenta" in o4 and "si es su responsable Gabi Prueba" in o4, "quien escribe en un área sin cuenta declarada va a «Para comprobar», con el dueño por su nombre")
 d["areas"]["ventas"]["permisos"][0] = u("ana@empresa.test", "reader")
 f.write_text(json.dumps(d)); o5 = subprocess.run([sys.executable, str(P), str(R4), "--drive", str(f)], capture_output=True, text=True).stdout
-ok("ana@empresa.test (responsable en ventas) no puede escribir en su área (tiene «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
+ok("ana@empresa.test (responsable en ventas) no puede escribir en su área (tiene el rol de Drive «Lector»): dale" in o5, "la frase de quien no puede escribir en su área está bien formada")
 # «En Drive:» con « y », al revés, mal escrita; y la cuenta de Claude que también está en Drive
 def con_linea(linea, drive):
     R5 = pathlib.Path(tempfile.mkdtemp()) / "raiz"; shutil.copytree(R4, R5)

@@ -293,7 +293,7 @@ def comparar(raiz, drive):
     mi_unidad = not any(x.get("role") in ("organizer", "fileOrganizer") for x in raizp) and any(x.get("role") == "owner" for x in raizp)
     NOM = ROL_MI if mi_unidad else ROL
     ESCRIBE_BIEN = {"writer", "owner"} if mi_unidad else {"organizer", "fileOrganizer"}
-    BIEN = "«Editor»" if mi_unidad else "«Gestor de contenido»"
+    BIEN = "el rol de Drive «Editor»" if mi_unidad else "el rol de Drive «Gestor de contenido»"
     def roles(perms):
         """Personas (correo → rol); los grupos aparte, y los permisos sin persona (dominio, cualquiera con el enlace)."""
         r, grupos, abiertos = {}, {}, []
@@ -331,7 +331,7 @@ def comparar(raiz, drive):
         hall.append("No llegaron los permisos de la raíz: sin ellos no se puede revisar nada. Vuelve a leerlos con el conector de Google Drive.")
     if not admins and rr:
         org = sorted(e for e, rol in rr.items() if rol in ("organizer", "owner"))
-        notas.append(f"No se sabe la cuenta de quien administra la carpeta («{adm or 'no consta'}» en guia.md), así que se tomó por administrador a quien tiene «{NOM.get('owner' if mi_unidad else 'organizer')}» en la raíz: {', '.join(org) or 'nadie'}. Pon su correo en guia.md.")
+        notas.append(f"No se sabe la cuenta de quien administra la carpeta («{adm or 'no consta'}» en guia.md), así que se tomó por administrador a quien tiene el rol de Drive «{NOM.get('owner' if mi_unidad else 'organizer')}» en la raíz: {', '.join(org) or 'nadie'}. Pon su correo en guia.md.")
     for a in areas:
         if a["aviso"]:
             notas.append(f"La celda Cuenta del área {a['slug']}/ no se deja leer ({a['aviso']}): hasta que se corrija no se puede decir quién debe escribir ahí.")
@@ -339,14 +339,14 @@ def comparar(raiz, drive):
         """Lo que no es una persona: un dominio o el enlace, siempre; un grupo, para comprobar a sus miembros."""
         for que, rol in abiertos:
             if rol in ESCRIBE:
-                hall.append(f"{donde} está abierta a {que} con «{NOM.get(rol, rol)}»: puede escribir cualquiera. Quítalo desde la web y comparte solo con las personas de guia.md.")
+                hall.append(f"{donde} está abierta a {que} con el rol de Drive «{NOM.get(rol, rol)}»: puede escribir cualquiera. Quítalo desde la web y comparte solo con las personas de guia.md.")
             else:
-                notas.append(f"{donde} la lee {que} («{NOM.get(rol, rol)}»). Si no es a propósito, quítalo desde la web.")
+                notas.append(f"{donde} la lee {que} (rol de Drive «{NOM.get(rol, rol)}»). Si no es a propósito, quítalo desde la web.")
         for g, rol in sorted(grupos.items()):
             if rol in ESCRIBE and not admin(g, rol):
-                hall.append(f"El grupo {g} tiene «{NOM.get(rol, rol)}» en {donde.lower()}: puede escribir todo su miembro. Bájalo a «Lector» y da la escritura por persona, como dice guia.md.")
+                hall.append(f"El grupo {g} tiene el rol de Drive «{NOM.get(rol, rol)}» en {donde.lower()}: puede escribir todo su miembro. Bájale el rol de Drive a «Lector» y da la escritura por persona, como dice guia.md.")
             else:
-                notas.append(f"{donde} la lee el grupo {g} («{NOM.get(rol, rol)}»): esta revisión no ve a sus miembros; comprueba en Google quién está en él.")
+                notas.append(f"{donde} la lee el grupo {g} (rol de Drive «{NOM.get(rol, rol)}»): esta revisión no ve a sus miembros; comprueba en Google quién está en él.")
     abiertos_en("La carpeta entera", ra, rg, hall, notas)
     por_grupo = bool(rg or ra)
     def sin_acceso(donde):
@@ -358,12 +358,12 @@ def comparar(raiz, drive):
             escriben_en_raiz.add(e)
             suyas = [a["slug"] for a in areas if e in a["duenos"] | a["colaboran"]]
             if suyas:
-                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas. Cámbiale el rol a «Lector» en la raíz y dale {BIEN} solo en la carpeta de {', '.join(suyas)}.")
+                hall.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas. Cámbiale el rol de Drive a «Lector» en la raíz y dale {BIEN} solo en la carpeta de {', '.join(suyas)}.")
             elif any(e in a["en_celda"] and a["aviso"] for a in areas):
-                notas.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta y aparece en una celda Cuenta que no se deja leer: corrige la celda antes de tocar su rol.")
+                notas.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta y aparece en una celda Cuenta que no se deja leer: corrige la celda antes de tocar su rol.")
             else:
                 a_decidir += 1
-                hall.append(f"{e} tiene «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol a «Lector» en la raíz.")
+                hall.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol de Drive a «Lector» en la raíz.")
     # el administrador principal (1.22.2): quien administra la carpeta, responde por el contexto y es su dueño en Drive es
     # una sola persona, y lee todo, también lo restringido
     _ver, _, _ = administrador_unico(quien_responde, por_nombre)
@@ -376,9 +376,9 @@ def comparar(raiz, drive):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")
         elif rr.get(e) and not mi_unidad and rr[e] != "organizer":
-            hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en la unidad es «{NOM.get(rr[e], rr[e])}»: dale «Administrador».")
+            hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en la unidad es el rol de Drive «{NOM.get(rr[e], rr[e])}»: dale el rol de Drive «Administrador».")
         elif rr.get(e) and mi_unidad and rr[e] != "owner":
-            hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en Drive no es su propietario («{NOM.get(rr[e], rr[e])}»): la carpeta tiene que ser suya; transfiere la propiedad desde la web.")
+            hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero en Drive no es su propietario (rol de Drive «{NOM.get(rr[e], rr[e])}»): la carpeta tiene que ser suya; transfiere la propiedad desde la web.")
     declaradas = set()
     for a in areas:
         declaradas |= a["duenos"] | a["colaboran"]
@@ -387,11 +387,11 @@ def comparar(raiz, drive):
     for e in sorted(declaradas | ctxc):
         if rr and e not in rr and not any(e in (a["duenos"] | a["colaboran"]) and a["restringida"] for a in areas):
             if por_grupo:
-                notas.append(f"{e} aparece en guia.md o en un proyecto y no figura con su correo en la carpeta: puede entrar por un grupo o por el dominio; si no, compártesela como «Lector».")
+                notas.append(f"{e} aparece en guia.md o en un proyecto y no figura con su correo en la carpeta: puede entrar por un grupo o por el dominio; si no, compártesela con el rol de Drive «Lector».")
             elif avisos_drive or e in claude_de:
                 notas.append(f"{e} aparece en guia.md o en un proyecto y no figura en la carpeta; la línea «En Drive:» no se deja leer entera: corrígela antes de compartir nada.")
             else:
-                hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela como «Lector» (si entra a Drive con otra cuenta, decláralo en «En Drive:» de guia.md).")
+                hall.append(f"{e} aparece en guia.md o en un proyecto, pero no tiene acceso a la carpeta: compártesela con el rol de Drive «Lector» (si entra a Drive con otra cuenta, decláralo en «En Drive:» de guia.md).")
                 acciones.append({"tipo": "compartir", "cuenta": e, "carpeta": "", "rol": "reader"})
     def limitar(carpeta, conservan, sin_resolver, ar):
         """La acción de limitar con el conector, solo si se sabe a quién conservar; si no, queda para la web."""
@@ -419,18 +419,18 @@ def comparar(raiz, drive):
             if rol in ESCRIBE_BIEN:
                 continue
             if rol == "writer" and not mi_unidad:
-                hall.append(f"{e} ({papel} en {a['slug']}) tiene «Colaborador» en su área, que no deja mover ni borrar archivos: cámbialo a «Gestor de contenido» en la carpeta {a['slug']}.")
+                hall.append(f"{e} ({papel} en {a['slug']}) tiene el rol de Drive «Colaborador» en su área, que no deja mover ni borrar archivos: cámbialo a «Gestor de contenido» en la carpeta {a['slug']}.")
             else:
-                hall.append(f"{e} ({papel} en {a['slug']}) no puede escribir en su área" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else sin_acceso("la carpeta")) + f": dale {BIEN} en la carpeta {a['slug']}.")
+                hall.append(f"{e} ({papel} en {a['slug']}) no puede escribir en su área" + (f" (tiene el rol de Drive «{NOM.get(rol, rol)}»)" if rol else sin_acceso("la carpeta")) + f": dale {BIEN} en la carpeta {a['slug']}.")
         for e, rol in sorted(ar.items()):
             if rol in ESCRIBE and e not in a["duenos"] | a["colaboran"] and not admin(e, rol) and e not in escriben_en_raiz:
                 if a["aviso"] and e in a["en_celda"]:
-                    notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y aparece en su celda Cuenta, que no se deja leer: corrige la celda antes de tocar su rol.")
+                    notas.append(f"{e} escribe en {a['slug']} (rol de Drive «{NOM.get(rol, rol)}») y aparece en su celda Cuenta, que no se deja leer: corrige la celda antes de tocar su rol.")
                 elif a["aviso"] and not a["en_celda"]:
-                    notas.append(f"{e} escribe en {a['slug']} («{NOM.get(rol, rol)}») y el área no declara ninguna cuenta ({a['aviso']}): si es su responsable{(' ' + a['dueno']) if a['dueno'] else ''} o colabora, nada que cambiar; ponlo en la celda Cuenta de guia.md.")
+                    notas.append(f"{e} escribe en {a['slug']} (rol de Drive «{NOM.get(rol, rol)}») y el área no declara ninguna cuenta ({a['aviso']}): si es su responsable{(' ' + a['dueno']) if a['dueno'] else ''} o colabora, nada que cambiar; ponlo en la celda Cuenta de guia.md.")
                 else:
                     a_decidir += 1
-                    hall.append(f"{e} puede escribir en {a['slug']} («{NOM.get(rol, rol)}») y guia.md no lo declara responsable ni colaborador de esa área. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md; si no, cámbiale el rol a «Lector» ahí.")
+                    hall.append(f"{e} puede escribir en {a['slug']} (rol de Drive «{NOM.get(rol, rol)}») y guia.md no lo declara responsable ni colaborador de esa área. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md" + ("" if rol in ESCRIBE_BIEN else f" y súbele el rol a {BIEN.replace('el rol de Drive ', '')} en esa carpeta, porque «{NOM.get(rol, rol)}» no deja mover ni borrar archivos") + "; si no, cámbiale el rol de Drive a «Lector» ahí.")
         lim = bool(info.get("limitada"))
         if a["restringida"] and not lim:
             conservan = a["duenos"] | a["colaboran"] | a["leen"] | set(c for p in proyectos if p["area"] == a["slug"] for c in p["colaboran"] | p["dueno"])
@@ -464,7 +464,7 @@ def comparar(raiz, drive):
             for e in sorted(p["colaboran"]):
                 rol = pr.get(e)
                 if rol not in ESCRIBE_BIEN:
-                    hall.append(f"{e} colabora en {p['id']} pero no puede escribir en su carpeta" + (f" (tiene «{NOM.get(rol, rol)}»)" if rol else sin_acceso("ella")) + f": dale {BIEN} en la carpeta {p['id']}.")
+                    hall.append(f"{e} colabora en {p['id']} pero no puede escribir en su carpeta" + (f" (tiene el rol de Drive «{NOM.get(rol, rol)}»)" if rol else sin_acceso("ella")) + f": dale {BIEN} en la carpeta {p['id']}.")
             if p["restringido"] and not info.get("limitada"):
                 acc = limitar(p["id"], conservan, p["dueno_sin"], pr)
                 hall.append(f"El proyecto {p['id']}/ está declarado restringido en su area.md, pero en Drive no tiene acceso limitado." + web(p["dueno_sin"] if not acc else []))
