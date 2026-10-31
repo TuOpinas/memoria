@@ -80,9 +80,12 @@ cola.write_text(json.dumps([
     {"id": "r4", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "adoptada"},
     {"id": "r5", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "cuestionada", "porque": "uno\ndos"},
     {"id": "r6", "tipo": "respuesta", "proyecto": "personas--nomina", "decision": "operacion/compras#2026-10-02", "valor": "aceptada"},
+    {"id": "e1", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "Espera a Luis Romero: firmamos con Beta", "espera": "Luis Romero", "decision": "si firmamos con Beta"},
 ]), encoding="utf-8")
 r8 = corre("--cuenta", "ana@ejemplo.test")
 ps8 = {x["id"]: x for x in r8["para_sesion"]}
+ok(ps8.get("e1", {}).get("espera") == "Luis Romero" and ps8["e1"].get("decision") == "si firmamos con Beta", "la nota de «Ya llegó» lleva a quién se esperaba y qué decisión (revisión de la 1.24)")
+ps8.pop("e1", None)
 ok(set(ps8) == {"r1", "r2"} and ps8["r1"]["decision"] == "operacion/compras#2026-10-02" and ps8["r1"]["valor"] == "cuestionada" and ps8["r1"]["porque"].startswith("El tope") and not r8["aplicados"], "una respuesta llega a la sesión con su decisión, su valor y su porqué, sin aplicarse")
 ok({x["id"] for x in r8["rechazados"]} == {"r3", "r4", "r5"} and [x["id"] for x in r8["para_su_dueno"]] == ["r6"] and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "una respuesta sin identificador, con otro valor o con saltos de línea se rechaza; la de un área ajena espera a su dueño")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
