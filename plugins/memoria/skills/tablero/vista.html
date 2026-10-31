@@ -1725,14 +1725,17 @@ const RE_ESPERA = /\b(espera|esperar|esperando|pendiente de|que (?:nos )?(?:conf
 const RE_NO_ESPERA = /pendiente de (?:fecha|agendar)|\b(?:sesión|reunión|junta|llamada)\b[^.;]{0,40}\bpendiente\b/i;
 // a quién se espera: el complemento del verbo («esperar la confirmación de X», «a que X…», «recibir … de X») o el sujeto
 // de «Que X haga…»; no la primera persona que el texto nombre (revisión de la 1.24)
-const RE_ESPERADO = [/\b(?:esperar|espera|esperando|pendiente de)\s+(?:(?:a\s+)?que\s+|a\s+)?(?:(?:la|el|los|las|su|sus)\s+)?(?:[a-záéíóúñ]+\s+){0,4}?(?:de\s+|a\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/,
+const RE_ESPERADO = [/\b(?:[Ee]sperar|[Ee]spera|[Ee]sperando|[Pp]endiente de)\s+(?:(?:a\s+)?que\s+|a\s+)?(?:(?:la|el|los|las|su|sus)\s+)?(?:[a-záéíóúñ]+\s+){0,4}?(?:de\s+|a\s+)?([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/,
   /^(?:\s*20\d\d-\d\d-\d\d[^·:]{0,60}[·:]\s*)?(?:\*\*[^*]+\*\*[.:]?\s*)?que\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i,
   /\brecibir\b[^.;]{0,60}?\bde\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)/i];
 const esEspera = (p, s) => !esTareaDecidir(s) && !RE_NO_ESPERA.test(s.texto||"") && (effNat(p,s)==="espera" || RE_ESPERA.test(s.texto||""));
 function esperadoEn(p, t){
   for(const re of RE_ESPERADO){ const m = (t||"").match(re); if(!m) continue; const i = m.index + m[0].length - m[1].length;
     const f = (p.personas_fuera||[]).map(x=>typeof x==="string" ? x : x.nombre).find(n=>n && t.startsWith(n, i)); if(f) return f;
-    const n = nombreEn(t, i, m[1], p); if(n) return n; }
+    const n = nombreEn(t, i, m[1], p); if(n) return n;
+    // alguien que la carpeta no conoce: se espera a quien el texto nombra, tal cual, y no a otra persona del mismo texto
+    const raw = t.slice(i).match(new RegExp(`^[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)*[A-ZÁÉÍÓÚÑ][a-záéíóúñü-]+){0,3}`));
+    if(raw) return raw[0]; }
   return null;
 }
 // un cuestionamiento te toca si cuestiona una decisión de un proyecto tuyo, o una premisa y respondes por el contexto (revisión 1.22.4)
@@ -1762,7 +1765,7 @@ function conOtros(){
       if(mio && esEspera(p, s)){ lado = "deben"; const e = esperadoEn(p, s.texto); n = e && fuera(e) ? e : e ? null : (fueraEn(p, s.texto) || nombresEn(s.texto, p).find(fuera)); }
       else if(md && (mio ? !deOtro : deMi)){ lado = "debes"; const n_ = nombreEn(s.texto, md.index + md[0].length - md[2].length, md[2], p); n = n_ && fuera(n_) ? n_ : null; }
       if(lado && n) add(n, lado, {p, t:s.texto, f:effDate(p,s), tab:"quehay", row:key(p.id,s.texto)}); }
-    if(mio) for(const s of stepsLive(p)){ if(!esTareaDecidir(s)) continue; const dd = decisorFd(s.texto); if(dd && (yo ? persona(dd)!==yoN : !esc_.has(persona(dd)))) add(dd, "deben", {p, t:"Decide: "+sinFechaDelante(s.texto), f:effDate(p,s), tab:"quehay", row:key(p.id,s.texto)}); }
+    if(mio) for(const s of stepsLive(p)){ if(!esTareaDecidir(s)) continue; const dd = decisorFd(s.texto); if(dd && (yo ? persona(dd)!==yoN : !esc_.has(persona(dd)))) add(dd, "deben", {p, t:"Decide: "+sinFechaDelante(s.texto).replace(/^(?:\*\*[^*]+\*\*[.:]?\s*)?(?:decidir|definir|elegir)\s+/i,""), f:effDate(p,s), tab:"quehay", row:key(p.id,s.texto)}); }
     const fd = mio ? faltaDecidir(p) : null; if(fd){ const d = decisorFd(fd); const ns = d ? [d] : []; for(const n of ns.filter(n=>yo ? persona(n)!==yoN : !esc_.has(persona(n)))) add(n, "deben", {p, t:"Decide: "+fd, f:fechaEstatus(p), tab:"estatus"}); }
   }
   return Object.values(por).map(g=>({...g, dentro: esc_.has(persona(g.n)), total:g.deben.length+g.debes.length, desde:[...g.deben,...g.debes].map(x=>x.f).filter(Boolean).sort()[0]||null})).sort((a,b)=>b.total-a.total || a.n.localeCompare(b.n,"es"));
