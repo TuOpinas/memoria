@@ -65,8 +65,8 @@ Imprime siempre un JSON: «escritos», «sin_match», «rechazados», «fallidos
 el motivo), «ajenos» (archivos que alguien cambió desde --abierto, con la hora; también los que cambiaron mientras este
 cierre escribía; nunca los que este mismo cierre escribió), «reintentos», «hora» (ahora, ISO 8601 en minutos UTC, para la
 marca del tablero), «documento» (el id de esa marca) y «escrito_en» (la hora de esta escritura, para pasar como --abierto si
-se repite la llamada); y, si alguno de «publico» no quedó vigente (un reemplazo de «otros» que no se escribió),
-«no_publicado» con esas rutas, que la entrada no lleva en «Publicó:» (1.24.2). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
+se repite la llamada); y, si alguno de «publico» no quedó vigente tras los reemplazos de «otros», «no_publicado» con
+esas rutas y un «error»: no se escribe nada más que «otros», y la misma llamada se repite cuando estén arreglados (1.24.2). Con --sin-fechas (sin consola: la copia lleva la fecha de cuándo se trajo) «ajenos» va vacío.
 """
 import datetime
 import hashlib
@@ -806,10 +806,14 @@ def main(argv):
             return clave_cabecera((pd / r).read_text(encoding="utf-8-sig").replace("\r\n", "\n"), "estado") == "vigente"
         except (OSError, UnicodeDecodeError):
             return False
+    # si algo de «publico» no quedó vigente, no se escribe nada más (ni la entrada, ni la línea del entregable en area.md):
+    # se dice, se arregla lo de «otros» y se repite la misma llamada, que escribe la entrada entera una sola vez (1.24.2)
     _quedo_borrador = [x for x in publico if not _vigente_ya(x)]
     if _quedo_borrador:
-        publico = [x for x in publico if x not in _quedo_borrador]
         s["no_publicado"] = _quedo_borrador
+        print(json.dumps({"error": "no quedó vigente lo que se publica: " + ", ".join(_quedo_borrador) + ". No se escribió la entrada ni lo demás; "
+                          "arregla el reemplazo de «otros» (mira «sin_match» y «rechazados») y repite la misma llamada", **s}, ensure_ascii=False))
+        return 1
     # 2. sesiones.md
     if ses:
         entrada = con_autoria(ses, escribio, publico)
