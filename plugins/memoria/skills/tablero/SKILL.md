@@ -48,7 +48,7 @@ Cuatro comprobaciones, y en la primera que falle se dice qué falta y se para:
 
 ## Montar
 
-**1. Publicar la página.** Se copia `vista.html` de esta skill al scratchpad con el nombre `tablero.html`, se sustituye su primera línea `<title>Tablero</title>` por `<title>Tablero <organización></title>` (<organización> es el nombre de la organización: lo que va antes del «·» en el título de `guia.md`, `convenciones` sección 1), y se publica como artifact nuevo con el icono `dashboard` (`publish_files`, sin `slug`, con `tablero.html` como `index.html` y el título; o `Artifact`), y esta declaración de capacidades, idéntica para todos los tableros (con el conector, `declare_capabilities` justo después de publicar; con `Artifact`, en la misma publicación):
+**1. Publicar la página.** Se copia `vista.html` de esta skill al scratchpad con el nombre `tablero.html`, se sustituye su primera línea `<title>Tablero</title>` por `<title>Tablero <organización></title>` (<organización> es el nombre de la organización: lo que va antes del «·» en el título de `guia.md`, `convenciones` sección 1), y se publica como artifact nuevo con el icono `dashboard` (`publish_files`, sin `slug`, con `tablero.html` como `index.html` y el título; o `Artifact`), y esta declaración de capacidades, idéntica para todos los tableros (con el conector, `mcp__claude-artifacts__declare_capabilities` justo después de publicar; con `Artifact`, en la misma publicación):
 
 ```
 db: reglas [{path: "", read: "view", write: "admin"}, {path: "cambios", read: "view", write: "interact"}]
@@ -60,11 +60,11 @@ Con eso quien lo montó lo ve, actúa desde él (lo que toca va a la cola) y lan
 
 **2. La tarea del botón.** Se crea siempre, sin horario, como dice «La tarea del botón y la diaria» abajo, y su id se pasa al generador en el paso 3 con `--manual`; si la persona pide además que corra cada mañana, se crea con horario en vez de sin él. Crearla pide una aprobación en la app, que forma parte de montar. Si falta el conector «Claude Code Remote», se monta igual, con el botón apagado diciendo que falta el conector, y se dice en una línea.
 
-**3. Generar y cargar.** Son los pasos 1 y 5 de `tarea.md` y `regenerar.md` tal cual (sin consola, con lo que dice su «SIN CONSOLA», copia incluida), con el tablero todavía sin archivos: inventario en la computadora, copia de los archivos con `device_stage_files`, generación en Claude, `plan_subida.py` (sin nada publicado lo propone todo) y `datos.py publicar`, que arma los cuatro archivos de datos para una sola publicación. Ningún documento pasa por la conversación. En `meta/estado` se añade `pagina_actualizada: {version: <versión del plugin>, fecha: <hoy>}`, que es como la puesta al día sabe qué versión de la página hay publicada sin leerla.
+**3. Generar.** Son los pasos 1 y 5 de `tarea.md` y `regenerar.md` tal cual (sin consola, con lo que dice su «SIN CONSOLA», copia incluida), como la primera vez (`--primera-vez`, `--sin-archivos`): inventario en la computadora, copia de los archivos con `device_stage_files`, generación en Claude y `plan_subida.py`, que sin nada publicado lo propone todo. Ningún documento pasa por la conversación.
 
-**4. El primer «Por dónde empezar».** Es el paso 6 de `regenerar.md` (cómo, en `juicio.md`) y se hace aquí mismo, porque la página saldría sin esa sección hasta la primera puesta al día: se leen los grupos candidatos de `<trabajo>/salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe en `<trabajo>/enfoque.json`, que entra en la publicación del paso 3 con `--enfoque`.
+**4. El primer «Por dónde empezar», y publicar.** Es el paso 6 de `regenerar.md` (cómo, en `juicio.md`) y va antes de publicar, porque la página saldría sin esa sección hasta la siguiente puesta al día: se leen los grupos candidatos de `<trabajo>/salida/meta/enfoque-candidatos.json` y los pasos con sus señales, se eligen tres o cuatro grupos con los tres criterios (prioridad del área, cliente o dinero, desbloquea a otros; vencido no suma) y se escribe en `<trabajo>/enfoque.json`. Después, PUBLICAR de `tarea.md`, con `--vista` y `--enfoque`: la página y sus cuatro archivos de datos en una sola publicación, que apunta en meta/estado la versión de la página (`pagina_actualizada`), para que la puesta al día no tenga que leerla.
 
-**5. Comprobar.** Se abre el artifact y se mira que pinte la raíz con sus áreas y que `datos/estado.json` tenga la versión.
+**5. Comprobar.** Se abre el artifact (el `Artifact` con `open`, o se da el enlace) y se mira que pinte la raíz con sus áreas.
 
 ### Qué respondo al terminar
 
@@ -126,7 +126,7 @@ La computadora no ve el plugin, y cada sesión empieza con el `$HOME` de su VM v
 Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Pedir, para poner al día un tablero, acceso a otra carpeta que no sea la raíz, o pedirle a la persona que haga algo (añadir una carpeta, conectar, aprobar, pulsar). La puesta al día es invisible para quien la tiene; si algo falla, se dice en una línea y la siguiente lo reintenta.
-- Pasar por la conversación el contenido de los documentos del tablero (con `cat`, pegado o como `data`): se generan en Claude y se suben con `file_path`.
+- Pasar por la conversación el contenido de los documentos del tablero (con `cat`, pegado o como `data`): se generan en Claude y van como archivos del tablero, publicados desde disco; por la conversación pasa solo lo pequeño de la base (`tarea.md`, «SIN PEDIR NADA A NADIE»).
 
 - Escribir en la raíz nada del tablero: ni el enlace, ni scripts, ni la salida del generador, ni la cola, ni un archivo de configuración. En la carpeta solo entra lo mecánico de la cola (fechas y hechos con nota), y solo donde la cuenta es responsable o colabora.
 - Montar un tablero sin decir que no se comparte.

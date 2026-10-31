@@ -383,38 +383,15 @@ const path = require('path');
     if(!r.pend) errores.push(`abierto: el botón de sincronizar no marca el cierre que llegó con la página abierta`);
     await ctx.close();
   }
-  // el detalle de un proyecto (bitácora vieja, estado entero, porqués) se vuelve a traer cuando el proyecto cambia en la
-  // base con la página abierta: una sincronización que mueve una sesión al detalle no la hace desaparecer (1.19)
+  // un tablero sin sus archivos (no se sincronizó con la 1.24.1) no enseña los datos viejos de la base: lo dice
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
-    p.on('pageerror', e => errores.push(`detalle: ${e.message}`));
-    // un tablero que aún no tiene sus archivos (su primera sincronización con la 1.24.1 no corrió) se lee de la base, en vivo
+    p.on('pageerror', e => errores.push(`sin archivos: ${e.message}`));
     await p.addInitScript(() => { window.__SIN_ARCHIVOS = true; });
-    await p.goto('file://' + path.resolve(dir, 'completo.html') + '#p-ventas--cuentas-t-registro'); await p.waitForTimeout(800);
-    if(await p.evaluate(() => ARCHIVOS)) errores.push('detalle: sin archivos, la página tenía que leer de la base');
-    // desde la 1.24 el registro enseña el periodo y «Ver anteriores» trae lo demás
-    await p.evaluate(() => { REG_TODO.add('ventas--cuentas'); render(); }); await p.waitForTimeout(200);
-    const fechas = () => p.evaluate(() => [...document.querySelectorAll('#main article.dec.ses time')].map(t => t.textContent));
-    const antes = await fechas();
-    if(antes.length !== 2) errores.push(`detalle: la bitácora de Cuentas tenía que enseñar dos sesiones, una del proyecto y otra del detalle (${antes.join(', ')})`);
-    const pie = await p.evaluate(() => [...document.querySelectorAll('#main .more')].map(x => x.textContent).join(' | '));
-    if(/Las 1 entradas/.test(pie)) errores.push(`detalle: el pie de la bitácora cuenta mal (${pie.slice(0, 120)})`);
-    await p.evaluate(() => {
-      const D = window.__D, pr = D.proyectos['ventas--cuentas'], de = D.detalle['ventas--cuentas'];
-      de.sesiones = pr.sesiones.concat(de.sesiones || []);
-      pr.sesiones = [{ fecha: '2026-10-20', titulo: '2026-10-20 (cierre nuevo)', trabajamos: 'NUEVA-SESION en la llamada.', avances: 'cerrada', pendiente: '' }];
-      pr.sesiones_total = 3; pr.sesiones_registro = 3; pr.huella = 'otra'; de.huella = 'otra';
-      window.__emitir('proyectos');
-    });
-    await p.waitForTimeout(800);
-    const despues = await fechas();
-    if(despues.length !== 3 || !(await p.evaluate(() => document.querySelector('#main').textContent.includes('NUEVA-SESION')))) errores.push(`detalle: tras cambiar el proyecto en la base, la bitácora tenía que enseñar tres sesiones con la nueva (${despues.join(', ')})`);
-    // un detalle que la base no tiene no se pinta como vacío
-    await p.evaluate(() => { delete window.__D.detalle['ventas--cuentas']; window.__D.proyectos['ventas--cuentas'].huella = 'otra-mas'; window.__emitir('proyectos'); });
-    await p.waitForTimeout(600);
-    const txt = await p.evaluate(() => document.querySelector('#main').textContent);
-    if(!/No se pudo traer el detalle/.test(txt)) errores.push(`detalle: sin el documento de detalle, la bitácora tenía que decirlo y no pintarse vacía`);
+    await p.goto('file://' + path.resolve(dir, 'completo.html')); await p.waitForTimeout(800);
+    const r = await p.evaluate(() => ({ archivos: ARCHIVOS, txt: document.querySelector('#main').textContent, areas: AREAS.length }));
+    if(r.archivos || r.areas || !/todavía no tiene sus datos con la versión nueva/.test(r.txt)) errores.push(`sin archivos: la página tenía que decir que falta sincronizar, sin leer la base vieja (${JSON.stringify({archivos: r.archivos, areas: r.areas})})`);
     await ctx.close();
   }
   // con los archivos (1.24.1): el detalle llega de detalle.json, una sola vez, y si un proyecto no lo tiene se dice
@@ -437,9 +414,13 @@ const path = require('path');
       PROP_ARCHIVO['prop-solo-archivo'] = {tipo: 'propuesta', clase: 'paso-hecho', proyecto: 'ventas--cuentas', texto: 'T', estado: 'pendiente'}; mezclarPropuestas();
       const q = PROPUESTAS.find(c => c.id === 'prop-solo-archivo'); await marcarPropuesta(q, {estado: 'descartada'});
       await new Promise(r => setTimeout(r, 50));
-      const d = window.__D.cambios['prop-solo-archivo']; return { d, visto: (PROPUESTAS.find(c => c.id === 'prop-solo-archivo') || {}).estado };
+      const d = window.__D.cambios['prop-solo-archivo']; return { d: d && {...d}, visto: (PROPUESTAS.find(c => c.id === 'prop-solo-archivo') || {}).estado };
     });
-    if(!(marca.d && marca.d.tipo === 'propuesta' && marca.d.estado === 'descartada' && marca.d.texto === 'T' && marca.visto === 'descartada')) errores.push(`archivos: descartar una propuesta del archivo no dejó su marca en la base (${JSON.stringify(marca)})`);
+    if(!(marca.d && marca.d.tipo === 'propuesta' && marca.d.estado === 'descartada' && !('texto' in marca.d) && marca.d.proyecto === 'ventas--cuentas' && marca.visto === 'descartada')) errores.push(`archivos: descartar una propuesta del archivo tenía que dejar en la base solo su marca, sin el texto (${JSON.stringify(marca)})`);
+    // volver a «pendiente» borra la marca
+    const vuelta = await p.evaluate(async () => { const q = PROPUESTAS.find(c => c.id === 'prop-solo-archivo'); await marcarPropuesta(q, {estado: 'pendiente'}); await new Promise(r => setTimeout(r, 50)); return { base: 'prop-solo-archivo' in (window.__D.cambios || {}), visto: (PROPUESTAS.find(c => c.id === 'prop-solo-archivo') || {}).estado }; });
+    if(vuelta.base || vuelta.visto !== 'pendiente') errores.push(`archivos: volver a pendiente tenía que borrar la marca de la base (${JSON.stringify(vuelta)})`);
+    await p.evaluate(async () => { await marcarPropuesta(PROPUESTAS.find(c => c.id === 'prop-solo-archivo'), {estado: 'descartada'}); await new Promise(r => setTimeout(r, 50)); });
     // la marca «aplicada» de un cierre la quita de la página hasta que la puesta al día la retira
     const oculta = await p.evaluate(async () => { await DB.doc('cambios/prop-solo-archivo').update({estado: 'aplicada'}); await new Promise(r => setTimeout(r, 50)); return !PROPUESTAS.some(c => c.id === 'prop-solo-archivo'); });
     if(!oculta) errores.push('archivos: una propuesta marcada «aplicada» seguía en la página');
@@ -448,6 +429,10 @@ const path = require('path');
     // una publicación más nueva que la que enseña la página: se dice, y el botón deja de esperar
     const aviso = await p.evaluate(async () => { const t = new Date(Date.now() + 60000).toISOString(); (window.__D.publicado = window.__D.publicado || {})['p1'] = {sincronizado: t}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return HAY_NUEVO; });
     if(!aviso) errores.push('archivos: una puesta al día publicada con la página abierta no se avisó');
+    {
+      const r = await p.evaluate(async () => { HAY_NUEVO = false; const t = new Date(Date.now() + 120000).toISOString(); window.__D.publicado = {p2: {sincronizado: t, solo_estado: true, llamadas: 13}}; window.__emitir('publicado'); await new Promise(r => setTimeout(r, 100)); return { nuevo: HAY_NUEVO, sinc: META.sincronizado === t, llamadas: META.llamadas }; });
+      if(r.nuevo || !r.sinc || r.llamadas !== 13) errores.push(`archivos: una corrida al día (solo_estado) tenía que poner la hora sin pedir recargar (${JSON.stringify(r)})`);
+    }
     await ctx.close();
   }
   await b.close();

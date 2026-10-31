@@ -307,9 +307,10 @@ def una_linea_(texto, n):
 def fechas_en(texto):
     return re.findall(r"\b(20\d\d-\d\d-\d\d)\b", texto)
 
-# lo que la base del tablero admite: un doc_id sin espacios ni acentos y un documento de menos de 1 MB (plan_subida.py)
+# un doc_id sin espacios ni acentos (lo que la base admite: también nombra los documentos de los archivos del tablero); y, desde la
+# 1.24.1, un documento de hasta 3,5 MB, lo que la puesta al día puede volver a traer en un archivo (datos.py)
 ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")
-LIMITE_DOC = 1_000_000
+LIMITE_DOC = 3_500_000
 MAX_ARCHIVADAS = 150   # decisiones archivadas que viajan por proyecto (1.23): las más recientes
 
 # ---------- guia.md ----------

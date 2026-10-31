@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qué hay que subir a la base del tablero, sin traer ningún documento a la conversación.
+"""Qué cambia en el tablero, sin traer ningún documento a la conversación (desde la 1.24.1 lo aplica datos.py publicar).
 
 Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000] [--cierres <volcado de «cierres»>]
                     [--inicio <trabajo>/inicio.json] [--llamadas <n>] [--pagina '<json de pagina_actualizada>']
@@ -165,7 +165,7 @@ SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
 MAX = int(sys.argv[sys.argv.index("--max-bytes") + 1]) if "--max-bytes" in sys.argv else 900_000
 COLECCIONES = ("areas", "proyectos", "detalle")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
-LIMITE = 15_000_000                                                   # desde la 1.24.1 van en archivos del tablero (20 MiB cada uno)
+LIMITE = 3_500_000                                                    # lo que datos.py puede volver a traer en un archivo (read_file: 4 MiB)
 
 
 def huella_en_base(col, doc):
