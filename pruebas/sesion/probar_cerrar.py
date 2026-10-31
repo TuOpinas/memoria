@@ -18,6 +18,10 @@ def ok(c, t):
 def raiz_nueva():
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     shutil.copytree(AQUI.parent / "tablero" / "raiz", r)
+    # fechas de archivo fijas y viejas: recién clonado, todo parecería cambiado en los últimos minutos
+    viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+    for d, _, fs in os.walk(r):
+        for n in fs: os.utime(os.path.join(d, n), (viejo, viejo))
     return r
 
 

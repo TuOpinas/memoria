@@ -5,6 +5,7 @@ Anexo de la skill `sesion`. Compara los permisos reales de la carpeta en Drive c
 ## Cuándo
 
 - **Lo pide el administrador principal** (quien administra la carpeta, responde por el contexto y es su dueño en Drive: una sola persona): «revisa los permisos», «¿están bien los permisos de Drive?», «¿quién puede escribir dónde?».
+- **Al abrir, ofrecida** (1.24.2): en la apertura del administrador principal de una raíz en Google Drive, si la última revisión que guarda su tablero tiene más de 30 días, dejó cambios por hacer o no hay ninguna (`SKILL.md`, «Permisos de Drive» en la apertura mínima). Se hace con su sí.
 - **Lo pide quien administra para aplicar los cambios**: «aplica los permisos» (abajo, «Aplicar lo que el conector permite»).
 - **Al cerrar una sesión suya en la que cambió quién escribe o qué se restringe**: un área nueva, alguien añadido como responsable o colaborador en `guia.md` o en un proyecto, un área o un proyecto declarado restringido, una carpeta `restringido/` nueva. Se propone en una línea al final del cierre («¿Reviso ahora que Drive coincide?») y se hace con su sí.
 - **Al terminar de montar una raíz o sumar a alguien** (skill `nuevo`), cuando quien administra dice que ya dio los permisos.

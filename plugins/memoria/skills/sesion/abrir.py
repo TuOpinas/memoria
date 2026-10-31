@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas [--listado <archivo>]] [--minima]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas [--listado <archivo>]] [--minima] [--origen "<ruta de la raíz en la computadora>"]
+
+Con --origen (la ruta que da get_device_info) y la cuenta del administrador principal, si la raíz vive en Google Drive
+imprime en CUENTA la línea PERMISOS, para ofrecer la revisión de permisos al abrir (1.24.2).
 
 Con --minima (la apertura mínima, la primera respuesta de cualquier conversación con la carpeta conectada) imprime solo
 la primera línea de metodo.md con su veredicto, el nombre de la organización, la cuenta, una línea por proyecto de cada
@@ -61,12 +64,27 @@ if MINIMA:
 SIN_FECHAS = "--sin-fechas" in args
 if SIN_FECHAS:
     args.remove("--sin-fechas")
+ORIGEN = None
+if "--origen" in args:
+    i = args.index("--origen"); ORIGEN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
 LISTADO = None
 if "--listado" in args:
     i = args.index("--listado"); LISTADO = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args and not MINIMA else None
 ZONA_AVISO = None
 _LEIDOS = {}
+
+
+def en_drive(origen):
+    """Si la ruta de la raíz en la computadora (la de get_device_info) es de Google Drive para escritorio: en Mac, bajo
+    Library/CloudStorage/GoogleDrive-…; en Windows, una unidad que no es C: o una ruta con «Google Drive»; en los dos, con
+    «My Drive», «Mi unidad», «Shared drives» o «Unidades compartidas». iCloud, Dropbox o OneDrive no lo son."""
+    o = (origen or "").replace("\\", "/")
+    if re.search(r"/Library/CloudStorage/GoogleDrive-|/Google Drive(/|$)|/(My Drive|Mi unidad|Shared drives|Unidades compartidas)(/|$)", o, re.I):
+        return True
+    return bool(re.match(r"^[A-BD-Za-bd-z]:/", o)) and not re.search(r"/(OneDrive|Dropbox|iCloud)", o, re.I)
+
+
 def zona_horaria(raiz, defecto="America/Mexico_City"):
     """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas
     invertidas, y UTC o Etc/GMT+5), si la hay; si no, Ciudad de México. Una zona que no vale se avisa en ZONA_AVISO."""
@@ -483,6 +501,12 @@ if CUENTA:
             print("(aviso para decirlo: el primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. "
                   "Se escribe en una o dos frases, a qué se dedica y para quién, sin hablar de la carpeta; lo de la carpeta pasa al segundo párrafo. "
                   "Lo escribe esta cuenta, con su sí al texto.)")
+    # la revisión de permisos se ofrece al abrir (1.24.2, decidido el 2026-10-30): solo al administrador principal y solo si
+    # la raíz vive en Google Drive (la ruta de --origen, o una sesión sin consola, que es la de Drive en Windows). La fecha
+    # de la última revisión vive en el tablero (meta/permisos), no en la carpeta: la mira la sesión, no este script
+    if es_resp and (SIN_FECHAS or en_drive(ORIGEN)):
+        print("PERMISOS: la raíz vive en Google Drive y esta cuenta la administra: se mira en su tablero la última revisión "
+              "(meta/permisos) y se ofrece revisarlos si tiene más de 30 días, si dejó cambios por hacer o si no hay ninguna")
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
     # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
     for a in areas:
