@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Aplica a la raíz los cambios mecánicos de la cola de la Vista y reporta el resto.
 
-La cola ("cambios" en la base de la página) trae seis tipos:
+La cola ("cambios" en la base de la página) trae siete tipos:
 - fecha: cambio de fecha de un paso de «Siguientes pasos». Se aplica aquí, en la línea del paso.
 - hecho: un paso marcado como hecho, con nota opcional. NO se aplica: cerrarlo bien pide
   quitar el paso, contar qué pasó en sesiones.md y a veces una decisión. Se reporta.
@@ -10,6 +10,10 @@ La cola ("cambios" en la base de la página) trae seis tipos:
   la sesión del responsable del área. Se reporta.
 - corregir: quien usa el tablero dice que un paso no es lo que la vista cree (es rutina, es condicional, la fecha
   no es plazo, es decisión). NO se aplica: cambia dónde vive el paso o cómo se escribe, y eso es de sesión.
+- respuesta (1.24): «Aceptar» o «Cuestionar» una decisión de otro proyecto que afecta a uno tuyo, desde «Decisiones que te
+  afectan» o el registro. NO se aplica: un cuestionamiento es una entrada de decisiones.md y aceptar se cuenta en la bitácora,
+  y las dos se escriben en la sesión del proyecto desde el que se registra («proyecto»). Se reporta. «decision» tiene que ser
+  un identificador «area/proyecto#AAAA-MM-DD[-n]» y «valor», «aceptada» o «cuestionada».
 - propuesta: algo que el barrido de la puesta al día (`barrido.py`) vio que una sesión olvidó. NO se aplica nunca aquí:
   la memoria propone y solo su responsable decide, en una sesión. Se reporta aparte, en "propuestas", como lo que se queda
   en la cola a propósito. Una que no cumple la forma (id de proyecto, línea única) va a "rechazados" y se borra.
@@ -116,6 +120,7 @@ def puede(t, c, area):
         return True
     a_, s_ = partes(c)
     return bool(a_) and colabora_en_proyecto(a_, s_)
+REF_DEC = re.compile(r"[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*#20\d\d-\d\d-\d\d(?:-\d+)?", re.ASCII)   # area/proyecto#AAAA-MM-DD[-n]
 NOMBRE = re.compile(r"[a-z0-9][a-z0-9-]*", re.ASCII)     # nombres de área y de proyecto, como el contrato (sección 6)
 FECHA = re.compile(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}", re.ASCII)
 
@@ -232,10 +237,13 @@ for c in cargar():
             continue
         rep["propuestas"].append(c["id"])
         continue
-    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and c.get("proyecto") and not partes(c)[0]:
+    if t == "respuesta" and (not partes(c)[0] or not REF_DEC.fullmatch(str(c.get("decision") or "")) or c.get("valor") not in ("aceptada", "cuestionada")):
+        rep["rechazados"].append({"id": c["id"], "detalle": "respuesta sin proyecto «area--slug», sin identificador de decisión o con un valor que no es «aceptada» ni «cuestionada»"})
+        continue
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad", "respuesta") and c.get("proyecto") and not partes(c)[0]:
         rep["rechazados"].append({"id": c["id"], "detalle": f"id de proyecto mal formado: {c.get('proyecto')!r}"})
         continue
-    if t in ("fecha", "hecho", "nota", "corregir", "prioridad") and not puede(t, c, area):
+    if t in ("fecha", "hecho", "nota", "corregir", "prioridad", "respuesta") and not puede(t, c, area):
         rep["para_su_dueno"].append({"id": c["id"], "tipo": t, "proyecto": c.get("proyecto"), "area": area,
                                      "detalle": "falta --cuenta" if not CUENTA else (f"las prioridades de {area} son de su responsable" if t == "prioridad" and area in COLABORA else f"el área {area or '?'} no es de {CUENTA}")})
         continue
@@ -245,11 +253,11 @@ for c in cargar():
         except (OSError, UnicodeError) as e:   # sin permiso de escritura, archivo sin descargar…
             estado, detalle = "errores", f"{type(e).__name__}: {e}"
         rep[estado].append({"id": c["id"], "proyecto": c.get("proyecto"), "detalle": detalle})
-    elif t in ("hecho", "nota", "corregir", "prioridad"):
-        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto") if c.get(k) not in (None, "")):
-            rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta o texto con saltos de línea"})
+    elif t in ("hecho", "nota", "corregir", "prioridad", "respuesta"):
+        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto", "porque", "titulo", "decidio") if c.get(k) not in (None, "")):
+            rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta, texto o porqué con saltos de línea"})
             continue
-        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")})
+        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")} | ({k: c.get(k) for k in ("decision", "valor", "porque", "titulo", "decidio")} if t == "respuesta" else {}))
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})
 print(json.dumps(rep, ensure_ascii=False, indent=1))

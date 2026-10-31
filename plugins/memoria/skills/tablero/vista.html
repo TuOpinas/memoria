@@ -2305,11 +2305,18 @@ function sinSujeto(t, nombre, fecha){
 
 
 // ---- «Te afecta»: por decisión, solo de otras personas, y en Acciones (es algo a lo que reaccionar: adoptar o cuestionar) ----
+// una decisión aceptada o cuestionada ya registrada (1.24): el cuestionamiento de quien mira en el registro, o el
+// identificador en «Avances» de una sesión suya (así cuenta el cierre lo aceptado: cerrar.md, paso 0)
+function yaRespondida(q, d, yo){
+  if((d.cuestionado_por||[]).some(c=>persona(c.planteo||"")===yo)) return true;
+  const ref = d.id ? refDec(q, d) : ""; if(!ref) return false;
+  return PROJ.some(p=>!p.restringido && sesionesTodas(p).some(s=>persona(s.quien||"")===yo && (s.avances||"").includes(ref)));
+}
 function afectaDeOtros(){
   const yo = persona(VIEWER()), por = {};
   // lo que afecta a tus proyectos, no a cualquiera de la carpeta (1.23.4)
   for(const p of PROJ){ if(p.restringido || p.cerrado || !esMio(p)) continue;
-    for(const {q,d,nueva} of afectan(p)){ if(!nueva) continue; if(persona(d.decidio||"")===yo) continue;
+    for(const {q,d,nueva} of afectan(p)){ if(!nueva) continue; if(persona(d.decidio||"")===yo || yaRespondida(q, d, yo)) continue;
       const k = q.id+"#"+(d.id||d.fecha+d.titulo); const g = por[k] = por[k] || {q, d, a: []}; g.a.push(p); } }
   return Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
 }

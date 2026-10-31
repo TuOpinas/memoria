@@ -71,5 +71,19 @@ r6 = corre("--cuenta", "carla@ejemplo.test")
 ok([x["id"] for x in r6["para_sesion"]] == ["c1"] and {x["id"] for x in r6["para_su_dueno"]} == {"c2", "c3", "c4"} and r6["colabora"] == ["ventas"] and r6["mis_areas"] == [], "quien colabora en un área escribe en ella, pero sus prioridades se quedan para el dueño")
 r7 = corre("--cuenta", "dani@ejemplo.test")
 ok({x["id"] for x in r7["para_sesion"]} == {"c3", "c4"} and {x["id"] for x in r7["para_su_dueno"]} == {"c1", "c2"}, "quien colabora en un solo proyecto escribe solo en ese proyecto")
+# «Aceptar» y «Cuestionar» (1.24): llegan a la sesión con la decisión y el porqué; las que no tienen la forma, fuera
+antes = (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8")
+cola.write_text(json.dumps([
+    {"id": "r1", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "cuestionada", "porque": "El tope deja fuera las compras recurrentes", "titulo": "Tope de 5.000 MXN", "decidio": "Beto Prueba"},
+    {"id": "r2", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02-2", "valor": "aceptada"},
+    {"id": "r3", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras", "valor": "aceptada"},
+    {"id": "r4", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "adoptada"},
+    {"id": "r5", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/compras#2026-10-02", "valor": "cuestionada", "porque": "uno\ndos"},
+    {"id": "r6", "tipo": "respuesta", "proyecto": "personas--nomina", "decision": "operacion/compras#2026-10-02", "valor": "aceptada"},
+]), encoding="utf-8")
+r8 = corre("--cuenta", "ana@ejemplo.test")
+ps8 = {x["id"]: x for x in r8["para_sesion"]}
+ok(set(ps8) == {"r1", "r2"} and ps8["r1"]["decision"] == "operacion/compras#2026-10-02" and ps8["r1"]["valor"] == "cuestionada" and ps8["r1"]["porque"].startswith("El tope") and not r8["aplicados"], "una respuesta llega a la sesión con su decisión, su valor y su porqué, sin aplicarse")
+ok({x["id"] for x in r8["rechazados"]} == {"r3", "r4", "r5"} and [x["id"] for x in r8["para_su_dueno"]] == ["r6"] and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "una respuesta sin identificador, con otro valor o con saltos de línea se rechaza; la de un área ajena espera a su dueño")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)
