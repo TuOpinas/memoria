@@ -78,5 +78,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -s "$RUNNER_TEMP/evals.log" ] || exit 0
-          { echo "**Evals** (${{ steps.cuales.outputs.lista }}, $MODELO)"; echo; echo '```'; tail -c 60000 "$RUNNER_TEMP/evals.log"; echo '```'; } > "$RUNNER_TEMP/comentario.md"
+          { echo "**Evals** (${{ steps.cuales.outputs.lista }}, $MODELO)"; echo; echo '```'; tail -c 20000 "$RUNNER_TEMP/evals.log"; echo '```'; echo; python3 pruebas/evals/resumen_fallos.py "$RUNNER_TEMP/evals"; } > "$RUNNER_TEMP/comentario.md"
           gh pr comment ${{ github.event.pull_request.number }} --body-file "$RUNNER_TEMP/comentario.md"
