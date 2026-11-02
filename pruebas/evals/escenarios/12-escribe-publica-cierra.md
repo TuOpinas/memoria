@@ -7,11 +7,6 @@ preparar:
   - "sustituir ventas/cuentas/entregables/borrador-viejo.md actualizado: 2026-08-01 => actualizado: 2026-10-15\naportacion: Con cada cliente grande se sostiene una llamada semanal."
   - "sustituir ventas/cuentas/entregables/borrador-viejo.md Cuerpo. => Con cada cliente grande se sostiene una llamada semanal, como dicen los siguientes pasos del proyecto."
   - "migrar"
-turnos: 50
-preparar:
-  - "migrar"
-  - "sustituir ventas/cuentas/entregables/borrador-viejo.md actualizado: 2026-08-01 => actualizado: 2026-10-15\naportacion: Cliente Uno recibe una llamada de seguimiento cada semana hasta la firma."
-  - "sustituir ventas/cuentas/entregables/borrador-viejo.md Cuerpo. => A Cliente Uno se le llama cada semana para dar seguimiento a la propuesta hasta que firme, como dicen los siguientes pasos del proyecto."
 turnos:
   - "Abre sesión en ventas/cuentas. Escríbeme en el taller una nota corta, nota-soporte.md, con lo que acordamos hoy con Cliente Uno: el soporte responde en menos de 24 horas. Después publica el entregable borrador-viejo.md tal como está, que ya lo revisé. Y cierra la sesión."
   - "Sí, así."
