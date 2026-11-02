@@ -68,11 +68,13 @@ class TableroFalso:
         return self._json({"ok": True})
 
     def servidor(self):
+        def esquema(obligatorios, **props):
+            return {"type": "object", "properties": {k: {"type": v} for k, v in props.items()}, "required": obligatorios}
         t = [
-            tool("list_artifacts", "Lista los artifacts de la cuenta.", {"limit": int})(self.list_artifacts),
-            tool("db_query", "Consulta una colección de la base de un artifact (slug, collection, where, limit).", {"slug": str, "collection": str, "where": list, "limit": int})(self.db_query),
-            tool("db_get", "Lee un documento de la base de un artifact (slug, path).", {"slug": str, "path": str})(self.db_get),
-            tool("read_file", "Lee archivos de un artifact (slug, path o paths).", {"slug": str, "path": str, "paths": list})(self.read_file),
-            tool("db_write", "Escribe documentos en la base de un artifact (slug, ops).", {"slug": str, "ops": list})(self.db_write),
+            tool("list_artifacts", "Lista los artifacts de la cuenta.", esquema([], limit="integer"))(self.list_artifacts),
+            tool("db_query", "Consulta una colección de la base de un artifact (slug, collection, where, limit).", esquema(["slug", "collection"], slug="string", collection="string", where="array", limit="integer"))(self.db_query),
+            tool("db_get", "Lee un documento de la base de un artifact (slug, path).", esquema(["slug", "path"], slug="string", path="string"))(self.db_get),
+            tool("read_file", "Lee archivos de un artifact (slug, path o paths).", esquema(["slug"], slug="string", path="string", paths="array"))(self.read_file),
+            tool("db_write", "Escribe documentos en la base de un artifact (slug, ops).", esquema(["slug", "ops"], slug="string", ops="array"))(self.db_write),
         ]
         return create_sdk_mcp_server(name="claude-artifacts", version="1.0.0", tools=t)

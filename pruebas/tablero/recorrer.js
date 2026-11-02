@@ -235,6 +235,8 @@ const path = require('path');
         if(!a || !q || !otro) return {...r, prep: false};
         const d = {id: today()+"-7", fecha: today(), titulo: "PRUEBA-AREA-ENTERA", decidio: otro, afecta: a.slug+"/ (el área entera)"};
         q.decisiones = [d, ...(q.decisiones||[])];
+        // el proyecto de origen es de otra persona (si la raíz de prueba no deja otro, se finge)
+        const e0q = q.escribe; q.escribe = false;
         const filas = () => [...document.querySelectorAll('#te-afectan .due-item')].filter(x=>/PRUEBA-AREA-ENTERA/.test(x.textContent));
         const pinta = async () => { _M = null; render(); await new Promise(z=>setTimeout(z,150)); };
         a.escribe = false; await pinta(); r.ajena = filas().length === 0;
@@ -244,6 +246,13 @@ const path = require('path');
         const pa = PROJ.find(x=>x.area===a.slug && activo(x) && !x.restringido), e0 = pa.escribe; pa.escribe = true; await pinta();
         r.unaVez = filas().length === 1 && !filas()[0].textContent.includes("el área " + a.nombre) && filas()[0].textContent.includes(pa.nombre);
         pa.escribe = e0; await pinta();
+        // una decisión registrada en un proyecto tuyo, con «Decidió» de otra persona y «Afecta a» tu área, no vuelve como ajena
+        const qm = PROJ.find(x=>x!==q && !x.restringido && !x.cerrado && esMio(x) && activo(x) && !sesionesTodas(x).some(y=>y.fecha===today()));
+        const dm = {id: today()+"-8", fecha: today(), titulo: "PRUEBA-REGISTRADA-POR-MI", decidio: otro, afecta: a.slug+"/ (el área entera)"};
+        if(qm){ qm.decisiones = [dm, ...(qm.decisiones||[])]; await pinta();
+          r.noVuelve = ![...document.querySelectorAll('#te-afectan .due-item')].some(x=>/PRUEBA-REGISTRADA-POR-MI/.test(x.textContent));
+          qm.decisiones = qm.decisiones.filter(x=>x!==dm); } else r.noVuelve = true;
+        window.__g3q = {q, e0q}; await pinta();
         return {...r, prep: true};
       });
       if(g3.prep){
@@ -251,8 +260,9 @@ const path = require('path');
         await p.click('#te-afectan form[data-resp-form^="ok|"] [type="submit"]', {timeout: 3000}).catch(()=>{}); await p.waitForTimeout(250);
         const c3 = await p.evaluate(ref => Object.values(window.__D.cambios||{}).filter(c=>c.tipo==="respuesta" && c.decision===ref), g3.ref);
         g3.acepta = c3.length === 1 && g3.mios.includes(c3[0].proyecto) && c3[0].por === "ana@ejemplo.test" && c3[0].decidio !== c3[0].por;
+        await p.evaluate(() => { const g = window.__g3q; if(g){ g.q.escribe = g.e0q; _M = null; render(); } });
       }
-      if(!(g3.porDueno && g3.porOtra && g3.prep && g3.ajena && g3.llega && g3.unaVez && g3.acepta)) errores.push(`${etiqueta}: quién marca o lo decidido para un área entera no van como en la 1.24.8 (${JSON.stringify(g3)})`);
+      if(!(g3.porDueno && g3.porOtra && g3.prep && g3.ajena && g3.llega && g3.unaVez && g3.noVuelve && g3.acepta)) errores.push(`${etiqueta}: quién marca o lo decidido para un área entera no van como en la 1.24.8 (${JSON.stringify(g3)})`);
       await abre(p, url, '', '[data-ini="mant"]');
       const g4 = await p.evaluate(async () => {
         META = {...(META||{}), tablero_de: "Ana Prueba"};

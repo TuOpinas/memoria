@@ -16,18 +16,20 @@ BLOQUE="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar 
 MINIMA="$(sed -n '/^Apertura mínima, sin cargar la skill sesion/,/^4\. Si la petición es trabajo de un proyecto/p' "$RAIZ/skills/sesion/minima.md" 2>/dev/null)"
 printf '%s\n' "$MINIMA" | tail -n 1 | grep -q '^4\. Si la petición' || exit 0
 
-# En la app de escritorio las carpetas conectadas están en $HOME/mnt: si ninguna es una raíz, basta una línea (1.24.8).
-# En la nube enlazada a la computadora $HOME/mnt no existe aquí y no se sabe: va el aviso entero.
+# En la app de escritorio las carpetas conectadas están montadas en $HOME/mnt: si hay alguna montada y ninguna es una raíz,
+# basta una línea (1.24.8). Sin nada montado no se sabe (la nube enlazada a la computadora no monta nada aquí, y Google
+# Drive en Windows no se monta aunque esté conectado): va el aviso entero.
 HAY_RAIZ=""
 if [ -n "${HOME:-}" ] && [ -d "$HOME/mnt" ]; then
-  for g in "$HOME"/mnt/*/guia.md; do
-    [ -f "$g" ] && [ -f "$(dirname "$g")/metodo.md" ] && { HAY_RAIZ=1; break; }
+  for d in "$HOME"/mnt/*/; do
+    [ -d "$d" ] || continue
+    HAY_RAIZ=no
+    [ -f "$d/guia.md" ] && [ -f "$d/metodo.md" ] && { HAY_RAIZ=1; break; }
   done
-  [ -n "$HAY_RAIZ" ] || HAY_RAIZ=no
 fi
 
 if [ "$HAY_RAIZ" = no ]; then
-  TEXTO="Plugin memoria ${VERSION}. Ninguna carpeta conectada es ahora una memoria (con guia.md y metodo.md en su primer nivel). Si se conecta una o piden algo del método, se carga la skill sesion de memoria: su «Apertura mínima», o el anexo sin-carpeta.md si no hay carpeta. Si no, ignora este aviso."
+  TEXTO="Plugin memoria ${VERSION}. Ninguna de las carpetas montadas en esta consola es una memoria (con guia.md y metodo.md en su primer nivel). Si get_device_info lista una carpeta conectada que no está en \$HOME/mnt (Google Drive en Windows), o se conecta una memoria más tarde, carga la skill sesion de memoria y sigue su «Apertura mínima» (su anexo minima.md). Si piden algo del método sin carpeta, su anexo sin-carpeta.md. Si no, ignora este aviso."
 else
 TEXTO="Plugin memoria ${VERSION}. Una carpeta conectada con guia.md y metodo.md en su primer nivel es la memoria de una organización que sigue el método Memoria. Si la conversación tiene carpetas conectadas o es de un proyecto de Claude, la primera llamada de tu primera respuesta, sin escribir nada antes, es la del paso 1 de abajo. Sin memoria: si piden algo del método, el anexo sin-carpeta.md de la skill sesion; si no, ignora este aviso.
 
@@ -55,7 +57,7 @@ if [ "$HAY_RAIZ" != no ] && command -v python3 >/dev/null 2>&1 && python3 -c '' 
 fi
 [ -n "$PREP" ] && TEXTO="${TEXTO}
 
-Para el paso 2 de la apertura mínima y para abrir un proyecto, ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor:
+Para el paso 2 de la apertura mínima y para abrir un proyecto, ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor (METODO_DESCARGA solo cuando la RESPUESTA de abrir.py lo pida):
 ${PREP}"
 
 # JSON a mano, sin python: el texto solo puede traer barras, comillas, tabuladores y saltos de línea

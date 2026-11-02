@@ -19,14 +19,17 @@ printf '%s' "$salida" | grep -q 'Apertura mínima, sin cargar la skill sesion' &
 # sin ninguna raíz en $HOME/mnt (la app de escritorio), una sola línea y sin descarga; con una, el aviso entero
 casa="$(mktemp -d)"; mkdir -p "$casa/mnt/Otra"
 corto="$(HOME="$casa" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/hooks/arranque.sh")"
-printf '%s' "$corto" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert len(t) < 600 and "Ninguna carpeta conectada" in t and "\nDESCARGA " not in t' 2>/dev/null; ok $? "sin raíz en \$HOME/mnt, una línea corta y sin descarga"
+printf '%s' "$corto" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert len(t) < 700 and "Ninguna de las carpetas montadas" in t and "minima.md" in t and "\nDESCARGA " not in t' 2>/dev/null; ok $? "con una carpeta montada que no es raíz, una línea corta, sin descarga y con la salida para Drive en Windows"
+mkdir -p "$casa/mnt"; rmdir "$casa/mnt/Otra"
+vacio="$(HOME="$casa" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/hooks/arranque.sh")"
+printf '%s' "$vacio" | grep -q 'Apertura mínima, sin cargar'; ok $? "con \$HOME/mnt vacío (nada montado: Drive en Windows, o la nube) el aviso entero"
 mkdir -p "$casa/mnt/Acme"; : > "$casa/mnt/Acme/guia.md"; : > "$casa/mnt/Acme/metodo.md"
 largo="$(HOME="$casa" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/hooks/arranque.sh")"
 printf '%s' "$largo" | grep -q 'Apertura mínima, sin cargar'; ok $? "con una raíz en \$HOME/mnt, el aviso entero"
 rm -rf "$casa"
 # 1.24.7: la descarga de la apertura viene hecha, la misma que imprime preparar.py; sin python3, el aviso sale igual sin ella
 esperada="$(python3 "$PLUGIN/preparar.py" '$HOME/memoria' skills/sesion/abrir.py skills/sesion/cerrar.py | grep -v '^REINTENTO ')"
-printf '%s' "$salida" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; e=sys.argv[1]; assert e.count("\n")==2 and "REINTENTO" not in t and t.endswith("\n"+e)' "$esperada" 2>/dev/null; ok $? "termina con VERSION, METODO y DESCARGA de la apertura, iguales a los de preparar.py (sin REINTENTO, que la skill arma)"
+printf '%s' "$salida" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; e=sys.argv[1]; assert e.count("\n")==3 and "REINTENTO" not in t and "\nMETODO_DESCARGA " in t and t.endswith("\n"+e)' "$esperada" 2>/dev/null; ok $? "termina con VERSION, METODO, DESCARGA y METODO_DESCARGA de la apertura, iguales a los de preparar.py (sin REINTENTO, que la skill arma)"
 sinpy="$(mktemp -d)"; for c in bash sed head tail grep printf cat dirname; do p="$(command -v $c)" && ln -s "$p" "$sinpy/$c"; done
 nopy="$(PATH="$sinpy" CLAUDE_PLUGIN_ROOT="$PLUGIN" "$(command -v bash)" "$PLUGIN/hooks/arranque.sh")"; rm -rf "$sinpy"
 printf '%s' "$nopy" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "Antes de guardar algo" in t and "\nDESCARGA " not in t' 2>/dev/null; ok $? "sin python3 el aviso sale entero, sin la descarga"

@@ -38,7 +38,12 @@ corre "$tmp/casa-codigo" "$(conv b "$pregunta" "$respuesta")"; calla; ok $? "con
 corre "$tmp/casa-memoria" "$(conv c "$pregunta" "$respuesta")"; recuerda; ok $? "con una memoria conectada (ruta con espacios) y sin apertura deja el recordatorio, sin error"
 grep -q 'apertura mínima' "$tmp/out"; ok $? "y dice qué hacer"
 corre "$tmp/casa-vacia" "$(conv d "$elegidas" "$respuesta")"; recuerda; ok $? "en la nube, con carpetas elegidas y sin apertura, recuerda comprobarlo"
-grep -q 'si ninguna carpeta lo es' "$tmp/out"; ok $? "y deja seguir sin más si ninguna es una memoria"
+grep -q 'Si ninguna carpeta lo es' "$tmp/out"; ok $? "y deja seguir sin más si ninguna es una memoria"
+# 1.24.8: get_device_info listó carpetas conectadas que la consola no monta (Google Drive en Windows) y nadie las miró
+vistas='{"type":"user","message":{"role":"user","content":[{"tool_use_id":"t3","type":"tool_result","content":"{\"platform\":\"win32\",\"connectedFolders\":[\"G:\\\\Unidades compartidas\\\\Acme\"]}"}]}}'
+corre "$tmp/casa-codigo" "$(conv d2 "$pregunta" "$miro" "$vistas" "$respuesta")"; recuerda; ok $? "con carpetas conectadas que la consola no monta, vistas con get_device_info y sin apertura, recuerda"
+listada='{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t4","name":"mcp__remote-devices__device_list_dir","input":{"path":"G:"}}]}}'
+corre "$tmp/casa-codigo" "$(conv d3 "$pregunta" "$miro" "$vistas" "$listada" "$respuesta")"; calla; ok $? "si además las listó y no abrió, no son memoria: no dice nada"
 corre "$tmp/casa-memoria" "$(conv e "$pregunta" "$apertura_txt" "$respuesta")"; calla; ok $? "con una apertura ya hecha no dice nada"
 corre "$tmp/casa-memoria" "$(conv e2 "$pregunta" "$apertura_lista" "$respuesta")"; calla; ok $? "también con el resultado en forma de lista"
 corre "$tmp/casa-memoria" "$(conv e3 "$pregunta" "$respuesta")" false "Memoria activa · TuOpinas · método 1.18.2"; calla; ok $? "la respuesta que termina ya abrió, aunque el registro vaya con retraso"

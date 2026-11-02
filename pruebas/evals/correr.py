@@ -186,7 +186,8 @@ def preparar_plugin(origen, trabajo):
 
 def sembrar_scripts(plugin, hogar):
     """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
-    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py"]),
+    # metodo.md también (1.24.8): la apertura mínima lo copia desde $HOME/memoria con METODO_DESCARGA, sin cargar la skill
+    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "metodo.md"]),
                            ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
         d = hogar / destino
         d.mkdir(parents=True, exist_ok=True)
@@ -494,6 +495,18 @@ def _(ctx, arg):
     return True, f"no menciona «{arg}»"
 
 
+@comprobacion("no-menciona-re")
+def _(ctx, arg):
+    """no-menciona-re <regex>[@N]: ninguna respuesta (o la del turno N) casa con la expresión, sin distinguir mayúsculas."""
+    pat, _, n = arg.rpartition("@") if re.search(r"@\d+$", arg) else (arg, "", "")
+    turnos = [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
+    for i, t in enumerate(turnos, 1):
+        m = re.search(pat, texto_de(t), re.I)
+        if m:
+            return False, f"casa en el turno {i}: «{m.group(0)[:60]}»"
+    return True, f"nada casa con «{pat}»"
+
+
 @comprobacion("menciona")
 def _(ctx, arg):
     """menciona <texto>[|<otro>...][@N]: alguna respuesta (o la del turno N) dice alguno de los textos."""
@@ -632,15 +645,6 @@ def _(ctx, arg):
                 if re.search(r"\b(find|ls)\b[^|;&]*\.claude/plugins|\.claude/plugins/\*", cmd):
                     malos.append(cmd[:100])
     return not malos, "ningún comando busca el plugin" if not malos else "; ".join(malos)
-
-
-@comprobacion("cola-resuelta")
-def _(ctx, arg):
-    """cola-resuelta: lo que el cierre resolvió de la cola del tablero de mentira se borró o se marcó con db_write."""
-    tb = ctx.get("tablero")
-    if not tb:
-        return False, "el escenario no tiene tablero"
-    return bool(tb.escritos), f"{len(tb.escritos)} escrituras en la cola"
 
 
 @comprobacion("palabras-maximo")

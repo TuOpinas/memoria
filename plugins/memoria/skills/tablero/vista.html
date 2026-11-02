@@ -2385,6 +2385,10 @@ function afectaDeOtros(){
   for(const a of AREAS){ if(a.legible===false || archivada(a) || !areaMia(a)) continue;
     const re = new RegExp("(?<![\\w/-])"+a.slug.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"/(?![\\w-])");
     for(const q of PROJ){ if(q.restringido) continue; for(const d of (q.decisiones||[])){ if(!re.test(d.afecta||"")) continue;
+      // una decisión registrada en un proyecto tuyo la viste al registrarla, salvo que ese día cerrara sesión otra persona
+      // (la misma regla que el bucle de arriba): si no, volvería como ajena por nombrar tu área
+      if(esMio(q)){ const ses = sesionesTodas(q).filter(x=>x.fecha===d.fecha), otras = ses.filter(x=>x.quien && persona(x.quien)!==yo);
+        if(!(otras.some(x=>persona(x.quien)===persona(d.decidio||"")) || (otras.length && otras.length===ses.length))) continue; }
       suma(q, d, null); const g = por[q.id+"#"+d.id]; if(g && !g.a.some(p=>p.area===a.slug) && !g.ar.includes(a)) g.ar.push(a); } } }
   for(const k in por) if(!por[k].a.length && !por[k].ar.length) delete por[k];
   const out = Object.values(por).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
