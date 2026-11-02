@@ -2410,8 +2410,9 @@ function resumenCalculado(p, piezas){
 // ---- Inicio: Actividad sin «Por proyecto»; el área recibe «Por proyecto» como su sección de actividad. «Personas» pasa a «Quién aporta». ----
 const selPeriodo = (o) => `<div class="hoy-sel" role="group" aria-label="Periodo">${[[7,"Últimos 7 días"],[28,"Últimos 28 días"]].map(([d,l])=>`<button type="button" class="chip${ACT_DIAS===d?" on":""}" data-act-dias="${d}">${l}</button>`).join("")}<span class="more">del ${fmtD(addDays(-(ACT_DIAS-1)))} al ${fmtD(today())}, hoy incluido</span><span class="more" style="margin-left:auto">${kTxt(o)} · ${cuantos(o.proy.size,"proyecto","proyectos")}</span></div>`;
 function tabActividad(){
-  const ev = eventos(addDays(-(ACT_DIAS-1)), true), o = agrega(ev);
-  return {n: 0, html: selPeriodo(o) + actPorArea(ev) + actPersonas(ev)};
+  // los eventos «esc» (documentos escritos) solo los cuenta «Por persona»: solo ahí se generan (1.24.8)
+  const desde = addDays(-(ACT_DIAS-1)), ev = eventos(desde), o = agrega(ev);
+  return {n: 0, html: selPeriodo(o) + actPorArea(ev) + actPersonas(eventos(desde, true))};
 }
 function actPorProyectoArea(ev, ps){
   const esc_ = escribenSet(); ev = ev.map(e=>esc_.has(e.q) ? e : {...e, q:""});   // solo quien escribe en la carpeta
@@ -2494,9 +2495,9 @@ function renderArea(a){
     const tuyo = cuestAbiertos(c=>cuestMio(c) && enA(byId[c.a_proyecto])) + seccionDecidir(enA, false) + seccionCriticas(enA, false) + seccionAfectan(enA);
     body = enfoque2(enA) + (tuyo || `<p class="empty">Nada pendiente de ti en el área.</p>`);
   } else if(tab==="actividad"){
-    const ev = eventos(addDays(-(ACT_DIAS-1)), true).filter(e=>e.p.area===a.slug), o = agrega(ev);
+    const desde = addDays(-(ACT_DIAS-1)), ev = eventos(desde).filter(e=>e.p.area===a.slug), o = agrega(ev);
     const hace30 = addDays(-30), recientes = ps.filter(p=>!p.restringido).flatMap(p=>(p.decisiones||[]).filter(d=>d.tipo!=="cuestionamiento" && d.fecha && d.fecha>=hace30).map(d=>({d,p}))).sort((x,y)=>(y.d.fecha||"").localeCompare(x.d.fecha||""));
-    body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(ev, a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
+    body = selPeriodo(o) + `<section class="card"><h2>Por proyecto</h2>${actPorProyectoArea(ev, ps)}</section>` + actPersonas(eventos(desde, true), a.slug) + `<details class="card mas-c"><summary><h2 style="display:inline">Decidido en el último mes</h2><span class="more"> · ${recientes.length}</span></summary><div style="margin-top:10px">${recientes.length ? decList(recientes, true, 12) : `<p class="empty">Nada en los últimos 30 días.</p>`}</div></details>`;
   } else {
     const vig = ps.flatMap(p => (p.entregables||[]).filter(e=>e.estado==="vigente").map(e=>({p,e}))).sort((x,y)=>(y.e.actualizado||"").localeCompare(x.e.actualizado||""));
     // la misma forma que Qué hay del proyecto: arriba «Lo publicado / En el taller» del área, y debajo, plegado, lo de

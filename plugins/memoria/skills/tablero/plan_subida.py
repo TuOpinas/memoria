@@ -77,25 +77,18 @@ if "--guardada" in sys.argv:
     sys.exit(0)
 
 import datetime
-ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como doc_id
+# lo que la base admite como doc_id y la lectura de un JSON de la base: los de datos.py, junto a este archivo (los dos
+# corren solo en el contenedor)
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from datos import ID_VALIDO, _json, _datos as _datos_base
 
 
 def _opt(n, defecto=None):
     return sys.argv[sys.argv.index(n) + 1] if n in sys.argv and len(sys.argv) > sys.argv.index(n) + 1 else defecto
 
 
-def _json(p):
-    if not p:
-        return None
-    try:
-        d = json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return d
-
-
 def _datos(d):
-    return d.get("data", d) if isinstance(d, dict) and "data" in d else (d if isinstance(d, dict) else {})
+    return _datos_base(d) or {}
 
 
 def _zona(nombre):

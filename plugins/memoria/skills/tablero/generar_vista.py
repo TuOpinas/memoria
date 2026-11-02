@@ -64,15 +64,24 @@ def colaboran_en(quien):
 # que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
 SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
 def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
-    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
-    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    """Las frases del primer párrafo de guia.md sin lo que habla de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis. Dentro de cada parte,
+    se queda lo que va antes de la coma, los dos puntos o la raya que abre lo de la carpeta, si es una frase de tres palabras
+    o más: «Acme fabrica muebles, como dice `guia.md`» deja «Acme fabrica muebles» (1.24.8)."""
     out = []
     for f in frases:
         if not re.search(rx, f):
             out.append(f); continue
-        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
-        quedan = [c for c in partes if c and not re.search(rx, c)]
-        if quedan and len(partes) > 1:
+        quedan = []
+        for c in [c.strip() for c in re.split(r";(?![^()]*\))", f)]:
+            m = re.search(rx, c) if c else None
+            if c and not m:
+                quedan.append(c); continue
+            cortes = [s.start() for s in re.finditer(r"[,:—](?![^()]*\))", c[:m.start()] if m else "")]
+            t = c[:cortes[-1]].strip() if cortes else ""
+            if len(t.split()) >= 3 and not re.search(rx, t):
+                quedan.append(t)
+        if quedan:
             t = "; ".join(quedan); t = t[0].upper() + t[1:]
             out.append(t if t[-1] in ".!?" else t + ".")
     return out

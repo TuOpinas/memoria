@@ -311,6 +311,16 @@ av_ = o.split("=== AVISOS")[1]
 ok(f"ventas/cuentas#{ant_}-12-31-2" in av_ and "LA-SEGUNDA-DEL-DIA" in av_, "la decisión del 31 de diciembre, ya archivada, avisa como nueva y con su «-2» del año anterior")
 ok("LA-PRIMERA-DEL-DIA" not in av_, "la primera del día, que no nombra el proyecto, no avisa")
 
+print("El primer párrafo de guia.md con lo de la carpeta en la misma frase (1.24.8)")
+# sin «;»: se queda lo que dice qué es la organización y no se pide escribirlo; si la frase solo habla de la carpeta, sí
+RP = tmp / "raiz-parrafo"; shutil.copytree(AQUI.parent / "tablero" / "raiz", RP)
+gp_ = (RP / "guia.md").read_text(encoding="utf-8")
+for p1_, pide in (("Acme fabrica muebles para oficinas en Monterrey, como explica `guia.md`.", False),
+                  ("Sigue el método del plugin `memoria`, porque la ventaja es la misma.", True)):
+    (RP / "guia.md").write_text(gp_.replace("Raíz inventada para probar el tablero. Ningún dato es real.", p1_), encoding="utf-8")
+    o = subprocess.run([sys.executable, str(ABRIR), str(RP), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+    ok(("no dice qué es la organización" in o) == pide, f"«{p1_[:40]}…»: {'se pide escribirlo' if pide else 'no se pide'}")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
