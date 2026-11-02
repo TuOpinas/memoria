@@ -275,13 +275,12 @@ try:
     r = subprocess.run([sys.executable, str(BARRIDO), str(raiz), str(sal), "--cola", str(cola2), "--hoy", "2026-10-23"], capture_output=True, text=True)
     r = subprocess.run([sys.executable, str(PLAN), str(sal), str(tmp / "volcado")], capture_output=True, text=True)
     plan = _plan(r.stdout)
-    ops = [e for lote in plan["lotes"] for e in lote]
+    ops = plan["ops"]
     sets = [e for e in ops if e["op"] == "set" and e["collection"] == "cambios"]
     dels = [e for e in ops if e["op"] == "delete" and e["collection"] == "cambios"]
-    ok(len(sets) == len(docs) - 1 and all(e["doc_id"].startswith("prop-") and not e["existe"] and pathlib.Path(e["file_path"]).exists() for e in sets), "las propuestas nuevas van como «set» en «cambios», con su archivo")
+    ok(len(sets) == len(docs) - 1 and all(e["doc_id"].startswith("prop-") and pathlib.Path(e["file_path"]).exists() for e in sets), "las propuestas nuevas van como «set» en «cambios», con su archivo")
     ok(dels == [{"op": "delete", "collection": "cambios", "doc_id": idv, "if_version": 7}], "la que ya no vale va como «delete» con la versión leída")
     ok(ops[-1]["collection"] == "meta" and ops[-1]["doc_id"] == "estado", "meta/estado sigue yendo la última")
-    ok(plan["propuestas"] == {"nuevas": len(docs) - 1, "retiradas": 1}, "el plan cuenta las propuestas")
 
     print("la cola con tope y caducidad (1.22.1)")
     rz = tmp / "raiz-tope"

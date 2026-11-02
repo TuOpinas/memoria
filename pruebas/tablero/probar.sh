@@ -50,6 +50,9 @@ casos += [(j("ana", "proyectos", "ventas--cuentas").get("escribe") is True and j
           (j("carla", "meta", "estado").get("tablero_de") == "" and j("carla", "proyectos", "ventas--cuentas").get("escribe") is True, "quien solo colabora y no tiene nombre en la carpeta: el tablero no es de nadie más (no sale la responsable), y sí sabe dónde escribe"),
           (j("eva", "meta", "estado").get("tablero_de") == "", "ni se cuela el responsable con su nota entre paréntesis"),
           (j("dani", "meta", "estado").get("tablero_de") == "Dani Prueba" and j("dani", "proyectos", "operacion--soporte").get("escribe") is True, "quien colabora en un proyecto tiene el nombre que le da su línea «Colabora:»")]
+# 1.24.8: la cuenta que monta el tablero, para «por» de lo que marca su dueño, y las áreas donde es responsable o colabora
+casos += [(j("ana", "meta", "estado").get("cuenta") == "ana@ejemplo.test" and j("completo", "meta", "estado").get("cuenta") == "", "el tablero sabe la cuenta de quien lo monta, y sin --cuenta queda vacía (1.24.8)"),
+          (j("ana", "areas", "ventas").get("escribe") is True and j("carla", "areas", "ventas").get("escribe") is True and j("beto", "areas", "ventas").get("escribe") is False and "escribe" not in j("completo", "areas", "ventas"), "el área dice si la cuenta es su responsable o colabora en ella (1.24.8)")]
 for c, q in casos: print(("  bien  " if c else "  FALLA ") + q)
 sys.exit(0 if all(c for c, _ in casos) else 1)
 PY2
@@ -77,6 +80,8 @@ python3 "$AQUI/probar_datos.py"
 python3 "$AQUI/probar_que_hay.py"
 python3 "$AQUI/probar_que_es.py"
 python3 "$AQUI/probar_resumenes.py"
+# el cambio de año: registros archivados del año anterior (1.24.8)
+python3 "$AQUI/probar_anio.py"
 # la apertura de sesión en una llamada (skill sesion, abrir.py), contra la misma raíz inventada
 python3 "$AQUI/../sesion/probar_abrir.py"
 python3 "$AQUI/../sesion/probar_cuentas.py"

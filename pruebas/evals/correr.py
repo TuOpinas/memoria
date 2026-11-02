@@ -195,7 +195,7 @@ def sembrar_scripts(plugin, hogar):
 
 
 # ---------- la conversación ----------
-async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
+async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, TextBlock, ToolResultBlock, ToolUseBlock, UserMessage
 
     # la conversación es de un proyecto de Claude (como en el uso real); la cuenta es la de quien corre el eval, y la
@@ -207,7 +207,7 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
         anexo = f"# userEmail\nThe user's email address is {correo}.\n" + anexo
     opciones = ClaudeAgentOptions(
         system_prompt={"type": "preset", "preset": "claude_code", "append": anexo},
-        mcp_servers={"remote-devices": disp.servidor()},
+        mcp_servers={"remote-devices": disp.servidor(), **({"claude-artifacts": tablero.servidor()} if tablero else {})},
         plugins=[{"type": "local", "path": str(plugin)}],
         permission_mode="bypassPermissions",
         model=ALIAS.get(modelo, modelo) if modelo else None,
@@ -611,6 +611,38 @@ def _(ctx, arg):
     return n == 0, f"{arg}: {n} llamadas"
 
 
+@comprobacion("skill")
+def _(ctx, arg):
+    """skill <nombre> <N>: la skill se cargó exactamente N veces (con la herramienta Skill; 1.24.8). La apertura mínima no
+    carga «sesion» (0) y la completa la carga una vez (1)."""
+    nombre, _, n = arg.rpartition(" ")
+    c = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"] == "Skill" and str((h["entrada"] or {}).get("skill", "")).split(":")[-1] == nombre)
+    return c == int(n), f"{nombre}: {c} cargas (se esperaban {n})"
+
+
+@comprobacion("sin-buscar-plugin")
+def _(ctx, arg):
+    """sin-buscar-plugin: ningún comando busca el plugin en disco (find, ls o un glob bajo .claude/plugins) para correr algo
+    desde ahí: en modo Auto la app lo frena con un permiso (1.24.7)."""
+    malos = []
+    for t in ctx["turnos"]:
+        for h in t["herramientas"]:
+            if h["nombre"].endswith(("Bash", "device_bash")):
+                cmd = str((h["entrada"] or {}).get("command", ""))
+                if re.search(r"\b(find|ls)\b[^|;&]*\.claude/plugins|\.claude/plugins/\*", cmd):
+                    malos.append(cmd[:100])
+    return not malos, "ningún comando busca el plugin" if not malos else "; ".join(malos)
+
+
+@comprobacion("cola-resuelta")
+def _(ctx, arg):
+    """cola-resuelta: lo que el cierre resolvió de la cola del tablero de mentira se borró o se marcó con db_write."""
+    tb = ctx.get("tablero")
+    if not tb:
+        return False, "el escenario no tiene tablero"
+    return bool(tb.escritos), f"{len(tb.escritos)} escrituras en la cola"
+
+
 @comprobacion("palabras-maximo")
 def _(ctx, arg):
     """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
@@ -674,8 +706,20 @@ def correr(e, plugin, version, modelo, salida):
     cwd = trabajo / "conversacion"; cwd.mkdir()
     transcripcion = salida / f"{e['nombre']}.md"
     transcripcion.write_text(f"# {e['nombre']} · {modelo or 'modelo por defecto'} · plugin {version} · {HOY}\n\n{e['descripcion']}\n", encoding="utf-8")
-    turnos, medidas = asyncio.run(conversar(e, disp, plugin, modelo, cwd, transcripcion))
-    ctx = {"turnos": turnos, "antes": antes, "antes_textos": antes_textos, "raiz": raiz, "dispositivo": disp}
+    # el tablero de mentira (1.24.8), con la cola que trae el escenario
+    tablero = None
+    if e.get("tablero"):
+        from tablero_falso import TableroFalso
+        tablero = TableroFalso(json.loads((AQUI / "escenarios" / e["tablero"]).read_text(encoding="utf-8")))
+    # un aviso de arranque sin la descarga, como donde el hook no tiene python3 (1.24.8): una copia del plugin cuyo hook no la prepara
+    if e.get("aviso") == "sin-descarga":
+        variante = trabajo / "plugin-sin-descarga" / "memoria"
+        shutil.copytree(plugin, variante)
+        h = variante / "hooks" / "arranque.sh"
+        h.write_text(h.read_text(encoding="utf-8").replace('[ -f "$RAIZ/preparar.py" ]', 'false'), encoding="utf-8")
+        plugin = variante
+    turnos, medidas = asyncio.run(conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero))
+    ctx = {"turnos": turnos, "antes": antes, "antes_textos": antes_textos, "raiz": raiz, "dispositivo": disp, "tablero": tablero}
     resultado = {"escenario": e["nombre"], "modelo": modelo, "plugin": version, "fecha": HOY, "consola": e["consola"],
                  "medidas": medidas, "archivos_cambiados": cambiados(antes, turnos[-1]["huellas"]) if turnos else [],
                  "comprobaciones": comprobar(e, ctx), "errores": [t["error"] for t in turnos if t.get("error")],

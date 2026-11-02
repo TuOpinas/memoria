@@ -1,0 +1,9 @@
+# Apertura mínima
+
+Anexo de la skill `sesion`. El aviso de arranque del plugin inyecta el bloque de abajo en cada conversación (`hooks/arranque.sh` lo lee de aquí: una sola fuente), así que la apertura mínima se hace sin cargar la skill. Lo que no cabe aquí, como copiar `metodo.md`, migrar, revisar los permisos o abrir un proyecto, lo pide la sección RESPUESTA de `abrir.py` y lo dice `SKILL.md`.
+
+Apertura mínima, sin cargar la skill sesion. Es la primera respuesta de toda conversación con una carpeta de memoria conectada, sea cual sea la petición:
+1. Un solo ToolSearch con get_device_info y device_bash. Con get_device_info, una carpeta conectada con guia.md y metodo.md en su primer nivel es una raíz. Sin ninguna, no se dice nada de esto.
+2. Por cada raíz, una llamada a device_bash: lo que va detrás de «DESCARGA » (al final de este aviso) seguido de ` && python3 abrir.py "<ruta de la raíz que da get_device_info>" --minima --cuenta <correo de la cuenta> --plugin "<la línea METODO sin «METODO »>" --origen "<la misma ruta>"`. Si la comprobación falla, se repite una vez con `main` en lugar de `v<versión>` en sus dos direcciones. Si este aviso no trae DESCARGA o la consola no ve la carpeta, se carga la skill sesion y se sigue su «Apertura mínima».
+3. Se hace lo que dice su sección RESPUESTA y nada más. Trae el recuadro con el que empieza la respuesta y, en orden, lo que toca antes y después de responder. Si hay SendUserMessage, el recuadro y la respuesta van con él antes de una herramienta de preguntas.
+4. Si la petición es trabajo de un proyecto, aunque no lo nombre (cambiar el código de un repositorio conectado, un problema que alguien reporta, algo para un cliente), se carga la skill sesion y se abre su sesión completa, sin repetir el recuadro y sin la apertura mínima antes si aún no se hizo. La puesta al día programada del tablero no hace ninguna de las dos.

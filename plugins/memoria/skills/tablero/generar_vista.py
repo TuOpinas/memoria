@@ -1347,6 +1347,9 @@ for a in areas_guia:
         "lectores": a["lectores"], "restringido": a["restringida"], "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
+    if CUENTA_TABLERO:
+        # la cuenta es responsable o colabora en el área (1.24.8): le llega lo que se decide para el área entera
+        area_doc["escribe"] = CUENTA_TABLERO in set().union(*cuentas(a["cuenta"])[:2])
     if texto is None:
         area_doc["legible"] = False
         # por qué no se muestra. Lo que declara guia.md manda sobre lo que se ve en el disco: Drive no baja a la
@@ -1525,7 +1528,7 @@ for a in areas_guia:
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # las decisiones de otros proyectos que alguien aceptó desde este, con quién: el cierre lo cuenta en «Avances» como
-        # «Aceptada `area/proyecto#AAAA-MM-DD`» (cerrar.md, paso 0). Del texto entero, para que la página no dependa del
+        # «Aceptada `area/proyecto#AAAA-MM-DD`» (sesion, anexo cola.md). Del texto entero, para que la página no dependa del
         # recorte de los Avances (revisión de la 1.24)
         _acep = []
         for s_ in reales:
@@ -1681,6 +1684,9 @@ if not _de and CUENTA_TABLERO:
         _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
 docs["meta"]["estado"]["sin_cuenta"] = not CUENTA_TABLERO
+# la cuenta de quien monta el tablero (1.24.8): la página la apunta en «por» de lo que marca su dueño. Es su propio correo y
+# el tablero no se comparte; vacío si no se sabe (siempre, porque meta/estado se sube como update)
+docs["meta"]["estado"]["cuenta"] = CUENTA_TABLERO
 # si la cuenta del tablero responde por el contexto: por su correo en la línea, o por el nombre de un área que es suya; la
 # página no compara nombres (revisión 1.22.4, segunda vuelta)
 _ctx_correos = {c.lower() for c in CORREO.findall(contexto_raw or "")}

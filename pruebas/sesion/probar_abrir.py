@@ -135,6 +135,25 @@ c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella f8f1
 ok("Veredicto: AL DIA" in o, "misma versión y misma huella: AL DIA")
 c, o = abrir("--plugin", "# Método de trabajo · versión 1.14.9 · huella 000000")
 ok("Veredicto: MISMA VERSION, HUELLA DISTINTA" in o, "misma versión con otra huella: no se toca")
+print("La respuesta de la apertura mínima, ya decidida (1.24.8)")
+PL = "# Método de trabajo · versión 99.0.0 · huella abc1234"
+_, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--plugin", PL, "--origen", "/Users/ana/Library/CloudStorage/GoogleDrive-ana@ejemplo.test/Shared drives/Prueba")
+r_ = o.split("=== RESPUESTA")[1] if "=== RESPUESTA" in o else ""
+ok(r_.startswith(" (la apertura mínima") and o.rindex("=== RESPUESTA") > o.rindex("=== CLAUDE OUTPUTS"), "la mínima termina con su RESPUESTA")
+ok("| Memoria de trabajo · Organización de prueba · v99.0.0 |\n|---|" in r_, "el recuadro con la organización y la versión que quedará tras copiar metodo.md")
+ok("**Claude outputs:** 2 archivos sueltos" in r_ and "uno parece confidencial" in r_, "la fila de «Claude outputs», con lo que parece confidencial por su nombre")
+ok("copia el metodo.md del plugin" in r_ and "Permisos de Drive" in r_ and "¿Coloco ahora lo que hay en Claude outputs?" in r_, "los pasos: copiar el método, los permisos y la pregunta del final")
+ok(r_.index("copia el metodo.md") < r_.index("Responde a lo que se pidió") < r_.index("¿Coloco ahora"), "en orden: antes de responder, responder, y al final")
+ok("ventas/cuentas" not in r_, "la respuesta no repite la lista de proyectos")
+_, o = abrir("--minima", "--cuenta", "beto@ejemplo.test", "--plugin", "# Método de trabajo · versión 1.0.0 · huella abc1234")
+r_ = o.split("=== RESPUESTA")[1]
+ok("Claude outputs" not in r_ and "copia el metodo.md" not in r_ and "Permisos" not in r_, "a otra cuenta, con el plugin atrasado: sin Claude outputs, sin copiar y sin permisos")
+ok("**Método:** esta carpeta usa una versión del método más nueva que la de tu Claude" in r_, "el plugin atrasado es una fila del recuadro")
+_, o = abrir("--minima", "--cuenta", "nadie@ejemplo.test")
+ok("No escribes en ninguna área: dime en cuál trabajas." in o.split("=== RESPUESTA")[1], "una cuenta sin área lo dice en una fila")
+_, o = abrir("--minima", "--cuenta", "ana@ejemplo.test")
+ok(all(len(l) <= 140 for l in o.split("=== PROYECTOS POR ÁREA")[1].split("=== CLAUDE")[0].splitlines()), "en la mínima, cada proyecto en una línea corta")
+
 print("La revisión de permisos al abrir (1.24.2)")
 G = "/Users/ana/Library/CloudStorage/GoogleDrive-ana@ejemplo.test/Shared drives/Prueba"
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--origen", G)
@@ -270,6 +289,27 @@ ok("(ninguna)" not in dec_ and "## 2026-" in dec_, "las decisiones más reciente
 (pc_ / f"decisiones-{anio_}.md").rename(pc_ / "decisiones-2019.md")
 o = subprocess.run([sys.executable, str(ABRIR), str(RA), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
 ok("operacion/soporte#2026-09-25" not in o.split("=== AVISOS")[1], "un cuestionamiento cuya respuesta está en un archivado de hace años no reaparece como abierto")
+
+print("El cambio de año (1.24.8)")
+# el 1 de enero: el registro del año anterior ya se archivó y su último día tiene dos entradas. La segunda sigue siendo
+# «-2», sale como nueva para quien no ha abierto sesión desde entonces y su aviso cita el identificador con el año viejo
+RY = tmp / "raiz-anio"
+shutil.copytree(AQUI.parent / "tablero" / "raiz", RY)
+ant_ = str(int(time.strftime("%Y")) - 1)
+pv_ = RY / "ventas/cuentas"
+(pv_ / f"decisiones-{ant_}.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n"
+    f"## {ant_}-12-31 · LA-SEGUNDA-DEL-DIA\nDecidió: Ana Prueba\nPor qué: cierre de año.\nAfecta a: operacion/soporte (cambia el horario)\n\n"
+    f"## {ant_}-12-31 · LA-PRIMERA-DEL-DIA\nDecidió: Ana Prueba\nPor qué: cierre de año.\n", encoding="utf-8")
+(pv_ / "decisiones.md").write_text(f"---\nestado: vigente\n---\n# Decisiones\n\nArchivado: decisiones-{ant_}.md.\n", encoding="utf-8")
+ps_ = RY / "operacion/soporte/sesiones.md"
+ps_.write_text(re.sub(r"## 20\d\d-", f"## {int(ant_) - 1}-", ps_.read_text(encoding="utf-8")), encoding="utf-8")
+for d, _, fs in os.walk(RY):
+    for f in fs:
+        os.utime(os.path.join(d, f), (viejo, viejo))
+o = subprocess.run([sys.executable, str(ABRIR), str(RY), "operacion/soporte"], capture_output=True, text=True).stdout
+av_ = o.split("=== AVISOS")[1]
+ok(f"ventas/cuentas#{ant_}-12-31-2" in av_ and "LA-SEGUNDA-DEL-DIA" in av_, "la decisión del 31 de diciembre, ya archivada, avisa como nueva y con su «-2» del año anterior")
+ok("LA-PRIMERA-DEL-DIA" not in av_, "la primera del día, que no nombra el proyecto, no avisa")
 
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")

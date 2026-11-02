@@ -359,7 +359,7 @@ def publicar(trabajo, args):
     ahora = json.loads(json.dumps(antes))
     estado = dict(antes["estado"] or {})
     ops_marcas, sin_traer = [], []
-    for e in [x for lote in plan.get("lotes") or [] for x in lote]:
+    for e in plan.get("ops") or []:
         col, doc, op = e.get("collection"), e.get("doc_id"), e.get("op")
         data = _datos(_json(e["file_path"])) if e.get("file_path") else None
         if op in ("set", "update") and data is None:

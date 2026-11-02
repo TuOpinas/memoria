@@ -244,28 +244,25 @@ volcado = TRAB / "volcado"
 shutil.rmtree(volcado, ignore_errors=True)
 shutil.copytree(salida, volcado, ignore=shutil.ignore_patterns("indice.json", "enfoque-candidatos.json"))
 plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
-escr = [e for l in plan["lotes"] for e in l]
+escr = plan["ops"]
 ok([(e["collection"], e["doc_id"], e["op"]) for e in escr] == [("meta", "estado", "update")], "plan: sin cambios, solo se sube meta/estado (como update)")
 vacio = TRAB / "vacio"; vacio.mkdir(exist_ok=True)
 plan0 = _plan(subprocess.run([sys.executable, PLAN, salida, vacio], capture_output=True, text=True).stdout)
-e0 = [e for l in plan0["lotes"] for e in l]
-ok(all(e["op"] == "set" and not e["existe"] for e in e0) and len(e0) == len(json.loads((salida / "indice.json").read_text())), "plan: con la base vacía (al montar) todo va como set, también meta/estado")
+e0 = plan0["ops"]
+ok(all(e["op"] == "set" for e in e0) and len(e0) == len(json.loads((salida / "indice.json").read_text())), "plan: con la base vacía (al montar) todo va como set, también meta/estado")
 uno = sorted((volcado / "proyectos").glob("*.json"))[0]
 d = json.loads(uno.read_text(encoding="utf-8")); d["huella"] = "otra"; uno.write_text(json.dumps(d), encoding="utf-8")
 (volcado / "proyectos" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
 plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
-escr = [e for l in plan["lotes"] for e in l]
-ok(any(e["doc_id"] == uno.stem and e["op"] == "set" and e["existe"] for e in escr), "plan: un proyecto que cambió se sube entero, marcado como existente")
+escr = plan["ops"]
+ok(any(e["doc_id"] == uno.stem and e["op"] == "set" for e in escr), "plan: un proyecto que cambió se sube entero")
 ok(any(e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: un proyecto que ya no sale de la raíz se borra")
 (volcado / "detalle").mkdir(exist_ok=True); (volcado / "detalle" / "ya-no-existe.json").write_text(json.dumps({"huella": "h"}), encoding="utf-8")
 plan = _plan(subprocess.run([sys.executable, PLAN, salida, volcado], capture_output=True, text=True).stdout)
-escr = [e for l in plan["lotes"] for e in l]
+escr = plan["ops"]
 ok(any(e["collection"] == "detalle" and e["doc_id"] == "ya-no-existe" and e["op"] == "delete" for e in escr), "plan: el detalle de un proyecto que ya no sale también se borra (1.19)")
-ids = [(e["collection"], e["doc_id"]) for e in e0]
-ok(all(("detalle", d) not in ids or ids.index(("detalle", d)) == ids.index(("proyectos", d)) + 1 for _, d in ids if _ == "proyectos"), "plan: el detalle de un proyecto va justo después de su proyecto, para caer en el mismo lote")
 ok(all(pathlib.Path(e["file_path"]).is_file() for e in escr if e["op"] != "delete"), "plan: cada escritura apunta a un archivo que existe")
-ok(all(len(l) <= 50 for l in plan["lotes"]), "plan: ningún lote pasa de 50 entradas")
-ok([e for l in plan["lotes"] for e in l][-1]["doc_id"] == "estado", "plan: meta/estado va el último, para que un lote que falla no deje la huella nueva")
+ok(plan["ops"][-1]["doc_id"] == "estado" and all(set(e) <= {"op", "collection", "doc_id", "file_path", "if_version"} for e in plan["ops"]), "plan: una sola lista, sin lotes ni campos que nadie lee, con meta/estado al final (1.24.8)")
 
 # sin consola el inventario corre en el contenedor minutos después: con --instante, el instante es el de inicio.json
 _ini = TRAB / "inicio.json"; _ini.write_text(json.dumps({"inicio": "2026-10-24T15:00:00+00:00"}), encoding="utf-8")

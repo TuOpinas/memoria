@@ -54,7 +54,7 @@ else
   QUE="Esta conversación tiene carpetas conectadas y todavía no se comprobó si alguna es una carpeta de memoria (con guia.md y metodo.md en su primer nivel)."
 fi
 mkdir -p "$SELLOS" 2>/dev/null && : > "$SELLOS/$SID" 2>/dev/null || exit 0
-TEXTO="$MARCA $QUE Haz ahora la apertura mínima de la skill sesion de memoria; si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta solo el recuadro «Memoria de trabajo · …», la pregunta de la estructura si ESTRUCTURA dice ANTERIOR, y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
+TEXTO="$MARCA $QUE Haz ahora la apertura mínima de memoria, como la trae el aviso de arranque (anexo minima.md de la skill sesion); si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta lo que pide la sección RESPUESTA de abrir.py (el recuadro y sus preguntas), menos «Responde a lo que se pidió», que ya está, y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
 j=$TEXTO
 j=${j//\\/\\\\}
 j=${j//\"/\\\"}

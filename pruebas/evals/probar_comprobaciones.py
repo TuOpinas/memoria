@@ -55,5 +55,16 @@ ok(not cita(bien.replace(f"> {H} · **Todo bien.**\n> - **Siguiente:** z.", f"``
 ok(not cita(bien.replace(H, "2025-01-01"), False, H)[0], "una entrada vieja citada no cuenta como la de hoy")
 ok(cita(bien.replace("Decisiones\n", "**Decisiones**\n").replace("Bitácora\n", "**Bitácora**\n"), True, H)[0], "las palabras en negrita valen")
 ok(not cita(bien.replace("\nBitácora\n", "\n"), False, H)[0], "sin «Bitácora» no vale")
+
+print("Cargas de skill y búsquedas del plugin (1.24.8)")
+reg = {}
+g2 = {"re": re, "comprobacion": lambda n: (lambda f: reg.__setitem__(n, f) or f)}
+exec(src[src.index('@comprobacion("skill")'):src.index('@comprobacion("cola-resuelta")')], g2)
+H_ = lambda n, e: {"nombre": n, "entrada": e}
+ctx = {"turnos": [{"herramientas": [H_("Skill", {"skill": "memoria:sesion"}), H_("mcp__remote-devices__device_bash", {"command": "cd $HOME/memoria && python3 abrir.py x"})]}]}
+ok(reg["skill"](ctx, "sesion 1")[0] and not reg["skill"](ctx, "sesion 0")[0], "cuenta las cargas de una skill con su prefijo de plugin")
+ok(reg["sin-buscar-plugin"](ctx, "")[0], "abrir.py desde $HOME/memoria no es buscar el plugin")
+ctx["turnos"][0]["herramientas"].append(H_("Bash", {"command": "find /root/.claude/plugins -path '*/memoria*/skills/tablero'"}))
+ok(not reg["sin-buscar-plugin"](ctx, "")[0], "un find bajo .claude/plugins sí")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
