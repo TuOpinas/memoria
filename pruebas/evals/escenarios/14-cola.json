@@ -1,0 +1,46 @@
+{
+  "organizacion": "Organización de prueba",
+  "cambios": [
+    {
+      "id": "r1",
+      "data": {
+        "tipo": "respuesta",
+        "proyecto": "ventas--cuentas",
+        "decision": "operacion/soporte#2026-07-20",
+        "titulo": "El soporte atiende de 9 a 18",
+        "decidio": "Beto Prueba",
+        "valor": "aceptada",
+        "estado": "pendiente",
+        "creado": "2026-07-30T10:00:00-06:00"
+      }
+    },
+    {
+      "id": "r2",
+      "data": {
+        "tipo": "respuesta",
+        "proyecto": "ventas--cuentas",
+        "decision": "operacion/soporte#2026-07-21",
+        "titulo": "Los tickets se cierran a las 48 horas sin respuesta",
+        "decidio": "Beto Prueba",
+        "valor": "aceptada",
+        "estado": "pendiente",
+        "creado": "2026-07-30T10:01:00-06:00"
+      }
+    },
+    {
+      "id": "r3",
+      "data": {
+        "tipo": "respuesta",
+        "proyecto": "ventas--cuentas",
+        "decision": "operacion/soporte#2026-07-22",
+        "titulo": "Las cuentas grandes no tienen línea directa",
+        "decidio": "Beto Prueba",
+        "valor": "cuestionada",
+        "porque": "Cliente Uno pide línea directa en la propuesta",
+        "por": null,
+        "estado": "pendiente",
+        "creado": "2026-07-30T10:02:00-06:00"
+      }
+    }
+  ]
+}

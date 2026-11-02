@@ -15,7 +15,9 @@ comprobar:
   - llamadas-maximo 12
   - palabras-maximo 520
   - sin-ingles
+  - skill sesion 1
+  - sin-buscar-plugin
 ---
 Trabajo de un proyecto sin nombrarlo: la pregunta es de `ventas/cuentas` (Cliente Uno). Debe abrir la sesión completa
 de ese proyecto antes de responder (abrir.py con el proyecto, no solo la apertura mínima), responder con lo que dice la
-carpeta y no escribir nada más que `metodo.md` (la raíz de prueba está atrasada): abrir solo lee.
+carpeta y no escribir nada más que `metodo.md` (la raíz de prueba está atrasada): abrir solo lee. La skill `sesion` se carga una sola vez (1.24.8), y `abrir.py` corre directo con el proyecto.

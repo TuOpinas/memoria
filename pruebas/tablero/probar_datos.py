@@ -58,7 +58,7 @@ try:
     pend = lee(t1 / "cola" / "prop-decision-sin-registrar-pend.json")
     ok(pend["version"] is None and pend["data"]["estado"] == "pendiente", "una pendiente de la 1.24.0 pasa al archivo y su documento de la base sobra")
     rc, out, err = corre(PLAN, t1 / "salida", t1 / "base", "--cierres", t1 / "cierres")
-    ok(rc == 0 and "lotes" not in json.loads(out) and (t1 / "salida" / "plan.json").exists(), "el plan va a plan.json y por la conversación solo pasa el resumen")
+    ok(rc == 0 and "ops" not in json.loads(out) and (t1 / "salida" / "plan.json").exists(), "el plan va a plan.json y por la conversación solo pasa el resumen")
     rc, out, err = corre(DATOS, "publicar", t1)
     ok(rc != 0 and "--vista" in err, "la primera vez no se publica sin la página: la de antes no sabe leer los archivos")
     rc, out, err = corre(DATOS, "publicar", t1, "--vista", VISTA)
@@ -124,7 +124,7 @@ try:
     # una regeneración que no cambia ningún documento pero sí la huella de la raíz publica estado.json: si no, la siguiente regeneraría otra vez
     t4 = tmp / "t4"; shutil.copytree(t2, t4)
     rc, out, err = corre(DATOS, "base", t4, f"tablero={pub / 'tablero.json'}", f"propuestas={pub / 'propuestas.json'}", *PRO, *DET)
-    pl = {"lotes": [[{"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str(t4 / "e.json")}]]}
+    pl = {"ops": [{"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str(t4 / "e.json")}]}
     (t4 / "e.json").write_text(json.dumps({"huella_raiz": "otra-huella", "sincronizado": "2026-10-31T10:00-06:00"}), encoding="utf-8")
     shutil.rmtree(t4 / "salida", ignore_errors=True); (t4 / "salida").mkdir(); (t4 / "salida" / "plan.json").write_text(json.dumps(pl), encoding="utf-8")
     rc, out, err = corre(DATOS, "publicar", t4)
@@ -217,7 +217,7 @@ try:
             if data is not None:
                 f = t / f"op{i}.json"; f.write_text(json.dumps({"id": doc, "data": data}), encoding="utf-8"); e["file_path"] = str(f)
             lot.append(e)
-        (t / "salida" / "plan.json").write_text(json.dumps({"lotes": [lot]}), encoding="utf-8")
+        (t / "salida" / "plan.json").write_text(json.dumps({"ops": lot}), encoding="utf-8")
         rc, out, err = corre(DATOS, "publicar", t)
         return rc, (json.loads(out) if rc == 0 else {"archivos": [], "base": []}), err
     pid1 = next(p.stem for p in (t1 / "salida" / "detalle").glob("*.json"))

@@ -46,6 +46,9 @@ done
 ELEGIDAS=""
 grep -Fq '"text":"<system-reminder>\nThe user picked these folders on their computer' "$T" \
   && ! grep -Eq '"type":"tool_use","id":"[^"]*","name":"[^"]*(get_device_info|device_list_dir)"' "$T" && ELEGIDAS=1
+# o get_device_info ya listó carpetas conectadas que la consola no monta (Google Drive en Windows, 1.24.8): se comprobó que
+# hay carpetas, no que ninguna sea una memoria
+[ -z "$RAIZ_LOCAL$ELEGIDAS" ] && grep -Eq '\\"connectedFolders\\":\[\\"' "$T" && ! grep -Eq '"type":"tool_use","id":"[^"]*","name":"[^"]*(device_list_dir|device_stage_files)"' "$T" && ELEGIDAS=1
 [ -n "$RAIZ_LOCAL$ELEGIDAS" ] || exit 0
 
 if [ -n "$RAIZ_LOCAL" ]; then
@@ -54,7 +57,7 @@ else
   QUE="Esta conversación tiene carpetas conectadas y todavía no se comprobó si alguna es una carpeta de memoria (con guia.md y metodo.md en su primer nivel)."
 fi
 mkdir -p "$SELLOS" 2>/dev/null && : > "$SELLOS/$SID" 2>/dev/null || exit 0
-TEXTO="$MARCA $QUE Haz ahora la apertura mínima de la skill sesion de memoria; si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta solo el recuadro «Memoria de trabajo · …», la pregunta de la estructura si ESTRUCTURA dice ANTERIOR, y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
+TEXTO="$MARCA $QUE Haz ahora la apertura mínima de memoria, como la trae el aviso de arranque; si ese aviso no la trajo, carga la skill sesion y lee su anexo minima.md. Si ninguna carpeta lo es, basta con haberlo comprobado y no digas nada de esto. Si la abres, añade a tu respuesta lo que pide la sección RESPUESTA de abrir.py (el recuadro y sus preguntas, también la de la estructura, sola después del recuadro), menos «Responde a lo que se pidió», que ya está, y lo que cambie lo que ya respondiste; si la petición era trabajo de un proyecto, abre también su sesión. Este recordatorio no se repite en esta conversación."
 j=$TEXTO
 j=${j//\\/\\\\}
 j=${j//\"/\\\"}

@@ -41,15 +41,15 @@ try:
     rc, out, err = corre(PLAN, "--cierre", base, tmp / "salida", "--sincronizado", sinc, "--cierres", cierres.parent, "--inicio", trab / "inicio.json",
                          "--llamadas", "9", "--retenidos", tmp / "ret.json", "--ajenos", tmp / "aj.json", "--pagina", '{"version": "1.21.0", "desde": "1.20.1"}', "--tarea-desfasada", "false")
     res = _plan(out) if rc == 0 else {}
-    lote = (res.get("lotes") or [[]])[0]
+    lote = res.get("ops") or []
     meta = json.loads((tmp / "salida" / "meta" / "estado.json").read_text(encoding="utf-8")) if rc == 0 else {}
-    ok(rc == 0 and len(res["lotes"]) == 1 and lote[-1] == {"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str((tmp / "salida" / "meta" / "estado.json").resolve())}, f"un solo lote que termina en meta/estado como update sin if_version ({err[-200:]})")
+    ok(rc == 0 and lote and lote[-1] == {"op": "update", "collection": "meta", "doc_id": "estado", "file_path": str((tmp / "salida" / "meta" / "estado.json").resolve())}, f"termina en meta/estado como update sin if_version ({err[-200:]})")
     ok(sorted((e["doc_id"], e["if_version"]) for e in lote[:-1] if e["op"] == "delete" and e["collection"] == "cierres") == [("c-futura", 5), ("c-igual", 2), ("c-vieja", 1)], "borra las marcas anteriores o iguales al sincronizado (comparadas como instantes) y las del futuro, con su if_version; la posterior se queda")
     ok(meta.get("sincronizado") == sinc and meta.get("cola_retenida") == ["c9"] and meta.get("cola_ajena") == [] and meta.get("llamadas") == 9 and meta.get("pagina_actualizada", {}).get("desde") == "1.20.1" and re.fullmatch(r"20\d\d-\d\d-\d\d", meta["pagina_actualizada"].get("fecha", "")) and meta.get("tarea_desfasada") is False, "meta/estado lleva el sincronizado que imprimió el inventario, la cola, las llamadas y la página con su fecha puesta por el script")
     ok(6.5 <= (meta.get("duracion_min") or 0) <= 8, f"la duración sale de inicio.json ({meta.get('duracion_min')} min)")
     ok("huella_raiz" not in meta and "huellas" not in meta, "no toca las huellas: es un update parcial")
     rc2, out2, _ = corre(PLAN, "--cierre", tmp / "base-vacia", tmp / "salida2", "--sincronizado", sinc)
-    ok(rc2 == 0 and _plan(out2)["lotes"][0][-1]["op"] == "set" and json.loads((tmp / "salida2/meta/estado.json").read_text())["cola_retenida"] == [], "sin base ni archivos de cola, meta/estado va como set con la cola vacía")
+    ok(rc2 == 0 and _plan(out2)["ops"][-1]["op"] == "set" and json.loads((tmp / "salida2/meta/estado.json").read_text())["cola_retenida"] == [], "sin base ni archivos de cola, meta/estado va como set con la cola vacía")
 
     print("plan_subida.py al regenerar: los cierres y lo que cierra van en el último lote, y dice si el enfoque cambió")
     sal = tmp / "sal"
@@ -58,16 +58,16 @@ try:
     escribir(sal / "indice.json", json.dumps([{"coleccion": "meta", "doc_id": "estado", "archivo": "meta/estado.json", "bytes": 10, "huella": "h"}]))
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-vieja"}, "version": 4}))
     rc, out, err = corre(PLAN, sal, base, "--cierres", cierres.parent, "--inicio", trab / "inicio.json", "--llamadas", "14", "--pagina", '{"version": "1.21.0"}')
-    res = _plan(out) if rc == 0 else {}
-    ult = (res.get("lotes") or [[]])[-1]
+    res = json.loads(out) if rc == 0 else {}
+    ult = (_plan(out).get("ops") or []) if rc == 0 else []
     meta = json.loads((sal / "meta" / "estado.json").read_text(encoding="utf-8"))
-    ok(rc == 0 and ult[-1]["collection"] == "meta" and [e["doc_id"] for e in ult if e["collection"] == "cierres"] == ["c-futura", "c-igual", "c-vieja"], f"los delete de cierres van justo antes de meta/estado, en el último lote ({err[-200:]})")
+    ok(rc == 0 and ult[-1]["collection"] == "meta" and [e["doc_id"] for e in ult if e["collection"] == "cierres"] == ["c-futura", "c-igual", "c-vieja"], f"los delete de cierres van justo antes de meta/estado, al final ({err[-200:]})")
     ok(meta.get("llamadas") == 14 and meta.get("pagina_actualizada", {}).get("version") == "1.21.0" and meta["pagina_actualizada"].get("fecha") and 6.5 <= (meta.get("duracion_min") or 0) <= 8 and meta.get("sincronizado") == sinc, "meta/estado del generador gana las llamadas, la duración y la página, y conserva el sincronizado que estampó")
-    ok(res.get("enfoque_cambio") is True and res.get("cierres_borrados") == 3, "dice que el enfoque cambió cuando la huella de los candidatos no es la de la base")
+    ok(res.get("enfoque_cambio") is True and set(res) == {"enfoque_cambio", "enfoque_meta", "escrituras", "no_se_suben", "plan"}, "dice que el enfoque cambió cuando la huella de los candidatos no es la de la base")
     ok(meta.get("huella_candidatos") == "cand-vieja" and json.loads(pathlib.Path(res["enfoque_meta"]).read_text())["huella_candidatos"] == "cand-nueva", "la huella nueva no sube con meta/estado: la deja aparte para que el paso 6 la escriba junto al enfoque")
     escribir(base / "meta" / "estado.json", json.dumps({"data": {"huella_raiz": "h1", "zona": "America/Mexico_City", "huella_candidatos": "cand-nueva"}, "version": 4}))
     rc, out, _ = corre(PLAN, sal, base)
-    ok(json.loads(out).get("enfoque_cambio") is False and json.loads(out).get("cierres_borrados") == 0, "con la misma huella no hay que renovar el enfoque; sin --cierres no borra nada")
+    ok(json.loads(out).get("enfoque_cambio") is False and not any(e["collection"] == "cierres" for e in _plan(out)["ops"]), "con la misma huella no hay que renovar el enfoque; sin --cierres no borra nada")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))

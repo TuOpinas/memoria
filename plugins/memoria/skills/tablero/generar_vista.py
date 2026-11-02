@@ -64,15 +64,24 @@ def colaboran_en(quien):
 # que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
 SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
 def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
-    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
-    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    """Las frases del primer párrafo de guia.md sin lo que habla de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis. Dentro de cada parte,
+    se queda lo que va antes de la coma, los dos puntos o la raya que abre lo de la carpeta, si es una frase de tres palabras
+    o más: «Acme fabrica muebles, como dice `guia.md`» deja «Acme fabrica muebles» (1.24.8)."""
     out = []
     for f in frases:
         if not re.search(rx, f):
             out.append(f); continue
-        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
-        quedan = [c for c in partes if c and not re.search(rx, c)]
-        if quedan and len(partes) > 1:
+        quedan = []
+        for c in [c.strip() for c in re.split(r";(?![^()]*\))", f)]:
+            m = re.search(rx, c) if c else None
+            if c and not m:
+                quedan.append(c); continue
+            cortes = [s.start() for s in re.finditer(r"[,:—](?![^()]*\))", c[:m.start()] if m else "")]
+            t = c[:cortes[-1]].strip() if cortes else ""
+            if len(t.split()) >= 3 and not re.search(rx, t):
+                quedan.append(t)
+        if quedan:
             t = "; ".join(quedan); t = t[0].upper() + t[1:]
             out.append(t if t[-1] in ".!?" else t + ".")
     return out
@@ -1347,6 +1356,9 @@ for a in areas_guia:
         "lectores": a["lectores"], "restringido": a["restringida"], "orden": orden_area,
         "prioridades": [], "actualizado": None, "legible": texto is not None, "proyectos": [],
     }
+    if CUENTA_TABLERO:
+        # la cuenta es responsable o colabora en el área (1.24.8): le llega lo que se decide para el área entera
+        area_doc["escribe"] = CUENTA_TABLERO in set().union(*cuentas(a["cuenta"])[:2])
     if texto is None:
         area_doc["legible"] = False
         # por qué no se muestra. Lo que declara guia.md manda sobre lo que se ve en el disco: Drive no baja a la
@@ -1525,7 +1537,7 @@ for a in areas_guia:
                                       for s_ in reales if fecha_valida(s_["fecha"]) and s_["fecha"] >= _lim28 and "(migracion)" not in (s_.get("titulo") or "")]   # la entrada de la migración no es una sesión y no viaja a la página
         pdoc["ultima_sesion"] = ultima_real
         # las decisiones de otros proyectos que alguien aceptó desde este, con quién: el cierre lo cuenta en «Avances» como
-        # «Aceptada `area/proyecto#AAAA-MM-DD`» (cerrar.md, paso 0). Del texto entero, para que la página no dependa del
+        # «Aceptada `area/proyecto#AAAA-MM-DD`» (sesion, anexo cola.md). Del texto entero, para que la página no dependa del
         # recorte de los Avances (revisión de la 1.24)
         _acep = []
         for s_ in reales:
@@ -1681,6 +1693,9 @@ if not _de and CUENTA_TABLERO:
         _de = _ep["tablero_de"]
 docs["meta"]["estado"]["tablero_de"] = _de
 docs["meta"]["estado"]["sin_cuenta"] = not CUENTA_TABLERO
+# la cuenta de quien monta el tablero (1.24.8): la página la apunta en «por» de lo que marca su dueño. Es su propio correo y
+# el tablero no se comparte; vacío si no se sabe (siempre, porque meta/estado se sube como update)
+docs["meta"]["estado"]["cuenta"] = CUENTA_TABLERO
 # si la cuenta del tablero responde por el contexto: por su correo en la línea, o por el nombre de un área que es suya; la
 # página no compara nombres (revisión 1.22.4, segunda vuelta)
 _ctx_correos = {c.lower() for c in CORREO.findall(contexto_raw or "")}

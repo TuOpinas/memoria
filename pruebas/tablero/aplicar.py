@@ -89,5 +89,15 @@ ok(ps8.get("e1", {}).get("espera") == "Luis Romero" and ps8["e1"].get("decision"
 ps8.pop("e1", None)
 ok(set(ps8) == {"r1", "r2"} and ps8["r1"]["decision"] == "operacion/soporte#2026-10-05" and ps8["r1"]["valor"] == "cuestionada" and ps8["r1"]["porque"].startswith("El tope") and not r8["aplicados"], "una respuesta llega a la sesión con su decisión, su valor y su porqué, sin aplicarse")
 ok({x["id"] for x in r8["rechazados"]} == {"r3", "r4", "r5", "r7"} and [x["id"] for x in r8["para_su_dueno"]] == ["r6"] and antes == (RAIZ / "ventas/cuentas/proyecto.md").read_text(encoding="utf-8"), "una respuesta sin identificador, con otro valor, con saltos de línea o a una decisión que no está se rechaza; la de un área ajena espera a su dueño")
+# quién marcó (1.24.8): «por» llega a la sesión tal cual; lo de antes, sin él, sigue igual; con saltos de línea, se rechaza
+cola.write_text(json.dumps([
+    {"id": "p1", "tipo": "respuesta", "proyecto": "ventas--cuentas", "decision": "operacion/soporte#2026-10-05", "valor": "aceptada", "decidio": "Beto Prueba", "por": "ana@ejemplo.test"},
+    {"id": "p2", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "sin quién marcó"},
+    {"id": "p3", "tipo": "nota", "proyecto": "ventas--cuentas", "nota": "x", "por": "ana@ejemplo.test\n## Decisiones"},
+    {"id": "p4", "tipo": "hecho", "proyecto": "ventas--cuentas", "paso": "x", "nota": "ya", "por": None},
+]), encoding="utf-8")
+r9 = corre("--cuenta", "ana@ejemplo.test"); ps9 = {x["id"]: x for x in r9["para_sesion"]}
+ok(ps9.get("p1", {}).get("por") == "ana@ejemplo.test" and ps9["p1"].get("decidio") == "Beto Prueba" and set(ps9) == {"p1", "p2", "p4"} and ps9["p2"].get("por") is None and ps9["p4"].get("por") is None, "quién marcó («por») llega a la sesión aparte de quién decidió; sin él, como antes")
+ok([x["id"] for x in r9["rechazados"]] == ["p3"], "un «por» con saltos de línea se rechaza")
 print("\n" + ("Todo bien." if not fallos else f"{len(fallos)} fallo(s)."))
 sys.exit(1 if fallos else 0)

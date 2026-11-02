@@ -55,5 +55,23 @@ ok(not cita(bien.replace(f"> {H} · **Todo bien.**\n> - **Siguiente:** z.", f"``
 ok(not cita(bien.replace(H, "2025-01-01"), False, H)[0], "una entrada vieja citada no cuenta como la de hoy")
 ok(cita(bien.replace("Decisiones\n", "**Decisiones**\n").replace("Bitácora\n", "**Bitácora**\n"), True, H)[0], "las palabras en negrita valen")
 ok(not cita(bien.replace("\nBitácora\n", "\n"), False, H)[0], "sin «Bitácora» no vale")
+
+print("Cargas de skill y búsquedas del plugin (1.24.8)")
+reg = {}
+g2 = {"re": re, "comprobacion": lambda n: (lambda f: reg.__setitem__(n, f) or f)}
+exec(src[src.index('@comprobacion("skill")'):src.index('@comprobacion("palabras-maximo")')], g2)
+exec(src[src.index('@comprobacion("no-menciona-re")'):src.index('@comprobacion("menciona")')], g2)
+H_ = lambda n, e: {"nombre": n, "entrada": e}
+ctx = {"turnos": [{"herramientas": [H_("Skill", {"skill": "memoria:sesion"}), H_("mcp__remote-devices__device_bash", {"command": "cd $HOME/memoria && python3 abrir.py x"})]}]}
+ok(reg["skill"](ctx, "sesion 1")[0] and not reg["skill"](ctx, "sesion 0")[0], "cuenta las cargas de una skill con su prefijo de plugin")
+ok(reg["sin-buscar-plugin"](ctx, "")[0], "abrir.py desde $HOME/memoria no es buscar el plugin")
+ctx["turnos"][0]["herramientas"].append(H_("Bash", {"command": "find /root/.claude/plugins -path '*/memoria*/skills/tablero'"}))
+ok(not reg["sin-buscar-plugin"](ctx, "")[0], "un find bajo .claude/plugins sí")
+g2["texto_de"] = lambda t: "\n".join(t["respuestas"])
+ctx2 = {"turnos": [{"respuestas": ["| Memoria · lo que marcaste en el tablero · 2 |\n| **Beto Prueba** aceptó «x» |"]}]}
+pat = r"Beto( Prueba)?\W{0,8}(acept|cuestion)|(acept|cuestion)\w*\W{0,12}Beto"
+ok(not reg["no-menciona-re"](ctx2, pat + "@1")[0], "«**Beto Prueba** aceptó» casa con la expresión del eval 14")
+ctx2["turnos"][0]["respuestas"] = ["Aceptaste «x», de Beto Prueba."]
+ok(reg["no-menciona-re"](ctx2, pat + "@1")[0], "«Aceptaste «x», de Beto Prueba» no casa")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

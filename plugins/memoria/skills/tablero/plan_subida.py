@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Qué cambia en el tablero, sin traer ningún documento a la conversación (desde la 1.24.1 lo aplica datos.py publicar).
 
-Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900000] [--cierres <volcado de «cierres»>]
+Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--cierres <volcado de «cierres»>]
                     [--inicio <trabajo>/inicio.json] [--llamadas <n>] [--pagina '<json de pagina_actualizada>']
                     [--tarea-desfasada true|false]
      plan_subida.py --guardada <volcado-de-la-base> --version <versión del plugin> [--tarea <id>] [--manual]
@@ -9,7 +9,7 @@ Uso: plan_subida.py <salida-del-generador> <volcado-de-la-base> [--max-bytes 900
                     [--cierres …] [--inicio …] [--llamadas …] [--pagina …] [--tarea-desfasada …]
                     [--retenidos <retenidos.json>] [--ajenos <ajenos.json>]
 
-Lo que cierra la puesta al día va en el mismo lote que meta/estado, el último, y nadie escribe una hora a mano:
+Lo que cierra la puesta al día va con meta/estado, al final, y nadie escribe una hora a mano:
   --cierres   el volcado de la colección «cierres» (las marcas que deja cada cierre de sesión): van como «delete», con su
               if_version, las de `hora` anterior o igual al `sincronizado` de esta corrida y las de `hora` posterior a
               ahora (mal puestas); las demás se quedan, que son de un cierre que esta corrida pudo no ver.
@@ -18,7 +18,7 @@ Lo que cierra la puesta al día va en el mismo lote que meta/estado, el último,
   --pagina    el campo pagina_actualizada que escribe el paso de versiones; --tarea-desfasada, su campo.
 Con --cierre (el tablero ya estaba al día: no hubo generación) escribe <salida>/meta/estado.json con solo lo que cambia
 («sincronizado», el que imprimió el inventario en la zona de la organización, `cola_retenida`, `cola_ajena`, la duración,
-las llamadas, la página) y planea un lote: los «delete» de cierres y meta/estado como «update» (sin if_version: solo esta
+las llamadas, la página) y planea los «delete» de cierres y meta/estado como «update» (sin if_version: solo esta
 corrida escribe esos campos). Las huellas de la raíz y de los proyectos no se tocan.
 
 Con --guardada no planea nada: imprime tres líneas. La primera, la huella de la raíz que guardó la última puesta al día
@@ -29,17 +29,15 @@ huellas del taller de cada proyecto (pid:huella, separadas por comas, para --tal
 
 <volcado-de-la-base> es la carpeta donde datos.py base dejó lo publicado (desde la 1.24.1; antes, ArtifactData con out_dir)
 (<volcado>/areas/*.json, <volcado>/proyectos/*.json, <volcado>/meta/estado.json).
-Compara huellas e imprime un JSON con:
-  «lotes»: listas de escrituras, cada una de menos de --max-bytes y de 50 entradas como mucho, con
-           {op, collection, doc_id, file_path, existe}. «existe» dice si el documento ya está en la base:
-           esos llevan «if_version» con la versión que dio la lectura. meta/estado va siempre, como «update» (o «set» si la base está vacía).
-  Los documentos de la base que ya no salen de la raíz van en los lotes como «delete» (con su if_version).
-  Si <salida-del-generador>/barrido.json existe (lo deja `barrido.py`), suma a los lotes las propuestas nuevas de la cola
-  («set» en «cambios», sin if_version) y las que ya no valen («delete» con el if_version que dio la lectura de la cola).
-  «sin_cambios»: cuántos documentos no hace falta tocar; «borrados»: cuántos deletes hay en los lotes.
-  «no_se_suben»: lo que la base rechazaría (un doc_id con espacios o acentos, un documento de más de 1 MB);
-           se dice en el resumen, y el resto se sube igual.
-No escribe nada.
+Compara huellas y deja en <salida>/plan.json «ops»: la lista de escrituras que aplica datos.py publicar (que arma él
+los lotes de la base), cada una {op, collection, doc_id, file_path} y, en un «delete» que lo trae, «if_version».
+meta/estado va siempre, al final, como «update» (o «set» si la base está vacía). Los documentos de la base que ya no salen
+de la raíz van como «delete». Si <salida-del-generador>/barrido.json existe (lo deja `barrido.py`), suma las propuestas
+nuevas de la cola («set» en «cambios») y las que ya no valen («delete» con el if_version que dio la lectura de la cola).
+Imprime solo lo que lee la tarea: «enfoque_cambio» y «enfoque_meta» (paso 6), «escrituras» (cuántas), «no_se_suben» (lo
+que no se puede publicar: un doc_id con espacios o acentos, un documento demasiado grande; se dice en el resumen, y el resto
+se sube igual) y «plan» (la ruta de plan.json).
+No escribe nada en la base.
 """
 import sys, json, pathlib, re, hashlib
 
@@ -79,25 +77,18 @@ if "--guardada" in sys.argv:
     sys.exit(0)
 
 import datetime
-ID_VALIDO = re.compile(r"^(?!\.\.?$)[A-Za-z0-9_\-.~:@+]{1,200}$")   # lo que la base admite como doc_id
+# lo que la base admite como doc_id y la lectura de un JSON de la base: los de datos.py, junto a este archivo (los dos
+# corren solo en el contenedor)
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from datos import ID_VALIDO, _json, _datos as _datos_base
 
 
 def _opt(n, defecto=None):
     return sys.argv[sys.argv.index(n) + 1] if n in sys.argv and len(sys.argv) > sys.argv.index(n) + 1 else defecto
 
 
-def _json(p):
-    if not p:
-        return None
-    try:
-        d = json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return d
-
-
 def _datos(d):
-    return d.get("data", d) if isinstance(d, dict) and "data" in d else (d if isinstance(d, dict) else {})
+    return _datos_base(d) or {}
 
 
 def _zona(nombre):
@@ -168,16 +159,13 @@ if "--cierre" in sys.argv:
         campos[k] = v if isinstance(v, list) else []
     (SALIDA / "meta").mkdir(parents=True, exist_ok=True)
     (SALIDA / "meta" / "estado.json").write_text(json.dumps(campos, ensure_ascii=False, indent=1), encoding="utf-8")
-    lote = borrar + [{"op": "update" if base else "set", "collection": "meta", "doc_id": "estado", "file_path": str(SALIDA / "meta" / "estado.json")}]
-    plan = {"lotes": [lote], "cierres_borrados": len(borrar), "duracion_min": campos.get("duracion_min")}
-    (SALIDA / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
-    plan.pop("lotes"); plan["plan"] = str(SALIDA / "plan.json")
-    print(json.dumps(plan, ensure_ascii=False))
+    ops = borrar + [{"op": "update" if base else "set", "collection": "meta", "doc_id": "estado", "file_path": str(SALIDA / "meta" / "estado.json")}]
+    (SALIDA / "plan.json").write_text(json.dumps({"ops": ops}, ensure_ascii=False), encoding="utf-8")
+    print(json.dumps({"plan": str(SALIDA / "plan.json")}, ensure_ascii=False))
     sys.exit(0)
 
 SALIDA = pathlib.Path(sys.argv[1]).resolve()
 VOLCADO = pathlib.Path(sys.argv[2]).resolve()
-MAX = int(sys.argv[sys.argv.index("--max-bytes") + 1]) if "--max-bytes" in sys.argv else 900_000
 COLECCIONES = ("areas", "proyectos", "detalle")   # las que regenera el generador entero; «cambios» y «enfoque» no se tocan aquí
 LIMITE = 3_500_000                                                    # lo que datos.py puede volver a traer en un archivo (read_file: 4 MiB)
 
@@ -194,7 +182,7 @@ def huella_en_base(col, doc):
     return d.get("huella"), True
 
 
-# lo que cierra la corrida entra en meta/estado antes de planear, para que suba en el mismo lote, el último
+# lo que cierra la corrida entra en meta/estado antes de planear
 _meta_p = SALIDA / "meta" / "estado.json"
 _meta_d = _json(_meta_p) or {}
 _campos, _borrar_cierres = extras_cierre(_meta_d.get("sincronizado"), _meta_d.get("zona"))
@@ -225,7 +213,7 @@ if enfoque_cambio:
     (SALIDA / "meta" / "estado-enfoque.json").write_text(json.dumps({"huella_candidatos": _cand.get("huella")}, ensure_ascii=False), encoding="utf-8")
 
 indice = json.loads((SALIDA / "indice.json").read_text(encoding="utf-8"))
-escrituras, sin_cambios, salen, invalidos, grandes = [], 0, set(), [], []
+escrituras, salen, invalidos, grandes = [], set(), [], []
 for it in indice:
     col, doc = it["coleccion"], it["doc_id"]
     salen.add((col, doc))
@@ -238,10 +226,9 @@ for it in indice:
     h, existe = huella_en_base(col, doc)
     es_meta = (col, doc) == ("meta", "estado")
     if not es_meta and existe and h == it["huella"]:
-        sin_cambios += 1
         continue
     escrituras.append({"op": "update" if (es_meta and existe) else "set", "collection": col, "doc_id": doc,
-                       "file_path": str(SALIDA / it["archivo"]), "existe": existe, "bytes": it["bytes"]})
+                       "file_path": str(SALIDA / it["archivo"])})
 
 borrar = []
 # un resumen de «Qué hay» se borra cuando su proyecto ya no sale de la raíz (revisión 1.22.4, hallazgo 11); los demás se quedan
@@ -259,19 +246,9 @@ for col in COLECCIONES:
         if (col, p.stem) not in salen and ID_VALIDO.match(p.stem):
             borrar.append({"op": "delete", "collection": col, "doc_id": p.stem})
 
-# meta/estado va el último: lleva la huella de la raíz, y si un lote anterior falla, la siguiente
-# puesta al día no debe creer que el tablero ya estaba al día
+# meta/estado va el último (desde la 1.24.1 los lotes de la base los arma datos.py publicar: aquí el orden ya no reparte nada)
 _meta = [e for e in escrituras if (e["collection"], e["doc_id"]) == ("meta", "estado")]
-# el detalle de un proyecto va pegado a su proyecto, para que caigan en el mismo lote cuando quepan: si el lote falla,
-# la página no se queda con un proyecto nuevo y su detalle viejo (o al revés)
-_det = {e["doc_id"]: e for e in escrituras if e["collection"] == "detalle"}
-orden = []
-for e in escrituras:
-    if e in _meta or e["collection"] == "detalle":
-        continue
-    orden.append(e)
-    if e["collection"] == "proyectos" and e["doc_id"] in _det:
-        orden.append(_det.pop(e["doc_id"]))
+orden = [e for e in escrituras if e not in _meta]
 # las propuestas del barrido (colección «cambios», que el generador no toca): nuevas como «set», las que ya no valen como «delete»
 propuestas = []
 _b = SALIDA / "barrido.json"
@@ -281,30 +258,16 @@ if _b.exists():
         f = SALIDA / x["archivo"]
         if not ID_VALIDO.match(x["id"]) or not f.exists() or f.stat().st_size > LIMITE:
             invalidos.append(f"cambios/{x['id']}"); continue
-        propuestas.append({"op": "set", "collection": "cambios", "doc_id": x["id"], "file_path": str(f), "existe": False, "bytes": f.stat().st_size})
+        propuestas.append({"op": "set", "collection": "cambios", "doc_id": x["id"], "file_path": str(f)})
     for x in bar.get("borrar", []):
         if ID_VALIDO.match(x["id"]):
             e = {"op": "delete", "collection": "cambios", "doc_id": x["id"]}
             if x.get("if_version") is not None:
                 e["if_version"] = x["if_version"]
             propuestas.append(e)
-orden += list(_det.values()) + borrar + propuestas + _borrar_cierres + _meta
-lotes, actual, peso = [], [], 0
-for e in orden:
-    b = e.get("bytes", 200) + 300
-    if actual and (peso + b > MAX or len(actual) >= 50):
-        lotes.append(actual); actual, peso = [], 0
-    actual.append({k: v for k, v in e.items() if k != "bytes"})
-    peso += b
-if actual:
-    lotes.append(actual)
-
-plan = {"lotes": lotes, "sin_cambios": sin_cambios, "borrados": len(borrar), "cierres_borrados": len(_borrar_cierres),
-                  "enfoque_cambio": enfoque_cambio, "enfoque_meta": str(SALIDA / "meta" / "estado-enfoque.json") if enfoque_cambio else None,
-                  "duracion_min": _campos.get("duracion_min"),
-                  "propuestas": {"nuevas": sum(1 for e in propuestas if e["op"] == "set"), "retiradas": sum(1 for e in propuestas if e["op"] == "delete")},
-                  "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes}}
-# el plan entero va a <salida>/plan.json, que aplica datos.py publicar (1.24.1): por la conversación solo pasa el resumen
-(SALIDA / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
-plan["escrituras"] = sum(len(l) for l in plan.pop("lotes")); plan["plan"] = str(SALIDA / "plan.json")
-print(json.dumps(plan, ensure_ascii=False))
+orden += borrar + propuestas + _borrar_cierres + _meta
+# el plan entero va a <salida>/plan.json, que aplica datos.py publicar (1.24.1): por la conversación solo pasa lo que se lee
+(SALIDA / "plan.json").write_text(json.dumps({"ops": orden}, ensure_ascii=False), encoding="utf-8")
+print(json.dumps({"enfoque_cambio": enfoque_cambio, "enfoque_meta": str(SALIDA / "meta" / "estado-enfoque.json") if enfoque_cambio else None,
+                  "escrituras": len(orden), "no_se_suben": {"id_no_valido": invalidos, "demasiado_grandes": grandes},
+                  "plan": str(SALIDA / "plan.json")}, ensure_ascii=False))

@@ -80,10 +80,19 @@ print(("  bien  " if bien else "  FALLA ") + "sin_carpeta es la misma en abrir.p
 ns = {"re": re}; exec(ba, ns)
 casos = [(["Acme fabrica muebles.", "Cómo se trabaja está en `metodo.md`."], ["Acme fabrica muebles."]),
          (["Acme fabrica muebles; lo demás está en `guia.md`."], ["Acme fabrica muebles."]),
-         (["Acme (ver `guia.md`; abajo) fabrica muebles."], [])]
+         (["Acme (ver `guia.md`; abajo) fabrica muebles."], []),
+         # 1.24.8 (d5): sin «;», se queda lo que dice qué es la organización, antes de lo de la carpeta
+         (["Acme fabrica muebles para oficinas, como explica `guia.md`."], ["Acme fabrica muebles para oficinas."]),
+         (["Acme fabrica muebles: el mapa está en `guia.md`; lo aplica el plugin `memoria`."], ["Acme fabrica muebles."]),
+         (["Sigue el método del plugin `memoria`, porque la ventaja es la misma."], []),
+         (["Acme, ver `guia.md`."], [])]
 for entrada, sale in casos:
     bien = ns["sin_carpeta"](entrada) == sale
     print(("  bien  " if bien else "  FALLA ") + f"sin_carpeta({entrada!r})"); fallos += not bien
+# ID_VALIDO (1.24.8): generar_vista.py va suelto a la computadora y lleva su copia; la de datos.py la usa también plan_subida.py
+_idv = lambda ruta: (re.search(r'^ID_VALIDO = re\.compile\((r"[^"]*")\)', (P / ruta).read_text(encoding="utf-8"), re.M) or [None, None])[1]
+bien = bool(_idv("skills/tablero/datos.py")) and _idv("skills/tablero/datos.py") == _idv("skills/tablero/generar_vista.py") and "ID_VALIDO = " not in (P / "skills/tablero/plan_subida.py").read_text(encoding="utf-8")
+print(("  bien  " if bien else "  FALLA ") + "ID_VALIDO es el mismo en datos.py y generar_vista.py, y plan_subida.py usa el de datos.py"); fallos += not bien
 # con_archivados (1.23): los registros con sus archivados, igual en la sesión, el tablero y el barrido
 bloque2 = lambda ruta: (lambda s: s[s.index("# --- los registros con sus archivados ---"):s.index("# --- fin de los registros ---")])((P / ruta).read_text(encoding="utf-8"))
 b3 = [bloque2(r_) for r_ in ("skills/sesion/abrir.py", "skills/tablero/generar_vista.py", "skills/tablero/barrido.py")]

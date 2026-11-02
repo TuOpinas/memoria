@@ -49,6 +49,17 @@ if RAIZ is not None and not (RAIZ / "guia.md").is_file():
         sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]; RAIZ_RESUELTA = True
     elif len(_raices) > 1:
         sys.exit("Esa ruta no existe en esta consola y hay varias raíces bajo $HOME/mnt: " + ", ".join(d.name for d in _raices) + ". Pasa la de $HOME/mnt/<nombre>.")
+if RAIZ is not None and not (RAIZ / "guia.md").is_file() and len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+    # lo que la apertura necesita saber, en una línea que se reconoce (1.24.8): la conversación no tiene que comprobar antes
+    # si la carpeta es una raíz ni si la consola la ve
+    _mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    _monta = _mnt.is_dir() and any(d.name == RAIZ.name or d.name.endswith("--" + RAIZ.name) for d in _mnt.glob("*"))
+    if _monta or RAIZ.is_dir():
+        print(f"NO ES RAIZ: {RAIZ.name} no tiene guia.md y metodo.md en su primer nivel. No es una memoria: no se dice nada de esto.")
+    else:
+        print(f"SIN CONSOLA: esta consola no ve {RAIZ.name}. Si la carpeta es una memoria, se trabaja como dice el anexo sin-consola-sesion.md de la skill sesion; "
+              "se sabe trayendo guia.md y metodo.md con device_stage_files.")
+    sys.exit(0)
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
     sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas [--listado <archivo>]] [--minima] [--origen \"<ruta de la raíz en la computadora>\"]  (la raíz es la carpeta con guia.md y metodo.md: en esta consola, la de $HOME/mnt/ cuyo nombre es el último tramo de la ruta que da get_device_info)")
 args = [a for a in sys.argv[2:]]
@@ -72,6 +83,9 @@ if "--listado" in args:
     i = args.index("--listado"); LISTADO = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
 ACTIVO = args[0].strip("/") if args and not MINIMA else None
 ZONA_AVISO = None
+VEREDICTO, VERSION_RAIZ, VERSION_PLUGIN = None, None, None
+PERMISOS = False
+DECIR = []          # «aviso para decirlo» de CUENTA: una fila del recuadro cada uno (1.24.8)
 _LEIDOS = {}
 
 
@@ -240,15 +254,24 @@ def colaboran_en(quien):
 # que las dos copias son idénticas y dan lo mismo (1.23; antes vivía dentro de cada script, fuera de la comprobación).
 SOBRE_LA_CARPETA = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
 def sin_carpeta(frases, rx=SOBRE_LA_CARPETA):
-    """Las frases del primer párrafo de guia.md sin las que hablan de la carpeta o del método; de una frase unida con «;» a
-    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis."""
+    """Las frases del primer párrafo de guia.md sin lo que habla de la carpeta o del método; de una frase unida con «;» a
+    otra que no habla de ellos, se queda la otra (1.22.5), y no se parte por un «;» entre paréntesis. Dentro de cada parte,
+    se queda lo que va antes de la coma, los dos puntos o la raya que abre lo de la carpeta, si es una frase de tres palabras
+    o más: «Acme fabrica muebles, como dice `guia.md`» deja «Acme fabrica muebles» (1.24.8)."""
     out = []
     for f in frases:
         if not re.search(rx, f):
             out.append(f); continue
-        partes = [c.strip() for c in re.split(r";(?![^()]*\))", f)]
-        quedan = [c for c in partes if c and not re.search(rx, c)]
-        if quedan and len(partes) > 1:
+        quedan = []
+        for c in [c.strip() for c in re.split(r";(?![^()]*\))", f)]:
+            m = re.search(rx, c) if c else None
+            if c and not m:
+                quedan.append(c); continue
+            cortes = [s.start() for s in re.finditer(r"[,:—](?![^()]*\))", c[:m.start()] if m else "")]
+            t = c[:cortes[-1]].strip() if cortes else ""
+            if len(t.split()) >= 3 and not re.search(rx, t):
+                quedan.append(t)
+        if quedan:
             t = "; ".join(quedan); t = t[0].upper() + t[1:]
             out.append(t if t[-1] in ".!?" else t + ".")
     return out
@@ -382,10 +405,13 @@ if PLUGIN is not None:
     else:
         ver = "MISMA VERSION, HUELLA DISTINTA: no se toca"
     print(f"Veredicto: {ver} (raíz {txt(vr)}, plugin {txt(vp)})")
+    VEREDICTO = ver.split(":")[0]
+    VERSION_RAIZ, VERSION_PLUGIN = txt(vr), txt(vp)
+m_org = re.search(r"^#\s+(.+)$", guia, re.M)
+ORGANIZACION = m_org.group(1).split("·")[0].strip() if m_org else ""
 if MINIMA:
     titulo("ORGANIZACION")
-    m_ = re.search(r"^#\s+(.+)$", guia, re.M)
-    print((m_.group(1).split("·")[0].strip() if m_ else "(guia.md sin título)"))
+    print(ORGANIZACION or "(guia.md sin título)")
 else:
     titulo("GUIA")
     # la receta para conectarse y la nota de la versión son para personas: no hacen falta para trabajar (1.19)
@@ -483,13 +509,14 @@ if CUENTA:
         if tp_ and CUENTA in colaboran_en(seccion(cabecera(tp_)[1], "Quién participa")):
             proy_co = [ACTIVO]
     donde_ = ", ".join([f"{s} (responsable)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
+    if not donde_:
+        DECIR.append("No escribes en ninguna área: dime en cuál trabajas.")
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
     # el administrador principal es una sola persona (1.22.2): se le dice al responsable de contexto si guia.md nombra a dos
     _ver, _adm, _ctx = administrador_unico(seccion(guia, "Quién responde por qué"), {re.sub(r"\s*\([^)]*\)", "", a["dueno"]).split(",")[0].strip().lower(): a["cuentas_dueno"] for a in areas if a["cuentas_dueno"]})
     if es_resp and _ver == "dos":
-        print(f"(aviso para decirlo: guia.md nombra a dos personas, «{_adm}» administra la carpeta y «{_ctx}» responde por el contexto; "
-              "son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».)")
+        DECIR.append(f"guia.md nombra a dos personas: «{_adm}» administra la carpeta y «{_ctx}» responde por el contexto. Son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».")
     # el primer párrafo de guia.md es lo que el tablero enseña arriba de Inicio: si sigue con la plantilla o vacío, se le dice a
     # quien lo escribe (revisión de la 1.22.4, hallazgo 7). Las mismas reglas que generar_vista.py
     if es_resp:
@@ -499,20 +526,18 @@ if CUENTA:
         _frases = sin_carpeta(re.split(r"(?<=[.!?])\s+", _p1))
         if (not _p1 or _p1.startswith(("#", ">", "*", "```", "|")) or re.match(r"^\d+[.)]\s", _p1) or re.match(r"^Esta carpeta es la memoria de trabajo de\b", _p1)
                 or re.search(r"\[(?:[^\]\n]*\s[^\]\n]*|[Oo]rganizaci[oó]n)\](?![(\[])", _p1) or not " ".join(_frases).strip()):
-            print("(aviso para decirlo: el primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. "
-                  "Se escribe en una o dos frases, a qué se dedica y para quién, sin hablar de la carpeta; lo de la carpeta pasa al segundo párrafo. "
-                  "Lo escribe esta cuenta, con su sí al texto.)")
+            DECIR.append("El primer párrafo de guia.md no dice qué es la organización, y el tablero no enseña nada arriba de Inicio. Se escribe en una o dos frases, a qué se dedica y para quién, sin hablar de la carpeta (lo de la carpeta pasa al segundo párrafo); lo escribes tú, con tu sí al texto.")
     # la revisión de permisos se ofrece al abrir (1.24.2, decidido el 2026-10-30): solo al administrador principal y solo si
     # la raíz vive en Google Drive (la ruta de --origen, con consola o sin ella). La fecha
     # de la última revisión vive en el tablero (meta/permisos), no en la carpeta: la mira la sesión, no este script
     if es_resp and en_drive(ORIGEN):
-        print("PERMISOS: la raíz vive en Google Drive y esta cuenta la administra (qué se hace con esto: «Permisos de Drive» en la apertura mínima)")
+        PERMISOS = True
+        print("PERMISOS: la raíz vive en Google Drive y esta cuenta la administra (qué se hace con esto: la sección RESPUESTA, o «Permisos de Drive» en la skill)")
     # la cuenta está en la celda de un área pero la celda no se deja leer (dos correos sin «colabora:», por ejemplo):
     # se dice cuál y cómo se escribe, para que no parezca un fallo y lo corrija quien lleva guia.md
     for a in areas:
         if a["aviso"] and CUENTA in a["en_celda"] and CUENTA not in a["cuentas_dueno"] | a["colaboran"]:
-            print(f"(aviso para decirlo: esta cuenta está en la celda Cuenta de «{a['slug']}» en guia.md, pero no cuenta como suya: {a['aviso']}. "
-                  f"Se escribe «correo del responsable · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto se pregunta en qué área trabaja.)")
+            DECIR.append(f"Tu cuenta está en la celda Cuenta de «{a['slug']}» en guia.md pero no cuenta como tuya ({a['aviso']}). Se escribe «correo del responsable · colabora: otro@…, otro@…»; la corrige el responsable de contexto, y mientras tanto dime en qué área trabajas.")
 
 
 def solo_nombre(d):
@@ -587,6 +612,7 @@ def area_en_uso(slug):
 
 
 titulo("ESTRUCTURA")
+ESTRUCTURA_ANTERIOR = ""
 if not CUENTA:
     print("Veredicto: SIN CUENTA")
 else:
@@ -599,8 +625,9 @@ else:
             (ajenas_en_uso if area_en_uso(a["slug"]) else ajenas_viejas).append(f"{a['slug']} (de {solo_nombre(a['dueno']) or 'otro responsable'})")
     guia_vieja = es_resp and guia_anterior
     if propias_viejas or ajenas_viejas or guia_vieja:
-        print("Veredicto: ANTERIOR en " + ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))
-              + " · se pregunta antes de responder («Puesta al día de la estructura»)")
+        ESTRUCTURA_ANTERIOR = ", ".join(propias_viejas + ajenas_viejas + (["guia.md"] if guia_vieja else []))
+        print("Veredicto: ANTERIOR en " + ESTRUCTURA_ANTERIOR
+              + " · se pregunta antes de responder («La estructura» en la skill sesion)")
     else:
         print("Veredicto: AL DIA")
     if ajenas_en_uso:
@@ -692,7 +719,7 @@ def claude_outputs():
     titulo("CLAUDE OUTPUTS")
     if CUENTA and not es_resp:
         print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/" + ("; sin consola, device_list_dir de la carpeta y lo de los últimos 14 días)" if SIN_FECHAS else ")"))
-        return
+        return []
     try:
         co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
         sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
@@ -701,16 +728,94 @@ def claude_outputs():
         co, sueltos = RAIZ / "Claude outputs", []
     if not sueltos:
         print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
-        return
+        return []
     print(f"{len(sueltos)} archivos sueltos")
     for p in sueltos[:30]:
         f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
         print(f"- {p.relative_to(co).as_posix()}{f}")
     if len(sueltos) > 30:
         print(f"(y {len(sueltos) - 30} más)")
+    return sueltos
+
+
+CONFIDENCIAL = re.compile(r"contrat|propuesta|cotizaci|curr[ií]cul|\bcv\b|n[oó]mina|salari|sueldo|factura|\brfc\b|curp|\bnss\b|\bnda\b|confidencial|contrase|password", re.I)
+
+
+def celda(t):
+    """Una celda de tabla de Markdown: sin saltos de línea ni «|»."""
+    return re.sub(r"\s*[\r\n|]+\s*", " · ", t).strip()
+
+
+def respuesta(sueltos, completa=False):
+    """El recuadro con sus filas y, en orden, lo que toca, ya decidido (1.24.8). Así la conversación hace la apertura mínima
+    sin cargar la skill sesion (su anexo minima.md, que inyecta el aviso de arranque), y la completa no recalcula filas.
+    Nada de aquí remite a una skill: lo que hay que hacer viene escrito."""
+    titulo("RESPUESTA (la apertura completa: el recuadro y lo que toca)" if completa else "RESPUESTA (la apertura mínima: haz esto y nada más)")
+    vr_ = version_huella(linea_metodo)[0]
+    version = VERSION_PLUGIN if VEREDICTO == "RAIZ ATRASADA" else (".".join(map(str, vr_)) if vr_ else "?")
+    raiz_ = str(RAIZ)
+    filas = []
+    if VEREDICTO == "PLUGIN ATRASADO":
+        filas.append(f"**Método:** esta carpeta usa una versión del método más nueva que la de tu Claude ({VERSION_RAIZ} frente a {VERSION_PLUGIN}). "
+                     "Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.")
+    filas += [f"**Aviso:** {d}" for d in DECIR]
+    if sueltos:
+        f_ = "" if SIN_FECHAS else f", el último del {datetime.datetime.fromtimestamp(sueltos[0].stat().st_mtime, TZ).date().isoformat()}"
+        conf = sum(1 for p in sueltos if CONFIDENCIAL.search(p.name))
+        filas.append(f"**Claude outputs:** {len(sueltos)} archivo{'s' if len(sueltos) != 1 else ''} suelto{'s' if len(sueltos) != 1 else ''}{f_}"
+                     + (f"; {'uno parece confidencial' if conf == 1 else f'{conf} parecen confidenciales'}" if conf else "") + ".")
+    cab = "La respuesta empieza con este recuadro, tal cual"
+    if PERMISOS:
+        cab += " (la fila de permisos, si toca, la añade su paso)"
+    if completa:
+        cab += "; si en esta conversación ya salió, no se repite: solo sus filas nuevas, como filas de «Memoria · avisos», y una pregunta ya hecha no se repite"
+    print(cab + ":")
+    print(f"| Memoria de trabajo · {celda(ORGANIZACION or 'sin nombre')} · v{version} |")
+    print("|---|")
+    for f_ in filas:
+        print(f"| {celda(f_)} |")
+    pasos = []
+    if VEREDICTO == "RAIZ ATRASADA":
+        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz, en una llamada a device_bash: lo que va detrás de «METODO_DESCARGA » en el aviso de arranque, "
+                     f"seguido de ` && cp \"$HOME/memoria/metodo.md\" \"{raiz_}/metodo.md\" && head -1 \"{raiz_}/metodo.md\"`. "
+                     "Si la comprobación falla, una vez más con main en lugar de v<versión> en sus dos direcciones; si tampoco, o el aviso no trae METODO_DESCARGA, "
+                     "como dice «El método» de la skill sesion. Si la línea que imprime head no dice la versión nueva (la escritura falló por permisos), no se dice nada y el recuadro lleva "
+                     f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
+    if ESTRUCTURA_ANTERIOR:
+        pasos.append("Antes de responder: la respuesta es solo el recuadro y esta pregunta, con AskUserQuestion si está (opciones «Migrar ahora» y «Después»; sin ella, en texto, y se espera): "
+                     f"«Tu parte de la carpeta usa la estructura de antes de la 1.22 ({ESTRUCTURA_ANTERIOR}). ¿La paso a la nueva antes de seguir? Renombra secciones y claves sin perder nada y deja una línea en la bitácora de cada proyecto.»"
+                     + (" Añade que las áreas «(de …)» son de otros responsables y que su bitácora dirá quién las migró." if "(de " in ESTRUCTURA_ANTERIOR else "")
+                     + " Con «Migrar ahora», el anexo migracion.md de la skill sesion; con «Después», no se vuelve a preguntar en esta conversación. "
+                     "Los pasos que siguen a este van en la respuesta siguiente, después de la contestación; si ya se había respondido cuando llegó esta apertura, la pregunta va igual, sola tras el recuadro. "
+                     "En una tarea programada no se pregunta ni se migra.")
+    if PERMISOS:
+        if completa:
+            pasos.append("Permisos de Drive: como en la apertura mínima; si ya se ofreció en esta conversación, nada.")
+        else:
+            pasos.append("Permisos de Drive, solo si la sesión tiene el conector de Google Drive y el de artifacts (herramientas mcp__claude-artifacts__…; si no, nada, y no se dice): "
+                         "ToolSearch de mcp__claude-artifacts__list_artifacts y mcp__claude-artifacts__db_get; con el slug del artifact «Tablero "
+                         + (ORGANIZACION or "<organización>") + "» de esta cuenta, db_get de meta/permisos. Se ofrece si no existe, si su «revisado» es de hace más de 30 días, "
+                         "o si su lista «cambios» no está vacía y es de hace más de 7 días: una fila «**Permisos de Drive:** sin revisar desde el <fecha>» (o «nunca se revisaron», "
+                         "o «quedan <n> cambios de la revisión del <fecha>») y, al final, la pregunta «¿Reviso ahora los permisos de Drive?» con «Revisar ahora» y «Después». "
+                         "Sin tablero o si una llamada falla, nada. Con «Revisar ahora», el anexo permisos.md de la skill sesion; con «Después», no se vuelve a ofrecer en esta conversación.")
+    if completa:
+        pasos.append("Antes de responder, la cola del tablero: ToolSearch de mcp__claude-artifacts__list_artifacts, db_query y read_file (o Artifact y ArtifactData si la sesión tiene las de antes); "
+                     f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
+    pasos.append("Responde con la sesión: dónde quedó todo, los recuadros de la memoria, los avisos y la propuesta de trabajo, como dice «Qué respondo» de la skill sesion."
+                 if completa else "Responde a lo que se pidió.")
+    if sueltos:
+        pasos.append("La última acción de la respuesta: «¿Coloco ahora lo que hay en Claude outputs?», con AskUserQuestion si está (opciones «Colocar ahora» y «Después», "
+                     "en la misma llamada que la de los permisos si la hay; sin la herramienta, esa misma pregunta en texto, una sola vez). Con «Colocar ahora», «Ordenar Claude outputs» "
+                     "de la skill donde-va; con «Después», no se vuelve a preguntar en esta conversación, ni al abrir después un proyecto.")
+    for i, p_ in enumerate(pasos, 1):
+        print(f"{i}. {p_}")
+    if not completa:
+        print("Nada más de esta salida se dice: ni la lista de proyectos, que solo sirve para saber si la petición es trabajo de uno, ni avisos.")
 
 
 area_activa = ACTIVO.split("/")[0] if ACTIVO and "/" in ACTIVO else None
+TOPE_PROYECTOS = 40
+n_proy = 0
 if not ACTIVO:
     titulo("PROYECTOS POR ÁREA (para saber cuál se abre)")
     for a in areas:
@@ -723,10 +828,18 @@ if not ACTIVO:
         for slug, d in indice_proyectos(t).items():
             # solo para saber cuál se abre: la primera frase de la línea, no el resumen entero (1.19)
             l_ = d["linea"].replace(f"`{slug}/`", f"`{a['slug']}/{slug}/`", 1)
-            print(primera_frase(l_))
+            # en la mínima basta reconocer el proyecto: la ruta y unas palabras, no la frase entera, y con tope (1.24.8)
+            if MINIMA:
+                n_proy += 1
+                if n_proy > TOPE_PROYECTOS:
+                    continue
+            print(primera_frase(l_, minimo=20, maximo=90) if MINIMA else primera_frase(l_))
+    if MINIMA and n_proy > TOPE_PROYECTOS:
+        print(f"(y {n_proy - TOPE_PROYECTOS} proyectos más: sin --minima se listan todos)")
     if no_legibles:
         print(f"\n(no se pudieron leer: {len(no_legibles)})")
-    claude_outputs()
+    # sin proyecto todavía, la RESPUESTA también sale: la apertura completa que sigue con el proyecto no la repite
+    respuesta(claude_outputs(), completa=not MINIMA)
     sys.exit(0)
 
 # ---------- nivel 1 ----------
@@ -1041,4 +1154,4 @@ if viejos:
     print(f"(además, {viejos} decisiones de otros proyectos anteriores a la última sesión lo nombran en «Afecta a:»; ya se vieron)")
 if no_legibles:
     print(f"(no se pudieron leer {len(no_legibles)} archivos o carpetas: restringidos o sin descargar; no se supone qué hay)")
-claude_outputs()
+respuesta(claude_outputs(), completa=True)

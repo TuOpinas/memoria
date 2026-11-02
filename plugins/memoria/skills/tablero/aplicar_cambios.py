@@ -19,6 +19,9 @@ La cola ("cambios" en la base de la página) trae siete tipos:
   la memoria propone y solo su responsable decide, en una sesión. Se reporta aparte, en "propuestas", como lo que se queda
   en la cola a propósito. Una que no cumple la forma (id de proyecto, línea única) va a "rechazados" y se borra.
 
+Desde la 1.24.8 la página apunta en «por» la cuenta (correo) de quien marcó; falta en lo marcado antes, y entonces fue
+quien montó el tablero. Pasa tal cual a "para_sesion".
+
 Uso: aplicar_cambios.py <raiz> <cambios.json | carpeta con un JSON por cambio> --cuenta <correo> [--dry-run]
 Solo toca las áreas cuya columna «Cuenta» en la tabla de áreas de guia.md lleva ese correo, como responsable o tras
 «colabora:», y los proyectos cuya línea «Colabora:» de «Quién participa» lo lleva: la puesta al día corre con la
@@ -266,10 +269,10 @@ for c in cargar():
             estado, detalle = "errores", f"{type(e).__name__}: {e}"
         rep[estado].append({"id": c["id"], "proyecto": c.get("proyecto"), "detalle": detalle})
     elif t in ("hecho", "nota", "corregir", "prioridad", "respuesta"):
-        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto", "porque", "titulo", "decidio", "espera", "decision") if c.get(k) not in (None, "")):
+        if any(not texto_de_una_linea(c[k]) for k in ("paso", "nota", "propuesta", "texto", "porque", "titulo", "decidio", "espera", "decision", "por") if c.get(k) not in (None, "")):
             rep["rechazados"].append({"id": c["id"], "detalle": "paso, nota, propuesta, texto o porqué con saltos de línea"})
             continue
-        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto")} | ({k: c.get(k) for k in ("decision", "valor", "porque", "titulo", "decidio")} if t == "respuesta" else {})
+        rep["para_sesion"].append({k: c.get(k) for k in ("id", "tipo", "proyecto", "paso", "nota", "propuesta", "campo", "creado", "area", "indice", "texto", "por")} | ({k: c.get(k) for k in ("decision", "valor", "porque", "titulo", "decidio")} if t == "respuesta" else {})
                                    | ({k: c[k] for k in ("espera", "decision") if c.get(k)} if t == "nota" else {}))
     else:
         rep["sin_match"].append({"id": c["id"], "detalle": f"tipo desconocido: {t}"})

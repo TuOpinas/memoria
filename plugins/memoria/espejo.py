@@ -12,7 +12,7 @@ Devolver es lo delicado: un archivo de la copia puede estar viejo, a medias o va
 encima del de verdad. Por eso solo se devuelve lo que se registró al traerlo (con su fecha y su tamaño en la computadora) o
 lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que encoge a menos de la mitad, salvo con --forzar.
 
-  espejo.py rutas <copia> [<area>/<proyecto>] [--listado <device_list_dir de la carpeta del proyecto>]
+  espejo.py rutas <copia> [<area>/<proyecto>] [--listado <device_list_dir de la carpeta del proyecto>] [--raiz <device_list_dir de la raíz>]
       Qué traer para abrir sesión, por rondas: imprime una ruta por línea (relativa a la raíz) de lo que falta en la copia, o
       COMPLETA. Primera ronda: guia.md, metodo.md, base/premisas.md y base/contexto.md; segunda: el area.md de cada área de la
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
@@ -21,7 +21,8 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       proyecto activo que hay en la computadora (1.23). Lo que no se trajo se vuelve a
       pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
-      minutos.
+      minutos. Con --raiz (device_list_dir de la raíz, sin recursivo, guardado en un archivo; 1.24.8) la primera ronda pide
+      además el area.md de cada carpeta de primer nivel, menos base/ y «Claude outputs»: la apertura mínima queda en una ronda.
 
   espejo.py permisos <copia>
       Qué traer para revisar los permisos (skill sesion, anexo permisos.md) sobre la copia: el proyecto.md de cada proyecto
@@ -189,7 +190,19 @@ def archivados_del_listado(ruta):
                   and re.match(r"^(sesiones|decisiones)-20\d\d(?:-\d+)?\.md$", str(e.get("name") or "")))
 
 
-def rutas(copia, activo, listado=None):
+def carpetas_de_la_raiz(ruta):
+    """Las carpetas de primer nivel de la raíz según device_list_dir guardado en un archivo, menos base/, «Claude outputs» y las
+    ocultas: las que pueden ser áreas. Vacío si no se lee."""
+    try:
+        d = json.loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return []
+    ents = (d.get("entries") if isinstance(d, dict) else d) or []
+    return sorted(str(e.get("name")) for e in ents if isinstance(e, dict) and e.get("type") == "dir" and "/" not in str(e.get("name") or "")
+                  and str(e.get("name")) not in ("base", "Claude outputs") and not str(e.get("name")).startswith("."))
+
+
+def rutas(copia, activo, listado=None, raiz=None):
     copia = pathlib.Path(copia)
     faltan = set(estado(copia)["faltan"])
     # en la misma conversación la copia se reutiliza: solo se pide lo que no está. Lo que dice cómo está el proyecto que se
@@ -200,13 +213,17 @@ def rutas(copia, activo, listado=None):
     ausente = lambda r: not (copia / r).is_file() and r not in faltan
     falta = lambda r: (ausente(r) or viejo(r)) and r not in faltan
     ronda = [r for r in ("guia.md", "metodo.md", "base/premisas.md", "base/contexto.md") if ausente(r)]
+    if ronda and raiz:
+        ronda += [f"{c}/area.md" for c in carpetas_de_la_raiz(raiz) if ausente(f"{c}/area.md") and c not in FUERA]
     if not ronda:
         guia = leer(copia / "guia.md")
         if guia is None:
             print("Sin guia.md en la copia: no es la raíz, o la cuenta no la lee.", file=sys.stderr)
             return 1
         areas = areas_de(guia)
-        ronda = [f"{a}/area.md" for a in areas if ausente(f"{a}/area.md")]
+        # con el listado de la raíz se sabe qué áreas de la tabla no tienen carpeta: no se piden
+        carpetas = set(carpetas_de_la_raiz(raiz)) if raiz else None
+        ronda = [f"{a}/area.md" for a in areas if ausente(f"{a}/area.md") and (carpetas is None or a in carpetas)]
         if not ronda:
             ronda = sorted(r for r in frescos if viejo(r) and not r.endswith(("proyecto.md", "decisiones.md", "sesiones.md")))
             # sin proyecto, abrir.py solo lee hasta los area.md; con proyecto, de los demás solo lee decisiones.md (el barrido
@@ -509,10 +526,12 @@ def main(argv):
         return 2
     orden, copia, resto = argv[1], argv[2], argv[3:]
     if orden == "rutas":
-        listado = None
+        listado = raiz = None
         if "--listado" in resto:
             i = resto.index("--listado"); listado = resto[i + 1] if i + 1 < len(resto) else None; del resto[i:i + 2]
-        return rutas(copia, resto[0].strip("/") if resto else None, listado)
+        if "--raiz" in resto:
+            i = resto.index("--raiz"); raiz = resto[i + 1] if i + 1 < len(resto) else None; del resto[i:i + 2]
+        return rutas(copia, resto[0].strip("/") if resto else None, listado, raiz)
     if orden == "permisos":
         return permisos(copia)
     if orden == "falta":

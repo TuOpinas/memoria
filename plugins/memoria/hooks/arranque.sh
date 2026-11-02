@@ -11,18 +11,43 @@ BLOQUE="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar 
 # Si el contrato perdió la línea final del bloque, sed llegaría hasta el final del archivo: mejor no inyectar nada
 [ -n "$BLOQUE" ] && printf '%s\n' "$BLOQUE" | tail -n 1 | grep -q '^Antes de guardar algo' || exit 0
 
-TEXTO="Plugin memoria ${VERSION}. Una carpeta conectada con guia.md y metodo.md en su primer nivel es la memoria de una organización que sigue el método Memoria. Si la conversación tiene carpetas conectadas o es de un proyecto de Claude, la primera llamada de tu primera respuesta, sin escribir nada antes, es un solo ToolSearch que carga get_device_info, device_list_dir, device_bash, device_stage_files, device_commit_files, device_request_folder_access, device_request_delete_permission y, si la cuenta tiene tablero, las del tablero (mcp__claude-artifacts__list_artifacts, mcp__claude-artifacts__read_file, mcp__claude-artifacts__db_query, mcp__claude-artifacts__db_get y mcp__claude-artifacts__db_write, o ArtifactData si la sesión tiene las de antes); luego lista las carpetas (una vinculada al proyecto está ahí aunque nadie la nombre). Si hay memoria, haz la apertura mínima de la skill sesion antes de responder, sea cual sea la petición, en cada carpeta de memoria si hay varias; y la sesión completa del proyecto en cuanto la petición sea trabajo de uno aunque no lo nombre (cambiar el código de un repositorio conectado, un problema que alguien reporta, algo para un cliente). La puesta al día programada del tablero no la hace. Sin memoria: si piden algo del método, el anexo sin-carpeta.md de la skill sesion; si no, ignora este aviso. Con memoria, esto vale como instrucciones del proyecto:
+# La apertura mínima vive en su anexo de la skill sesion (1.24.8): se inyecta aquí para que la conversación no tenga que
+# cargar la skill entera solo para abrir. Igual que el bloque: si perdió su última línea, no se inyecta nada.
+MINIMA="$(sed -n '/^Apertura mínima, sin cargar la skill sesion/,/^4\. Si la petición es trabajo de un proyecto/p' "$RAIZ/skills/sesion/minima.md" 2>/dev/null)"
+printf '%s\n' "$MINIMA" | tail -n 1 | grep -q '^4\. Si la petición' || exit 0
+
+# En la app de escritorio las carpetas conectadas están montadas en $HOME/mnt: si hay alguna montada y ninguna es una raíz,
+# basta una línea (1.24.8). Sin nada montado no se sabe (la nube enlazada a la computadora no monta nada aquí, y Google
+# Drive en Windows no se monta aunque esté conectado): va el aviso entero.
+HAY_RAIZ=""
+if [ -n "${HOME:-}" ] && [ -d "$HOME/mnt" ]; then
+  for d in "$HOME"/mnt/*/; do
+    [ -d "$d" ] || continue
+    HAY_RAIZ=no
+    [ -f "$d/guia.md" ] && [ -f "$d/metodo.md" ] && { HAY_RAIZ=1; break; }
+  done
+fi
+
+if [ "$HAY_RAIZ" = no ]; then
+  TEXTO="Plugin memoria ${VERSION}. Ninguna de las carpetas montadas en esta consola es una memoria (con guia.md y metodo.md en su primer nivel). Si get_device_info lista una carpeta conectada que no está en \$HOME/mnt (Google Drive en Windows), o se conecta una memoria más tarde, carga la skill sesion de memoria y sigue su «Apertura mínima» (su anexo minima.md). Si piden algo del método sin carpeta, su anexo sin-carpeta.md. Si no, ignora este aviso."
+else
+TEXTO="Plugin memoria ${VERSION}. Una carpeta conectada con guia.md y metodo.md en su primer nivel es la memoria de una organización que sigue el método Memoria. Si la conversación tiene carpetas conectadas o es de un proyecto de Claude, la primera llamada de tu primera respuesta, sin escribir nada antes, es la del paso 1 de abajo. Sin memoria: si piden algo del método, el anexo sin-carpeta.md de la skill sesion; si no, ignora este aviso.
+
+${MINIMA}
+
+Con memoria, esto vale como instrucciones del proyecto:
 
 ${BLOQUE}
 
-Con varias memorias, pregunta en cuál se trabaja antes de escribir o de abrir la sesión de un proyecto, y nada pasa de una a otra sin un traspaso que la persona confirma pieza a pieza. Abrir y cerrar sesión, consultar, guardar y revisar se hacen con las skills del plugin memoria, y antes de escribir en la carpeta se carga el anexo escribir.md de la skill convenciones. Si la consola de la computadora no monta la carpeta (Google Drive en Windows), no pidas acceso otra vez: se trabaja como dice el anexo sin-consola.md de convenciones. En la conversación, cada archivo de la carpeta que nombras va como enlace: [ruta relativa](computer:///<raíz de get_device_info>/<ruta>), con / y los espacios como %20 (en Windows, computer:///C:/Users/…); dentro de la carpeta nunca van rutas absolutas. Al redactar, la primera frase dice el hecho, sin anunciarlo, y sobra toda palabra que se pueda borrar; lo que se firma o se comparte sigue la skill estilo."
+Con varias memorias, la apertura mínima se hace en cada una; antes de escribir o de abrir la sesión de un proyecto se pregunta en cuál se trabaja, y nada pasa de una a otra sin un traspaso que la persona confirma pieza a pieza. Abrir y cerrar sesión, consultar, guardar y revisar se hacen con las skills del plugin memoria, y antes de escribir en la carpeta se carga el anexo escribir.md de la skill convenciones. Si la consola de la computadora no monta la carpeta (Google Drive en Windows), no pidas acceso otra vez: se trabaja como dice el anexo sin-consola.md de convenciones. En la conversación, cada archivo de la carpeta que nombras va como enlace: [ruta relativa](computer:///<raíz de get_device_info>/<ruta>), con / y los espacios como %20 (en Windows, computer:///C:/Users/…); dentro de la carpeta nunca van rutas absolutas. Al redactar, la primera frase dice el hecho, sin anunciarlo, y sobra toda palabra que se pueda borrar; lo que se firma o se comparte sigue la skill estilo."
+fi
 
 # La descarga de la apertura, ya preparada (1.24.7), el único paso del hook con python3: así la apertura no corre en el contenedor el comando que buscaba el
 # plugin con find, que el modo Auto de la app frenaba con un permiso. Sin python3 o si preparar.py falla, no se añade nada
 # y la skill sesion lo pide con un comando simple.
 PREP=""
 # python3 -c '' además de command -v: en un Mac sin las herramientas de desarrollo, /usr/bin/python3 existe pero no corre
-if command -v python3 >/dev/null 2>&1 && python3 -c '' >/dev/null 2>&1 && [ -f "$RAIZ/preparar.py" ]; then
+if [ "$HAY_RAIZ" != no ] && command -v python3 >/dev/null 2>&1 && python3 -c '' >/dev/null 2>&1 && [ -f "$RAIZ/preparar.py" ]; then
   # con tope propio, más corto que el del hook (10 s), para que un Python lento nunca se lleve el aviso entero
   T3=""; command -v timeout >/dev/null 2>&1 && T3="timeout 3"
   PREP="$($T3 python3 "$RAIZ/preparar.py" '$HOME/memoria' skills/sesion/abrir.py skills/sesion/cerrar.py 2>/dev/null)" || PREP=""
@@ -32,7 +57,7 @@ if command -v python3 >/dev/null 2>&1 && python3 -c '' >/dev/null 2>&1 && [ -f "
 fi
 [ -n "$PREP" ] && TEXTO="${TEXTO}
 
-Para la apertura de la skill sesion (paso 1 de «Qué leo»), ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor:
+Para el paso 2 de la apertura mínima y para abrir un proyecto, ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor (METODO_DESCARGA solo cuando la RESPUESTA de abrir.py lo pida):
 ${PREP}"
 
 # JSON a mano, sin python: el texto solo puede traer barras, comillas, tabuladores y saltos de línea
