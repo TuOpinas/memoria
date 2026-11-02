@@ -7,28 +7,13 @@ Uso: python3 pruebas/tablero/probar_personas.py
 """
 import datetime, json, pathlib, shutil, subprocess, sys, tempfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import dos_corridas as _dos_corridas
 AQUI = pathlib.Path(__file__).resolve().parent
 GV = AQUI.parents[1] / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"
 
 
 def dos_corridas(raiz, tmp):
-    """Como la puesta al día real (la misma que probar_que_es.py): inventario y generación sobre la copia, y una segunda
-    corrida que reutiliza la base. Devuelve (primera, segunda, reutilizó algo)."""
-    def corrida(sal, previos=None, sin_cambios=None):
-        a = [sys.executable, str(GV), str(raiz), "--inventario"] + (["--sin-cambios", sin_cambios] if sin_cambios else [])
-        inv = json.loads(subprocess.run(a, capture_output=True, text=True, check=True).stdout)
-        ip = tmp / f"inv-{sal}.json"; ip.write_text(json.dumps(inv["inventario"]), encoding="utf-8")
-        cop = tmp / f"copia-{sal}"
-        for r_ in inv["leer"]:
-            (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(raiz / r_, cop / r_)
-        cop.mkdir(exist_ok=True)
-        subprocess.run([sys.executable, str(GV), str(cop), str(tmp / sal), "--desde-inventario", str(ip), "--version", "prueba"]
-                       + (["--previos", str(previos)] if previos else []), check=True, stdout=subprocess.DEVNULL)
-        return inv
-    corrida("o1")
-    est = json.loads((tmp / "o1" / "meta" / "estado.json").read_text(encoding="utf-8"))
-    inv = corrida("o2", tmp / "o1", ",".join(est.get("huellas") or []))
-    return tmp / "o1", tmp / "o2", bool(inv["inventario"].get("reusar"))
+    return _dos_corridas(raiz, tmp, fuera=False)
 
 fallos = 0
 

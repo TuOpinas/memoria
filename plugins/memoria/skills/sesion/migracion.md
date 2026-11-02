@@ -40,4 +40,4 @@ Cuesta una llamada de listado por área, una de traer por cada 50 archivos (dos 
 | `fuentes/enlaces.md`, `restringido/enlaces.md` | → `inventario.md` |
 | `sesiones.md` de cada proyecto migrado | una entrada «## AAAA-MM-DD (migracion)», de una frase |
 
-No toca `decisiones.md`, las entradas ya escritas de `sesiones.md`, `base/` ni lo que hay dentro de `fuentes/` y `restringido/` salvo su inventario. Cada archivo se relee y se vuelve a transformar en el momento de escribirlo, bajo el cerrojo de `cerrar.py`, para no pisar un cierre que llegue entre medias.
+No toca `decisiones.md`, las entradas ya escritas de `sesiones.md`, `base/`, lo que hay dentro de `fuentes/` y `restringido/` salvo su inventario, ni la prosa de las celdas de `guia.md` más allá de lo que dice su fila de la tabla. Cada archivo se relee y se vuelve a transformar en el momento de escribirlo, bajo el cerrojo de `cerrar.py`, para no pisar un cierre que llegue entre medias.
