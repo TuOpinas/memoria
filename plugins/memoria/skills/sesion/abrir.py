@@ -805,7 +805,7 @@ def respuesta(sueltos, completa=False):
                  if completa else "Responde a lo que se pidió.")
     if sueltos:
         pasos.append("La última acción de la respuesta: «¿Coloco ahora lo que hay en Claude outputs?», con AskUserQuestion si está (opciones «Colocar ahora» y «Después», "
-                     "en la misma llamada que la de los permisos si la hay; sin la herramienta, en texto: «¿Los coloco ahora o después?»). Con «Colocar ahora», «Ordenar Claude outputs» "
+                     "en la misma llamada que la de los permisos si la hay; sin la herramienta, esa misma pregunta en texto, una sola vez). Con «Colocar ahora», «Ordenar Claude outputs» "
                      "de la skill donde-va; con «Después», no se vuelve a preguntar en esta conversación, ni al abrir después un proyecto.")
     for i, p_ in enumerate(pasos, 1):
         print(f"{i}. {p_}")
