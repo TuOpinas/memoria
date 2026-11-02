@@ -4,6 +4,11 @@ cuenta: ana@ejemplo.test
 consola: si
 max_turnos: 50
 preparar:
+  - "sustituir ventas/cuentas/entregables/borrador-viejo.md actualizado: 2026-08-01 => actualizado: 2026-10-15\naportacion: Con cada cliente grande se sostiene una llamada semanal."
+  - "sustituir ventas/cuentas/entregables/borrador-viejo.md Cuerpo. => Con cada cliente grande se sostiene una llamada semanal, como dicen los siguientes pasos del proyecto."
+  - "migrar"
+turnos: 50
+preparar:
   - "migrar"
   - "sustituir ventas/cuentas/entregables/borrador-viejo.md actualizado: 2026-08-01 => actualizado: 2026-10-15\naportacion: Cliente Uno recibe una llamada de seguimiento cada semana hasta la firma."
   - "sustituir ventas/cuentas/entregables/borrador-viejo.md Cuerpo. => A Cliente Uno se le llama cada semana para dar seguimiento a la propuesta hasta que firme, como dicen los siguientes pasos del proyecto."
