@@ -51,6 +51,8 @@ jobs:
           npm install -g @anthropic-ai/claude-code
           pip install claude-agent-sdk
           mkdir -p "$MEMORIA_EVALS_PLUGINS"
+          # la copia sin consola y las salidas viven donde en la app: /mnt/user-data
+          sudo mkdir -p /mnt/user-data/uploads /mnt/user-data/outputs && sudo chown -R "$(id -u):$(id -g)" /mnt/user-data
       - name: Escenarios
         id: cuales
         run: |

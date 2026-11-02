@@ -201,6 +201,10 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
     # la conversación es de un proyecto de Claude (como en el uso real); la cuenta es la de quien corre el eval, y la
     # raíz de prueba ya la declara en el papel que pide el escenario (preparar_raiz)
     anexo = "# attachedProject\nThis session is attached to the Project \"Prueba\"."
+    # como la app, que da a Claude el correo de la cuenta (sin él no sabe con qué --cuenta abrir); en GitHub no hay otra vía
+    correo = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip()
+    if correo:
+        anexo = f"# userEmail\nThe user's email address is {correo}.\n" + anexo
     opciones = ClaudeAgentOptions(
         system_prompt={"type": "preset", "preset": "claude_code", "append": anexo},
         mcp_servers={"remote-devices": disp.servidor()},
