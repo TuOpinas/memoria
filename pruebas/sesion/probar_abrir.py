@@ -154,6 +154,15 @@ ok("No escribes en ninguna área: dime en cuál trabajas." in o.split("=== RESPU
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test")
 ok(all(len(l) <= 140 for l in o.split("=== PROYECTOS POR ÁREA")[1].split("=== CLAUDE")[0].splitlines()), "en la mínima, cada proyecto en una línea corta")
 
+# una carpeta que no es raíz, o que la consola no ve: lo dice en una línea, sin que la conversación lo compruebe antes
+nr_ = tmp / "no-raiz"; nr_.mkdir()
+r_ = subprocess.run([sys.executable, str(ABRIR), str(nr_), "--minima"], capture_output=True, text=True)
+ok(r_.returncode == 0 and r_.stdout.startswith("NO ES RAIZ:"), "una carpeta sin guia.md ni metodo.md: «NO ES RAIZ», sin error")
+r_ = subprocess.run([sys.executable, str(ABRIR), "/Users/nadie/Documents/Otra", "--minima"], capture_output=True, text=True, env={**os.environ, "HOME": str(tmp / "casa-sin-mnt")})
+ok(r_.returncode == 0 and r_.stdout.startswith("SIN CONSOLA:") and "sin-consola-sesion.md" in r_.stdout, "una carpeta que la consola no ve: «SIN CONSOLA» y a qué anexo ir")
+_, o = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok("la cola del tablero" in o.split("=== RESPUESTA")[1] and "cola.md" in o.split("=== RESPUESTA")[1], "la apertura completa pide mirar la cola del tablero")
+
 print("La revisión de permisos al abrir (1.24.2)")
 G = "/Users/ana/Library/CloudStorage/GoogleDrive-ana@ejemplo.test/Shared drives/Prueba"
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--origen", G)

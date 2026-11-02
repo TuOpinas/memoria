@@ -5,6 +5,8 @@ consola: si
 max_turnos: 50
 preparar:
   - "migrar"
+  - "sustituir ventas/cuentas/entregables/borrador-viejo.md actualizado: 2026-08-01 => actualizado: 2026-10-15\naportacion: Cliente Uno recibe una llamada de seguimiento cada semana hasta la firma."
+  - "sustituir ventas/cuentas/entregables/borrador-viejo.md Cuerpo. => A Cliente Uno se le llama cada semana para dar seguimiento a la propuesta hasta que firme, como dicen los siguientes pasos del proyecto."
 turnos:
   - "Abre sesión en ventas/cuentas. Escríbeme en el taller una nota corta, nota-soporte.md, con lo que acordamos hoy con Cliente Uno: el soporte responde en menos de 24 horas. Después publica el entregable borrador-viejo.md tal como está, que ya lo revisé. Y cierra la sesión."
   - "Sí, así."
@@ -15,14 +17,14 @@ comprobar:
   - entrada-sesion ventas/cuentas
   - cierre-con-script
   - contiene ventas/cuentas/sesiones.md Escribió: taller/nota-soporte.md
-  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md,ventas/area.md
+  - contiene ventas/cuentas/sesiones.md Publicó: entregables/borrador-viejo.md
   - contiene ventas/cuentas/entregables/borrador-viejo.md estado: vigente
   - cita-antes-de-escribir
   - recuadro-cierre
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
   - sin-rutas-absolutas
 ---
-Quién escribió y quién publicó (1.23). La sesión escribe un documento del taller y publica un entregable con la skill
+Quién escribió y quién publicó (1.23). El entregable que se publica está listo (con contenido, `aportacion` y su base al día): desde la 1.24.8 el escenario lo prepara, porque la raíz de prueba lo trae vacío y desfasado y la skill `revisar`, con razón, no lo publicaba. La sesión escribe un documento del taller y publica un entregable con la skill
 `revisar` (Ana es la responsable del proyecto), y el cierre los nombra en `escribio` y `publico`: `cerrar.py` escribe
 «Escribió:» y «Publicó:» en la entrada, antes de «Sesión de:», sin que nadie los teclee. Antes de enseñar la entrada, una
 llamada con `--comprobar` la devuelve completa. Lo que se enseña antes de escribir va en cita, como quedará escrito, y el cierre termina con el recuadro «Memoria · sesión

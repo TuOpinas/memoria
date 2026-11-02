@@ -49,6 +49,17 @@ if RAIZ is not None and not (RAIZ / "guia.md").is_file():
         sys.argv[1] = str(_cand[0]); RAIZ = _cand[0]; RAIZ_RESUELTA = True
     elif len(_raices) > 1:
         sys.exit("Esa ruta no existe en esta consola y hay varias raíces bajo $HOME/mnt: " + ", ".join(d.name for d in _raices) + ". Pasa la de $HOME/mnt/<nombre>.")
+if RAIZ is not None and not (RAIZ / "guia.md").is_file() and len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+    # lo que la apertura necesita saber, en una línea que se reconoce (1.24.8): la conversación no tiene que comprobar antes
+    # si la carpeta es una raíz ni si la consola la ve
+    _mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    _monta = _mnt.is_dir() and any(d.name == RAIZ.name or d.name.endswith("--" + RAIZ.name) for d in _mnt.glob("*"))
+    if _monta or RAIZ.is_dir():
+        print(f"NO ES RAIZ: {RAIZ.name} no tiene guia.md y metodo.md en su primer nivel. No es una memoria: no se dice nada de esto.")
+    else:
+        print(f"SIN CONSOLA: esta consola no ve {RAIZ.name}. Si la carpeta es una memoria, se trabaja como dice el anexo sin-consola-sesion.md de la skill sesion; "
+              "se sabe trayendo guia.md y metodo.md con device_stage_files.")
+    sys.exit(0)
 if RAIZ is None or not (RAIZ / "guia.md").is_file():
     sys.exit("Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin \"<primera línea del metodo.md del plugin>\"] [--sin-fechas [--listado <archivo>]] [--minima] [--origen \"<ruta de la raíz en la computadora>\"]  (la raíz es la carpeta con guia.md y metodo.md: en esta consola, la de $HOME/mnt/ cuyo nombre es el último tramo de la ruta que da get_device_info)")
 args = [a for a in sys.argv[2:]]
@@ -787,6 +798,9 @@ def respuesta(sueltos, completa=False):
                          "o si su lista «cambios» no está vacía y es de hace más de 7 días: una fila «**Permisos de Drive:** sin revisar desde el <fecha>» (o «nunca se revisaron», "
                          "o «quedan <n> cambios de la revisión del <fecha>») y, al final, la pregunta «¿Reviso ahora los permisos de Drive?» con «Revisar ahora» y «Después». "
                          "Sin tablero o si una llamada falla, nada. Con «Revisar ahora», el anexo permisos.md de la skill sesion; con «Después», no se vuelve a ofrecer en esta conversación.")
+    if completa:
+        pasos.append("Antes de responder, la cola del tablero: ToolSearch de mcp__claude-artifacts__list_artifacts, db_query y read_file (o Artifact y ArtifactData si la sesión tiene las de antes); "
+                     f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
     pasos.append("Responde con la sesión: dónde quedó todo, los recuadros de la memoria, los avisos y la propuesta de trabajo, como dice «Qué respondo» de la skill sesion."
                  if completa else "Responde a lo que se pidió.")
     if sueltos:

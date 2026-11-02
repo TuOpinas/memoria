@@ -53,7 +53,7 @@ comprobar:
 ---
 ```
 
-Pasos de `preparar` y `entre`: `migrar` (la raíz pasa a la estructura de la 1.22 por la cuenta del escenario), `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `otro-cierre <area>/<proyecto>`.
+Pasos de `preparar` y `entre`: `migrar` (la raíz pasa a la estructura de la 1.22 por la cuenta del escenario), `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `sustituir <ruta> <viejo> => <nuevo>` (con `\n` para un salto de línea), `otro-cierre <area>/<proyecto>`.
 
 Comprobaciones: `recuadro` (tabla de una columna, fuera de cita y de código), `recuadro-cierre` (igual, en la última respuesta), `cita-antes-de-escribir [decision]` (la respuesta que pide el sí enseña en cita la entrada, el `Estatus` y, con `decision`, cada decisión), `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <ruta> <bloque>`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `pregunta-antes N`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `estatus <a>/<p>` (o `en-corto`), `nombres-nuevos <a>/<p>`, `migrada <area>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-contiene <texto>`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`, `palabras-maximo N[@T]`, `sin-ingles`, `skill <nombre> <N>` (la skill se cargó exactamente N veces), `sin-buscar-plugin` (ningún comando busca el plugin en disco) y `no-menciona-re <regex>[@N]`. Se añaden en `correr.py` con `@comprobacion`.
 

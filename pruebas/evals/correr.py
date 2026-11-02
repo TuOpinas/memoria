@@ -126,6 +126,14 @@ def aplicar_paso(e, raiz, paso):
             r, _, texto = arg.partition(" ")
             with open(raiz / r, "a", encoding="utf-8") as f:
                 f.write(texto + "\n")
+        elif orden == "sustituir":             # sustituir <ruta> <viejo> => <nuevo>: cambia un texto del archivo (\n es salto de línea)
+            r, _, resto = arg.partition(" ")
+            viejo, _, nuevo = resto.partition(" => ")
+            viejo, nuevo = viejo.replace("\\n", "\n"), nuevo.replace("\\n", "\n")
+            t = (raiz / r).read_text(encoding="utf-8")
+            if viejo not in t:
+                raise SystemExit(f"{e['nombre']}: «{viejo}» no está en {r}")
+            (raiz / r).write_text(t.replace(viejo, nuevo, 1), encoding="utf-8")
         elif orden == "otro-cierre":           # otro-cierre <area>/<proyecto>: otra persona cierra sesión ahora (entrada arriba y un paso nuevo)
             ses = raiz / arg / "sesiones.md"
             t = ses.read_text(encoding="utf-8")
