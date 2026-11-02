@@ -16,6 +16,10 @@ python3 pruebas/evals/correr.py --plugin /ruta/al/plugin/de/otra/rama
 
 Deja en `resultados/<fecha>-<versión>-<modelo>/` un `resultados.json` (medidas y comprobaciones de cada escenario) y la transcripción de cada uno (`<escenario>.md`: cada turno, cada llamada con su entrada y su resultado, y la respuesta). `resultados/` no se versiona.
 
+## En GitHub, sin sesión
+
+`.github/workflows/evals.yml` los corre en GitHub cuando un pull request recibe la etiqueta `evals` (los escenarios, de la línea «Evals:» de su descripción; sin ella, 01, 02 y 03), o a mano desde Actions con los escenarios y el modelo. Gasta del plan de la cuenta cuyo token está en el secreto `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`), con su correo en `EVALS_CORREO`. Deja el resumen como comentario del pull request y los resultados como artefacto. Así quien prepara una versión los lanza poniendo la etiqueta, sin depender de su sesión ni de su computadora.
+
 ## Cómo funciona
 
 - **El plugin que se prueba** se copia a `/root/.claude/plugins/evals/memoria`, que es donde la skill `sesion` lo busca, con una versión mayor que cualquier copia instalada (para que la elija si hay varias) y su `metodo.md` regenerado. Se borra al terminar.

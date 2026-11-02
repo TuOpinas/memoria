@@ -31,7 +31,8 @@ import time
 AQUI = pathlib.Path(__file__).resolve().parent
 REPO = AQUI.parent.parent
 PLUGIN = REPO / "plugins" / "memoria"
-PLUGINS_INSTALADOS = pathlib.Path("/root/.claude/plugins")
+# donde la sesión tiene sus plugins: /root en las sesiones en la nube; en GitHub (evals.yml) el $HOME del runner
+PLUGINS_INSTALADOS = pathlib.Path(os.environ.get("MEMORIA_EVALS_PLUGINS") or "/root/.claude/plugins")
 sys.path.insert(0, str(AQUI))
 from dispositivo import Dispositivo  # noqa: E402
 
@@ -200,6 +201,10 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion):
     # la conversación es de un proyecto de Claude (como en el uso real); la cuenta es la de quien corre el eval, y la
     # raíz de prueba ya la declara en el papel que pide el escenario (preparar_raiz)
     anexo = "# attachedProject\nThis session is attached to the Project \"Prueba\"."
+    # como la app, que da a Claude el correo de la cuenta (sin él no sabe con qué --cuenta abrir); en GitHub no hay otra vía
+    correo = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip()
+    if correo:
+        anexo = f"# userEmail\nThe user's email address is {correo}.\n" + anexo
     opciones = ClaudeAgentOptions(
         system_prompt={"type": "preset", "preset": "claude_code", "append": anexo},
         mcp_servers={"remote-devices": disp.servidor()},

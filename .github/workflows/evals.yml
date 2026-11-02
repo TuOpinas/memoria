@@ -1,0 +1,84 @@
+# Corre los evals (pruebas/evals/) en GitHub, para que no dependan de una sesión concreta ni de una computadora.
+# Cuestan tokens del plan de quien es dueño del token, así que no corren solos: corren cuando un pull request recibe la
+# etiqueta «evals» (los escenarios salen de la línea «Evals:» de su descripción; sin ella, 01, 02 y 03) o a mano desde
+# Actions. Al terminar dejan el resumen como comentario del pull request y los resultados como artefacto.
+#
+# Hace falta, una sola vez, en Settings → Secrets and variables → Actions del repositorio:
+#   CLAUDE_CODE_OAUTH_TOKEN  el token de `claude setup-token` (usa el plan de esa cuenta, no la API)
+#   EVALS_CORREO             el correo de esa misma cuenta (la raíz de prueba declara esa cuenta)
+name: Evals
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      escenarios:
+        description: 'Escenarios separados por espacios (vacío: 01, 02 y 03)'
+        required: false
+      modelo:
+        description: 'Modelo (opus, sonnet…)'
+        required: false
+        default: opus
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  evals:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'evals'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      CLAUDE_CODE_USER_EMAIL: ${{ secrets.EVALS_CORREO }}
+      MEMORIA_EVALS_PLUGINS: ${{ github.workspace }}/../plugins-evals
+      CUERPO: ${{ github.event.pull_request.body }}
+      ENTRADA: ${{ inputs.escenarios }}
+      MODELO: ${{ inputs.modelo || 'opus' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Claude Code y su SDK
+        run: |
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -n "$CLAUDE_CODE_USER_EMAIL" ] || { echo "Faltan los secretos CLAUDE_CODE_OAUTH_TOKEN y EVALS_CORREO (ver la cabecera de este archivo)"; exit 1; }
+          npm install -g @anthropic-ai/claude-code
+          pip install claude-agent-sdk
+          mkdir -p "$MEMORIA_EVALS_PLUGINS"
+          # la copia sin consola y las salidas viven donde en la app: /mnt/user-data
+          sudo mkdir -p /mnt/user-data/uploads /mnt/user-data/outputs && sudo chown -R "$(id -u):$(id -g)" /mnt/user-data
+      - name: Escenarios
+        id: cuales
+        run: |
+          e="$ENTRADA"
+          [ -z "$e" ] && e="$(printf '%s\n' "$CUERPO" | sed -n 's/^\**Evals:\**[[:space:]]*//p' | head -n 1)"
+          e="$(printf '%s' "$e" | tr -cd 'A-Za-z0-9 _-')"
+          [ -z "$e" ] && e="01-pregunta-ajena 02-abre-sin-nombrar 03-cierre-con-decision"
+          echo "lista=$e" >> "$GITHUB_OUTPUT"
+      - name: Correr
+        run: |
+          python3 pruebas/evals/correr.py ${{ steps.cuales.outputs.lista }} --modelo "$MODELO" --salida "$RUNNER_TEMP/evals" 2>&1 | tee "$RUNNER_TEMP/evals.log"
+          exit "${PIPESTATUS[0]}"
+      - name: Resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals
+          path: |
+            ${{ runner.temp }}/evals
+            ${{ runner.temp }}/evals.log
+          if-no-files-found: ignore
+      - name: Comentario en el pull request
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -s "$RUNNER_TEMP/evals.log" ] || exit 0
+          { echo "**Evals** (${{ steps.cuales.outputs.lista }}, $MODELO)"; echo; echo '```'; tail -c 20000 "$RUNNER_TEMP/evals.log"; echo '```'; echo; python3 pruebas/evals/resumen_fallos.py "$RUNNER_TEMP/evals"; } > "$RUNNER_TEMP/comentario.md"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file "$RUNNER_TEMP/comentario.md"

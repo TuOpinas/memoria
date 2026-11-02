@@ -35,3 +35,28 @@ def raiz_migrada(cuenta="ana@ejemplo.test", nombre="Ana Prueba"):
     p = subprocess.run([sys.executable, str(MIG), str(r), "--cuenta", cuenta, "--nombre", nombre, "--plugin", "1.22.1"],
                        capture_output=True, text=True)
     return r, json.loads(p.stdout)
+
+
+GV = PRUEBAS.parent / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"
+
+
+def dos_corridas(raiz, tmp, fuera=False):
+    """Como la puesta al día real: inventario y generación sobre la copia, y una segunda corrida que reutiliza la base.
+    Devuelve (primera, segunda, reutilizó algo); con fuera=True, «reutilizó» exige también lo de fuera de los proyectos.
+    La usan probar_que_es.py y probar_personas.py (antes cada una tenía su copia)."""
+    def corrida(sal, previos=None, sin_cambios=None):
+        a = [sys.executable, str(GV), str(raiz), "--inventario"] + (["--sin-cambios", sin_cambios] if sin_cambios else [])
+        inv = json.loads(subprocess.run(a, capture_output=True, text=True, check=True).stdout)
+        ip = tmp / f"inv-{sal}.json"; ip.write_text(json.dumps(inv["inventario"]), encoding="utf-8")
+        cop = tmp / f"copia-{sal}"
+        for r_ in inv["leer"]:
+            (cop / r_).parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(raiz / r_, cop / r_)
+        cop.mkdir(exist_ok=True)
+        subprocess.run([sys.executable, str(GV), str(cop), str(tmp / sal), "--desde-inventario", str(ip), "--version", "prueba"]
+                       + (["--previos", str(previos)] if previos else []), check=True, stdout=subprocess.DEVNULL)
+        return inv
+    corrida("o1")
+    est = json.loads((tmp / "o1" / "meta" / "estado.json").read_text(encoding="utf-8"))
+    inv = corrida("o2", tmp / "o1", ",".join(est.get("huellas") or []))
+    reuso = bool(inv["inventario"].get("reusar")) and (not fuera or bool(inv["inventario"].get("fuera_reusar")))
+    return tmp / "o1", tmp / "o2", reuso

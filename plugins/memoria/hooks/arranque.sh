@@ -17,6 +17,24 @@ ${BLOQUE}
 
 Con varias memorias, pregunta en cuál se trabaja antes de escribir o de abrir la sesión de un proyecto, y nada pasa de una a otra sin un traspaso que la persona confirma pieza a pieza. Abrir y cerrar sesión, consultar, guardar y revisar se hacen con las skills del plugin memoria, y antes de escribir en la carpeta se carga el anexo escribir.md de la skill convenciones. Si la consola de la computadora no monta la carpeta (Google Drive en Windows), no pidas acceso otra vez: se trabaja como dice el anexo sin-consola.md de convenciones. En la conversación, cada archivo de la carpeta que nombras va como enlace: [ruta relativa](computer:///<raíz de get_device_info>/<ruta>), con / y los espacios como %20 (en Windows, computer:///C:/Users/…); dentro de la carpeta nunca van rutas absolutas. Al redactar, la primera frase dice el hecho, sin anunciarlo, y sobra toda palabra que se pueda borrar; lo que se firma o se comparte sigue la skill estilo."
 
+# La descarga de la apertura, ya preparada (1.24.7), el único paso del hook con python3: así la apertura no corre en el contenedor el comando que buscaba el
+# plugin con find, que el modo Auto de la app frenaba con un permiso. Sin python3 o si preparar.py falla, no se añade nada
+# y la skill sesion lo pide con un comando simple.
+PREP=""
+# python3 -c '' además de command -v: en un Mac sin las herramientas de desarrollo, /usr/bin/python3 existe pero no corre
+if command -v python3 >/dev/null 2>&1 && python3 -c '' >/dev/null 2>&1 && [ -f "$RAIZ/preparar.py" ]; then
+  # con tope propio, más corto que el del hook (10 s), para que un Python lento nunca se lleve el aviso entero
+  T3=""; command -v timeout >/dev/null 2>&1 && T3="timeout 3"
+  PREP="$($T3 python3 "$RAIZ/preparar.py" '$HOME/memoria' skills/sesion/abrir.py skills/sesion/cerrar.py 2>/dev/null)" || PREP=""
+  printf '%s\n' "$PREP" | grep -q '^DESCARGA ' || PREP=""
+  # REINTENTO no viaja: es DESCARGA con main en lugar de v<versión>, y la skill lo arma (la mitad del texto añadido)
+  PREP="$(printf '%s\n' "$PREP" | grep -v '^REINTENTO ')"
+fi
+[ -n "$PREP" ] && TEXTO="${TEXTO}
+
+Para la apertura de la skill sesion (paso 1 de «Qué leo»), ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor:
+${PREP}"
+
 # JSON a mano, sin python: el texto solo puede traer barras, comillas, tabuladores y saltos de línea
 j=$TEXTO
 j=${j//\\/\\\\}

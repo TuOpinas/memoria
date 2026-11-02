@@ -13,7 +13,7 @@
 #   3. No es la puesta al día del tablero (una tarea programada que no es una sesión de trabajo).
 #   4. Este control no intervino antes en esta conversación: lo apunta en un sello por conversación (session_id),
 #      fuera de la carpeta; si no puede apuntarlo, no interviene, para no repetirse.
-# Sin python ni jq: grep y sed, como el hook de arranque.
+# Sin python ni jq: grep y sed (el de arranque solo usa python3, con tope, para la descarga de la apertura).
 set -u
 HOME="${HOME:-}"
 ENTRADA="$(cat 2>/dev/null)" || exit 0
