@@ -31,7 +31,8 @@ import time
 AQUI = pathlib.Path(__file__).resolve().parent
 REPO = AQUI.parent.parent
 PLUGIN = REPO / "plugins" / "memoria"
-PLUGINS_INSTALADOS = pathlib.Path("/root/.claude/plugins")
+# donde la sesión tiene sus plugins: /root en las sesiones en la nube; en GitHub (evals.yml) el $HOME del runner
+PLUGINS_INSTALADOS = pathlib.Path(os.environ.get("MEMORIA_EVALS_PLUGINS") or "/root/.claude/plugins")
 sys.path.insert(0, str(AQUI))
 from dispositivo import Dispositivo  # noqa: E402
 
