@@ -112,5 +112,9 @@ ok(not v3.get("colaboran_nombres") and v3.get("colaboran_sin_nombre") == 2, f"co
 v4 = guia_con("| Ana Prueba (colabora María de la Fuente) | ana@ejemplo.test · colabora: mfuente@ejemplo.test |", "particulas")
 ok(v4.get("colaboran_ver") == ["María de la Fuente"], f"un nombre con partículas ({v4.get('colaboran_ver')})")
 
+# el nombre junto al correo en la celda Cuenta, como dice guia.md: «colabora: Ana Ruiz (ana@…)» (1.24.10: en Smile Pill salía «sin nombre»)
+v5 = guia_con("| Ana Prueba | ana@ejemplo.test · colabora: Gabby Meade (gabriela.meade@ejemplo.test), Luis Mejía (lmejia@ejemplo.test) |", "celda")
+ok(v5.get("colaboran_nombres") == {"gabriela.meade@ejemplo.test": "Gabby Meade", "lmejia@ejemplo.test": "Luis Mejía"} and not v5.get("colaboran_sin_nombre"), f"«Nombre (correo)» en la celda Cuenta da el nombre ({v5.get('colaboran_nombres')}, sin nombre {v5.get('colaboran_sin_nombre')})")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

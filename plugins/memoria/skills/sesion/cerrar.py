@@ -83,9 +83,13 @@ INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (escribir.md, sección 8; por tamaño desde la 1.23)
 
-# --- quién escribe: la celda Cuenta de guia.md y la línea «Colabora:» de un proyecto ---
-# La misma función en abrir.py, aplicar_cambios.py, generar_vista.py y verificar.sh (cada uno se descarga suelto);
-# pruebas/sesion/probar_cuentas.py comprueba que las cuatro copias son idénticas.
+# --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
+# La misma función en abrir.py, cerrar.py, permisos.py, migrar_estructura.py, aplicar_cambios.py, barrido.py,
+# generar_vista.py y verificar.sh (cada uno se descarga suelto); pruebas/sesion/probar_cuentas.py comprueba que las
+# ocho copias son idénticas. Desde la 1.25 cada persona está una vez en «Quién es quién» («Nombre · cuenta@») y la tabla
+# de áreas la nombra por su nombre en Responsable y Colabora; hasta la 1.24, la celda Cuenta llevaba los correos. Se
+# leen las dos formas: con registro y columna Colabora, por nombre; sin ellos, la celda Cuenta como siempre.
+import unicodedata
 CORREO = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)*")
 PALABRA_COLABORA = re.compile(r"\bco-?labor\w*\s*:?", re.I)
 LINEA_COLABORA = re.compile(r"^\s*[-*]?\s*\**\s*colabora[n]?\s*\**\s*:", re.I)
@@ -106,9 +110,146 @@ def cuentas(celda):
     elif len(partes) > 1 and not re.search(r"\bcolabora\s*:", texto):
         aviso = "la palabra para quien colabora va escrita «colabora:»"
     return antes, despues, aviso
-def colaboran_en(quien):
-    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas)."""
-    return set(c for l in (quien or "").split("\n") if LINEA_COLABORA.match(l) for c in CORREO.findall(l.lower()))
+def clave_nombre(n):
+    """Cómo se comparan dos nombres: NFC (Mac y Windows escriben las tildes distinto), sin mayúsculas, sin negritas ni
+    comillas, y con los espacios juntos. Nada más: sin acentos no es el mismo nombre."""
+    n = unicodedata.normalize("NFC", n or "").replace(" ", " ")
+    return re.sub(r"\s+", " ", re.sub(r"[*_`«»\"]", "", n)).strip(" .,;:").lower()
+def registro_personas(guia):
+    """«Quién es quién» de guia.md: {"hay", "personas", "nombre": {clave: persona}, "cuenta": {correo: persona}, "avisos"}.
+    Una línea es «- Nombre · campo · campo»; los campos: un correo (su cuenta de Claude), «cuentas: a@, b@», «en Drive: x@»,
+    «sin cuenta», «sin confirmar», «también: Otra Grafía», «de: Organización», «baja AAAA-MM-DD», «compartida con: Nombre»
+    y «registra: Nombre». «?» como nombre es una cuenta que todavía no tiene nombre. Quien está de baja no escribe."""
+    m = re.search(r"^##\s+Quién es quién\s*$(.*?)(?=^##\s|\Z)", guia or "", re.M | re.S)
+    reg = {"hay": bool(m), "personas": [], "nombre": {}, "cuenta": {}, "avisos": []}
+    for l in (m.group(1) if m else "").split("\n"):
+        if not re.match(r"^\s*[-*]\s+\S", l):
+            continue
+        campos = [c.strip() for c in re.split(r"\s+·\s+|\s*·\s*", l.strip()[1:].strip()) if c.strip()]
+        if not campos:
+            continue
+        p = {"nombre": re.sub(r"[*_`]", "", campos[0]).strip(), "cuentas": set(), "drive": set(), "sin_cuenta": False,
+             "sin_confirmar": False, "alias": [], "de": "", "baja": "", "compartida": "", "registra": "", "linea": l.strip()}
+        if CORREO.fullmatch(p["nombre"].lower()):
+            p["cuentas"].add(p["nombre"].lower()); p["nombre"] = "?"
+        for c in campos[1:]:
+            cl = c.lower()
+            if CORREO.fullmatch(cl):
+                p["cuentas"].add(cl)
+            elif re.match(r"^cuentas?\s*:", cl):
+                p["cuentas"] |= set(CORREO.findall(cl))
+            elif re.match(r"^(en\s+)?(google\s+)?drive\s*:", cl):
+                p["drive"] |= set(CORREO.findall(cl))
+            elif re.match(r"^sin\s+cuenta\b", cl):
+                p["sin_cuenta"] = True
+            elif re.match(r"^sin\s+confirmar\b", cl):
+                p["sin_confirmar"] = True
+            elif re.match(r"^tambi[eé]n\s*:", cl):
+                p["alias"] += [a.strip() for a in re.split(r",|\s+y\s+", c.split(":", 1)[1]) if a.strip()]
+            elif re.match(r"^de\s*:", cl):
+                p["de"] = c.split(":", 1)[1].strip()
+            elif re.match(r"^baja\b", cl):
+                p["baja"] = (re.search(r"20\d\d-\d\d-\d\d", c) or [""])[0] or "sí"
+            elif re.match(r"^compartida\s+con\s*:", cl):
+                p["compartida"] = c.split(":", 1)[1].strip()
+            elif re.match(r"^registra\s*:", cl):
+                p["registra"] = c.split(":", 1)[1].strip()
+            else:
+                reg["avisos"].append(f"«{p['nombre']}»: no se entiende «{c}» (van un correo, «sin cuenta», «en Drive: correo», «también: nombre», «de: organización» o «baja AAAA-MM-DD»)")
+        if p["sin_cuenta"] and p["cuentas"]:
+            reg["avisos"].append(f"«{p['nombre']}» dice «sin cuenta» y lleva una cuenta: se queda la cuenta")
+            p["sin_cuenta"] = False
+        if not p["cuentas"] and not p["sin_cuenta"] and not p["de"]:
+            reg["avisos"].append(f"«{p['nombre']}» no lleva ni su cuenta ni «sin cuenta»")
+        reg["personas"].append(p)
+        for n in ([p["nombre"]] if p["nombre"] != "?" else []) + p["alias"]:
+            k = clave_nombre(n)
+            if k in reg["nombre"] and reg["nombre"][k] is not p:
+                reg["avisos"].append(f"«{n}» está dos veces: dos personas con el mismo nombre se distinguen con el segundo apellido o una inicial")
+            reg["nombre"].setdefault(k, p)
+        for c in p["cuentas"]:
+            if c in reg["cuenta"]:
+                reg["avisos"].append(f"la cuenta {c} está en dos líneas («{reg['cuenta'][c]['nombre']}» y «{p['nombre']}»)")
+            reg["cuenta"].setdefault(c, p)
+    return reg
+def persona(nombre, reg):
+    """La persona del registro con ese nombre o alias; None si no está."""
+    return (reg or {}).get("nombre", {}).get(clave_nombre(re.sub(r"\s*\([^)]*\)", "", nombre or "")))
+def nombres_de(texto):
+    """Los nombres de una celda o una línea («Colabora: Ana Ruiz, Luis Mejía»): separados por comas, «;» o « y », sin
+    la etiqueta del principio ni lo que va entre paréntesis."""
+    t = re.sub(r"^\s*[-*]?\s*\**\s*(?:colabora[n]?|lo leen?|responsable)\s*\**\s*:\s*\**", "", texto or "", flags=re.I)
+    t = re.sub(r"\s*\([^)]*\)", "", t)
+    return [n.strip(" .*") for n in re.split(r",|;|\s+y\s+", t) if n.strip(" .*") and n.strip(" .*").lower() not in ("—", "-", "nadie", "ninguno", "ninguna")]
+def cuentas_de_nombres(texto, reg):
+    """(cuentas, nombres que no están en el registro) de una celda con nombres. Quien está de baja o sin cuenta no da
+    ninguna; un correo escrito tal cual («Nombre (correo)», el alta provisional de un proyecto) cuenta."""
+    out, faltan = set(CORREO.findall((texto or "").lower())), []
+    for n in nombres_de(texto):
+        p = persona(n, reg)
+        if p is None:
+            if not CORREO.fullmatch(n.lower()):
+                faltan.append(n)
+        elif not p["baja"]:
+            out |= p["cuentas"]
+    return out, faltan
+def columnas_personas(cab):
+    """Dónde están Responsable, Cuenta y Colabora en el encabezado de la tabla de áreas (None si no están)."""
+    n = [re.sub(r"[*_`]", "", x).strip().lower() for x in cab]
+    pos = lambda *ns: next((i for i, x in enumerate(n) if x in ns), None)
+    return {"responsable": pos("responsable", "dueño", "dueno"), "cuenta": pos("cuenta"), "colabora": pos("colabora", "colaboran")}
+def fila_cuentas(cab, celdas, reg):
+    """(responsable, colaboran, aviso) de una fila de la tabla de áreas, como cuentas(): con la columna Cuenta (hasta la
+    1.24), de sus correos; con la columna Colabora y «Quién es quién» (1.25), por los nombres. Sin encabezado reconocible,
+    la cuarta columna como Cuenta, como siempre. Falla cerrado: un responsable que no está en el registro no es nadie."""
+    col = columnas_personas(cab)
+    if col["cuenta"] is not None or col["colabora"] is None:
+        i = col["cuenta"] if col["cuenta"] is not None else 3
+        return cuentas(celdas[i] if i < len(celdas) else "")
+    if not (reg or {}).get("hay"):
+        return set(), set(), "la tabla nombra a quien colabora por su nombre y guia.md no tiene «Quién es quién»"
+    resp = celdas[col["responsable"] if col["responsable"] is not None else 2] if len(celdas) > 2 else ""
+    rn = nombres_de(re.sub(r"\s*\((?=[a-záéíóúñ`])[^)]*\)", "", resp))
+    avisos = []
+    de = set()
+    if len(rn) != 1:
+        avisos.append("el responsable es una sola persona del registro" if rn else "sin responsable")
+    else:
+        p = persona(rn[0], reg)
+        if p is None:
+            avisos.append(f"«{rn[0]}» no está en «Quién es quién»")
+        elif p["baja"]:
+            avisos.append(f"«{p['nombre']}» está de baja")
+        elif p["cuentas"]:
+            de = set(p["cuentas"])
+        elif p["registra"] and persona(p["registra"], reg) and persona(p["registra"], reg)["cuentas"]:
+            de = set(persona(p["registra"], reg)["cuentas"])
+        else:
+            avisos.append(f"«{p['nombre']}» no tiene cuenta: o la tiene, o su línea dice «registra: Nombre» de quien escribe por ella")
+    co, faltan = cuentas_de_nombres(celdas[col["colabora"]] if col["colabora"] < len(celdas) else "", reg)
+    avisos += [f"«{n}» (Colabora) no está en «Quién es quién»" for n in faltan]
+    return de, co - de, "; ".join(avisos) or None
+def cuentas_contexto(linea, reg):
+    """Las cuentas de quien responde por el contexto: la que va entre paréntesis en «Contexto común: Nombre (correo)»
+    (hasta la 1.24) o la del registro para ese nombre (1.25)."""
+    t = (linea or "").split(":", 1)[-1]
+    c = set(CORREO.findall(t.lower()))
+    if c:
+        return c
+    p = persona(t.strip().rstrip("."), reg)
+    return set(p["cuentas"]) if p and not p["baja"] else set()
+def nombre_de(cuenta, reg):
+    """El nombre del registro de esa cuenta, o "" si no está (o es «?»)."""
+    p = (reg or {}).get("cuenta", {}).get((cuenta or "").lower())
+    return p["nombre"] if p and p["nombre"] != "?" else ""
+def colaboran_en(quien, reg=None):
+    """Las cuentas de las líneas «Colabora:» de «Quién participa» de un proyecto (todas las líneas): los correos escritos
+    tal cual y, con registro, las de los nombres."""
+    out = set()
+    for l in (quien or "").split("\n"):
+        if LINEA_COLABORA.match(l):
+            out |= cuentas_de_nombres(l, reg)[0] if reg else set(CORREO.findall(l.lower()))
+    return out
 # --- fin de quién escribe ---
 
 
@@ -132,22 +273,22 @@ def zona_horaria(raiz, defecto="America/Mexico_City"):
 
 
 def celda_cuenta(raiz, area):
-    """(responsables, colaboran) del área según la tabla de guia.md."""
+    """(responsables, colaboran) del área según la tabla de guia.md: la celda Cuenta hasta la 1.24, Responsable y
+    Colabora por «Quién es quién» desde la 1.25."""
     try:
         guia = (raiz / "guia.md").read_text(encoding="utf-8-sig")
     except OSError:
         return set(), set()
     m = re.search(r"^##\s+Áreas\s*$(.*?)(?=^##\s|\Z)", guia, re.M | re.S)
-    col = None
+    cab, reg = None, registro_personas(guia)
     for l in (m.group(1) if m else "").split("\n"):
         if not l.startswith("|") or re.match(r"^\|[\s:|-]+\|?\s*$", l):
             continue
         c = [x.strip() for x in l.strip().strip("|").split("|")]
-        if col is None:   # la columna Cuenta por su encabezado; sin él, la cuarta, como siempre
-            n_ = [re.sub(r"[*_`]", "", x).strip().lower() for x in c]
-            col = next((i for i, x in enumerate(n_) if x == "cuenta"), 3); continue
-        if len(c) > col and c[0].strip("`").rstrip("/") == area:
-            de, co, _ = cuentas(c[col])
+        if cab is None:   # las columnas por su encabezado; sin él, la cuarta como Cuenta, como siempre
+            cab = c; continue
+        if c[0].strip("`").rstrip("/") == area:
+            de, co, _ = fila_cuentas(cab, c, reg)
             return de, co
     return set(), set()
 
@@ -842,7 +983,7 @@ def main(argv):
     # 5 y 10. area.md: la línea del proyecto (con las de sus entregables) y el Estatus del área
     ar = cambios.get("area") or {}
     if ar.get("linea") and not puede_area:
-        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el responsable del área o quien colabora en ella; {cuenta} no está en su celda Cuenta: pásasela al responsable"})
+        s["rechazados"].append({"ruta": c.rel(pa), "motivo": f"la línea del proyecto en area.md la escribe el responsable del área o quien colabora en ella; {cuenta} no está en su fila de la tabla de áreas de guia.md: pásasela al responsable"})
         ar = {}
     est_area = cambios.get("estatus_area")
     if est_area and not puede_estatus_area:

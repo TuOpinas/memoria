@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prueba verificar.sh: el nombre del dueño de area.md, sin la frase que le sigue, y las copias en conflicto de Drive.
+"""Prueba verificar.sh: el responsable de area.md ya no se compara con guia.md (1.25), y las copias en conflicto de Drive.
 
 Uso: python3 pruebas/verificar/probar_verificar.py
 """
@@ -34,7 +34,7 @@ ok(not dueno_distinto(), "la raíz de prueba no da el hallazgo")
 a.write_text(t.replace(m.group(0), f"Dueño: {nombre}. Consume esta área cualquier conversación comercial."), encoding="utf-8")
 ok(not dueno_distinto(), "una frase después del nombre no cuenta como otro dueño")
 a.write_text(t.replace(m.group(0), "Dueño: Otra Persona. Consume esta área cualquier conversación comercial."), encoding="utf-8")
-ok(len(dueno_distinto()) == 1, "otro nombre sí da el hallazgo")
+ok(not dueno_distinto(), "otro nombre tampoco: desde la 1.25 verificar no compara area.md con la tabla, que es la única fuente (los falsos avisos de Ctrl+ y Escuela Fácil, 2026-11-02)")
 a.write_text(t, encoding="utf-8")
 print("verificar.sh: copias en conflicto de Drive")
 import shutil as _sh

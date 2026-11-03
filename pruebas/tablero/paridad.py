@@ -50,7 +50,7 @@ for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-s
     print(("  bien  " if bien else "  FALLA ") + f"el dueño «{d}» sale igual"); fallos += not bien
 # cuentas (1.24.2): la celda Cuenta de guia.md se lee igual en los siete scripts que la copian (cada uno se descarga suelto)
 CON_CUENTAS = ["skills/sesion/abrir.py", "verificar.sh", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
-               "skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py"]
+               "skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py"]
 def con_cuentas(ruta):
     src = (P / ruta).read_text(encoding="utf-8"); ns = {"re": re}
     for c in ("CORREO", "PALABRA_COLABORA"):

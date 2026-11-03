@@ -36,7 +36,7 @@ Colabora: [nombre y apellido], solo si alguien colabora en el área
 
 El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. La línea del entregable dice lo que dice su clave `aportacion` (sección 5), copiada tal cual, para que el índice y el documento no digan dos cosas distintas; si el entregable no la tiene, lleva una línea de qué es hasta que la tenga. Un proyecto cerrado ocupa solo su línea, sin desglose. La línea de un proyecto restringido empieza por «restringido: responsable Nombre.» y sigue con su descripción (`` - `ronda/` — restringido: responsable Beto Prueba. Ronda de inversión ``): el nombre es lo único que ve quien no puede leerlo, y el tablero y la apertura lo toman de ahí. Lo escriben el cierre de sesión, la publicación de un entregable y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de los proyectos son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
 
-`Quién participa` es donde vive el responsable del área. No hay otra clave para él. Las cuentas de quienes colaboran en el área están en la celda Cuenta de `guia.md`, que es lo que decide quién escribe; la línea `Colabora:` del área dice sus nombres.
+`Quién participa` repite el responsable y quienes colaboran de la tabla de áreas de `guia.md`, que es la fuente y lo que decide quién escribe: desde la 1.25 nadie compara las dos, y la línea sale de `area.md` con la migración de la 1.26. Mientras, se escribe igual que en la tabla, por su nombre.
 
 ## 3. Estructura de `proyecto.md`
 
@@ -64,8 +64,11 @@ No entra: [lo que queda fuera]
 
 ## Quién participa
 Responsable: [nombre] ([área])
-Colabora: [nombre (correo)], solo si alguien colabora en este proyecto sin colaborar en el área
+Colabora: [nombre y apellido], solo si alguien colabora en este proyecto sin colaborar en el área
+Lo lee: [nombre y apellido], solo si el proyecto, o su restringido/, lo lee alguien que no escribe en él
 ```
+
+Los nombres son los de «Quién es quién» de `guia.md` (contrato, sección 1). Quien colabora y aún no está ahí va como `Nombre Apellido (correo)`, el alta provisional: escribe desde ya, y el responsable de contexto lo pasa al registro. En una raíz sin «Quién es quién» (hasta la 1.24), todos van así, con su cuenta.
 
 Las secciones van en este orden, el mismo patrón que el área (sección 2): cómo va, qué es, qué contiene, quién.
 
@@ -170,7 +173,7 @@ Publicó: entregables/mapa-epicas.md
 Sesión de: Nombre Apellido · plugin 1.23.0
 ```
 
-`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: lo que escribieron o publicaron no se atribuye a nadie. Publicado es solo lo que una entrada dice en «Publicó:»; un entregable vigente que cambió sin que ninguna entrada lo nombre se cuenta aparte, sin suponer quién. La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
+`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: lo que escribieron o publicaron no se atribuye a nadie. Publicado es solo lo que una entrada dice en «Publicó:»; un entregable vigente que cambió sin que ninguna entrada lo nombre se cuenta aparte, sin suponer quién. La última línea dice quién trabajó y con qué versión del plugin; el nombre es el de la línea NOMBRE de `abrir.py`, que lo toma de «Quién es quién», y solo se pregunta si no la da. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
 Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`, y la migración de estructura de la 1.22, como `## AAAA-MM-DD (migracion)`: cuentan lo que hicieron, pero no son sesiones, y el tablero no las cuenta como tales.
 
@@ -223,7 +226,7 @@ El paso a `vigente` lo pide siempre el responsable del proyecto de forma explíc
 
 Las dos claves son obligatorias en lo que se crea en `entregables/` y `taller/`; en lo que ya existía sin ellas, `verificar.sh` las cuenta y el barrido propone la `aportacion`. Ningún otro archivo las lleva: ni los registros, ni `area.md`, ni `proyecto.md`, ni `base/`, ni `fuentes/`.
 
-No hay clave de responsable. El responsable vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
+No hay clave de responsable. El de un área vive en la tabla de áreas de `guia.md`; el de un proyecto, en `Quién participa` de su `proyecto.md`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
 
 Las claves van sin acentos ni eñes.
 
