@@ -2,7 +2,6 @@
 raiz: raiz
 cuenta: ana@ejemplo.test
 consola: si
-aviso: sin-descarga
 max_turnos: 20
 preparar:
   - "migrar"
@@ -19,6 +18,6 @@ comprobar:
   - sin-ingles
   - minima-sin-ejecutar
 ---
-El 01 con un aviso de arranque que no trae la descarga, como cuando el hook corre donde no hay python3 (1.24.7). Desde la
-1.24.9 la apertura mínima no la necesita: lee una copia y corre `abrir.py` en el contenedor desde PLUGIN, que el aviso trae
-siempre. Mide que no busque el plugin en disco (`sin-buscar-plugin`) ni ejecute nada en la computadora (`minima-sin-ejecutar`).
+El 01 midiendo cómo abre la mínima: desde la 1.24.9 lee una copia y corre `abrir.py` en el contenedor desde PLUGIN, que el
+aviso trae siempre, y desde la 1.25.1 el aviso ya no trae ninguna descarga (nació como «el aviso sin descarga», 1.24.7). Mide
+que no busque el plugin en disco (`sin-buscar-plugin`) ni ejecute nada en la computadora (`minima-sin-ejecutar`).

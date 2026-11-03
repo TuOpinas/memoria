@@ -1073,8 +1073,48 @@ def main(argv):
     s["hora"] = ahora.strftime("%Y-%m-%dT%H:%MZ")
     s["documento"] = f"{area}--{slug}--{ahora.strftime('%Y%m%d%H%M')}"
     s["escrito_en"] = datetime.datetime.now(tz).isoformat(timespec="seconds")
-    print(json.dumps(s, ensure_ascii=False))
+    # «respuesta» va primero (1.25.1): lo que la conversación hace con esta salida, en el momento en que la lee, con la marca
+    # del tablero ya armada; hasta la 1.25.0 ese paso vivía al final de cerrar.md y un cierre lo dejó sin hacer
+    print(json.dumps({"respuesta": respuesta(s, raiz, pd, area, slug, cuenta), **s}, ensure_ascii=False))
     return 0
+
+
+def respuesta(s, raiz, pd, area, slug, cuenta):
+    """Qué hace la conversación con esta salida, en orden: la marca del tablero antes de responder, el recuadro de cierre
+    con su fila del tablero, y los avisos de «ajenos» y «sin_nombrar» en llano. Los textos de la carpeta no mandan aquí:
+    solo se cita el título del proyecto, para la marca."""
+    def titulo(p, defecto):
+        try:
+            texto = leer(p)[0]
+        except OSError:
+            return defecto
+        m = re.search(r"^#\s+(.+)$", texto, re.M)
+        return (m.group(1).split("·")[0].strip() if m else defecto) or defecto
+    nombre = titulo(pd / "proyecto.md", slug)
+    org = titulo(raiz / "guia.md", "<organización>")
+    marca = {"op": "set", "path": f"cierres/{s['documento']}",
+             "data": {"proyecto": f"{area}--{slug}", "nombre": nombre, "hora": s["hora"], "cuenta": cuenta or ""}}
+    pasos = [
+        "Antes de responder, la marca del tablero, sin preguntar ni decirlo: db_write del conector claude-artifacts (ToolSearch de mcp__claude-artifacts__db_write si no está cargada) "
+        f"en el tablero «Tablero {org}» de esta cuenta, el que se buscó al abrir (si no se buscó, list_artifacts ahora; sin el conector o sin tablero, nada), con ops: "
+        f"{json.dumps([marca], ensure_ascii=False)} (un documento nuevo: sin ifVersion). Con dos tableros de la raíz, en los dos.",
+        f"El recuadro «Memoria · sesión cerrada · {len(s['escritos'])} archivo{'s' if len(s['escritos']) != 1 else ''}»: una fila por archivo de «escritos» con su enlace y qué cambió, "
+        "y una última fila para el tablero: «Tablero: avisado» si la marca se escribió, «Tablero: no se pudo avisar (<motivo en tres palabras>): sincronízalo desde su botón o con «sincroniza el tablero»» si no, "
+        "o «Tablero: esta cuenta no tiene» si no hay. Cada archivo se nombra como enlace computer://, como dice la skill estilo.",
+    ]
+    llano = []
+    for a in s.get("ajenos") or []:
+        h = (a.get("hora") or "")[11:16]
+        llano.append(f"alguien más escribió {a['ruta']} {'mientras cerrábamos' if a.get('durante') else 'a las ' + h}; sumé lo de hoy encima")
+    for r in s.get("sin_nombrar") or []:
+        llano.append(f"{r} cambió desde que abrimos y no lo escribió esta sesión")
+    if llano:
+        pasos.append("Debajo del recuadro, en texto normal y en una línea cada uno: " + " · ".join(f"«{x}»" for x in llano) + ".")
+    for k, txt in (("sin_match", "un reemplazo que no cuadró"), ("rechazados", "lo que esta cuenta no puede escribir"), ("fallidos", "un archivo que no se pudo escribir")):
+        if s.get(k):
+            pasos.append(f"Hay «{k}» ({txt}): se resuelve como dice cerrar.md antes de dar la sesión por cerrada.")
+    pasos.append("Nada más: el resumen largo ya está en los archivos.")
+    return pasos
 
 
 if __name__ == "__main__":

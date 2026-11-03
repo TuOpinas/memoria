@@ -32,6 +32,11 @@ def abrir(*a):
     return r.returncode, r.stdout + r.stderr
 
 
+def abrir_sin_raiz(*a):
+    r = subprocess.run([sys.executable, str(ABRIR), *a], capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
 print("Abrir sesión en una llamada")
 c, o = abrir()
 ok(c == 0 and "=== METODO" in o and "=== GUIA" in o and "=== PREMISAS VIGENTES" in o, "sin proyecto: nivel 0 (método, guía, premisas)")
@@ -143,12 +148,12 @@ r_ = o.split("=== RESPUESTA")[1] if "=== RESPUESTA" in o else ""
 ok(r_.startswith(" (la apertura mínima") and o.rindex("=== RESPUESTA") > o.rindex("=== CLAUDE OUTPUTS"), "la mínima termina con su RESPUESTA")
 ok("| Memoria de trabajo · Organización de prueba · v99.0.0 |\n|---|" in r_, "el recuadro con la organización y la versión que quedará tras copiar metodo.md")
 ok("**Claude outputs:** 2 archivos sueltos" in r_ and "uno parece confidencial" in r_, "la fila de «Claude outputs», con lo que parece confidencial por su nombre")
-ok("METODO_DESCARGA" in r_ and 'cp "$HOME/memoria/metodo.md"' in r_ and "Permisos de Drive" in r_ and "¿Coloco ahora lo que hay en Claude outputs?" in r_, "los pasos: copiar el método, los permisos y la pregunta del final")
-ok(r_.index("METODO_DESCARGA") < r_.index("Responde a lo que se pidió") < r_.index("¿Coloco ahora"), "en orden: antes de responder, responder, y al final")
+ok("--metodo-para-subir" in r_ and "device_commit_files" in r_ and "METODO_DESCARGA" not in r_ and "Permisos de Drive" in r_ and "¿Coloco ahora lo que hay en Claude outputs?" in r_, "los pasos: copiar el método sin descargar nada (1.25.1), los permisos y la pregunta del final")
+ok(r_.index("--metodo-para-subir") < r_.index("Responde a lo que se pidió") < r_.index("¿Coloco ahora"), "en orden: antes de responder, responder, y al final")
 ok("ventas/cuentas" not in r_, "la respuesta no repite la lista de proyectos")
 _, o = abrir("--minima", "--cuenta", "beto@ejemplo.test", "--plugin", "# Método de trabajo · versión 1.0.0 · huella abc1234")
 r_ = o.split("=== RESPUESTA")[1]
-ok("Claude outputs" not in r_ and "METODO_DESCARGA" not in r_ and "Permisos" not in r_, "a otra cuenta, con el plugin atrasado: sin Claude outputs, sin copiar y sin permisos")
+ok("Claude outputs" not in r_ and "metodo-para-subir" not in r_ and "Permisos" not in r_, "a otra cuenta, con el plugin atrasado: sin Claude outputs, sin copiar y sin permisos")
 ok("**Método:** esta carpeta usa una versión del método más nueva que la de tu Claude" in r_, "el plugin atrasado es una fila del recuadro")
 _, o = abrir("--minima", "--cuenta", "nadie@ejemplo.test")
 ok("No escribes en ninguna área: dime en cuál trabajas." in o.split("=== RESPUESTA")[1], "una cuenta sin área lo dice en una fila")
@@ -190,7 +195,12 @@ _r = re.search(r"devicePath «([^»]+)»", abrir("--minima", "--sin-fechas", "--
 ok(bool(_r) and _r.group(1) == "C:\\Users\\ana\\Mi unidad\\Prueba\\metodo.md", f"en Windows, devicePath con barras invertidas (1.24.9) ({_r.group(1) if _r else None})")
 _m = re.search(r"stagedPath «([^»]+)» y devicePath «/Users/ana/Prueba/metodo.md»", o)
 ok(bool(_m) and pathlib.Path(_m.group(1)).read_text(encoding="utf-8").startswith(_pl), "y con la raíz atrasada pide device_commit_files del metodo.md del plugin, ya copiado (1.24.9)")
-ok("METODO_DESCARGA" not in o.split("=== RESPUESTA")[1], "sin descargar nada en la computadora")
+ok("METODO_DESCARGA" not in o.split("=== RESPUESTA")[1] and "metodo-para-subir" not in o.split("=== RESPUESTA")[1], "sin descargar nada en la computadora")
+# el mismo camino para la apertura completa con consola (1.25.1): --metodo-para-subir imprime la ruta de la copia, y nada si no cuadra
+_c, _o2 = abrir_sin_raiz("--metodo-para-subir", "--plugin", _pl)
+ok(_c == 0 and _o2.strip() == (_m.group(1) if _m else "") and pathlib.Path(_o2.strip()).is_file(), "--metodo-para-subir imprime la misma copia del metodo.md del plugin (1.25.1)")
+_c, _o3 = abrir_sin_raiz("--metodo-para-subir", "--plugin", "# Método de trabajo · versión 0.0.1 · huella 0000000")
+ok(_c == 1 and not _o3.strip(), "y con otra primera línea no imprime nada y sale con 1")
 if _m:
     shutil.rmtree(pathlib.Path(_m.group(1)).parent, ignore_errors=True)
 os.environ.pop("MEMORIA_SALIDAS", None); shutil.rmtree(_d, ignore_errors=True)

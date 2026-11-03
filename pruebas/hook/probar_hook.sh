@@ -29,12 +29,11 @@ mkdir -p "$casa/mnt/Acme"; : > "$casa/mnt/Acme/guia.md"; : > "$casa/mnt/Acme/met
 largo="$(HOME="$casa" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/hooks/arranque.sh")"
 printf '%s' "$largo" | grep -q 'Apertura mínima, sin cargar'; ok $? "con una raíz en \$HOME/mnt, el aviso entero"
 rm -rf "$casa"
-# 1.24.7: la descarga de la apertura viene hecha, la misma que imprime preparar.py; sin python3, el aviso sale igual sin ella
-esperada="$(python3 "$PLUGIN/preparar.py" '$HOME/memoria' skills/sesion/abrir.py skills/sesion/cerrar.py | grep -v '^REINTENTO ')"
-printf '%s' "$salida" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; e=sys.argv[1]; assert e.count("\n")==3 and "REINTENTO" not in t and "\nMETODO_DESCARGA " in t and t.endswith("\n"+e)' "$esperada" 2>/dev/null; ok $? "termina con VERSION, METODO, DESCARGA y METODO_DESCARGA de la apertura, iguales a los de preparar.py (sin REINTENTO, que la skill arma)"
+# 1.25.1: la descarga ya no viaja en el aviso (la skill sesion la calcula al abrir un proyecto); METODO sí, y sin python3 igual
+printf '%s' "$salida" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "\nDESCARGA " not in t and "METODO_DESCARGA" not in t and "\nVERSION " not in t and "\nMETODO # Método de trabajo" in t' 2>/dev/null; ok $? "lleva METODO y no lleva DESCARGA, METODO_DESCARGA ni VERSION"
 sinpy="$(mktemp -d)"; for c in bash sed head tail grep printf cat dirname; do p="$(command -v $c)" && ln -s "$p" "$sinpy/$c"; done
 nopy="$(PATH="$sinpy" CLAUDE_PLUGIN_ROOT="$PLUGIN" "$(command -v bash)" "$PLUGIN/hooks/arranque.sh")"; rm -rf "$sinpy"
-printf '%s' "$nopy" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "Antes de guardar algo" in t and "\nDESCARGA " not in t and "\nPLUGIN " in t and "\nMETODO # Método de trabajo" in t' 2>/dev/null; ok $? "sin python3 el aviso sale entero, sin la descarga"
+printf '%s' "$nopy" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "Antes de guardar algo" in t and "\nPLUGIN " in t and "\nMETODO # Método de trabajo" in t' 2>/dev/null; ok $? "sin python3 el aviso sale igual, con PLUGIN y METODO"
 # copia del plugin con el bloque roto: el hook no inyecta nada, y release.sh lo detecta
 tmp="$(mktemp -d)"; mkdir -p "$tmp/repo/plugins" "$tmp/repo/.claude-plugin"
 cp -R "$PLUGIN" "$tmp/repo/plugins/memoria"; cp "$AQUI/../../.claude-plugin/marketplace.json" "$tmp/repo/.claude-plugin/"; cp "$AQUI/../../README.md" "$tmp/repo/"
