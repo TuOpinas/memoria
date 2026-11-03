@@ -46,7 +46,7 @@ Quien escribe en un área o en un proyecto sin ser su responsable (`convenciones
 
 **Sin «Quién es quién»** (una raíz de hasta la 1.24, que no se ha migrado), como antes: en toda un área, su cuenta en la celda Cuenta de esa área, después de la del responsable (`responsable@… · colabora: ana@…`), con su nombre junto al correo si se sabe (`colabora: Ana Ruiz (ana@…)`); en un solo proyecto, `Colabora: Nombre Apellido (correo)`. No se añade «Quién es quién» a mano a una raíz vieja: lo hace la migración.
 
-- **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable de su fila (y, sin registro, la primera cuenta de su celda), en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
+- **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable de su fila (y, sin registro, la primera cuenta de su celda), en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban; si la persona no está en «Quién es quién», se añade su línea en la misma sesión.
 
 En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta; cuando diga que ya lo puso, se ofrece comprobarlo (skill `sesion`, anexo `permisos.md`); y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
@@ -56,7 +56,7 @@ En los tres casos se recuerda en una línea el permiso que falta en la carpeta c
 
 Solo si la carpeta no tiene `guia.md`. Se hace una vez por organización.
 
-Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está en Google Drive, se recomienda una unidad compartida de la organización y se explica en dos líneas por qué, y cómo dar los permisos, como dice «La carpeta en Google Drive» en `montaje.md`; si la organización no tiene Google Workspace, una carpeta de «Mi unidad» de quien administra. Se avisa de que en Windows una unidad compartida se transmite y no se copia al disco, para probarlo en una computadora antes de sumar al equipo.
+Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está en Google Drive, se recomienda una unidad compartida de la organización y se explica en dos líneas por qué, y cómo dar los permisos, como dice «La carpeta en Google Drive» en `montaje.md`; si la organización no tiene Google Workspace, una carpeta de «Mi unidad» de quien administra. Se avisa de que en Windows una unidad compartida se transmite y no se copia al disco, para probarlo en una computadora antes de sumar al equipo. Y se dice que todo el que vaya a trabajar en ella necesita el plugin `memoria` 1.25 o posterior: la raíz nace con «Quién es quién», y un plugin anterior no sabría quién escribe en cada área.
 
 ## Las cuatro preguntas
 
@@ -409,7 +409,7 @@ Responsable: Marta Ruiz
 
 El `Estatus` nace con la fecha de hoy, una frase y las prioridades; lo reescribe la skill `director` al cerrar cada sesión en el área.
 
-**3. La fila del área en la tabla de `guia.md`**, con su responsable, su cuenta, quién la lee y su acceso («Abierta» o «Restringida»). La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
+**3. La fila del área en la tabla de `guia.md`**, con su responsable, quienes colaboran, quién la lee y su acceso («Abierta» o «Restringida»); con «Quién es quién», por sus nombres, y quien no esté en él se añade con su cuenta en la misma sesión (`· sin confirmar`); sin él (una raíz de hasta la 1.24), la cuenta en la celda Cuenta. La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
 
 Nada más: ni proyectos vacíos, ni plantillas, ni un `README`.
 
@@ -528,7 +528,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Creada la carpeta del área con su `area.md`, con Marta Ruiz como responsable, y su fila en `guia.md`: nombre, responsable, cuenta y «Restringida» en «Acceso», para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
+> Creada la carpeta del área con su `area.md`, con Marta Ruiz como responsable, y su fila en `guia.md`: nombre, responsable y «Restringida» en «Acceso», y su línea en «Quién es quién», para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
 >
 > Y una cosa más que no hace la skill: darle a Marta escritura sobre esa carpeta en Drive.
 
@@ -552,6 +552,6 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 > Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como responsable, que la lee todo el equipo.
 >
-> Me faltan las cuentas de Jorge y de Ana para la tabla de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
+> Me faltan las cuentas de Jorge y de Ana para «Quién es quién» de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
 >
 > Dos siguientes pasos. Permisos en Drive: lectura de la raíz para todo el equipo, escritura en `base/` para Jorge y en `compras/` para Ana. Y una sesión con Jorge para rellenar `contexto.md`, que ahora mismo son cuatro huecos.

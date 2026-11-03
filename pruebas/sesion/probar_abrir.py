@@ -235,7 +235,7 @@ cs_ = fila_.split("|"); cs_[4] = " carla@ejemplo.test, agustin@ejemplo.test "
 (R / "guia.md").write_text(g_.replace(fila_, "|".join(cs_)), encoding="utf-8")
 c, oc_ = abrir("--cuenta", "agustin@ejemplo.test")
 ok(c == 0 and "agustin@ejemplo.test: escribe en ninguna área" in oc_, "falla cerrado: nadie es dueño de un área con dos correos sin «colabora:»")
-ok("está en la celda Cuenta de «ventas»" in oc_.split("=== RESPUESTA")[1] and "colabora: otro@" in oc_, "y lo dice, con cómo se escribe, a la cuenta que está en esa celda, como fila de la RESPUESTA")
+ok("está en la fila de «ventas»" in oc_.split("=== RESPUESTA")[1] and "colabora: otro@" in oc_, "y lo dice, con cómo se escribe, a la cuenta que está en esa celda, como fila de la RESPUESTA")
 c, ob_ = abrir("--cuenta", "nadie@ejemplo.test")
 ok("está en la celda Cuenta" not in ob_, "a una cuenta que no está en la celda no se lo dice")
 (R / "guia.md").write_text(g_, encoding="utf-8")

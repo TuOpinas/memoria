@@ -104,7 +104,7 @@ d = bien(); d["areas"]["ventas"]["permisos"] = BASE[:1] + [u("beto@ejemplo.test"
 f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(d))
 o3 = subprocess.run([sys.executable, str(P), str(R3), "--drive", str(f)], capture_output=True, text=True).stdout
 ok("No se sabe la cuenta de quien administra la carpeta («Juanjo»" in o3 and "ana@ejemplo.test" in o3.split("se tomó por administrador")[1].split("\n")[0], "sin la cuenta de quien administra, se dice a quién se tomó por administrador")
-ok("La fila del área ventas/ en guia.md no se deja leer" in o3 and "cámbiale el rol de Drive a «Lector» ahí" not in o3 and "corrige la celda antes de tocar su rol" in o3, "una celda Cuenta que no se deja leer no manda bajar a nadie: pide corregirla")
+ok("La fila del área ventas/ en guia.md no se deja leer" in o3 and "cámbiale el rol de Drive a «Lector» ahí" not in o3 and "corrige la fila antes de tocar su rol" in o3, "una celda Cuenta que no se deja leer no manda bajar a nadie: pide corregirla")
 d = bien(); d["raiz"]["permisos"][1] = u("beto@ejemplo.test", "fileOrganizer")
 c, o = corre(d); a = acciones(o)
 ok(a["con_conector"] == [] and a["a_mano"] >= 1, "bajar un rol no se puede con el conector: queda a mano")

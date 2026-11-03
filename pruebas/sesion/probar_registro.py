@@ -4,8 +4,8 @@ a cada cuenta exactamente lo mismo que la misma raíz en la forma de la 1.22 (la
 
 Uso: python3 pruebas/sesion/probar_registro.py
 """
-import json, pathlib, re, shutil, subprocess, sys, tempfile, unicodedata
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import raiz_migrada, raiz_125, guia_125
+import json, pathlib, re, subprocess, sys, tempfile, unicodedata
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1])); from comun import raiz_migrada, raiz_125
 PL = pathlib.Path(__file__).resolve().parents[2] / "plugins" / "memoria"
 ABRIR, PERM, VERIF = PL / "skills/sesion/abrir.py", PL / "skills/sesion/permisos.py", PL / "verificar.sh"
 fallos = 0
@@ -68,7 +68,6 @@ for c in ["ana@ejemplo.test", "beto@ejemplo.test", "carla@ejemplo.test", "eva@ej
     ok(l2 and l5 and l2.group(0) == l5.group(0), f"{c}: escribe en lo mismo ({l5.group(0)[len(c)+2:] if l5 else '—'})")
     if c != "dani@ejemplo.test":
         ok(re.search(r"^NOMBRE \S", a5, re.M) is not None, f"{c}: la apertura dice su nombre, para «Sesión de:»")
-p2 = subprocess.run([sys.executable, str(ABRIR), str(R2), "--cuenta", "dani@ejemplo.test", "ventas/cuentas"], capture_output=True, text=True).stdout
 _, o5 = cuenta_de(R5, "dani@ejemplo.test", "operacion/soporte")
 _, o2 = cuenta_de(R2, "dani@ejemplo.test", "operacion/soporte")
 ok(("operacion/soporte (colabora en el proyecto)" in o5) == ("operacion/soporte (colabora en el proyecto)" in o2) and "operacion/soporte (colabora en el proyecto)" in o5, "quien colabora solo en un proyecto, por su nombre en «Colabora:»")
@@ -83,9 +82,6 @@ ok("legal (colabora)" in oe and "sin nombre" in oe, "«? · cuenta» sigue escri
 (R5 / "guia.md").write_text(g, encoding="utf-8")
 
 print("\nPermisos de Drive, igual en las dos formas")
-pp = pathlib.Path(__file__).resolve().parent / "probar_permisos.py"
-_t = pp.read_text(encoding="utf-8"); _n = {"__name__": "x"}
-_bien = _t[_t.index("u = lambda e, r:"):_t.index("\n", _t.index('"restringidos"', _t.index("def bien():")))+1] if '"restringidos"' in _t[_t.index("def bien():"):_t.index("def bien():")+2000] else None
 def drive():
     u = lambda e, r: {"email": e, "role": r}
     B = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "reader"), u("carla@ejemplo.test", "reader"), u("eva@ejemplo.test", "reader"), u("dani@ejemplo.test", "reader")]
@@ -96,7 +92,6 @@ def drive():
 f = pathlib.Path(tempfile.mkdtemp()) / "drive.json"; f.write_text(json.dumps(drive()))
 q2 = subprocess.run([sys.executable, str(PERM), str(R2), "--drive", str(f)], capture_output=True, text=True).stdout
 q5 = subprocess.run([sys.executable, str(PERM), str(R5), "--drive", str(f)], capture_output=True, text=True).stdout
-lim = lambda s: [l for l in s.split("\n") if not l.startswith("{")]
 ok(q2.strip() and q2 == q5, "permisos.py dice exactamente lo mismo" + ("" if q2 == q5 else ":\n" + "\n".join(f"      1.22 {a}\n      1.25 {b}" for a, b in zip(q2.split("\n"), q5.split("\n")) if a != b)))
 pl5 = subprocess.run([sys.executable, str(PERM), str(R5), "--plan"], capture_output=True, text=True).stdout
 pm = R5 / "operacion/soporte/proyecto.md"; tp = pm.read_text(encoding="utf-8")
@@ -153,10 +148,10 @@ ok(any(f.get("personas") and "eva@ejemplo.test" in f.get("guia", "") for f in jx
 (R5 / "guia.md").write_text(g, encoding="utf-8")
 
 print("\nLa puesta al día programada, igual en las dos formas")
-for rel in ("skills/tablero/barrido.py",):
-    src = (PL / rel).read_text(encoding="utf-8")
+if True:
+    src = (PL / "skills/tablero/barrido.py").read_text(encoding="utf-8")
     nsb = {"__name__": "x"}
-    exec(compile(src.split("\nif __name__")[0], rel, "exec"), nsb)
+    exec(compile(src.split("\nif __name__")[0], "barrido.py", "exec"), nsb)
     for c in ["ana@ejemplo.test", "beto@ejemplo.test", "carla@ejemplo.test", "eva@ejemplo.test"]:
         ok(nsb["areas_de_la_cuenta"](R2, c) == nsb["areas_de_la_cuenta"](R5, c) and nsb["areas_de_la_cuenta"](R5, c), f"barrido.py: {c} tiene las mismas áreas ({sorted(nsb['areas_de_la_cuenta'](R5, c))})")
     ok(nsb["colabora_en"](R5 / "operacion" / "soporte", "dani@ejemplo.test") and nsb["colabora_en"](R2 / "operacion" / "soporte", "dani@ejemplo.test"), "barrido.py: quien colabora en un proyecto, por su nombre")
@@ -178,6 +173,63 @@ for a_ in ["ventas", "legal", "personas", "operacion"]:
 MIG = PL / "skills/sesion/migrar_estructura.py"
 m5 = subprocess.run([sys.executable, str(MIG), str(R5), "--cuenta", "ana@ejemplo.test", "--plan"], capture_output=True, text=True)
 ok(m5.returncode == 0 and json.loads(m5.stdout).get("pendiente") in (None, [], False, 0) or "nada" in m5.stdout.lower() or '"cambios": []' in m5.stdout, "migrar_estructura.py no ve nada que migrar en una raíz de la 1.25: " + m5.stdout[:160].replace("\n", " "))
+
+print("\nLo que encontró la revisión de la 1.25: nada da escritura a quien no debe")
+g0 = (R5 / "guia.md").read_text(encoding="utf-8"); pm = R5 / "operacion/soporte/proyecto.md"; tp0 = pm.read_text(encoding="utf-8")
+def con(guia=None, proy=None):
+    (R5 / "guia.md").write_text(guia if guia is not None else g0, encoding="utf-8"); pm.write_text(proy if proy is not None else tp0, encoding="utf-8")
+def linea(c, *extra):
+    a_, o_ = cuenta_de(R5, c, *extra)
+    m_ = re.search(r"^" + re.escape(c) + r": .*$", a_, re.M)
+    return (m_.group(0) if m_ else ""), o_
+con(g0.replace("- Dani Prueba · dani@ejemplo.test", "- Dani Prueba · dani@ejemplo.test · baja 2026-10-15"), tp0.replace("Colabora: Dani Prueba", "Colabora: Dani Prueba (dani@ejemplo.test)"))
+ok("ninguna área" in linea("dani@ejemplo.test", "operacion/soporte")[0], "quien está de baja no escribe aunque su correo siga junto a su nombre en el proyecto")
+con(g0.replace("- Dani Prueba · dani@ejemplo.test", "- Dani Prueba · dani@ejemplo.test · dado de baja el 2026-10-15"))
+ok("ninguna área" in linea("dani@ejemplo.test", "operacion/soporte")[0], "la baja escrita de otra forma («dado de baja el…») también vale")
+con(None, tp0.replace("Colabora: Dani Prueba", "Colabora: Carla Prueba (intrusa@otro.test)"))
+ok("ninguna área" in linea("intrusa@otro.test", "operacion/soporte")[0], "un correo junto al nombre de alguien del registro no da escritura a ese correo")
+v_ = subprocess.run(["bash", str(VERIF), str(R5)], capture_output=True, text=True).stdout
+ok("intrusa" not in v_, "y verificar no lo toma por un alta provisional")
+con(g0.replace("| Carla Prueba |", "| Carla Prueba, zzz@otra.test |"))
+ok("ventas" not in linea("zzz@otra.test")[0], "un correo suelto en Colabora que no está en el registro no da escritura")
+con(g0.replace("- Carla Prueba · carla@ejemplo.test", "- Carla Ortega y Gasset · carla@ejemplo.test").replace("| Carla Prueba |", "| Carla Ortega y Gasset |"))
+ok("ventas (colabora)" in linea("carla@ejemplo.test")[0], "un nombre con « y » se queda entero si así está en el registro")
+con(g0.replace("- Eva Prueba · eva@ejemplo.test", "- Eva Prueba · eva@ejemplo.test\n- Ana Prueba · otra@ejemplo.test"))
+ok("ventas" not in linea("ana@ejemplo.test")[0] and "ventas" not in linea("otra@ejemplo.test")[0], "un nombre en dos líneas no es de nadie (falla cerrado)")
+q_ = subprocess.run([sys.executable, str(PERM), str(R5), "--drive", str(f)], capture_output=True, text=True).stdout
+ok("otra@ejemplo.test figura" not in q_, "y la revisión de permisos no propone nada para la segunda línea")
+con(g0.replace("| Eva Prueba | Ana Prueba y Beto Prueba | Restringida |", "| Eva Prueba | Ana Prueba y Beto Prueba |  |"))
+_, o_ = cuenta_de(R5, "carla@ejemplo.test"); ok("legal/ · restringida" in o_ or "legal · restringida" in o_ or re.search(r"legal/?\s*·\s*restringid", o_), "con «Colabora», un Acceso vacío deja el área restringida, no abierta")
+con(g0.replace("Contexto común: Ana Prueba", "Contexto común: Ana Prueba, que también administra la carpeta"))
+ok("responsable de contexto" in linea("ana@ejemplo.test")[0], "«Contexto común» con una coletilla tras la coma sigue reconociendo a quien responde")
+con(g0.replace("Contexto común: Ana Prueba", "Contexto común: Ana Pruebas"))
+ok("nadie responde por guia.md" in cuenta_de(R5, "ana@ejemplo.test")[1] and "«Ana Pruebas», en «Contexto común»" in subprocess.run(["bash", str(VERIF), str(R5)], capture_output=True, text=True).stdout, "un «Contexto común» que no está en el registro: lo dicen la apertura y verificar")
+for t_ in ("## Quién es Quién", "### Quién es quién", "## Quien es quien:"):
+    con(g0.replace("## Quién es quién", t_))
+    ok("ventas (colabora)" in linea("carla@ejemplo.test")[0], f"el registro se reconoce con «{t_}»")
+con(g0.replace("| Colabora |", "| Colaboradores |"))
+ok("ventas (colabora)" in linea("carla@ejemplo.test")[0], "y la columna «Colaboradores»")
+con(g0.replace("| Ana Prueba | Carla Prueba |", "| Ana Prueba, interina | Carla Prueba |"))
+l_, o_ = linea("ana@ejemplo.test"); ok("ventas (responsable)" in l_ and "va en «Qué es»" in o_, "un matiz tras la coma en Responsable: sigue siendo responsable, y se dice dónde va el matiz")
+con(None, tp0.replace("Colabora: Dani Prueba", "Colabora: Dani Prueba, Fede Nuevo (fede@ejemplo.test)"))
+_, o_ = cuenta_de(R5, "fede@ejemplo.test", "operacion/soporte")
+ok("alta provisional" in o_ and "no escribes en ninguna área" not in o_, "quien entra por alta provisional oye que escribe en el proyecto, no que no escribe")
+con()
+ok(not re.search(r"^NOMBRE", cuenta_de(R5, "ana@ejemplo.test", "--minima")[0], re.M), "la apertura mínima no imprime NOMBRE (no cierra sesión)")
+t_ = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8"); n_ = {"re": re}; exec(t_[t_.index("# --- quién escribe"):t_.index("# --- fin de quién escribe ---")], n_)
+ok(n_["fila_cuentas"](["Área", "Qué es", "Quién la lee", "Acceso", "Responsable", "Colabora"], ["a", "b", "c"], n_["registro_personas"](g0))[0] == set(), "una fila corta no rompe nada")
+o3, j3 = tablero(R5, "ana@ejemplo.test")
+_base = pathlib.Path(tempfile.mkdtemp()) / "t2"
+con(g0.replace("- Eva Prueba · eva@ejemplo.test", "- Eva Prueba · intrusa@otra.test"))
+subprocess.run([sys.executable, str(GV), str(R5), str(_base), "--cuenta", "ana@ejemplo.test", "--version", "prueba", "--previos", str(o3)], check=True, stdout=subprocess.DEVNULL)
+_e = json.loads((_base / "meta" / "estado.json").read_text(encoding="utf-8"))
+_e = _e.get("data", _e)
+ok(_e.get("registro_cambios") == ["Eva Prueba"] and any("Eva Prueba" in x.get("guia", "") and x.get("personas") for x in _e.get("fuera", [])), "el tablero de quien responde por el contexto dice qué línea de «Quién es quién» cambió")
+ok("intrusa" not in json.dumps(_e), "sin poner la cuenta en claro en los datos de la página")
+con(g0.replace("- Dani Prueba · dani@ejemplo.test", "- Dani Prueba · dani@ejemplo.test\n- Fabiola Davó · sin cuenta · registra: Dani Prueba").replace("| `operacion/` | Área de soporte y entregas | Ana Prueba |", "| `operacion/` | Área de soporte y entregas | Fabiola Davó |"))
+_, jd = tablero(R5, "dani@ejemplo.test")
+ok(jd("meta", "estado").get("tablero_de") == "Dani Prueba" and jd("areas", "operacion").get("escribe") is True, "el tablero de quien registra por otra persona es suyo, con su nombre del registro, y escribe en esa área")
+con()
 
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

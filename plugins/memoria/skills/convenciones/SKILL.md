@@ -53,7 +53,7 @@ La cuenta de cada persona está una sola vez en `guia.md`, en «Quién es quién
 
 Un área tiene un solo responsable, pero pueden escribir en ella más personas: **quienes colaboran**. Se declaran por su nombre en la columna «Colabora» de la tabla de áreas de `guia.md`, separados por comas, y valen para toda el área, también para los proyectos que aún no existen. Quien colabora en un solo proyecto, y no en toda el área, se declara en `Quién participa` de ese `proyecto.md`, con una línea `Colabora: Nombre Apellido, Nombre Apellido`. La tabla la escribe el responsable de contexto; la línea del proyecto, la sesión del responsable del área.
 
-Si quien va a colaborar en un proyecto todavía no está en «Quién es quién», el responsable del área no espera: escribe `Colabora: Nombre Apellido (correo)`, con su cuenta entre paréntesis. Es el **alta provisional**: esa persona escribe en el proyecto desde ya, y la revisión de permisos, el tablero y `verificar` se lo dicen al responsable de contexto, que añade su línea a «Quién es quién» y deja en el proyecto solo el nombre. Es la única prosa de la carpeta donde va una cuenta.
+Si quien va a colaborar en un proyecto todavía no está en «Quién es quién», el responsable del área no espera: escribe `Colabora: Nombre Apellido (correo)`, con su cuenta entre paréntesis. Es el **alta provisional**: esa persona escribe en el proyecto desde ya, y la revisión de permisos, el tablero y `verificar` se lo dicen al responsable de contexto, que añade su línea a «Quién es quién» y deja en el proyecto solo el nombre. Fuera de «Quién es quién», es el único sitio de la carpeta donde va una cuenta, junto con el correo de una cuenta sin nombre (abajo).
 
 | Puede | El responsable | Quien colabora |
 |---|---|---|
@@ -82,13 +82,13 @@ Una línea puede llevar, detrás, separados por «·»:
 | `cuentas: a@…, b@…` | la misma persona trabaja con dos cuentas de Claude |
 | `en Drive: otra@…` | entra a Drive con otra cuenta; vale también para quien no usa Claude y solo lee |
 | `sin cuenta` | es de la organización y no usa Claude todavía: no escribe en ningún sitio. No puede ser responsable de un área, salvo con `registra: Nombre`, la persona que escribe por ella |
-| `sin confirmar` | línea nueva cuya cuenta aún no abrió sesión; se quita cuando lo hace. La revisión de permisos no comparte la carpeta con ella sin decirlo |
+| `sin confirmar` | línea nueva cuya cuenta aún no abrió sesión; la quita el responsable de contexto cuando esa persona abre la suya (su apertura se lo recuerda). La revisión de permisos no comparte la carpeta con ella sin decirlo |
 | `también: Otra Grafía` | otro nombre de la misma persona (un apodo, un apellido que cambió) |
 | `de: Organización` | alguien de fuera que trabaja con Claude en esta raíz (un consultor, un socio) |
 | `baja AAAA-MM-DD` | ya no está: no escribe. **La línea no se borra nunca**, porque los registros la siguen nombrando |
 | `compartida con: Nombre` | dos personas usan la misma cuenta; el cierre pregunta quién trabajó |
 
-`? · cuenta@` es una cuenta de la que no se sabe el nombre: sigue escribiendo donde la tabla la ponga (con su correo en la celda) y `verificar` lo señala hasta que se complete. Una cuenta va en una sola línea. Dos personas con el mismo nombre se distinguen con el segundo apellido o una inicial, y la marca la lleva quien llega después. Las personas de fuera que no trabajan con Claude en la raíz no van aquí: se escriben «Nombre Apellido (Organización)» (`escribir.md`, «Personas de fuera»).
+`? · cuenta@` es una cuenta de la que no se sabe el nombre: escribe donde la tabla pone su correo, en Responsable o en Colabora, y `verificar` lo señala hasta que se complete. Cualquier otro correo suelto en la tabla no da escritura: solo cuenta lo que está en «Quién es quién», y un nombre o una cuenta escrita en dos líneas no es de nadie hasta que se corrija. Una cuenta va en una sola línea. Dos personas con el mismo nombre se distinguen con el segundo apellido o una inicial, y la marca la lleva quien llega después. Las personas de fuera que no trabajan con Claude en la raíz no van aquí: se escriben «Nombre Apellido (Organización)» (`escribir.md`, «Personas de fuera»).
 
 En los archivos vivos (la tabla de áreas, «Contexto común», «Quién participa» de los proyectos abiertos y la línea de un proyecto restringido en `area.md`) un nombre que no está en «Quién es quién» es un error que `verificar` señala, y no da acceso a nada. En los registros (`decisiones.md`, `sesiones.md`, premisas) no se comprueba: no se editan, y nombran también a quien ya se fue.
 
