@@ -199,7 +199,7 @@ def carpetas_de_la_raiz(ruta):
         return []
     ents = (d.get("entries") if isinstance(d, dict) else d) or []
     return sorted(str(e.get("name")) for e in ents if isinstance(e, dict) and e.get("type") == "dir" and "/" not in str(e.get("name") or "")
-                  and str(e.get("name")) not in ("base", "Claude outputs") and not str(e.get("name")).startswith("."))
+                  and str(e.get("name")).lower() not in ("base", "claude outputs") and not str(e.get("name")).startswith("."))
 
 
 def rutas(copia, activo, listado=None, raiz=None):

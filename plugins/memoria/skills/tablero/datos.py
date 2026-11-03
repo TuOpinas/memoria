@@ -548,7 +548,8 @@ def propuestas(archivo, pid):
         sys.exit(f"{archivo} no es el archivo de propuestas del tablero.")
     n = 0
     for id_, x in sorted(d.items(), key=lambda kv: str((kv[1] or {}).get("creado") or "")):
-        if isinstance(x, dict) and x.get("proyecto") == pid:
+        # «rotacion» no existe desde la 1.23 y la retira la siguiente puesta al día: no se enseña en la apertura (1.24.9)
+        if isinstance(x, dict) and x.get("proyecto") == pid and x.get("clase") != "rotacion":
             print(json.dumps(dict(x, id=id_), ensure_ascii=False)); n += 1
     if not n:
         print(f"Ninguna sugerencia para {pid}.")

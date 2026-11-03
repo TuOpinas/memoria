@@ -46,7 +46,7 @@ ok(c == 0 and "=== METODO" in o and "=== ORGANIZACION\nOrganización de prueba" 
 ok("=== GUIA" not in o and "=== PREMISAS" not in o and "Quién responde" not in o, "sin guia.md entero y sin premisas")
 ok("`ventas/cuentas/`" in o and "personas/ · restringida" in o and "nomina" not in o, "una línea por proyecto; de un área restringida ajena, solo su nombre")
 ok("legal/ · restringida a Ana Prueba y Beto Prueba; si hace falta acceso, se pide a Beto Prueba" in o, "un área restringida ajena sin carpeta sale restringida, con quién la lee y el dueño sin sus notas")
-ok("=== CLAUDE OUTPUTS" in o and "2 archivos sueltos" in o and "propuesta-NOMBRE-SUELTO.pdf" in o, "lista lo suelto en «Claude outputs», sin abrirlo")
+ok("=== CLAUDE OUTPUTS" in o and "2 archivos sueltos" in o and "propuesta-NOMBRE-SUELTO.pdf" not in o, "cuenta lo suelto en «Claude outputs», sin abrirlo ni listar los nombres en la mínima (1.24.9)")
 c, o = abrir()
 ok("=== CLAUDE OUTPUTS" in o and "propuesta-NOMBRE-SUELTO.pdf" in o, "sin proyecto también lista lo suelto en «Claude outputs»")
 c, o = abrir("ventas/cuentas", "--cuenta", "ana@ejemplo.test")
@@ -103,6 +103,7 @@ c, o = abrir("ventas/precios")
 ok(c == 0, "un proyecto declarado restringido que la cuenta puede leer se abre")
 c, o = abrir("ventas/no-existe")
 ok("no se pudo leer proyecto.md" in o, "un proyecto que no existe se dice y se para")
+ok("=== RESPUESTA" in o and "| Memoria de trabajo ·" in o and "«ventas/no-existe» no se encuentra" in o and "la cola del tablero" not in o, "y aun así imprime la RESPUESTA con el recuadro, que pregunta cuál era, sin la cola del tablero (1.24.9)")
 c, o = abrir("cuentas")
 ok(c != 0 and "<area>/<proyecto>" in o, "el proyecto se pide como area/proyecto")
 # casos que encontró la revisión de la 1.14.8, sobre la misma copia
@@ -175,6 +176,24 @@ _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--origen", "D:\\Trabaj
 ok("PERMISOS:" not in o, "una letra de unidad sola (un disco, un USB) no lo pide")
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--sin-fechas", "--origen", "/Users/ana/Library/Mobile Documents/com~apple~CloudDocs/Prueba")
 ok("PERMISOS:" not in o, "sin consola tampoco, si la raíz no está en Drive")
+# la apertura mínima en el contenedor (1.24.9): con el listado de «Claude outputs» da su fila con fecha, y con la raíz
+# atrasada deja el metodo.md del plugin en una carpeta de salidas y pide escribirlo con device_commit_files
+import json as _json, tempfile as _tf
+_d = pathlib.Path(_tf.mkdtemp())
+(_d / "co.json").write_text(_json.dumps({"entries": [{"name": "propuesta-x.pdf", "type": "file", "mtimeMs": 1793600000000},
+                                                     {"name": "sub", "type": "dir"}, {"name": ".DS_Store", "type": "file", "mtimeMs": 1}]}), encoding="utf-8")
+_pl = (ABRIR.parents[2] / "metodo.md").read_text(encoding="utf-8").split("\n", 1)[0]
+_salidas = _d / "salidas"; _salidas.mkdir(); os.environ["MEMORIA_SALIDAS"] = str(_salidas)
+_, o = abrir("--minima", "--sin-fechas", "--cuenta", "ana@ejemplo.test", "--plugin", _pl, "--origen", "/Users/ana/Prueba", "--outputs", str(_d / "co.json"))
+ok("**Claude outputs:** 2 archivos sueltos, el último del 2026-11-0" in o and "uno parece confidencial" in o, "sin consola, con --outputs, la fila de «Claude outputs» lleva su fecha y cuenta archivos y carpetas del primer nivel, sin los ocultos (1.24.9)")
+_r = re.search(r"devicePath «([^»]+)»", abrir("--minima", "--sin-fechas", "--cuenta", "ana@ejemplo.test", "--plugin", _pl, "--origen", "C:\\Users\\ana\\Mi unidad\\Prueba\\")[1])
+ok(bool(_r) and _r.group(1) == "C:\\Users\\ana\\Mi unidad\\Prueba\\metodo.md", f"en Windows, devicePath con barras invertidas (1.24.9) ({_r.group(1) if _r else None})")
+_m = re.search(r"stagedPath «([^»]+)» y devicePath «/Users/ana/Prueba/metodo.md»", o)
+ok(bool(_m) and pathlib.Path(_m.group(1)).read_text(encoding="utf-8").startswith(_pl), "y con la raíz atrasada pide device_commit_files del metodo.md del plugin, ya copiado (1.24.9)")
+ok("METODO_DESCARGA" not in o.split("=== RESPUESTA")[1], "sin descargar nada en la computadora")
+if _m:
+    shutil.rmtree(pathlib.Path(_m.group(1)).parent, ignore_errors=True)
+os.environ.pop("MEMORIA_SALIDAS", None); shutil.rmtree(_d, ignore_errors=True)
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--origen", "C:\\Users\\ana\\Meine Ablage\\Prueba")
 ok("PERMISOS:" in o, "Drive en otro idioma, sí")
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test")
