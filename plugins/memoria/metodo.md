@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.24.9 · huella cac256d · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.25.0 · huella 05c4af3 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -8,7 +8,7 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.24**
+Versión del método: **1.25**
 
 ## 1. Las tres capas de propiedad
 
@@ -48,11 +48,13 @@ La raíz es la carpeta que contiene `guia.md`, `metodo.md` y `base/`. Ninguna in
 
 **El responsable por defecto de un área o de un proyecto nuevo es la persona desde cuya cuenta se abre la sesión.** Se propone su nombre al crear y solo se pregunta si en ese momento se asigna a otra persona. Un área o un proyecto sin responsable con nombre y apellido no se crea.
 
-La cuenta de cada responsable queda escrita junto a su nombre en `guia.md`, y la del responsable de contexto, entre paréntesis en la línea «Contexto común» de «Quién responde por qué», para que se le reconozca aunque no sea responsable de ningún área. Eso es lo que permite comprobar, y no solo suponer, que quien pide publicar es el responsable del proyecto. Si la identidad de la cuenta no está disponible, por ejemplo con otro modelo leyendo `metodo.md`, se pregunta el nombre y se anota de quién viene la petición.
+La cuenta de cada persona está una sola vez en `guia.md`, en «Quién es quién» (abajo), y todo lo demás la nombra por su nombre: la tabla de áreas, «Contexto común», los proyectos. Eso es lo que permite comprobar, y no solo suponer, que quien pide publicar es el responsable del proyecto. Si la identidad de la cuenta no está disponible, por ejemplo con otro modelo leyendo `metodo.md`, se pregunta el nombre y se anota de quién viene la petición.
 
 ### Quién colabora
 
-Un área tiene un solo responsable, pero pueden escribir en ella más personas: **quienes colaboran**. Se declaran en la misma celda Cuenta de la tabla de áreas de `guia.md`, después de la cuenta del responsable: `responsable@ejemplo.com · colabora: ana@ejemplo.com, luis@ejemplo.com`. Las cuentas se comparan enteras. Quien colabora en un solo proyecto, y no en toda el área, se declara en `Quién participa` de ese `proyecto.md`, con una línea `Colabora: Nombre Apellido (correo), Nombre Apellido (correo)`; la cuenta entre paréntesis es lo que permite comprobar quién escribe. La celda de `guia.md` la escribe el responsable de contexto; la línea del proyecto, la sesión del responsable del área.
+Un área tiene un solo responsable, pero pueden escribir en ella más personas: **quienes colaboran**. Se declaran por su nombre en la columna «Colabora» de la tabla de áreas de `guia.md`, separados por comas, y valen para toda el área, también para los proyectos que aún no existen. Quien colabora en un solo proyecto, y no en toda el área, se declara en `Quién participa` de ese `proyecto.md`, con una línea `Colabora: Nombre Apellido, Nombre Apellido`. La tabla la escribe el responsable de contexto; la línea del proyecto, la sesión del responsable del área.
+
+Si quien va a colaborar en un proyecto todavía no está en «Quién es quién», el responsable del área no espera: escribe `Colabora: Nombre Apellido (correo)`, con su cuenta entre paréntesis. Es el **alta provisional**: esa persona escribe en el proyecto desde ya, y la revisión de permisos, el tablero y `verificar` se lo dicen al responsable de contexto, que añade su línea a «Quién es quién» y deja en el proyecto solo el nombre. Fuera de «Quién es quién», es el único sitio de la carpeta donde va una cuenta, junto con el correo de una cuenta sin nombre (abajo).
 
 | Puede | El responsable | Quien colabora |
 |---|---|---|
@@ -69,6 +71,27 @@ Una decisión de quien colabora vale como cualquier otra. Si el responsable no e
 **Dos personas en el mismo proyecto no cierran sesión a la vez.** La carpeta no bloquea a nadie: si dos cierres escriben a la vez, el segundo puede pisar al primero. Por eso el cierre compara, antes de escribir, la hora de la última escritura de `proyecto.md`, `decisiones.md` y `sesiones.md` con la que vio al abrir, y si cambió, relee y suma lo suyo a lo que encontró (skill `sesion`, anexo `cerrar.md`). Reduce el riesgo, no lo elimina: lo que otra persona escribió y la carpeta compartida aún no bajó a esta computadora no se ve.
 
 La carpeta tampoco impide que quien colabora edite la línea `Colabora:` de un proyecto, porque escribe en la misma carpeta. Las skills no la tocan desde su sesión; lo que de verdad decide quién escribe son los permisos de la carpeta compartida.
+
+### Quién es quién
+
+Cada persona de la raíz está **una sola vez** en la sección «Quién es quién» de `guia.md`, con una línea `- Nombre Apellido · cuenta@`. La cuenta es la de Claude y es la identidad de la persona; el nombre es como el resto de la carpeta la nombra, tal cual está escrito aquí. Dos nombres se comparan sin mayúsculas, con los espacios juntos y con las tildes iguales en Mac y en Windows; sin tilde no es el mismo nombre. La sección la escribe el responsable de contexto, y la apertura no la imprime: la leen los scripts, y la sesión recibe el nombre de su cuenta, que es el de «Sesión de:».
+
+Una línea puede llevar, detrás, separados por «·»:
+
+| Marca | Qué dice |
+|---|---|
+| `cuentas: a@…, b@…` | la misma persona trabaja con dos cuentas de Claude |
+| `en Drive: otra@…` | entra a Drive con otra cuenta; vale también para quien no usa Claude y solo lee |
+| `sin cuenta` | es de la organización y no usa Claude todavía: no escribe en ningún sitio. No puede ser responsable de un área, salvo con `registra: Nombre`, la persona que escribe por ella |
+| `sin confirmar` | línea nueva cuya cuenta aún no abrió sesión; la quita el responsable de contexto cuando esa persona abre la suya (su apertura se lo recuerda). La revisión de permisos no comparte la carpeta con ella sin decirlo |
+| `también: Otra Grafía` | otro nombre de la misma persona (un apodo, un apellido que cambió) |
+| `de: Organización` | alguien de fuera que trabaja con Claude en esta raíz (un consultor, un socio) |
+| `baja AAAA-MM-DD` | ya no está: no escribe. **La línea no se borra nunca**, porque los registros la siguen nombrando |
+| `compartida con: Nombre` | dos personas usan la misma cuenta; el cierre pregunta quién trabajó |
+
+`? · cuenta@` es una cuenta de la que no se sabe el nombre: escribe donde la tabla pone su correo, en Responsable o en Colabora, y `verificar` lo señala hasta que se complete. Cualquier otro correo suelto en la tabla no da escritura: solo cuenta lo que está en «Quién es quién», y un nombre o una cuenta escrita en dos líneas no es de nadie hasta que se corrija. Una cuenta va en una sola línea. Dos personas con el mismo nombre se distinguen con el segundo apellido o una inicial, y la marca la lleva quien llega después. Las personas de fuera que no trabajan con Claude en la raíz no van aquí: se escriben «Nombre Apellido (Organización)» (`escribir.md`, «Personas de fuera»).
+
+En los archivos vivos (la tabla de áreas, «Contexto común», «Quién participa» de los proyectos abiertos y la línea de un proyecto restringido en `area.md`) un nombre que no está en «Quién es quién» es un error que `verificar` señala, y no da acceso a nada. En los registros (`decisiones.md`, `sesiones.md`, premisas) no se comprueba: no se editan, y nombran también a quien ya se fue.
 
 ### Independencia entre raíces
 
@@ -103,7 +126,7 @@ En el `fuentes/inventario.md` público queda la fila que dice que ese material e
 
 **Dónde escala.** En `restringido/` no entran nunca `proyecto.md`, `decisiones.md` ni `sesiones.md`. Si lo que hay que esconder es una decisión, el estado o el objetivo, el proyecto no se puede partir: se restringe entero.
 
-**El nombre se ve.** Quien no tiene acceso ve la carpeta en gris, con su nombre, y un botón para solicitarlo que llega a quien administra. Por eso la carpeta de dentro de un proyecto se llama siempre `restringido` y no dice de qué trata. Las áreas y los proyectos se siguen listando en `guia.md` y en `area.md` con su nombre y su responsable, estén restringidos o no: el equipo tiene que poder saber que existen y a quién pedir acceso; lo que no puede es leerlos. Y lo dicen: un área restringida lleva «Restringida» en su columna «Acceso» de `guia.md`, y una que lee todo el equipo, «Abierta»; la columna «Quién la lee» dice quién la lee, en llano. En una `guia.md` sin migrar, que no tiene «Acceso» (sección 11, «Los nombres de antes de la 1.22»), vale la regla de hasta la 1.21: «Restringida» al inicio de «Quién la lee» (si la palabra aparece en otra parte de la celda sin negarla, también cuenta: ante la duda, se trata como restringida). Un proyecto restringido empieza su línea del bloque `Proyectos` de su `area.md` por esa palabra: `` - `slug/` — restringido: … ``. Decir en la línea que una parte del proyecto está en `restringido/` no lo declara restringido. Es lo único que deja ver que algo está restringido a quien sí puede leerlo, por ejemplo a la herramienta que genera un tablero con la cuenta de quien administra la carpeta.
+**El nombre se ve.** Quien no tiene acceso ve la carpeta en gris, con su nombre, y un botón para solicitarlo que llega a quien administra. Por eso la carpeta de dentro de un proyecto se llama siempre `restringido` y no dice de qué trata. Las áreas y los proyectos se siguen listando en `guia.md` y en `area.md` con su nombre y su responsable, estén restringidos o no: el equipo tiene que poder saber que existen y a quién pedir acceso; lo que no puede es leerlos. Y lo dicen: un área restringida lleva «Restringida» en su columna «Acceso» de `guia.md`, y una que lee todo el equipo, «Abierta»; la columna «Quién la lee» dice, con nombres de «Quién es quién», quién la lee sin escribir en ella (su responsable, quienes colaboran y quien administra la leen siempre), o «Todo el equipo» si está abierta. Quién lee un proyecto restringido y su `restringido/` lo dice una línea `Lo lee: Nombre, Nombre` en `Quién participa` de su `proyecto.md`; sin ella, su responsable, quienes colaboran y quien administra. En una `guia.md` sin migrar, que no tiene «Acceso» (sección 11, «Los nombres de antes de la 1.22»), vale la regla de hasta la 1.21: «Restringida» al inicio de «Quién la lee» (si la palabra aparece en otra parte de la celda sin negarla, también cuenta: ante la duda, se trata como restringida). Un proyecto restringido empieza su línea del bloque `Proyectos` de su `area.md` por esa palabra: `` - `slug/` — restringido: … ``. Decir en la línea que una parte del proyecto está en `restringido/` no lo declara restringido. Es lo único que deja ver que algo está restringido a quien sí puede leerlo, por ejemplo a la herramienta que genera un tablero con la cuenta de quien administra la carpeta.
 
 Si una organización necesita que ni el nombre de un área se vea, o que quien administra la carpeta compartida no pueda ver algo, ese caso se resuelve con una carpeta compartida aparte y se escribe en las reglas propias de `guia.md`.
 
@@ -144,7 +167,7 @@ RAIZ/
 
 Tres niveles: área, proyecto, carpeta del proyecto. Un cuarto nivel significa que ahí había dos proyectos, con una excepción: dentro de `entregables/`, `taller/` y `fuentes/` se permite **un** nivel de agrupación cuando hay material suficiente para que la lista deje de leerse; el nombre de la subcarpeta sigue la convención de nombres y no lleva número de fase. Antes de crearla vale la pena probar con el asunto por delante del nombre del archivo, que agrupa igual en el listado y no añade nivel. `restringido/` no admite ninguno: es plano.
 
-`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su responsable, su cuenta, quién las lee y su acceso, quién responde por el contexto, quién administra la carpeta compartida, las reglas propias de la casa y la receta para conectarse, y su zona horaria en una línea «Zona horaria:» si no es la de Ciudad de México, la que usan las fechas de la sesión y del tablero; y, si alguien entra a Drive con otra cuenta que la de la tabla, una línea «En Drive: cuenta@claude es cuenta@drive» en «Quién responde por qué», que usa la revisión de permisos. Su título es «<Organización> · esta carpeta», y **el nombre de la organización**, el que usan el aviso de arranque y el tablero, es lo que va antes del «·». Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
+`guia.md` es de la organización y solo de ella: qué es la carpeta, qué áreas hay con su responsable, quienes colaboran, quién las lee y su acceso, quién responde por el contexto, quién administra la carpeta compartida, quién es quién (el nombre y la cuenta de cada persona), las reglas propias de la casa y la receta para conectarse, y su zona horaria en una línea «Zona horaria:» si no es la de Ciudad de México, la que usan las fechas de la sesión y del tablero. Su título es «<Organización> · esta carpeta», y **el nombre de la organización**, el que usan el aviso de arranque y el tablero, es lo que va antes del «·». Nada de lo que es igual en cualquier organización entra ahí: eso vive en `metodo.md`, que genera el plugin y nadie edita, y que lleva este contrato, el estilo y el índice de skills para que funcionen también con otro modelo o con quien abra la carpeta sin el plugin.
 
 ### Los archivos de `base/`
 
@@ -246,23 +269,25 @@ Las secciones de `guia.md` van en este orden y con estos nombres, que leen `abri
 <Un párrafo sobre la carpeta: que es su memoria de trabajo y que el método está en metodo.md.>
 
 ## Áreas
-| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |
+| Área | Qué es | Responsable | Colabora | Quién la lee | Acceso |
 
 ## Quién responde por qué
-Contexto común (`guia.md` y `base/`): Nombre Apellido (correo)
+Contexto común (`guia.md` y `base/`): Nombre Apellido
 Administra la carpeta compartida y pone o quita los accesos: Nombre Apellido
-En Drive: cuenta@claude es cuenta@drive   (solo si alguien entra a Drive con otra cuenta)
 Cada área, su responsable de la tabla de arriba.
 Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
 
 ## Reglas propias de la casa      (solo si las hay)
+
+## Quién es quién
+- Nombre Apellido · cuenta@
 
 ## Cómo conectarte
 
 ## Versión del método
 ```
 
-**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. La celda Cuenta lleva la del responsable y, después, `· colabora: ana@…, luis@…` (sección 1, «Quién colabora»). A quien colabora se le da nombre de una de dos formas, y valen las dos: en la celda Responsable del área, detrás del responsable, `Ana Prueba (colabora Carla Prueba, Luis Mejía)`, para quien colabora en toda el área (el tablero lo empareja con su correo de «colabora:» cuando la parte local del correo lo nombra, o cuando queda uno solo); o en una línea «Colabora: Nombre Apellido (correo)» de un proyecto, para quien colabora solo en él. Si no consta, se pregunta: sin nombre, el tablero solo lo cuenta. «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»).
+**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. «Responsable» lleva un solo nombre de «Quién es quién», limpio: un matiz («de forma interina») va en «Qué es». «Colabora» lleva nombres separados por comas, o nada (sección 1, «Quién colabora»). «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»). Las etiquetas de «Quién responde por qué» empiezan como aquí, que es como las leen los scripts.
 
 ## 5. Cabecera
 
@@ -332,6 +357,10 @@ El método se actualiza publicando una versión nueva del plugin, y cada raíz r
 
 **Cuando una versión cambia la estructura**, como la 1.22 (`Estatus`, `Responsable`, `aportacion`, `Descartado`, `Tema`, «Acceso», `inventario.md`), cada raíz se migra sola, por partes: la apertura detecta la estructura anterior en las áreas de la cuenta y, antes de responder a lo que se pidió, pregunta si se migra; con el sí, un script (`migrar_estructura.py`, skill `sesion`) renombra secciones, claves y archivos en las áreas donde la cuenta es responsable y deja una entrada `(migracion)` en el `sesiones.md` de cada proyecto migrado. El responsable de contexto, que administra la carpeta y es su dueño en Drive, migra además `guia.md` y las áreas de los demás responsables, restringidas incluidas, para que nada se quede sin migrar; la entrada de esos proyectos dice por quién. Los registros no se editan: sus entradas viejas conservan sus nombres. Lo que nadie ha migrado todavía espera a la apertura de su responsable o del de contexto; mientras, una raíz mezclada funciona, porque durante esa versión los scripts y las skills leen los nombres viejos y los nuevos y escriben solo los nuevos. La skill `migrar` no interviene: es para adoptar estructuras ajenas.
 
+### Las personas antes de la 1.25
+
+Es la segunda nota de compatibilidad, y se mantiene mientras haya raíces sin «Quién es quién». Hasta la 1.24 la tabla de áreas tenía una columna «Cuenta» con los correos (`responsable@… · colabora: a@…, b@…`) donde hoy va «Colabora» con nombres; «Contexto común» llevaba la cuenta entre paréntesis; «En Drive: cuenta@claude es cuenta@drive» iba en «Quién responde por qué»; las líneas `Colabora:` de los proyectos llevaban «Nombre (correo)» para todos; `area.md` repetía en `Quién participa` el `Responsable:` y el `Colabora:` de la tabla; y «Quién la lee» llevaba «Restringida:» y grupos («dirección»). Una raíz con la columna «Cuenta» se lee así, entera; una con «Colabora», por «Quién es quién»; las herramientas reconocen cada una por el encabezado de la tabla, nunca por la posición de la columna. En la forma vieja solo se lee lo exacto (los correos de la celda y «Nombre (correo)» tal cual), y desde la 1.25 `verificar` ya no compara el `Responsable:` del `area.md` con la tabla. La 1.25 lee las dos formas y no convierte ninguna: la migración llega en la 1.26, cuando todas las personas que trabajan en la raíz tengan un plugin que lea la forma nueva, porque uno de la 1.24 leería los nombres de «Colabora» como si fueran correos y dejaría a todo el equipo sin escribir. Una raíz nueva se monta ya con «Quién es quién»; en una sin migrar, `nuevo` sigue escribiendo la forma vieja.
+
 ### Los nombres de antes de la 1.22
 
 Es la nota de compatibilidad del contrato, y se mantiene mientras haya raíces sin migrar. Hasta la 1.21 `Dueño` (columna de `guia.md` y línea de `Quién participa`) es `Responsable`; en `area.md`, `Panorama` y `Prioridades ahora` son `Estatus`; en `proyecto.md`, `En corto` es `Estatus`, `Terminado significa` es la segunda frase de `Objetivo`, `Estado actual` salió al taller (`taller/estado-anterior.md`), `Consumen esto` desapareció (lo dicen `Afecta a:` y `basado_en`) y el alcance «Sí / No» es «Entra / No entra»; `afirma` es `aportacion`; `fuentes/enlaces.md` es `fuentes/inventario.md`; en `guia.md`, lo restringido se leía al inicio de «Quién la lee» y hoy lo dice la columna «Acceso»; en los registros, `Descartamos:` es `Descartado:`, «Trabajamos en:» es «Tema:», «Pendiente:» ya no se escribe y `Reemplaza a P<n>` es `Reemplaza P<n>`. Las raíces sin migrar los llevan todavía y las entradas viejas de los registros los conservan: desde la 1.22 los scripts y las skills leen las dos formas y escriben solo la nueva, y el contrato habla solo de la nueva.
@@ -343,7 +372,7 @@ Nunca se lee todo, y casi nunca se lee `base/`. Al abrir, se carga lo justo para
 **Nivel 0, siempre, y nada más que esto.** Cuatro lecturas cortas:
 
 1. La primera línea de `metodo.md`, para la versión y la huella de la raíz.
-2. `guia.md` entero. Es el mapa: qué áreas hay, quién responde por cada una y con qué cuenta, quién mantiene el contexto, quién administra la carpeta y las reglas propias de la casa. Cabe en una pantalla.
+2. `guia.md` entero, salvo «Quién es quién», que leen los scripts. Es el mapa: qué áreas hay, quién responde por cada una y quién colabora, quién mantiene el contexto, quién administra la carpeta y las reglas propias de la casa. Cabe en una pantalla.
 3. El bloque `Proyectos` del `area.md` que toca. Dice qué proyectos hay y qué entregables vigentes tiene cada uno.
 4. `base/premisas.md`, si existe: las premisas vigentes, las que ninguna otra reemplaza. Es corta y todo se ancla en ella.
 
@@ -414,7 +443,7 @@ Colabora: [nombre y apellido], solo si alguien colabora en el área
 
 El bloque `Proyectos` es el índice de contexto del área: una línea por proyecto y, debajo, una línea por cada entregable `vigente`. La línea del entregable dice lo que dice su clave `aportacion` (sección 5), copiada tal cual, para que el índice y el documento no digan dos cosas distintas; si el entregable no la tiene, lleva una línea de qué es hasta que la tenga. Un proyecto cerrado ocupa solo su línea, sin desglose. La línea de un proyecto restringido empieza por «restringido: responsable Nombre.» y sigue con su descripción (`` - `ronda/` — restringido: responsable Beto Prueba. Ronda de inversión ``): el nombre es lo único que ve quien no puede leerlo, y el tablero y la apertura lo toman de ahí. Lo escriben el cierre de sesión, la publicación de un entregable y la creación de proyectos, no una persona, y `verificar.sh` avisa si falta algún proyecto o algún entregable vigente. No lo regenera ninguna herramienta: las descripciones de los proyectos son lo que hace útil el índice, y una lista rehecha desde los nombres de archivo dice menos que la que había. Es lo primero que lee cualquier skill antes de abrir un archivo del área.
 
-`Quién participa` es donde vive el responsable del área. No hay otra clave para él. Las cuentas de quienes colaboran en el área están en la celda Cuenta de `guia.md`, que es lo que decide quién escribe; la línea `Colabora:` del área dice sus nombres.
+`Quién participa` repite el responsable y quienes colaboran de la tabla de áreas de `guia.md`, que es la fuente y lo que decide quién escribe: desde la 1.25 nadie compara las dos, y la línea sale de `area.md` con la migración de la 1.26. Mientras, se escribe igual que en la tabla, por su nombre.
 
 ### 3. Estructura de `proyecto.md`
 
@@ -442,8 +471,11 @@ No entra: [lo que queda fuera]
 
 ## Quién participa
 Responsable: [nombre] ([área])
-Colabora: [nombre (correo)], solo si alguien colabora en este proyecto sin colaborar en el área
+Colabora: [nombre y apellido], solo si alguien colabora en este proyecto sin colaborar en el área
+Lo lee: [nombre y apellido], solo si el proyecto, o su restringido/, lo lee alguien que no escribe en él
 ```
+
+Los nombres son los de «Quién es quién» de `guia.md` (contrato, sección 1). Quien colabora y aún no está ahí va como `Nombre Apellido (correo)`, el alta provisional: escribe desde ya, y el responsable de contexto lo pasa al registro. En una raíz sin «Quién es quién» (hasta la 1.24), todos van así, con su cuenta.
 
 Las secciones van en este orden, el mismo patrón que el área (sección 2): cómo va, qué es, qué contiene, quién.
 
@@ -548,7 +580,7 @@ Publicó: entregables/mapa-epicas.md
 Sesión de: Nombre Apellido · plugin 1.23.0
 ```
 
-`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: lo que escribieron o publicaron no se atribuye a nadie. Publicado es solo lo que una entrada dice en «Publicó:»; un entregable vigente que cambió sin que ninguna entrada lo nombre se cuenta aparte, sin suponer quién. La última línea dice quién trabajó y con qué versión del plugin. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
+`Tema` dice en qué se trabajó, en una línea: es la cabecera pública de la entrada (contrato, sección 7). «Escribió:» lista los documentos de `entregables/` y `taller/` que la sesión creó o cambió en su contenido, y «Publicó:» los que pasó a `vigente` (skill `revisar`), con su ruta dentro del proyecto y separados por comas; cada línea, solo si trae algo. Las escribe `cerrar.py` desde lo que la sesión le dice, y nadie las teclea: el tablero cuenta cada documento como escrito para quien lo escribió y como publicado para quien lo publicó, aunque sean dos personas. Las entradas anteriores a la 1.23 no las llevan y se quedan así: lo que escribieron o publicaron no se atribuye a nadie. Publicado es solo lo que una entrada dice en «Publicó:»; un entregable vigente que cambió sin que ninguna entrada lo nombre se cuenta aparte, sin suponer quién. La última línea dice quién trabajó y con qué versión del plugin; el nombre es el de la línea NOMBRE de `abrir.py`, que lo toma de «Quién es quién», y solo se pregunta si no la da. Es del cuerpo, como «Avances», y no sale fuera del área. Lo que sigue no va en la entrada: lo dice «Siguiente» del `Estatus`, que el mismo cierre reescribe. Las entradas anteriores a la 1.16 no llevan «Sesión de:»; se quedan así. Una sesión sin consola (`sin-consola.md`) termina la línea con « · sin consola».
 
 Entradas nuevas arriba. Una tarea programada que escribe en la carpeta deja su entrada como `## AAAA-MM-DD (tarea)`, y la migración de estructura de la 1.22, como `## AAAA-MM-DD (migracion)`: cuentan lo que hicieron, pero no son sesiones, y el tablero no las cuenta como tales.
 
@@ -601,7 +633,7 @@ El paso a `vigente` lo pide siempre el responsable del proyecto de forma explíc
 
 Las dos claves son obligatorias en lo que se crea en `entregables/` y `taller/`; en lo que ya existía sin ellas, `verificar.sh` las cuenta y el barrido propone la `aportacion`. Ningún otro archivo las lleva: ni los registros, ni `area.md`, ni `proyecto.md`, ni `base/`, ni `fuentes/`.
 
-No hay clave de responsable. El responsable vive en `area.md` y en `proyecto.md`, en `Quién participa`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
+No hay clave de responsable. El de un área vive en la tabla de áreas de `guia.md`; el de un proyecto, en `Quién participa` de su `proyecto.md`. Si un documento concreto tiene otro responsable, lo dice la primera línea de su cuerpo.
 
 Las claves van sin acentos ni eñes.
 
@@ -698,7 +730,7 @@ Al proyecto se le vincula la raíz, y para trabajar en un área no hace falta ni
 
 **El tablero es opcional y personal.** Cualquiera lo monta desde su propia cuenta escribiendo «monta el tablero» con la raíz conectada; la skill `tablero` publica la página, que se pone al día cuando esa persona lo pide, con su botón, desde su computadora y con sus permisos (al abrirla avisa de las sesiones cerradas que aún no muestra; una tarea que la regenere cada mañana solo se crea si se pide): lo que su cuenta no lee en la carpeta sale como restringido, y lo que su tarea escribe lo escribe con sus permisos. Muestra todo lo que la cuenta lee, con las sesiones recientes enteras, y por eso es solo de esa persona y no se comparte: quien quiera uno lo monta (hasta la 1.17 había además un modo público, que pasa solo a este). Se encuentra por su nombre entre los artifacts de la cuenta; en la raíz no queda nada de él. Lo que se toca en el tablero espera en su cola hasta que la siguiente puesta al día lo escribe en la carpeta, o hasta la siguiente sesión del proyecto si pide juicio; la página nunca escribe en la raíz. Cuando sale una versión nueva del plugin, la siguiente puesta al día republica la página sobre la misma URL sin que nadie lo pida.
 
-**Nadie pega instrucciones en el proyecto.** El plugin trae un hook de arranque que, al empezar cada sesión, inyecta el bloque de abajo como contexto, y con él cómo saber dónde escribe cada quien: la cuenta que abre la sesión se busca en la columna Cuenta de la tabla de áreas de `guia.md`, como responsable o tras «colabora:», y en la línea `Colabora:` de cada proyecto, y esas áreas y proyectos son los suyos. Así el método se aplica en cuanto la carpeta está conectada, se actualiza solo con cada versión del plugin y no depende de que nadie copie bien un texto. El mismo aviso pide la apertura mínima de la skill `sesion` en la primera respuesta de cualquier conversación con la carpeta conectada, sea cual sea la petición, y un segundo hook, al terminar cada respuesta, la pide una vez por conversación si faltó; sin carpetas conectadas ninguno de los dos hace nada, y ante un error el segundo deja pasar. El bloque sigue aquí para quien trabaje con otro modelo sin el plugin, o en una superficie donde el arranque del plugin no corra: en ese caso se pega tal cual y se añade debajo una línea propia diciendo dónde se escribe. El texto no nombra skills, porque Claude las elige solo:
+**Nadie pega instrucciones en el proyecto.** El plugin trae un hook de arranque que, al empezar cada sesión, inyecta el bloque de abajo como contexto, y con él cómo saber dónde escribe cada quien: la cuenta que abre la sesión se busca en «Quién es quién» de `guia.md`, su nombre en las columnas Responsable y Colabora de la tabla de áreas y en la línea `Colabora:` de cada proyecto (en una raíz de hasta la 1.24, la cuenta en la columna Cuenta), y esas áreas y proyectos son los suyos. Así el método se aplica en cuanto la carpeta está conectada, se actualiza solo con cada versión del plugin y no depende de que nadie copie bien un texto. El mismo aviso pide la apertura mínima de la skill `sesion` en la primera respuesta de cualquier conversación con la carpeta conectada, sea cual sea la petición, y un segundo hook, al terminar cada respuesta, la pide una vez por conversación si faltó; sin carpetas conectadas ninguno de los dos hace nada, y ante un error el segundo deja pasar. El bloque sigue aquí para quien trabaje con otro modelo sin el plugin, o en una superficie donde el arranque del plugin no corra: en ese caso se pega tal cual y se añade debajo una línea propia diciendo dónde se escribe. El texto no nombra skills, porque Claude las elige solo:
 
 ```
 Este proyecto trabaja sobre una memoria de trabajo permanente: la carpeta conectada, que sigue el método del plugin `memoria`. Aplícalo en todo lo que hagas aquí, y no guardes nada en tu memoria: si un dato importa, va a un archivo de la carpeta.
@@ -1005,7 +1037,7 @@ Una premisa es algo que la dirección confirmó y sobre lo que todos construyen;
 1. La revisión se pasó y no quedan hallazgos bloqueantes
 2. No hay huecos abiertos, o el responsable del proyecto los acepta de forma explícita y quedan escritos en el documento
 3. `basado_en` no está vacía y la cabecera lleva `aportacion` (si falta, se escribe ahora, con el responsable, porque es la línea del índice del área). Si el documento es material adoptado y no hay forma de reconstruir sus fuentes, el responsable del proyecto acepta el hueco de forma explícita y queda escrito en el documento, en una línea bajo el título: de quién venía el material, con qué fecha y por qué no hay trazabilidad. Esa línea no nombra rutas ni carpetas del sistema del que se migró
-4. **Lo pide el responsable del proyecto, y se comprueba.** El responsable es quien figura en `Quién participa` de `proyecto.md`, y su cuenta está junto a su nombre en `guia.md`, la primera de la celda Cuenta, antes de «colabora:». Quien colabora en el área o en el proyecto no publica: su cuenta no cuenta como la del responsable. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
+4. **Lo pide el responsable del proyecto, y se comprueba.** El responsable es quien figura en `Quién participa` de `proyecto.md`, y su cuenta es la de su línea en «Quién es quién» de `guia.md` (en una raíz de hasta la 1.24, la primera de la celda Cuenta, antes de «colabora:»). Quien colabora en el área o en el proyecto no publica: su cuenta no cuenta como la del responsable. Se contrasta contra la cuenta desde la que se abrió esta sesión. Si no coinciden, no se publica, y se dice quién tiene que pedirlo. Si la identidad de la cuenta no está disponible, se pregunta quién lo pide y se anota en `sesiones.md` de quién vino la petición
 
 Si falta cualquiera de los cuatro, se dice cuál falta y no se publica.
 
