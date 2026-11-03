@@ -183,11 +183,7 @@ _d = pathlib.Path(_tf.mkdtemp())
 (_d / "co.json").write_text(_json.dumps({"entries": [{"name": "propuesta-x.pdf", "type": "file", "mtimeMs": 1793600000000},
                                                      {"name": "sub", "type": "dir"}, {"name": ".DS_Store", "type": "file", "mtimeMs": 1}]}), encoding="utf-8")
 _pl = (ABRIR.parents[2] / "metodo.md").read_text(encoding="utf-8").split("\n", 1)[0]
-_salidas = pathlib.Path("/mnt/user-data/outputs"); _creada = not _salidas.exists()
-try:
-    _salidas.mkdir(parents=True, exist_ok=True)
-except OSError:
-    pass
+_salidas = _d / "salidas"; _salidas.mkdir(); os.environ["MEMORIA_SALIDAS"] = str(_salidas)
 _, o = abrir("--minima", "--sin-fechas", "--cuenta", "ana@ejemplo.test", "--plugin", _pl, "--origen", "/Users/ana/Prueba", "--outputs", str(_d / "co.json"))
 ok("**Claude outputs:** 2 archivos sueltos, el último del 2026-11-0" in o and "uno parece confidencial" in o, "sin consola, con --outputs, la fila de «Claude outputs» lleva su fecha y cuenta archivos y carpetas del primer nivel, sin los ocultos (1.24.9)")
 _r = re.search(r"devicePath «([^»]+)»", abrir("--minima", "--sin-fechas", "--cuenta", "ana@ejemplo.test", "--plugin", _pl, "--origen", "C:\\Users\\ana\\Mi unidad\\Prueba\\")[1])
@@ -197,8 +193,7 @@ ok(bool(_m) and pathlib.Path(_m.group(1)).read_text(encoding="utf-8").startswith
 ok("METODO_DESCARGA" not in o.split("=== RESPUESTA")[1], "sin descargar nada en la computadora")
 if _m:
     shutil.rmtree(pathlib.Path(_m.group(1)).parent, ignore_errors=True)
-if _creada:
-    shutil.rmtree(_salidas, ignore_errors=True)
+os.environ.pop("MEMORIA_SALIDAS", None); shutil.rmtree(_d, ignore_errors=True)
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test", "--origen", "C:\\Users\\ana\\Meine Ablage\\Prueba")
 ok("PERMISOS:" in o, "Drive en otro idioma, sí")
 _, o = abrir("--minima", "--cuenta", "ana@ejemplo.test")

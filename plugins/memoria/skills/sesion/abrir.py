@@ -798,7 +798,8 @@ def metodo_para_subir():
         return None
     if not PLUGIN or PLUGIN not in texto[:400]:
         return None
-    base = next((pathlib.Path(b) for b in ("/mnt/project-files", "/mnt/user-data/outputs") if pathlib.Path(b).is_dir()), None)
+    # MEMORIA_SALIDAS solo lo usan las pruebas, donde no existen las carpetas de salidas del contenedor
+    base = next((pathlib.Path(b) for b in (os.environ.get("MEMORIA_SALIDAS") or "", "/mnt/project-files", "/mnt/user-data/outputs") if b and pathlib.Path(b).is_dir()), None)
     if base is None:
         return None
     # un nombre por versión, reutilizado: cada conversación con la raíz atrasada no deja otra copia de 137 KB
