@@ -36,12 +36,17 @@ Las demás preguntas de cada nivel se hacen juntas, en una sola tanda, en lengua
 
 ## Sumar a quien colabora
 
-Quien escribe en un área o en un proyecto sin ser su responsable (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe.
+Quien escribe en un área o en un proyecto sin ser su responsable (`convenciones`, sección 1, «Quién colabora»). Se pide el nombre y apellido y la cuenta con la que trabaja con la IA; sin cuenta no se declara, porque es lo que permite saber quién escribe. Una sola frase hace todo: «añade a [nombre] con [correo] como colaborador de [área o proyecto]».
 
-- **En toda un área**: se añade su cuenta en la celda Cuenta de esa área en `guia.md`, después de la del responsable: `responsable@… · colabora: ana@…`, o con una coma más si ya había alguien. Solo lo escribe la sesión del responsable de contexto; desde otra sesión se prepara la fila y se le pasa.
-- **En un solo proyecto**: se añade en `Quién participa` de su `proyecto.md` la línea `Colabora: Nombre Apellido (correo)`, o la persona al final de la que ya hay. Solo lo escribe la sesión del responsable del área.
+**Con «Quién es quién» en `guia.md`** (las raíces montadas desde la 1.25):
 
-- **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable y la primera cuenta de su celda, en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban.
+- **En toda un área**: si la persona no está en «Quién es quién», se añade su línea, `- Nombre Apellido · correo@… · sin confirmar`; y su nombre va en la columna «Colabora» de esa área, con una coma si ya había alguien. Las dos cosas en la misma sesión, la del responsable de contexto; desde otra sesión se prepara el texto y se le pasa.
+- **En un solo proyecto**: en `Quién participa` de su `proyecto.md`, la línea `Colabora: Nombre Apellido`, o la persona al final de la que ya hay. Si no está en «Quién es quién», va con su cuenta, `Nombre Apellido (correo)`: es el alta provisional, que la deja escribir desde ya; el responsable de contexto pasa su línea al registro y quita el correo del proyecto (la revisión de permisos, el tablero y `verificar` se lo recuerdan). Solo lo escribe la sesión del responsable del área.
+- **Cambiar la cuenta de alguien** es cambiar su línea de «Quién es quién», y nada más; **darle de baja**, añadirle `· baja AAAA-MM-DD`, nunca borrar la línea, y quitar su nombre de la tabla y de los proyectos abiertos. Otro nombre para la misma persona va como `· también: …`.
+
+**Sin «Quién es quién»** (una raíz de hasta la 1.24, que no se ha migrado), como antes: en toda un área, su cuenta en la celda Cuenta de esa área, después de la del responsable (`responsable@… · colabora: ana@…`), con su nombre junto al correo si se sabe (`colabora: Ana Ruiz (ana@…)`); en un solo proyecto, `Colabora: Nombre Apellido (correo)`. No se añade «Quién es quién» a mano a una raíz vieja: lo hace la migración.
+
+- **Cambiar el responsable de un área**: «[nombre] con [correo] es el responsable del área [área]» cambia el Responsable de su fila (y, sin registro, la primera cuenta de su celda), en la sesión del responsable de contexto, y deja a quienes colaboraban como estaban; si la persona no está en «Quién es quién», se añade su línea en la misma sesión.
 
 En los tres casos se recuerda en una línea el permiso que falta en la carpeta compartida («Gestor de contenido» en la carpeta del área, o solo en la del proyecto; «Editor» si la carpeta está en «Mi unidad»), que pone quien administra la carpeta; cuando diga que ya lo puso, se ofrece comprobarlo (skill `sesion`, anexo `permisos.md`); y que en el tablero, «Sumar a un compañero», está el mensaje para mandarle a esa persona.
 
@@ -51,7 +56,7 @@ En los tres casos se recuerda en una línea el permiso que falta en la carpeta c
 
 Solo si la carpeta no tiene `guia.md`. Se hace una vez por organización.
 
-Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está en Google Drive, se recomienda una unidad compartida de la organización y se explica en dos líneas por qué, y cómo dar los permisos, como dice «La carpeta en Google Drive» en `montaje.md`; si la organización no tiene Google Workspace, una carpeta de «Mi unidad» de quien administra. Se avisa de que en Windows una unidad compartida se transmite y no se copia al disco, para probarlo en una computadora antes de sumar al equipo.
+Antes de montar, se mira dónde vive la carpeta. Si va a ser compartida y está en Google Drive, se recomienda una unidad compartida de la organización y se explica en dos líneas por qué, y cómo dar los permisos, como dice «La carpeta en Google Drive» en `montaje.md`; si la organización no tiene Google Workspace, una carpeta de «Mi unidad» de quien administra. Se avisa de que en Windows una unidad compartida se transmite y no se copia al disco, para probarlo en una computadora antes de sumar al equipo. Y se dice que todo el que vaya a trabajar en ella necesita el plugin `memoria` 1.25 o posterior: la raíz nace con «Quién es quién», y un plugin anterior no sabría quién escribe en cada área.
 
 ## Las cuatro preguntas
 
@@ -77,23 +82,21 @@ falta leer: lo aplica el plugin `memoria` cuando trabajas con Claude. Aquí solo
 
 ## Áreas
 
-| Área | Qué es | Responsable | Cuenta | Quién la lee | Acceso |
+| Área | Qué es | Responsable | Colabora | Quién la lee | Acceso |
 |---|---|---|---|---|---|
-| `comercial/` | … | Nombre Apellido | correo@… | Todo el equipo | Abierta |
-| `nordia/` | … | Nombre Apellido | correo@… | Dirección | Restringida |
+| `comercial/` | … | Nombre Apellido |  | Todo el equipo | Abierta |
+| `nordia/` | … | Nombre Apellido | Otro Nombre | Nombre Apellido | Restringida |
 
-La cuenta es con la que esa persona trabaja con la IA. Es lo que permite comprobar
-que quien pide publicar algo es su responsable. Quien escribe en un área sin ser su responsable va en
-la misma celda, después de la cuenta del responsable: `responsable@… · colabora: ana@…, luis@…`.
-Quien colabora abre y cierra sesión y registra las decisiones de su trabajo; publicar
-y el estatus del área, con sus prioridades, son de su responsable. «Acceso» dice si el área
-la lee todo el equipo («Abierta») o solo quien está en «Quién la lee» («Restringida»).
+Cada persona va por su nombre, el de «Quién es quién» (abajo), donde está su cuenta. Quien
+escribe en un área sin ser su responsable va en «Colabora»: abre y cierra sesión y registra las
+decisiones de su trabajo; publicar y el estatus del área, con sus prioridades, son de su
+responsable. «Acceso» dice si el área la lee todo el equipo («Abierta») o solo quien está en
+«Quién la lee» («Restringida»), además de quien escribe en ella y quien administra la carpeta.
 
 ## Quién responde por qué
 
-Contexto común (`guia.md` y `base/`): [nombre y apellido] ([correo con el que trabaja con la IA]).
+Contexto común (`guia.md` y `base/`): [nombre y apellido].
 Administra la carpeta compartida y pone o quita los accesos: [nombre y apellido].
-En Drive: [solo si alguien entra a Drive con otra cuenta que la de la tabla: `cuenta@claude es cuenta@drive`, separadas por comas; si no, la línea no va]
 Cada área, su responsable de la tabla de arriba.
 Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 
@@ -102,6 +105,14 @@ Zona horaria: [la de la organización; si nadie la dice, America/Mexico_City]
 [Solo si las hay. Lo que el método no puede prever porque es nuestro: un tipo de dato
 que aquí cuenta como confidencial, una convención de nombres, vocabulario que conviene
 fijar. No pueden contradecir `metodo.md`; si alguna lo hace, manda `metodo.md`.]
+
+## Quién es quién
+
+- [nombre y apellido] · [correo con el que trabaja con la IA]
+
+Una línea por persona, y una sola vez: el resto de la carpeta la nombra por su nombre. Si entra
+a Drive con otra cuenta, `· en Drive: otra@…`; si no usa Claude todavía, `· sin cuenta`; si ya
+no está, `· baja AAAA-MM-DD` (la línea no se borra). Lo escribe quien mantiene el contexto común.
 
 ## Cómo conectarte
 
@@ -263,9 +274,11 @@ hacer de tu lado y trae el mensaje con las instrucciones, listo para copiar. Qui
 quién colabora en cada área se le dice a Claude con una frase:
 
 - «[nombre] con [correo] es el responsable del área [área]», o «añade a [nombre] con [correo] como
-  colaborador del área [área]»: en una sesión de quien mantiene el contexto común.
+  colaborador del área [área]»: en una sesión de quien mantiene el contexto común, que lo pone
+  también en «Quién es quién» si no estaba.
 - «añade a [nombre] con [correo] como colaborador de este proyecto»: en una sesión del responsable
-  del área, dentro del proyecto.
+  del área, dentro del proyecto. Si no está en «Quién es quién», escribe desde ya, y quien
+  mantiene el contexto común lo añade después.
 
 Además, quien administra la carpeta compartida le da «Gestor de contenido» en la carpeta del área
 («Editor» si la carpeta está en «Mi unidad»), o solo en la del proyecto; nunca «Colaborador» ni
@@ -396,7 +409,7 @@ Responsable: Marta Ruiz
 
 El `Estatus` nace con la fecha de hoy, una frase y las prioridades; lo reescribe la skill `director` al cerrar cada sesión en el área.
 
-**3. La fila del área en la tabla de `guia.md`**, con su responsable, su cuenta, quién la lee y su acceso («Abierta» o «Restringida»). La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
+**3. La fila del área en la tabla de `guia.md`**, con su responsable, quienes colaboran, quién la lee y su acceso («Abierta» o «Restringida»); con «Quién es quién», por sus nombres, y quien no esté en él se añade con su cuenta en la misma sesión (`· sin confirmar`); sin él (una raíz de hasta la 1.24), la cuenta en la celda Cuenta. La escribe la sesión del responsable de contexto; desde la de otra persona se prepara la fila y se le pasa, y el área existe igual mientras tanto.
 
 Nada más: ni proyectos vacíos, ni plantillas, ni un `README`.
 
@@ -515,7 +528,7 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 **Respuesta:**
 
-> Creada la carpeta del área con su `area.md`, con Marta Ruiz como responsable, y su fila en `guia.md`: nombre, responsable, cuenta y «Restringida» en «Acceso», para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
+> Creada la carpeta del área con su `area.md`, con Marta Ruiz como responsable, y su fila en `guia.md`: nombre, responsable y «Restringida» en «Acceso», y su línea en «Quién es quién», para que el equipo sepa que existe y a quién pedir acceso. Falta lo único que no puedo hacer yo: que quien administra la carpeta compartida le ponga el acceso limitado desde la web de Drive, con Marta y quien decidas. Hasta entonces la lee todo el equipo.
 >
 > Y una cosa más que no hace la skill: darle a Marta escritura sobre esa carpeta en Drive.
 
@@ -539,6 +552,6 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 > Montada la raíz de Acme Distribución: `guia.md` con la tabla de áreas y la receta para conectarse, `metodo.md` copiado del plugin, `base/` con contexto, glosario y sistemas (tres filas, con "quién da acceso" como hueco), y `compras/` con Ana Pérez como responsable, que la lee todo el equipo.
 >
-> Me faltan las cuentas de Jorge y de Ana para la tabla de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
+> Me faltan las cuentas de Jorge y de Ana para «Quién es quién» de `guia.md`: son las que permiten comprobar después que quien pide publicar algo es su responsable.
 >
 > Dos siguientes pasos. Permisos en Drive: lectura de la raíz para todo el equipo, escritura en `base/` para Jorge y en `compras/` para Ana. Y una sesión con Jorge para rellenar `contexto.md`, que ahora mismo son cuatro huecos.
