@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lo que hay que leer para abrir una sesión, en una sola llamada y sin escribir nada.
 
-Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas [--listado <archivo>]] [--minima] [--origen "<ruta de la raíz en la computadora>"]
+Uso: abrir.py <raiz> [<area>/<proyecto>] [--cuenta <correo>] [--plugin "<primera línea del metodo.md del plugin>"] [--sin-fechas [--listado <archivo>] [--outputs <archivo>]] [--minima] [--origen "<ruta de la raíz en la computadora>"]
 
 Con --origen (la ruta de la raíz que da get_device_info) y la cuenta del administrador principal, si la raíz vive en
 Google Drive imprime en CUENTA la línea PERMISOS, para ofrecer la revisión de permisos al abrir (1.24.2).
@@ -33,7 +33,13 @@ archivo son las de la copia, no las de la computadora). No usa ninguna fecha de 
 por fechas, sino el instante desde el que hay que mirarlo en el listado de la computadora (device_list_dir, mtimeMs), y en
 REGISTROS solo da el tamaño. Con --listado <archivo> (el resultado de device_list_dir recursivo de la carpeta del
 proyecto, guardado tal cual en un archivo del contenedor) calcula él el aviso de trabajo sin sesión, con fecha y hora en la
-zona de la organización, como en la computadora: nadie compara milisegundos a mano.
+zona de la organización, como en la computadora: nadie compara milisegundos a mano. Con --outputs <archivo> (el
+device_list_dir recursivo de «Claude outputs», guardado igual) da lo suelto ahí con sus fechas, como con consola. Con
+--sin-fechas y la raíz atrasada, deja el metodo.md del plugin en una carpeta nueva de salidas del contenedor y la RESPUESTA
+dice con qué device_commit_files escribirlo: es lo único que escribe, y fuera de la raíz (1.24.9).
+
+La apertura mínima corre siempre así, en el contenedor sobre una copia (1.24.9): en la computadora no se ejecuta nada
+descargado, que el modo Auto de la app frena cuando la petición no tiene que ver con la memoria.
 """
 import datetime, json, os, pathlib, re, sys, time
 
@@ -78,6 +84,10 @@ if SIN_FECHAS:
 ORIGEN = None
 if "--origen" in args:
     i = args.index("--origen"); ORIGEN = (args[i + 1] if i + 1 < len(args) else "").strip(); del args[i:i + 2]
+OUTPUTS, OUTPUTS_CORTADO = None, [False]
+if "--outputs" in args:
+    # el device_list_dir recursivo de «Claude outputs» guardado tal cual: sin consola, la copia no trae esa carpeta (1.24.9)
+    i = args.index("--outputs"); OUTPUTS = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
 LISTADO = None
 if "--listado" in args:
     i = args.index("--listado"); LISTADO = args[i + 1] if i + 1 < len(args) else None; del args[i:i + 2]
@@ -718,21 +728,45 @@ def claude_outputs():
     --cuenta): a las demás no se les dice nada al abrir, y lo que cae ahí en su conversación lo recoge el hook."""
     titulo("CLAUDE OUTPUTS")
     if CUENTA and not es_resp:
-        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/" + ("; sin consola, device_list_dir de la carpeta y lo de los últimos 14 días)" if SIN_FECHAS else ")"))
+        print("(no se muestra a esta cuenta: solo a quien responde por guia.md y base/)")
         return []
-    try:
-        co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
-        sueltos = sorted((p for p in co.rglob("*") if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
-                         key=lambda p: p.stat().st_mtime, reverse=True)
-    except OSError:
-        co, sueltos = RAIZ / "Claude outputs", []
+    # cada suelto es (ruta dentro de la carpeta, fecha en segundos): de la carpeta o, sin consola, del listado (1.24.9)
+    sueltos = []
+    if SIN_FECHAS and OUTPUTS:
+        try:
+            d_ = json.loads(pathlib.Path(OUTPUTS).read_text(encoding="utf-8"))
+            ents = (d_.get("entries") if isinstance(d_, dict) else d_) or []
+            OUTPUTS_CORTADO[0] = bool(isinstance(d_, dict) and d_.get("truncated"))
+        except (OSError, ValueError, AttributeError):
+            ents = []
+        # un archivo o una carpeta del primer nivel es un suelto; la fecha de una carpeta, la de lo más nuevo que tenga dentro
+        nom = lambda e: str(e.get("name") or "").replace("\\", "/").strip("/")
+        ents = [e for e in ents if isinstance(e, dict) and nom(e) and not any(x.startswith(".") for x in nom(e).split("/"))]
+        fechas = {}
+        for e in ents:
+            if e.get("type") == "file":
+                for k in range(1, len(nom(e).split("/")) + 1):
+                    r_ = "/".join(nom(e).split("/")[:k]); fechas[r_] = max(fechas.get(r_, 0), (e.get("mtimeMs") or 0) / 1000)
+        sueltos = sorted(((nom(e), fechas.get(nom(e), 0)) for e in ents if "/" not in nom(e) and e.get("type") in ("file", "dir")),
+                         key=lambda x: x[1], reverse=True)
+    elif not SIN_FECHAS:
+        try:
+            co = next((d for d in RAIZ.iterdir() if d.is_dir() and d.name.lower() == "claude outputs"), RAIZ / "Claude outputs")
+            sueltos = sorted(((p.relative_to(co).as_posix(), p.stat().st_mtime) for p in co.rglob("*")
+                              if p.is_file() and not any(x.startswith(".") for x in p.relative_to(co).parts)),
+                             key=lambda x: x[1], reverse=True)
+        except OSError:
+            sueltos = []
     if not sueltos:
-        print("(vacía o no existe)" if not SIN_FECHAS else "(sin consola no se ve en la copia: se mira con device_list_dir de la carpeta «Claude outputs» de la raíz)")
+        print("(vacía o no existe)")
         return []
     print(f"{len(sueltos)} archivos sueltos")
-    for p in sueltos[:30]:
-        f = "" if SIN_FECHAS else " · " + datetime.datetime.fromtimestamp(p.stat().st_mtime, TZ).date().isoformat()
-        print(f"- {p.relative_to(co).as_posix()}{f}")
+    # en la mínima basta el número: la fila de la RESPUESTA lo resume, y los nombres los lista quien los coloca (1.24.9)
+    if MINIMA:
+        return sueltos
+    for r_, m_ in sueltos[:30]:
+        f = " · " + datetime.datetime.fromtimestamp(m_, TZ).date().isoformat() if m_ else ""
+        print(f"- {r_}{f}")
     if len(sueltos) > 30:
         print(f"(y {len(sueltos) - 30} más)")
     return sueltos
@@ -746,7 +780,39 @@ def celda(t):
     return re.sub(r"\s*[\r\n|]+\s*", " · ", t).strip()
 
 
-def respuesta(sueltos, completa=False):
+def ruta_en_la_computadora(rel):
+    """La ruta de un archivo de la raíz en la computadora, con el separador de la ruta que dio get_device_info: en Windows
+    va con barras invertidas, como hace espejo.py."""
+    o = ORIGEN or str(RAIZ)
+    sep = "\\" if "\\" in o and "/" not in o.replace("\\", "") else "/"
+    return o.rstrip("/\\") + sep + rel.replace("/", sep)
+
+
+def metodo_para_subir():
+    """El metodo.md del plugin con el que corre este script, copiado a una carpeta nueva de salidas del contenedor para
+    device_commit_files (1.24.9). Solo si su primera línea es la del --plugin; si no, None y se sigue como siempre."""
+    fuente = pathlib.Path(__file__).resolve().parents[2] / "metodo.md"
+    try:
+        texto = fuente.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not PLUGIN or PLUGIN not in texto[:400]:
+        return None
+    base = next((pathlib.Path(b) for b in ("/mnt/project-files", "/mnt/user-data/outputs") if pathlib.Path(b).is_dir()), None)
+    if base is None:
+        return None
+    # un nombre por versión, reutilizado: cada conversación con la raíz atrasada no deja otra copia de 137 KB
+    destino = base / f"metodo-{VERSION_PLUGIN or 'plugin'}" / "metodo.md"
+    try:
+        if not (destino.is_file() and destino.read_text(encoding="utf-8") == texto):
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_text(texto, encoding="utf-8")
+    except OSError:
+        return None
+    return str(destino)
+
+
+def respuesta(sueltos, completa=False, sin_proyecto=False):
     """El recuadro con sus filas y, en orden, lo que toca, ya decidido (1.24.8). Así la conversación hace la apertura mínima
     sin cargar la skill sesion (su anexo minima.md, que inyecta el aviso de arranque), y la completa no recalcula filas.
     Nada de aquí remite a una skill: lo que hay que hacer viene escrito."""
@@ -760,9 +826,9 @@ def respuesta(sueltos, completa=False):
                      "Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.")
     filas += [f"**Aviso:** {d}" for d in DECIR]
     if sueltos:
-        f_ = "" if SIN_FECHAS else f", el último del {datetime.datetime.fromtimestamp(sueltos[0].stat().st_mtime, TZ).date().isoformat()}"
-        conf = sum(1 for p in sueltos if CONFIDENCIAL.search(p.name))
-        filas.append(f"**Claude outputs:** {len(sueltos)} archivo{'s' if len(sueltos) != 1 else ''} suelto{'s' if len(sueltos) != 1 else ''}{f_}"
+        f_ = f", el último del {datetime.datetime.fromtimestamp(sueltos[0][1], TZ).date().isoformat()}" if sueltos[0][1] else ""
+        conf = sum(1 for r_, _ in sueltos if CONFIDENCIAL.search(r_.rsplit("/", 1)[-1]))
+        filas.append(f"**Claude outputs:** {'más de ' if OUTPUTS_CORTADO[0] else ''}{len(sueltos)} archivo{'s' if len(sueltos) != 1 else ''} suelto{'s' if len(sueltos) != 1 else ''}{f_}"
                      + (f"; {'uno parece confidencial' if conf == 1 else f'{conf} parecen confidenciales'}" if conf else "") + ".")
     cab = "La respuesta empieza con este recuadro, tal cual"
     if PERMISOS:
@@ -775,7 +841,17 @@ def respuesta(sueltos, completa=False):
     for f_ in filas:
         print(f"| {celda(f_)} |")
     pasos = []
-    if VEREDICTO == "RAIZ ATRASADA":
+    copia_metodo = metodo_para_subir() if VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS else None
+    if copia_metodo:
+        # sin consola, o en la apertura mínima, que no ejecuta nada descargado en la computadora (1.24.9): el metodo.md del
+        # plugin instalado ya está en una carpeta de salidas, y basta escribirlo
+        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz: device_commit_files con "
+                     f"stagedPath «{copia_metodo}» y devicePath «{ruta_en_la_computadora('metodo.md')}», y después, en el Bash que siga o en uno propio, `rm -rf \"{pathlib.Path(copia_metodo).parent}\"`. Si no sale en «written», no se dice nada y el recuadro lleva "
+                     f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
+    elif VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS:
+        # sin carpeta de salidas device_commit_files no tiene de dónde escribir, y descargar en la computadora es lo que se evita
+        pasos.append(f"El método de la raíz no se pone al día en esta conversación: no se dice nada y el recuadro lleva v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
+    elif VEREDICTO == "RAIZ ATRASADA":
         pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz, en una llamada a device_bash: lo que va detrás de «METODO_DESCARGA » en el aviso de arranque, "
                      f"seguido de ` && cp \"$HOME/memoria/metodo.md\" \"{raiz_}/metodo.md\" && head -1 \"{raiz_}/metodo.md\"`. "
                      "Si la comprobación falla, una vez más con main en lugar de v<versión> en sus dos direcciones; si tampoco, o el aviso no trae METODO_DESCARGA, "
@@ -798,10 +874,13 @@ def respuesta(sueltos, completa=False):
                          "o si su lista «cambios» no está vacía y es de hace más de 7 días: una fila «**Permisos de Drive:** sin revisar desde el <fecha>» (o «nunca se revisaron», "
                          "o «quedan <n> cambios de la revisión del <fecha>») y, al final, la pregunta «¿Reviso ahora los permisos de Drive?» con «Revisar ahora» y «Después». "
                          "Sin tablero o si una llamada falla, nada. Con «Revisar ahora», el anexo permisos.md de la skill sesion; con «Después», no se vuelve a ofrecer en esta conversación.")
-    if completa:
+    if completa and not sin_proyecto:
         pasos.append("Antes de responder, la cola del tablero: ToolSearch de mcp__claude-artifacts__list_artifacts, db_query y read_file (o Artifact y ArtifactData si la sesión tiene las de antes); "
                      f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
-    pasos.append("Responde con la sesión: dónde quedó todo, los recuadros de la memoria, los avisos y la propuesta de trabajo, como dice «Qué respondo» de la skill sesion."
+    # con un proyecto que no se pudo leer, la apertura sale igual, con el recuadro, y la respuesta pregunta cuál era (1.24.9)
+    pasos.append(f"Di en una línea que «{ACTIVO}» no se encuentra (no existe, es restringido o no está descargado) y pregunta cuál se abre, con los proyectos de su área del bloque Proyectos de arriba; "
+                 "no lo crees sin que lo pidan (la skill nuevo)." if sin_proyecto else
+                 "Responde con la sesión: dónde quedó todo, los recuadros de la memoria, los avisos y la propuesta de trabajo, como dice «Qué respondo» de la skill sesion."
                  if completa else "Responde a lo que se pidió.")
     if sueltos:
         pasos.append("La última acción de la respuesta: «¿Coloco ahora lo que hay en Claude outputs?», con AskUserQuestion si está (opciones «Colocar ahora» y «Después», "
@@ -852,8 +931,8 @@ print(seccion(cabecera(area_txt)[1], "Proyectos") if area_txt is not None else f
 tp = leer(pc / "proyecto.md")
 if tp is None:
     titulo("PROYECTO")
-    print("(no se pudo leer proyecto.md: el proyecto no existe, es restringido o no está descargado; se dice y se para)")
-    claude_outputs()
+    print("(no se pudo leer proyecto.md: el proyecto no existe, es restringido o no está descargado)")
+    respuesta(claude_outputs(), completa=True, sin_proyecto=True)
     sys.exit(0)
 titulo(f"PROYECTO {ACTIVO}/proyecto.md")
 print(tp.strip())

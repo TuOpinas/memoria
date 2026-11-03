@@ -51,7 +51,7 @@ const path = require('path');
     }
     // Inicio › Estatus: qué es la organización (primer párrafo de la guía), una ficha por área con su titular y ningún aviso de la herramienta
     await abre(p, url, '', '[data-ini="estatus"]');
-    const ini = await p.evaluate(() => { const fichas = [...document.querySelectorAll('#main .area-card')]; return { que: /Raíz inventada para probar el tablero/.test((document.querySelector('.org-q')||{}).textContent||''), fichas: fichas.length,
+    const ini = await p.evaluate(() => { const fichas = [...document.querySelectorAll('#main .area-card')]; return { que: /Raíz inventada para probar el tablero/.test((document.querySelector('.org-tit .org-i')||{dataset:{}}).dataset.tip||'') && !document.querySelector('.org-band') && /\d+ áreas? · \d+ proyectos? activos?/.test((document.querySelector('#head .meta')||{}).textContent||''), fichas: fichas.length,
       panorama: fichas.some(x => /una sola cuenta grande abierta/.test(x.textContent)), avisos: document.querySelectorAll('#main .tab-body #arreglar, #main #arreglar').length, etiqueta: /Personal · no compartir/.test(document.body.textContent) }; });
     if(!(ini.que && ini.fichas >= 2 && ini.panorama && ini.avisos === 0 && !ini.etiqueta)) errores.push(`${etiqueta}: Inicio › Estatus no dice qué es la organización, le faltan fichas de área (el Panorama vale de titular), o enseña avisos o la etiqueta vieja (${JSON.stringify(ini)})`);
     // los avisos del tablero viven en Mantenimiento
@@ -353,6 +353,19 @@ const path = require('path');
   await pasada('completo.html', 'completo-claro', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   await pasada('completo.html', 'completo-oscuro', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   await pasada('completo.html', 'completo-movil', { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
+  // qué es la organización: en el teléfono un toque abre la burbuja y la deja abierta; en escritorio, al pasar el ratón (1.24.9)
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true }); const p = await ctx.newPage();
+    const url = 'file://' + path.resolve(dir, 'completo.html');
+    await p.goto(url); await p.waitForTimeout(600); await p.tap('.org-i-m'); await p.waitForTimeout(300);
+    const m = await p.evaluate(() => { const t = document.getElementById('tip'); return !!t && !t.hidden && /Raíz inventada/.test(t.textContent); });
+    await ctx.close();
+    const ctx2 = await b.newContext({ viewport: { width: 1440, height: 900 } }); const d = await ctx2.newPage();
+    await d.goto(url); await d.waitForTimeout(600); await d.hover('.org-tit .org-i'); await d.waitForTimeout(300);
+    const e = await d.evaluate(() => { const t = document.getElementById('tip'); return !!t && !t.hidden; });
+    await ctx2.close();
+    if(!(m && e)) errores.push(`qué es la organización no se abre (toque ${m}, ratón ${e})`);
+  }
   // un proyecto cerrado abierto directo en Estatus pinta su propia cabecera (revisión 1.22.5)
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage();

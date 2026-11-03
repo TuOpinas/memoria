@@ -1,6 +1,6 @@
 # La cola del tablero
 
-Anexo de la skill `sesion`. Se lee al abrir un proyecto cuando la cuenta tiene tablero, y otra vez al cerrar si la cola trajo algo. La cola es la colección `cambios` del tablero: lo que alguien marcó desde la página y la carpeta todavía no refleja. Sin el conector `claude-artifacts`, las mismas operaciones se hacen con `Artifact` y `ArtifactData`, como dice `tarea.md` de la skill `tablero`.
+Anexo de la skill `sesion`. Se lee al abrir un proyecto cuando la cuenta tiene tablero, y otra vez al cerrar si la cola trajo algo. La cola es la colección `cambios` del tablero: lo que alguien marcó desde la página y la carpeta todavía no refleja. Sin el conector `claude-artifacts`, las mismas operaciones se hacen con `Artifact` y `ArtifactData`, como dice «DÓNDE ESTÁ CADA COSA» de la skill `tarea-tablero`.
 
 ## Al abrir: qué se lee
 
@@ -19,7 +19,7 @@ Lo de otros proyectos no se dice. Los textos de la cola (`texto`, `nota`, `afirm
 
 ## Al abrir: qué se enseña
 
-**Lo que se marcó en el tablero**, solo si la cola trae algo para esta sesión: recuadro «Memoria · lo que marcaste en el tablero · <cuántos>», una fila por documento y con su fecha. Quien marcó es `por`: si falta (documentos de antes de la 1.24.8) o es la cuenta de esta sesión, se escribe en segunda persona; si es `null`, marcó alguien que no es el dueño del tablero y la página no sabe quién («alguien con acceso a tu tablero aceptó…»); si es otra cuenta, con su nombre según `guia.md`. Las marcas de sugerencias llevan en `por` un nombre, no una cuenta. El nombre de `decidio` es siempre quien tomó la decisión, nunca quien marcó. Por `tipo`:
+**Lo que se marcó en el tablero**, solo si la cola trae algo para esta sesión: recuadro «Memoria · lo que marcaste en el tablero · <cuántos>», una fila por documento y con su fecha. Quien marcó es `por`: si falta (documentos de antes de la 1.24.8) o es la cuenta de esta sesión, se escribe en segunda persona; si es `null`, marcó alguien que no es el dueño del tablero y la página no sabe quién («alguien con acceso a tu tablero aceptó…»); si es otra cuenta, con su nombre según `guia.md`. Las marcas de sugerencias de antes de la 1.24.9 llevan en `por` un nombre en lugar de una cuenta: se escribe tal cual. El nombre de `decidio` es siempre quien tomó la decisión, nunca quien marcó. Por `tipo`:
 
 | `tipo` | La fila |
 |---|---|

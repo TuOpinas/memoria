@@ -301,6 +301,10 @@ try:
     ok(rc == 2 and not (t3 / "cola" / "c9.json").exists(), "un documento que la consulta trae sin cuerpo no entra como un cambio vacío (se borraría)")
     rc, out, err = corre(DATOS, "propuestas", pub / "propuestas.json", "ventas--cuentas")
     ok(rc == 0 and "prop-decision-sin-registrar-acep" in out, "la sesión ve las sugerencias de su proyecto")
+    rot = tmp / "rot.json"; rot.write_text(json.dumps({"r1": {"clase": "rotacion", "proyecto": "ventas--cuentas", "texto": "Archivar"},
+                                                    "a1": {"clase": "afirma", "proyecto": "ventas--cuentas", "texto": "Una frase"}}), encoding="utf-8")
+    rc, out, err = corre(DATOS, "propuestas", rot, "ventas--cuentas")
+    ok(rc == 0 and '"a1"' in out and '"r1"' not in out, "una sugerencia «rotacion» de antes de la 1.23 no sale en la apertura (1.24.9)")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{len(fallos)} fallo(s).")

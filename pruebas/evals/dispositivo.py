@@ -124,7 +124,8 @@ class Dispositivo:
         for ruta in args.get("paths") or []:
             p = self.real(ruta)
             if p is None or not p.is_file():
-                return self._json({"error": f"No existe o no es un archivo: {ruta}"}, error=True)
+                # como la herramienta real: el que falta va con su error y los demás se traen igual (1.24.9)
+                out.append({"devicePath": ruta, "ok": False, "error": "No existe o no es un archivo"}); continue
             dest = self.uploads / p.relative_to(self.raiz)
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(p, dest)   # como la herramienta real: la fecha de la copia es la de la traída

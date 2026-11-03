@@ -15,7 +15,9 @@ printf '%s' "$salida" | grep -q "Plugin memoria $version\."; ok $? "lleva la ver
 printf '%s' "$salida" | grep -q 'Este proyecto trabaja sobre una memoria' && printf '%s' "$salida" | grep -q 'Antes de guardar algo'; ok $? "lleva el bloque de instrucciones entero, de la primera a la última línea"
 printf '%s' "$salida" | grep -q 'sin-carpeta.md'; ok $? "nombra el anexo sin-carpeta.md, que existe"; [ -f "$PLUGIN/skills/sesion/sin-carpeta.md" ] || fallos=$((fallos+1))
 # 1.24.8: la apertura mínima viaja en el aviso, entera, desde su anexo (la conversación no carga la skill para ella)
-printf '%s' "$salida" | grep -q 'Apertura mínima, sin cargar la skill sesion' && printf '%s' "$salida" | grep -q '4\. Si la petición es trabajo de un proyecto'; ok $? "lleva la apertura mínima de minima.md, de la primera a la última línea"
+printf '%s' "$salida" | grep -q 'Apertura mínima, sin cargar la skill sesion' && printf '%s' "$salida" | grep -q '6\. Si la petición es trabajo de un proyecto'; ok $? "lleva la apertura mínima de minima.md, de la primera a la última línea"
+# 1.24.9: la apertura mínima corre abrir.py en el contenedor desde PLUGIN, también sin python3 en el hook, con METODO
+printf '%s' "$salida" | grep -q "^PLUGIN $PLUGIN\$\|PLUGIN $PLUGIN\\\\n"; ok $? "lleva PLUGIN, la ruta del plugin instalado"
 # sin ninguna raíz en $HOME/mnt (la app de escritorio), una sola línea y sin descarga; con una, el aviso entero
 casa="$(mktemp -d)"; mkdir -p "$casa/mnt/Otra"
 corto="$(HOME="$casa" CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$PLUGIN/hooks/arranque.sh")"
@@ -32,7 +34,7 @@ esperada="$(python3 "$PLUGIN/preparar.py" '$HOME/memoria' skills/sesion/abrir.py
 printf '%s' "$salida" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; e=sys.argv[1]; assert e.count("\n")==3 and "REINTENTO" not in t and "\nMETODO_DESCARGA " in t and t.endswith("\n"+e)' "$esperada" 2>/dev/null; ok $? "termina con VERSION, METODO, DESCARGA y METODO_DESCARGA de la apertura, iguales a los de preparar.py (sin REINTENTO, que la skill arma)"
 sinpy="$(mktemp -d)"; for c in bash sed head tail grep printf cat dirname; do p="$(command -v $c)" && ln -s "$p" "$sinpy/$c"; done
 nopy="$(PATH="$sinpy" CLAUDE_PLUGIN_ROOT="$PLUGIN" "$(command -v bash)" "$PLUGIN/hooks/arranque.sh")"; rm -rf "$sinpy"
-printf '%s' "$nopy" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "Antes de guardar algo" in t and "\nDESCARGA " not in t' 2>/dev/null; ok $? "sin python3 el aviso sale entero, sin la descarga"
+printf '%s' "$nopy" | python3 -c 'import json,sys; t=json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]; assert "Antes de guardar algo" in t and "\nDESCARGA " not in t and "\nPLUGIN " in t and "\nMETODO # Método de trabajo" in t' 2>/dev/null; ok $? "sin python3 el aviso sale entero, sin la descarga"
 # copia del plugin con el bloque roto: el hook no inyecta nada, y release.sh lo detecta
 tmp="$(mktemp -d)"; mkdir -p "$tmp/repo/plugins" "$tmp/repo/.claude-plugin"
 cp -R "$PLUGIN" "$tmp/repo/plugins/memoria"; cp "$AQUI/../../.claude-plugin/marketplace.json" "$tmp/repo/.claude-plugin/"; cp "$AQUI/../../README.md" "$tmp/repo/"

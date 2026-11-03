@@ -69,6 +69,9 @@ while rondas_m < 4:
             corre(ESPEJO, "falta", CM, r)
 ok(out_m.strip() == "COMPLETA" and rondas_m == 1, f"con --raiz, la apertura mínima en una ronda (rondas: {rondas_m})")
 ok(not (CM / "Claude outputs").exists() and not (CM / "base" / "area.md").exists(), "no pide base/ ni «Claude outputs» como áreas")
+lr2 = tmp / "raiz2.json"; lr2.write_text(json.dumps({"entries": [{"name": "claude outputs", "type": "dir"}, {"name": "ventas", "type": "dir"}]}), encoding="utf-8")
+_rc, _o, _ = corre(ESPEJO, "rutas", tmp / "uploads" / "Minuscula", "--raiz", lr2)
+ok("claude outputs/area.md" not in _o, "«claude outputs» en minúsculas tampoco se pide como área (1.24.9)")
 # en la misma conversación: abrir otro proyecto pide solo lo suyo; y lo del proyecto que se abre, si llegó hace rato, otra vez
 _, out2, _ = corre(ESPEJO, "rutas", C, "operacion/soporte")
 ok(sorted(out2.split()) == ["operacion/soporte/proyecto.md", "operacion/soporte/sesiones.md"], f"otro proyecto en la misma conversación pide solo lo suyo ({out2.split()})")

@@ -391,6 +391,14 @@ def _(ctx, arg):
     return False, "abrir.py no corrió con el proyecto (o no respondió)"
 
 
+@comprobacion("minima-sin-ejecutar")
+def _(ctx, arg):
+    """En el primer turno no se ejecuta nada en la computadora (1.24.9): la apertura mínima lee una copia y corre abrir.py en
+    el contenedor; device_bash, que el modo Auto frena cuando la petición no es de la memoria, no aparece."""
+    n = [h for h in (ctx["turnos"][0]["herramientas"] if ctx["turnos"] else []) if h["nombre"].endswith("device_bash")]
+    return (not n), ("sin device_bash en el primer turno" if not n else f"{len(n)} device_bash en el primer turno")
+
+
 @comprobacion("apertura-minima")
 def _(ctx, arg):
     for t in ctx["turnos"]:

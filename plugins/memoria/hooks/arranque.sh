@@ -13,8 +13,8 @@ BLOQUE="$(sed -n '/^Este proyecto trabaja sobre una memoria/,/^Antes de guardar 
 
 # La apertura mínima vive en su anexo de la skill sesion (1.24.8): se inyecta aquí para que la conversación no tenga que
 # cargar la skill entera solo para abrir. Igual que el bloque: si perdió su última línea, no se inyecta nada.
-MINIMA="$(sed -n '/^Apertura mínima, sin cargar la skill sesion/,/^4\. Si la petición es trabajo de un proyecto/p' "$RAIZ/skills/sesion/minima.md" 2>/dev/null)"
-printf '%s\n' "$MINIMA" | tail -n 1 | grep -q '^4\. Si la petición' || exit 0
+MINIMA="$(sed -n '/^Apertura mínima, sin cargar la skill sesion/,/^6\. Si la petición es trabajo de un proyecto/p' "$RAIZ/skills/sesion/minima.md" 2>/dev/null)"
+printf '%s\n' "$MINIMA" | tail -n 1 | grep -q '^6\. Si la petición' || exit 0
 
 # En la app de escritorio las carpetas conectadas están montadas en $HOME/mnt: si hay alguna montada y ninguna es una raíz,
 # basta una línea (1.24.8). Sin nada montado no se sabe (la nube enlazada a la computadora no monta nada aquí, y Google
@@ -55,9 +55,20 @@ if [ "$HAY_RAIZ" != no ] && command -v python3 >/dev/null 2>&1 && python3 -c '' 
   # REINTENTO no viaja: es DESCARGA con main en lugar de v<versión>, y la skill lo arma (la mitad del texto añadido)
   PREP="$(printf '%s\n' "$PREP" | grep -v '^REINTENTO ')"
 fi
+# dónde está el plugin instalado (1.24.9): la apertura mínima corre abrir.py desde aquí, en el contenedor, sin descargar nada
+# a la computadora; METODO va aunque no haya python3, leído con sed de metodo.md
+if [ "$HAY_RAIZ" != no ]; then
+  METODO_L="$(sed -n '/^# Método de trabajo/{p;q;}' "$RAIZ/metodo.md" 2>/dev/null)"
+  TEXTO="${TEXTO}
+
+Para la apertura mínima:
+PLUGIN ${RAIZ}"
+  [ -n "$METODO_L" ] && ! printf '%s\n' "$PREP" | grep -q '^METODO ' && TEXTO="${TEXTO}
+METODO ${METODO_L}"
+fi
 [ -n "$PREP" ] && TEXTO="${TEXTO}
 
-Para el paso 2 de la apertura mínima y para abrir un proyecto, ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor (METODO_DESCARGA solo cuando la RESPUESTA de abrir.py lo pida):
+Para abrir un proyecto, ya preparado por este aviso con preparar.py; se usa tal cual, sin calcularlo otra vez en el contenedor (METODO_DESCARGA solo cuando la RESPUESTA de abrir.py lo pida):
 ${PREP}"
 
 # JSON a mano, sin python: el texto solo puede traer barras, comillas, tabuladores y saltos de línea
