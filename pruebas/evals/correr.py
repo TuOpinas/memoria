@@ -620,7 +620,8 @@ def _(ctx, arg):
     for t in ctx["turnos"]:
         for h in t["herramientas"]:
             ent = json.dumps(h["entrada"], ensure_ascii=False)
-            if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in ent for k in REG):
+            # un Write sobre uno de los cuatro archivos, por su ruta; no el listado o el cambios.json que los nombran (1.25.1)
+            if h["nombre"] in ("Write", "Edit", "MultiEdit") and str((h["entrada"] or {}).get("file_path") or "").endswith(REG):
                 a_mano.append(h["nombre"])
             elif h["nombre"].endswith(("device_bash", "Bash")) and "cerrar.py" not in ent and re.search(r"(>>?\s*\\?\"?[^\s\"]*|\btee\s+(-a\s+)?\\?\"?[^\s\"]*|sed\s+-i[^;&|]*|open\([^)]*|write_text\([^)]*)(sesiones|decisiones|proyecto|area)\.md", ent) and "cambios" not in ent[:200]:
                 a_mano.append(h["nombre"] + ": " + ent[:80])

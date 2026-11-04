@@ -87,5 +87,14 @@ _T.escritos = []
 ok(not marca({"tablero": _T()}, "ventas/cuentas")[0], "sin marca no pasa")
 ok(not marca({"tablero": None}, "ventas/cuentas")[0], "sin tablero de mentira no pasa")
 
+print("El cierre con su script (1.25.1)")
+exec(src[src.index('@comprobacion("cierre-con-script")'):src.index('@comprobacion("herramienta")')], g)
+cs = g["COMPROBACIONES"]["cierre-con-script"]
+_cerr = {"nombre": "Bash", "entrada": {"command": "python3 cerrar.py x"}, "resultado": '{"escritos": []}'}
+_lst = {"nombre": "Write", "entrada": {"file_path": "/tmp/listado.json", "content": '{"entries": [{"name": "proyecto.md"}, {"name": "sesiones.md"}]}'}}
+_mal = {"nombre": "Write", "entrada": {"file_path": "/tmp/copia/ventas/cuentas/sesiones.md", "content": "x"}}
+ok(cs({"turnos": [{"herramientas": [_lst, _cerr]}]}, "")[0], "un Write del listado o de cambios.json que nombra los registros no es escribir a mano")
+ok(not cs({"turnos": [{"herramientas": [_mal, _cerr]}]}, "")[0], "un Write sobre sesiones.md sí")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
