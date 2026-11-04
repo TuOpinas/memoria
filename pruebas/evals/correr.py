@@ -194,7 +194,7 @@ def preparar_plugin(origen, trabajo):
 
 def sembrar_scripts(plugin, hogar):
     """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
-    # metodo.md también (1.24.8): la apertura mínima lo copia desde $HOME/memoria con METODO_DESCARGA, sin cargar la skill
+    # metodo.md también (1.24.8; desde la 1.24.9 la mínima lo escribe con device_commit_files y no lo necesita aquí)
     for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "metodo.md"]),
                            ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
         d = hogar / destino

@@ -163,19 +163,26 @@ ok([a["ruta"] for a in s11["ajenos"]] == ["ventas/cuentas/proyecto.md"] and "-06
 ok("- Paso que puso otra persona." in p.read_text(encoding="utf-8") and "- Firmar con Cliente Uno." in p.read_text(encoding="utf-8"), "escribe encima de su versión, no de la de la apertura")
 # 1.25.1: la salida empieza por «respuesta», con la marca del tablero armada y los avisos en llano, para que el cierre no se los salte
 _r = s11.get("respuesta") or []
-ok(list(s11)[0] == "respuesta" and len(_r) >= 3 and _r[0].startswith("Antes de responder, la marca del tablero") and "«Tablero Organización de prueba»" in _r[0], "la respuesta va primero y empieza por la marca del tablero, con el nombre del tablero")
+ok(list(s11)[0] == "respuesta" and len(_r) >= 3 and _r[0].startswith("1. La marca del tablero") and "«Tablero Organización de prueba»" in _r[0] and "completo" in _r[0], "la respuesta va primero y empieza por la marca del tablero, con el nombre del tablero y el de antes de la 1.18")
 _op = json.loads(_r[0].split("con ops: ", 1)[1].split(" (un documento nuevo", 1)[0])
 ok(_op == [{"op": "set", "path": f"cierres/{s11['documento']}", "data": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": s11["hora"], "cuenta": "ana@ejemplo.test"}}], f"la marca lleva el documento, el proyecto, su título, la hora y la cuenta ({_op})")
-ok("sesión cerrada · 4 archivos" in _r[1] and "Tablero: avisado" in _r[1] and "no se pudo avisar" in _r[1], "el recuadro lleva una fila para el tablero, avisado o no")
+ok("sesión cerrada · 4 archivos" in _r[1] and "Tablero: avisado" in _r[1] and "no se pudo avisar" in _r[1] and "sin el conector" in _r[1] and "esta cuenta no tiene" in _r[1], "el recuadro lleva una fila para el tablero, con sus cuatro formas")
 ok(any("alguien más escribió ventas/cuentas/proyecto.md a las " in x and "sumé lo de hoy encima" in x for x in _r), "el archivo ajeno sale en llano, con su hora")
-ok(s.get("respuesta") and not any("alguien más escribió" in x for x in s["respuesta"]) and s["respuesta"][-1].startswith("Nada más"), "sin ajenos no hay línea de ajenos, y la respuesta termina con «Nada más»")
+ok(s.get("respuesta") and not any("alguien más escribió" in x for x in s["respuesta"]) and s["respuesta"][-1].endswith("Nada más: el resumen largo ya está en los archivos."), "sin ajenos no hay línea de ajenos, y la respuesta termina con lo de cerrar.md y «Nada más»")
+# con un sin_match, la marca se pide después de resolverlo, y la llamada que repite no la vuelve a pedir
+_c, _sm = corre(raiz_nueva(), {**CAMBIOS, "proyecto": {**CAMBIOS["proyecto"], "reemplazos": [{"de": "- esto no está", "a": "- x"}]}}, "--cuenta", "ana@ejemplo.test")
+ok(_sm["sin_match"] and _sm["respuesta"][0].startswith("1. Hay «sin_match»") and _sm["respuesta"][1].startswith("2. La marca del tablero"), "con sin_match, resolverlo va antes que la marca")
 c, s12 = corre(R3, {"proyecto": {"reemplazos": [{"de": "- Paso que puso otra persona.", "a": "- Paso ajeno, visto."}]}}, "--abierto", abierto.isoformat())
 ok(s12["ajenos"] == [] and s12["escritos"] == ["ventas/cuentas/proyecto.md"], "la segunda llamada de la misma sesión no da por ajeno lo que ella misma escribió")
+# una llamada a mitad de sesión (solo reemplazos) no es un cierre: sin marca y sin «sesión cerrada»
+ok(s12["respuesta"][0].startswith("Esta llamada no cierra la sesión") and not any("cierres/" in x or "sesión cerrada" in x for x in s12["respuesta"]), "solo reemplazos: la respuesta dice que la sesión sigue abierta, sin marca ni recuadro de cierre")
 R4 = raiz_nueva()
 for f_ in ("proyecto.md", "sesiones.md", "decisiones.md"):
     os.utime(R4 / "ventas/cuentas" / f_, None)   # como la copia sin consola: la fecha es la de la traída
 c, s13 = corre(R4, CAMBIOS, "--abierto", abierto.isoformat(), "--sin-fechas")
 ok(s13["ajenos"] == [] and len(s13["escritos"]) == 4, "con --sin-fechas (la copia) no se mira la fecha de nadie")
+# sin consola, la devolución va antes que la marca
+ok(s13["respuesta"][0].startswith("1. Primero devuelve los archivos") and s13["respuesta"][1].startswith("2. La marca del tablero"), "con --sin-fechas la devolución va primero y la marca después")
 c, s14 = corre(raiz_nueva(), {"sesion": SESION}, "--abierto", "ahora: 2026-10-22")
 ok(c == 2, "un --abierto que no es una hora ISO se rechaza con un mensaje")
 

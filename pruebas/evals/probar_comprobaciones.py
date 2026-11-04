@@ -73,5 +73,19 @@ pat = r"Beto( Prueba)?\W{0,8}(acept|cuestion)|(acept|cuestion)\w*\W{0,12}Beto"
 ok(not reg["no-menciona-re"](ctx2, pat + "@1")[0], "«**Beto Prueba** aceptó» casa con la expresión del eval 14")
 ctx2["turnos"][0]["respuestas"] = ["Aceptaste «x», de Beto Prueba."]
 ok(reg["no-menciona-re"](ctx2, pat + "@1")[0], "«Aceptaste «x», de Beto Prueba» no casa")
+print("La marca del tablero (1.25.1)")
+g["json"] = __import__("json")
+exec("COMPROBACIONES = {}\ndef comprobacion(n):\n    def d(f):\n        COMPROBACIONES[n] = f\n        return f\n    return d\n", g)
+exec(src[src.index('@comprobacion("marca-tablero")'):src.index('@comprobacion("herramienta")')], g)
+marca = g["COMPROBACIONES"]["marca-tablero"]
+class _T:
+    escritos = [{"op": "set", "path": "cierres/ventas--cuentas--202611032159", "data": {"proyecto": "ventas--cuentas", "nombre": "Cuentas", "hora": "2026-11-03T21:59Z", "cuenta": "ana@ejemplo.test"}}]
+ok(marca({"tablero": _T()}, "ventas/cuentas")[0], "una marca bien formada en cierres pasa")
+_T.escritos = [dict(_T.escritos[0], ifVersion=1)]
+ok(not marca({"tablero": _T()}, "ventas/cuentas")[0], "con ifVersion no pasa (es un documento nuevo)")
+_T.escritos = []
+ok(not marca({"tablero": _T()}, "ventas/cuentas")[0], "sin marca no pasa")
+ok(not marca({"tablero": None}, "ventas/cuentas")[0], "sin tablero de mentira no pasa")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
