@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   sesion:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # ubuntu-latest pasó a 26.04 el 2026-11-03 y setup-python no tiene ahí el 3.9
     strategy:
       fail-fast: false
       matrix:
@@ -52,7 +52,7 @@ jobs:
           python3 pruebas/tablero/aplicar.py plugins/memoria/skills/tablero/aplicar_cambios.py "$copia" || fallos=$((fallos + 1))
           [ "$fallos" -eq 0 ] || { echo "$fallos prueba(s) del tablero fallaron"; exit 1; }
   tablero:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # ubuntu-latest pasó a 26.04 el 2026-11-03 y setup-python no tiene ahí el 3.9
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

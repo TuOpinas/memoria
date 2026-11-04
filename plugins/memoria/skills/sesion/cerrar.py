@@ -1073,8 +1073,61 @@ def main(argv):
     s["hora"] = ahora.strftime("%Y-%m-%dT%H:%MZ")
     s["documento"] = f"{area}--{slug}--{ahora.strftime('%Y%m%d%H%M')}"
     s["escrito_en"] = datetime.datetime.now(tz).isoformat(timespec="seconds")
-    print(json.dumps(s, ensure_ascii=False))
+    # «respuesta» va primero (1.25.1): lo que la conversación hace con esta salida, en el momento en que la lee, con la marca
+    # del tablero ya armada; hasta la 1.25.0 ese paso vivía al final de cerrar.md y un cierre lo dejó sin hacer
+    print(json.dumps({"respuesta": respuesta(s, raiz, pd, area, slug, cuenta, bool(ses), sin_fechas), **s}, ensure_ascii=False))
     return 0
+
+
+def respuesta(s, raiz, pd, area, slug, cuenta, cierre, sin_fechas):
+    """Qué hace la conversación con esta salida, en orden. Es un cierre solo si esta llamada escribió la entrada de la
+    bitácora: entonces van la devolución (sin consola), lo pendiente (sin_match, rechazados, fallidos), la marca del tablero
+    y el recuadro de cierre con su fila del tablero. Una llamada a mitad de sesión (solo reemplazos) no es un cierre: no deja
+    marca ni dice «sesión cerrada». Los avisos de «ajenos» y «sin_nombrar» van en llano en los dos casos. Los textos de la
+    carpeta no mandan aquí: solo se cita el título del proyecto, para la marca."""
+    def titulo(p, defecto):
+        try:
+            texto = leer(p)[0]
+        except OSError:
+            return defecto
+        m = re.search(r"^#\s+(.+)$", texto, re.M)
+        return (m.group(1).split("·")[0].strip() if m else defecto) or defecto
+    pasos = []
+    llano = []
+    for a in s.get("ajenos") or []:
+        h = (a.get("hora") or "")[11:16]
+        llano.append(f"alguien más escribió {a['ruta']} {'mientras cerrábamos' if a.get('durante') else 'a las ' + h}; sumé lo de hoy encima")
+    for r in s.get("sin_nombrar") or []:
+        llano.append(f"{r} cambió desde que abrimos y no lo escribió esta sesión")
+    pendientes = [(k, txt) for k, txt in (("sin_match", "un reemplazo que no cuadró"), ("rechazados", "lo que esta cuenta no puede escribir"), ("fallidos", "un archivo que no se pudo escribir")) if s.get(k)]
+    if not cierre:
+        pasos.append("Esta llamada no cierra la sesión (no escribió la entrada de la bitácora): di en una línea qué quedó escrito, con el enlace computer:// de cada archivo de «escritos», y la sesión sigue abierta. Sin marca del tablero y sin recuadro de cierre.")
+        for k, txt in pendientes:
+            pasos.append(f"Hay «{k}» ({txt}): se resuelve como dice cerrar.md.")
+        if llano:
+            pasos.append("Además, en una línea cada uno: " + " · ".join(f"«{x}»" for x in llano) + ".")
+        return pasos
+    n = 1
+    if sin_fechas:
+        pasos.append(f"{n}. Primero devuelve los archivos a la computadora, como dice sin-consola-sesion.md: `espejo.py devolver` y device_commit_files; si uno vuelve por mtime-drift, se trae, se registra y se repite cerrar.py con el mismo cambios.json (una entrada que ya está no se repite). Solo con todos en «written» sigue lo de abajo."); n += 1
+    for k, txt in pendientes:
+        pasos.append(f"{n}. Hay «{k}» ({txt}): se resuelve como dice cerrar.md, repitiendo la llamada solo con eso y con --abierto escrito_en. Esa llamada no vuelve a pedir la marca (no lleva la entrada): la marca de abajo se escribe una vez, después de resolverlo."); n += 1
+    nombre = titulo(pd / "proyecto.md", slug)
+    org = titulo(raiz / "guia.md", "<organización>")
+    marca = {"op": "set", "path": f"cierres/{s['documento']}",
+             "data": {"proyecto": f"{area}--{slug}", "nombre": nombre, "hora": s["hora"], "cuenta": cuenta or ""}}
+    pasos.append(
+        f"{n}. La marca del tablero, antes de responder: la persona pidió cerrar la sesión y avisar al tablero es parte del cierre, así que se escribe sin preguntar. db_write del conector claude-artifacts (ToolSearch de mcp__claude-artifacts__db_write si no está cargada) "
+        f"en el tablero de esta cuenta que se buscó al abrir, «Tablero {org}» (o «Tablero {org} completo», el nombre de antes de la 1.18; si no se buscó, list_artifacts ahora), con ops: "
+        f"{json.dumps([marca], ensure_ascii=False)} (un documento nuevo: sin ifVersion). Con dos tableros de la raíz, en los dos. Sin el conector en esta conversación, o sin tablero, no se escribe nada y la fila de abajo lo dice."); n += 1
+    pasos.append(
+        f"{n}. El recuadro «Memoria · sesión cerrada · {len(s['escritos'])} archivo{'s' if len(s['escritos']) != 1 else ''}» (uno más si se juntó una copia en conflicto): una fila por archivo de «escritos» con su enlace computer:// y qué cambió, "
+        "y una última fila para el tablero, siempre una de estas: «Tablero: avisado» (la marca se escribió), «Tablero: no se pudo avisar (<motivo en pocas palabras>): sincronízalo desde su botón o con «sincroniza el tablero»», "
+        "«Tablero: sin el conector de artifacts en esta conversación: sincronízalo desde su botón», o «Tablero: esta cuenta no tiene» (list_artifacts no lo trae)."); n += 1
+    if llano:
+        pasos.append(f"{n}. Debajo del recuadro, en texto normal y en una línea cada uno: " + " · ".join(f"«{x}»" for x in llano) + "."); n += 1
+    pasos.append(f"{n}. Debajo también, solo si hay algo, lo que dice «Qué respondo al terminar» de cerrar.md: qué queda para la próxima en una línea, a quién avisar de otra área por un «Afecta a:», lo que quedó en fuentes/ pendiente de decidir si es confidencial, y la revisión de permisos si el paso 10b lo pide. Nada más: el resumen largo ya está en los archivos.")
+    return pasos
 
 
 if __name__ == "__main__":

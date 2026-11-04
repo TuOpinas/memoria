@@ -52,26 +52,6 @@ ok(out.strip() == "COMPLETA" and rondas == 3, f"tres rondas y COMPLETA (rondas: 
 ok(not any(re.search(r"(^|/)(fuentes|taller|restringido)/", r) for r in pedidas), "no pide nada de fuentes/, taller/ ni restringido/")
 ok("ventas/cuentas/decisiones.md" in pedidas and "ventas/area.md" in pedidas, "pide area.md y los registros de los proyectos")
 ok(not any(r.startswith("ventas/oculto/") for r in pedidas), "no pide un proyecto que no está en el índice de su área")
-# la apertura mínima en una ronda (1.24.8): con el listado de la raíz, la primera ronda trae ya los area.md
-CM = tmp / "uploads" / "Minima"
-lr = tmp / "raiz.json"
-lr.write_text(json.dumps({"entries": [{"name": n.name, "type": "dir" if n.is_dir() else "file"} for n in R.iterdir()]}), encoding="utf-8")
-rondas_m = 0
-while rondas_m < 4:
-    rc, out_m, _ = corre(ESPEJO, "rutas", CM, "--raiz", lr)
-    if rc != 0 or out_m.strip() == "COMPLETA":
-        break
-    rondas_m += 1
-    for r in out_m.split():
-        if (R / r).is_file():
-            (CM / r).parent.mkdir(parents=True, exist_ok=True); shutil.copy(R / r, CM / r)
-        else:
-            corre(ESPEJO, "falta", CM, r)
-ok(out_m.strip() == "COMPLETA" and rondas_m == 1, f"con --raiz, la apertura mínima en una ronda (rondas: {rondas_m})")
-ok(not (CM / "Claude outputs").exists() and not (CM / "base" / "area.md").exists(), "no pide base/ ni «Claude outputs» como áreas")
-lr2 = tmp / "raiz2.json"; lr2.write_text(json.dumps({"entries": [{"name": "claude outputs", "type": "dir"}, {"name": "ventas", "type": "dir"}]}), encoding="utf-8")
-_rc, _o, _ = corre(ESPEJO, "rutas", tmp / "uploads" / "Minuscula", "--raiz", lr2)
-ok("claude outputs/area.md" not in _o, "«claude outputs» en minúsculas tampoco se pide como área (1.24.9)")
 # en la misma conversación: abrir otro proyecto pide solo lo suyo; y lo del proyecto que se abre, si llegó hace rato, otra vez
 _, out2, _ = corre(ESPEJO, "rutas", C, "operacion/soporte")
 ok(sorted(out2.split()) == ["operacion/soporte/proyecto.md", "operacion/soporte/sesiones.md"], f"otro proyecto en la misma conversación pide solo lo suyo ({out2.split()})")

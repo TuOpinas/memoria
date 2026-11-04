@@ -194,7 +194,7 @@ def preparar_plugin(origen, trabajo):
 
 def sembrar_scripts(plugin, hogar):
     """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
-    # metodo.md también (1.24.8): la apertura mínima lo copia desde $HOME/memoria con METODO_DESCARGA, sin cargar la skill
+    # metodo.md también (1.24.8; desde la 1.24.9 la mínima lo escribe con device_commit_files y no lo necesita aquí)
     for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "metodo.md"]),
                            ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
         d = hogar / destino
@@ -334,7 +334,9 @@ def cita_antes_de_escribir(t, con_decision=False, hoy=None):
     Devuelve (bien, qué falta)."""
     t = sin_codigo(t)
     sola = lambda w: re.search(r"(?m)^ {0,3}(?:\*\*)?" + w + r"(?:\*\*)?:?[ \t]*$", t)
-    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})[ \t]*$", t)
+    # «## AAAA-MM-DD (algo)» también vale: el segundo cierre del día lo distingue así, y el tablero solo deja de contar como
+    # sesión «(tarea)», «(tablero)» y «(migracion)» (1.25.1: el 07 escribió «(Cliente Uno confirma la firma)» tras otro cierre)
+    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})(?:[ \t]+\((?!tarea\)|tablero\)|migracion\))[^)\n]+\))?[ \t]*$", t)
     est = re.findall(r"(?m)^> ?(\d{4}-\d{2}-\d{2}) · \*\*", t)
     falta = [n for n, c in (("«Bitácora»", sola("Bitácora")), ("«Estatus»", sola("Estatus")), ("la entrada en cita", bit), ("el Estatus en cita", est)) if not c]
     if hoy and bit and hoy not in bit:
@@ -620,11 +622,27 @@ def _(ctx, arg):
     for t in ctx["turnos"]:
         for h in t["herramientas"]:
             ent = json.dumps(h["entrada"], ensure_ascii=False)
-            if h["nombre"] in ("Write", "Edit", "MultiEdit") and any(k in ent for k in REG):
+            # un Write sobre uno de los cuatro archivos, por su ruta; no el listado o el cambios.json que los nombran (1.25.1)
+            if h["nombre"] in ("Write", "Edit", "MultiEdit") and str((h["entrada"] or {}).get("file_path") or "").endswith(REG):
                 a_mano.append(h["nombre"])
             elif h["nombre"].endswith(("device_bash", "Bash")) and "cerrar.py" not in ent and re.search(r"(>>?\s*\\?\"?[^\s\"]*|\btee\s+(-a\s+)?\\?\"?[^\s\"]*|sed\s+-i[^;&|]*|open\([^)]*|write_text\([^)]*)(sesiones|decisiones|proyecto|area)\.md", ent) and "cambios" not in ent[:200]:
                 a_mano.append(h["nombre"] + ": " + ent[:80])
     return con > 0 and not a_mano, f"cerrar.py con «escritos»: {con}" + (f"; a mano: {'; '.join(a_mano)}" if a_mano else "")
+
+
+@comprobacion("marca-tablero")
+def _(ctx, arg):
+    """marca-tablero <area>/<proyecto>: el cierre dejó su marca en la colección «cierres» del tablero de mentira (1.25.1): un
+    «set» en cierres/<area>--<proyecto>--<AAAAMMDDHHMM>, con proyecto, nombre, hora (minutos, en Z) y cuenta, sin ifVersion.
+    En Smile Pill, el 2026-11-03, dos cierres completos la dejaron sin escribir y el tablero no avisó de nada."""
+    tb = ctx.get("tablero")
+    if tb is None:
+        return False, "el escenario no tiene tablero de mentira"
+    pid = arg.strip("/").replace("/", "--")
+    marcas = [op for op in tb.escritos if op.get("op") == "set" and re.fullmatch(rf"cierres/{re.escape(pid)}--\d{{12}}", op.get("path") or "")]
+    buenas = [op for op in marcas if (d := op.get("data") or {}) and d.get("proyecto") == pid and d.get("nombre") and d.get("cuenta")
+              and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z", str(d.get("hora") or "")) and "ifVersion" not in op]
+    return len(buenas) == 1 and len(marcas) == 1, f"marcas en cierres: {len(marcas)}, bien formadas: {len(buenas)}" + (f" ({marcas[0]})" if marcas and not buenas else "")
 
 
 @comprobacion("herramienta")
@@ -731,13 +749,6 @@ def correr(e, plugin, version, modelo, salida):
     if e.get("tablero"):
         from tablero_falso import TableroFalso
         tablero = TableroFalso(json.loads((AQUI / "escenarios" / e["tablero"]).read_text(encoding="utf-8")))
-    # un aviso de arranque sin la descarga, como donde el hook no tiene python3 (1.24.8): una copia del plugin cuyo hook no la prepara
-    if e.get("aviso") == "sin-descarga":
-        variante = trabajo / "plugin-sin-descarga" / "memoria"
-        shutil.copytree(plugin, variante)
-        h = variante / "hooks" / "arranque.sh"
-        h.write_text(h.read_text(encoding="utf-8").replace('[ -f "$RAIZ/preparar.py" ]', 'false'), encoding="utf-8")
-        plugin = variante
     turnos, medidas = asyncio.run(conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero))
     ctx = {"turnos": turnos, "antes": antes, "antes_textos": antes_textos, "raiz": raiz, "dispositivo": disp, "tablero": tablero}
     resultado = {"escenario": e["nombre"], "modelo": modelo, "plugin": version, "fecha": HOY, "consola": e["consola"],

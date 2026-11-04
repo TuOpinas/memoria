@@ -21,6 +21,7 @@ class TableroFalso:
         self.versiones = {k: 1 for k in self.cambios}
         self.meta = datos.get("meta", {})
         self.escritos = []
+        self.docs = {}      # las demás colecciones escritas (cierres…), por colección e id, para rechazar un set repetido
 
     def _json(self, d, error=False):
         return {"content": [{"type": "text", "text": json.dumps(d, ensure_ascii=False)}], **({"is_error": True} if error else {})}
@@ -55,9 +56,19 @@ class TableroFalso:
         return self._json({"error": "not_found: el archivo no existe en este artifact"}, error=True)
 
     async def db_write(self, args):
+        # como el conector real (1.25.1): un set, merge o delete sobre un documento que ya existe sin ifVersion se rechaza entero
+        for op in args.get("ops") or []:
+            col, _, i = (op.get("path") or "").partition("/")
+            existe = i in self.cambios if col == "cambios" else i in self.docs.get(col, {})
+            if op.get("op") in ("set", "merge", "update", "delete") and existe and "ifVersion" not in op:
+                return self._json({"error": f"conflict: {op.get('path')} ya existe; pasa ifVersion"}, error=True)
         for op in args.get("ops") or []:
             self.escritos.append(op)
             col, _, i = (op.get("path") or "").partition("/")
+            if op.get("op") == "delete":
+                self.docs.get(col, {}).pop(i, None)
+            else:
+                self.docs.setdefault(col, {})[i] = op.get("data") or {}
             if col != "cambios":
                 continue
             if op.get("op") == "delete":

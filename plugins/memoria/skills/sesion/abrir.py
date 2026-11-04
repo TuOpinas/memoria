@@ -43,6 +43,41 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
+def copia_del_metodo(plugin_linea, version):
+    """El metodo.md del plugin con el que corre este script, copiado a una carpeta de salidas del contenedor para
+    device_commit_files (1.24.9). Solo si su primera línea es la de --plugin; si no, None. Un nombre por versión, reutilizado:
+    cada conversación con la raíz atrasada no deja otra copia de 137 KB."""
+    fuente = pathlib.Path(__file__).resolve().parents[2] / "metodo.md"
+    try:
+        texto = fuente.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not plugin_linea or plugin_linea not in texto[:400]:
+        return None
+    # MEMORIA_SALIDAS solo lo usan las pruebas, donde no existen las carpetas de salidas del contenedor
+    base = next((pathlib.Path(b) for b in (os.environ.get("MEMORIA_SALIDAS") or "", "/mnt/project-files", "/mnt/user-data/outputs") if b and pathlib.Path(b).is_dir()), None)
+    if base is None:
+        return None
+    destino = base / f"metodo-{version or 'plugin'}" / "metodo.md"
+    try:
+        if not (destino.is_file() and destino.read_text(encoding="utf-8") == texto):
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_text(texto, encoding="utf-8")
+    except OSError:
+        return None
+    return str(destino)
+
+
+if len(sys.argv) > 1 and sys.argv[1] == "--metodo-para-subir":
+    # la apertura completa con consola, cuando la raíz está atrasada y la mínima no lo puso al día (1.25.1): imprime la ruta de
+    # la copia, lista para device_commit_files; nada, y sale con 1, si no cuadra
+    _pl = sys.argv[sys.argv.index("--plugin") + 1].strip() if "--plugin" in sys.argv and sys.argv.index("--plugin") + 1 < len(sys.argv) else ""
+    _m = re.search(r"versi[oó]n\s+(\d+(?:\.\d+)*)", _pl)
+    _d = copia_del_metodo(_pl, _m.group(1) if _m else None)
+    if _d:
+        print(_d)
+    sys.exit(0 if _d else 1)
+
 RAIZ = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
 RAIZ_RESUELTA = False
 if RAIZ is not None and not (RAIZ / "guia.md").is_file():
@@ -1023,28 +1058,8 @@ def ruta_en_la_computadora(rel):
 
 
 def metodo_para_subir():
-    """El metodo.md del plugin con el que corre este script, copiado a una carpeta nueva de salidas del contenedor para
-    device_commit_files (1.24.9). Solo si su primera línea es la del --plugin; si no, None y se sigue como siempre."""
-    fuente = pathlib.Path(__file__).resolve().parents[2] / "metodo.md"
-    try:
-        texto = fuente.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    if not PLUGIN or PLUGIN not in texto[:400]:
-        return None
-    # MEMORIA_SALIDAS solo lo usan las pruebas, donde no existen las carpetas de salidas del contenedor
-    base = next((pathlib.Path(b) for b in (os.environ.get("MEMORIA_SALIDAS") or "", "/mnt/project-files", "/mnt/user-data/outputs") if b and pathlib.Path(b).is_dir()), None)
-    if base is None:
-        return None
-    # un nombre por versión, reutilizado: cada conversación con la raíz atrasada no deja otra copia de 137 KB
-    destino = base / f"metodo-{VERSION_PLUGIN or 'plugin'}" / "metodo.md"
-    try:
-        if not (destino.is_file() and destino.read_text(encoding="utf-8") == texto):
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            destino.write_text(texto, encoding="utf-8")
-    except OSError:
-        return None
-    return str(destino)
+    """La copia del metodo.md del plugin para device_commit_files, con el --plugin y la versión de esta corrida."""
+    return copia_del_metodo(PLUGIN, VERSION_PLUGIN)
 
 
 def respuesta(sueltos, completa=False, sin_proyecto=False):
@@ -1080,17 +1095,19 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
     if copia_metodo:
         # sin consola, o en la apertura mínima, que no ejecuta nada descargado en la computadora (1.24.9): el metodo.md del
         # plugin instalado ya está en una carpeta de salidas, y basta escribirlo
-        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz: device_commit_files con "
+        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz: ToolSearch de mcp__remote-devices__device_commit_files (no viene cargada) y device_commit_files con "
                      f"stagedPath «{copia_metodo}» y devicePath «{ruta_en_la_computadora('metodo.md')}», y después, en el Bash que siga o en uno propio, `rm -rf \"{pathlib.Path(copia_metodo).parent}\"`. Si no sale en «written», no se dice nada y el recuadro lleva "
                      f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
     elif VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS:
         # sin carpeta de salidas device_commit_files no tiene de dónde escribir, y descargar en la computadora es lo que se evita
         pasos.append(f"El método de la raíz no se pone al día en esta conversación: no se dice nada y el recuadro lleva v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
     elif VEREDICTO == "RAIZ ATRASADA":
-        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz, en una llamada a device_bash: lo que va detrás de «METODO_DESCARGA » en el aviso de arranque, "
-                     f"seguido de ` && cp \"$HOME/memoria/metodo.md\" \"{raiz_}/metodo.md\" && head -1 \"{raiz_}/metodo.md\"`. "
-                     "Si la comprobación falla, una vez más con main en lugar de v<versión> en sus dos direcciones; si tampoco, o el aviso no trae METODO_DESCARGA, "
-                     "como dice «El método» de la skill sesion. Si la línea que imprime head no dice la versión nueva (la escritura falló por permisos), no se dice nada y el recuadro lleva "
+        # con consola (1.25.1): sin descargar nada en la computadora, como la mínima; lo normal es que la mínima de esta
+        # misma conversación ya lo haya hecho, y entonces este paso no se repite
+        pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz, salvo que la apertura mínima ya lo hiciera en esta conversación: en el contenedor, Bash "
+                     f"`python3 \"<PLUGIN del aviso de arranque>/skills/sesion/abrir.py\" --metodo-para-subir --plugin \"{PLUGIN}\"` imprime la ruta de una copia del metodo.md del plugin "
+                     f"(si no imprime nada, no se pone al día y no se dice); ToolSearch de mcp__remote-devices__device_commit_files y device_commit_files con stagedPath esa ruta y devicePath «{ruta_en_la_computadora('metodo.md')}»; "
+                     "después, en el Bash que siga o en uno propio, `rm -rf` de la carpeta de esa copia. Si no sale en «written», no se dice nada y el recuadro lleva "
                      f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
     if ESTRUCTURA_ANTERIOR:
         pasos.append("Antes de responder: la respuesta es solo el recuadro y esta pregunta, con AskUserQuestion si está (opciones «Migrar ahora» y «Después»; sin ella, en texto, y se espera): "

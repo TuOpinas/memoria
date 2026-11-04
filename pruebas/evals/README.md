@@ -26,7 +26,6 @@ Deja en `resultados/<fecha>-<versión>-<modelo>/` un `resultados.json` (medidas 
 - **La raíz** es una copia de `pruebas/tablero/raiz` con las fechas de archivo fijas (2026-08-01). La cuenta de la conversación es la de quien corre el eval (Claude Code la pone sola), así que el escenario dice qué cuenta de la raíz de prueba ocupa esa persona (`cuenta: ana@ejemplo.test`, la responsable de contexto; `carla@ejemplo.test`, que solo colabora en ventas) y la copia la escribe con el correo real.
 - **La computadora** es `dispositivo.py`: las herramientas `get_device_info`, `device_list_dir`, `device_bash`, `device_stage_files`, `device_commit_files` y las de permisos, como servidor MCP en el proceso del eval. Con consola, `device_bash` corre bash con un `$HOME` propio donde la raíz está en `$HOME/mnt/Memoria--Prueba`, como en Mac; sin consola, el mismo bash sin nada bajo `$HOME/mnt`, como Google Drive en Windows. Los scripts que las skills traen con DESCARGA (`abrir.py`, `cerrar.py`, `permisos.py`, los del tablero) ya están sembrados en ese `$HOME`, con la huella de la rama: así no hace falta red y se prueba la rama, no `main`.
 - **El tablero, de mentira y solo si el escenario lo pide** (1.24.8): con `tablero: <archivo>.json` de `escenarios/`, `tablero_falso.py` sirve `list_artifacts`, `db_query`, `db_get`, `read_file` y `db_write` del conector `claude-artifacts` con la cola `cambios` del archivo (`read_file` dice que no hay archivos: sin sugerencias ni página que partir). Sin él no hay tablero; la página y la puesta al día las cubre `pruebas/tablero/`.
-- **Un aviso sin descarga** (1.24.8): con `aviso: sin-descarga`, el hook de arranque de una copia del plugin no prepara la descarga, como donde corre sin python3.
 
 ## Un escenario
 
@@ -36,7 +35,6 @@ Un `.md` en `escenarios/` con cabecera y una descripción de lo que debe pasar:
 ---
 raiz: raiz                      # carpeta de pruebas/tablero/, o una ruta
 tablero: 14-cola.json           # opcional: la cola del tablero de mentira
-aviso: sin-descarga             # opcional: el aviso de arranque sin la descarga
 cuenta: ana@ejemplo.test        # la cuenta de la raíz que ocupa quien conversa
 consola: si                     # no: Windows sin consola
 max_turnos: 40
@@ -75,8 +73,9 @@ Del 01 al 09, y el 12, corren sobre la raíz ya migrada a la 1.22 (`preparar: mi
 | 10 | Apertura sobre una raíz sin migrar | pregunta si se migra antes de responder, sin escribir; con el sí, `migrar_estructura.py` migra las áreas de la cuenta, `guia.md` y, porque es la responsable de contexto, las de otra cuenta, con su entrada `(migracion)` (la de las ajenas dice por quién) |
 | 11 | El 10 sin consola | lo mismo por la copia, con `espejo.py migracion` y `device_commit_files` |
 | 12 | Escribe, publica y cierra (1.23) | la entrada lleva «Escribió:» y «Publicó:» escritos por `cerrar.py`; el entregable queda vigente; lo que se registra se enseña en cita antes del sí (`cita-antes-de-escribir`) y el cierre termina con el recuadro «Memoria · sesión cerrada» (`recuadro-cierre`) |
-| 13 | El 01 con un aviso sin descarga (1.24.8) | la apertura mínima carga la skill y calcula la descarga sin buscar el plugin en disco (`sin-buscar-plugin`) |
+| 13 | El 01 midiendo la apertura mínima | corre `abrir.py` desde PLUGIN sin buscar el plugin en disco (`sin-buscar-plugin`) ni ejecutar nada en la computadora (`minima-sin-ejecutar`) |
 | 14 | La cola del tablero con respuestas (1.24.8) | «Aceptaste…» para lo que marcó la dueña del tablero, «alguien con acceso a tu tablero» para lo marcado sin cuenta (`por: null`), y quien decidió nunca como quien marcó |
+| 15 | El cierre deja su marca en el tablero (1.25.1) | con un tablero de la cuenta, el cierre escribe la marca en «cierres» como dice `respuesta` de `cerrar.py` (`marca-tablero`) y el recuadro lleva «Tablero: avisado» |
 
 Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20), y qué pasó con cada cosa: la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí (corregido en `cerrar.md`); el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); «Descartamos: no consta» como relleno (corregido en `cerrar.md`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt` (dos llamadas de más; sin cambio todavía, pendiente de ver si se repite).
 

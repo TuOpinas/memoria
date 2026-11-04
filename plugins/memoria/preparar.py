@@ -2,14 +2,13 @@
 """Prepara, en el contenedor, la llamada que trae scripts del plugin a la computadora.
 
 La computadora no ve el plugin y su $HOME empieza vacío en cada sesión. Este script
-corre donde sí está el plugin y imprime cuatro líneas:
+corre donde sí está el plugin y imprime cuatro líneas (desde la 1.25.1 lo corre la skill
+sesion al abrir un proyecto, no el aviso de arranque, que ya no las lleva):
 
   VERSION <versión del plugin>
   METODO <primera línea del metodo.md del plugin>
   DESCARGA <comando para device_bash: trae cada archivo del repositorio en esa versión y lo comprueba>
   REINTENTO <el mismo comando con main en lugar de v<versión>>
-  METODO_DESCARGA <lo mismo solo para metodo.md, al mismo destino (1.24.8): la apertura mínima lo usa para poner al día una
-                   raíz atrasada sin cargar ninguna skill; con --sin-metodo no se imprime>
 
 De DESCARGA y REINTENTO se usa lo que va detrás de la etiqueta y su espacio.
 
@@ -39,8 +38,6 @@ def main(argv):
         print(__doc__.strip(), file=sys.stderr)
         return 2
     trabajo = copia = None
-    sin_metodo = "--sin-metodo" in argv
-    argv = [a for a in argv if a != "--sin-metodo"]
     for nombre in ("--trabajo", "--copia"):
         if nombre in argv:
             i = argv.index(nombre)
@@ -87,13 +84,13 @@ def main(argv):
         print("El destino no puede llevar comillas ni acentos graves", file=sys.stderr)
         return 1
 
-    def comando(ref, lista_huellas=None):
+    def comando(ref):
         partes = [f'mkdir -p "{destino}"', f'cd "{destino}"']
-        for nombre, ruta, h in (lista_huellas or huellas):
+        for nombre, ruta, h in huellas:
             n = shlex.quote(nombre)
             url = shlex.quote(f"{REPO}/{ref}/plugins/memoria/{ruta}")
             partes.append(f"{{ echo '{h}  {nombre}' | sha256sum -c --status 2>/dev/null || curl -sfL -o {n} {url}; }}")
-        lista = " ".join(f"{h} {shlex.quote(n)}" for n, _, h in (lista_huellas or huellas))
+        lista = " ".join(f"{h} {shlex.quote(n)}" for n, _, h in huellas)
         partes.append(f"printf '%s  %s\\n' {lista} | sha256sum -c --quiet")
         return " && ".join(partes)
 
@@ -101,10 +98,6 @@ def main(argv):
     print(f"METODO {metodo}")
     print(f"DESCARGA {comando('v' + version)}")
     print(f"REINTENTO {comando('main')}")
-    if not sin_metodo:
-        with open(os.path.join(plugin, "metodo.md"), "rb") as f:
-            hm = hashlib.sha256(f.read()).hexdigest()
-        print(f"METODO_DESCARGA {comando('v' + version, [('metodo.md', 'metodo.md', hm)])}")
     return 0
 
 
