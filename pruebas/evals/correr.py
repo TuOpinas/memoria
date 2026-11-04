@@ -334,7 +334,9 @@ def cita_antes_de_escribir(t, con_decision=False, hoy=None):
     Devuelve (bien, qué falta)."""
     t = sin_codigo(t)
     sola = lambda w: re.search(r"(?m)^ {0,3}(?:\*\*)?" + w + r"(?:\*\*)?:?[ \t]*$", t)
-    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})[ \t]*$", t)
+    # «## AAAA-MM-DD (algo)» también vale: el segundo cierre del día lo distingue así, y el tablero solo deja de contar como
+    # sesión «(tarea)», «(tablero)» y «(migracion)» (1.25.1: el 07 escribió «(Cliente Uno confirma la firma)» tras otro cierre)
+    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})(?:[ \t]+\((?!tarea\)|tablero\)|migracion\))[^)\n]+\))?[ \t]*$", t)
     est = re.findall(r"(?m)^> ?(\d{4}-\d{2}-\d{2}) · \*\*", t)
     falta = [n for n, c in (("«Bitácora»", sola("Bitácora")), ("«Estatus»", sola("Estatus")), ("la entrada en cita", bit), ("el Estatus en cita", est)) if not c]
     if hoy and bit and hoy not in bit:

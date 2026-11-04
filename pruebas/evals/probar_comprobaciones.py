@@ -96,5 +96,10 @@ _mal = {"nombre": "Write", "entrada": {"file_path": "/tmp/copia/ventas/cuentas/s
 ok(cs({"turnos": [{"herramientas": [_lst, _cerr]}]}, "")[0], "un Write del listado o de cambios.json que nombra los registros no es escribir a mano")
 ok(not cs({"turnos": [{"herramientas": [_mal, _cerr]}]}, "")[0], "un Write sobre sesiones.md sí")
 
+print("La entrada con su etiqueta (1.25.1)")
+_e = "Bitácora\n\n> ## 2026-11-03 (Cliente Uno confirma la firma)\n> Tema: x.\n\nEstatus\n\n> 2026-11-03 · **Algo.**\n"
+ok(cita(_e, False, "2026-11-03")[0], "«## AAAA-MM-DD (etiqueta)» vale como entrada en cita")
+ok(not cita(_e.replace("(Cliente Uno confirma la firma)", "(tarea)"), False, "2026-11-03")[0], "«(tarea)» no es la entrada de una sesión")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
