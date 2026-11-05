@@ -234,6 +234,7 @@ class Root:
     method_line: str = ""                       # first line of metodo.md: version and fingerprint
     method_version: Optional[tuple[int, ...]] = None
     method_fingerprint: Optional[str] = None
+    language: str = "es"                        # the root's language pack (language.py)
     timezone: str = "America/Mexico_City"       # «Zona horaria:» of guia.md
     context_owner: str = ""                     # «Contexto común:» (who answers for guia.md and base/)
     administrator: str = ""                     # «Administra la carpeta:»

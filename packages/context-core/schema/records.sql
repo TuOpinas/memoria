@@ -22,6 +22,7 @@ CREATE TABLE root (
     method_line         text NOT NULL DEFAULT '',
     method_version      integer[],
     method_fingerprint  text,
+    language            text NOT NULL DEFAULT 'es',
     timezone            text NOT NULL DEFAULT 'America/Mexico_City',
     context_owner       text NOT NULL DEFAULT '',
     administrator       text NOT NULL DEFAULT '',

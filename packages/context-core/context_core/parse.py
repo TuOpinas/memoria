@@ -12,6 +12,7 @@ import re
 import unicodedata
 from typing import Optional
 
+from .language import ES, Pack
 from .records import (
     Area, AreaRow, Decision, DecisionRef, Deliverable, IndexEntry, PeopleRegistry, Person, Premise, Project,
     SessionEntry, Status, Step,
@@ -337,8 +338,8 @@ def _table_rows(block: str) -> tuple[Optional[list[str]], list[list[str]]]:
     return header, rows
 
 
-def area_rows(guia: str, reg: PeopleRegistry) -> list[AreaRow]:
-    header, rows = _table_rows(section(guia, "Áreas"))
+def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES) -> list[AreaRow]:
+    header, rows = _table_rows(section(guia, lang.areas))
     if header is None:
         return []
     col = _area_columns(header)
@@ -394,22 +395,20 @@ def premises(text: str) -> list[Premise]:
 
 # ── Estatus ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-_STATUS_FIELDS = {"se completo": "completed", "siguiente": "next", "falta decidir": "to_decide", "preocupa": "concern"}
-
-
-def status(body: str, legacy: tuple[str, ...] = ("Estado actual", "En corto")) -> Optional[Status]:
-    """The «Estatus» of proyecto.md or area.md, or the first legacy section present."""
-    text, source = section(body, "Estatus"), "Estatus"
+def status(body: str, legacy: Optional[tuple] = None, lang: Pack = ES) -> Optional[Status]:
+    """The «Estatus» of proyecto.md or area.md, or the first legacy section present (the project's by default)."""
+    legacy = lang.status_legacy_project if legacy is None else legacy
+    text, source = section(body, lang.status), lang.status
     if not text:
         source = next((n for n in legacy if section(body, n)), "")
         if not source:
             return None
         text = section(body, source)
     st = Status(source=source, text=text)
-    m = re.search(r"Proyecto terminado el\s*(20\d\d-\d\d-\d\d)", text)
+    m = re.search(re.escape(lang.finished_marker) + r"\s*(20\d\d-\d\d-\d\d)", text)
     if m:
         st.finished_on = m.group(1)
-    if source != "Estatus":
+    if source != lang.status:
         st.date = (dates_in(text.split("\n", 1)[0]) or [""])[0]
         return st
     lines = text.split("\n")
@@ -421,7 +420,7 @@ def status(body: str, legacy: tuple[str, ...] = ("Estado actual", "En corto")) -
     current = None
     for l in lines[1:]:
         mf = re.match(r"^\s*[-*]\s*\**\s*([^:*]+?)\s*(?::\s*\**|\**\s*:)\s*(.*)$", l)
-        key = _STATUS_FIELDS.get(heading_key(mf.group(1))) if mf and not l.startswith("  ") else None
+        key = lang.status_fields.get(heading_key(mf.group(1))) if mf and not l.startswith("  ") else None
         if key:
             current = key
             rest = mf.group(2).strip()
@@ -438,14 +437,15 @@ def status(body: str, legacy: tuple[str, ...] = ("Estado actual", "En corto")) -
     return st
 
 
-def area_priorities(body: str) -> list[str]:
+def area_priorities(body: str, lang: Pack = ES) -> list[str]:
     """«Siguiente» of the area's Estatus (1.22+), or «Prioridades ahora» (1.21). The board's queue cites them by number."""
-    est = section(body, "Estatus")
+    est = section(body, lang.status)
+    nxt = next((k for k, v in lang.status_fields.items() if v == "next"), "siguiente")
     if est:
         out, inside = [], False
         for l in est.split("\n"):
-            if re.match(r"^\s*[-*]\s*\**\s*Siguiente\s*:?\s*\**\s*:?\s*(.*)$", l, re.I):
-                rest = re.sub(r"^\s*[-*]\s*\**\s*Siguiente\s*:?\s*\**\s*:?\s*", "", l, flags=re.I).strip()
+            if re.match(r"^\s*[-*]\s*\**\s*" + nxt + r"\s*:?\s*\**\s*:?\s*(.*)$", l, re.I):
+                rest = re.sub(r"^\s*[-*]\s*\**\s*" + nxt + r"\s*:?\s*\**\s*:?\s*", "", l, flags=re.I).strip()
                 if rest:
                     out.append(rest)
                 inside = True; continue
@@ -454,7 +454,7 @@ def area_priorities(body: str) -> list[str]:
             if inside and l.strip():
                 inside = False
         return out
-    return bullets(section(body, "Prioridades ahora"))
+    return bullets(section(body, lang.priorities_legacy))
 
 
 # ── decisiones.md and sesiones.md ──────────────────────────────────────────────────────────────────────────────────
@@ -471,25 +471,19 @@ def decision_ref(text: str) -> Optional[DecisionRef]:
     return DecisionRef(f"{m.group(1)}--{m.group(2)}", m.group(3), t) if m else DecisionRef(None, None, t)
 
 
-_DECISION_FIELDS = (("decidió:", "decided_by"), ("decidio:", "decided_by"), ("por qué:", "why"), ("por que:", "why"),
-                    ("descartamos:", "discarded"), ("descartado:", "discarded"), ("afecta a:", "affects"),
-                    ("planteó:", "raised_by"), ("planteo:", "raised_by"), ("cuestiona a:", "challenges"),
-                    ("responde a:", "responds_to"), ("reemplaza:", "replaces"), ("reemplaza a:", "replaces"))
-
-
-def decisions(text: str, live: Optional[int] = None) -> list[Decision]:
+def decisions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[Decision]:
     """The entries of decisiones.md, newest first. With `live`, entries after the first `live` come from an archive."""
     raw: list[dict] = []
     for p in re.split(r"^## ", text or "", flags=re.M)[1:]:
         head, _, body = p.partition("\n")
         mm = re.match(r"(20\d\d-\d\d-\d\d)\s*·\s*(.*)", head.strip())
         date, title = (mm.group(1), mm.group(2).strip()) if mm else ((dates_in(head) or [""])[0], head.strip())
-        f = {k: "" for _, k in _DECISION_FIELDS}
+        f = {k: "" for _, k in lang.decision_fields}
         current = None
         for l in body.split("\n"):
             s = l.strip()
             low = s.lower()
-            hit = next((k for pre, k in _DECISION_FIELDS if low.startswith(pre)), None)
+            hit = next((k for pre, k in lang.decision_fields if low.startswith(pre)), None)
             if hit:
                 current = hit; f[hit] = s.split(":", 1)[1].strip()
             elif current and s:
@@ -501,11 +495,11 @@ def decisions(text: str, live: Optional[int] = None) -> list[Decision]:
                      discarded=r["discarded"], affects=r["affects"], raised_by=r["raised_by"],
                      challenges=decision_ref(r["challenges"]), responds_to=decision_ref(r["responds_to"]),
                      replaces=decision_ref(r["replaces"]),
-                     pending_confirmation=bool(re.search(r"\(pendiente de confirma(r|ción)\)", r["decided_by"].lower())),
+                     pending_confirmation=bool(re.search(lang.pending_confirmation, r["decided_by"].lower())),
                      archived=live is not None and i >= live)
-        if r["challenges"] or re.match(r"cuestionamiento\b", d.title, re.I):
+        if r["challenges"] or re.match(lang.challenge_title + r"\b", d.title, re.I):
             d.kind = "challenge"
-            t = re.sub(r"^cuestionamiento\s*:\s*", "", d.title, flags=re.I) or d.title
+            t = re.sub(r"^" + lang.challenge_title + r"\s*:\s*", "", d.title, flags=re.I) or d.title
             d.title = t[:1].upper() + t[1:]
         out.append(d)
     count: dict[str, int] = {}
@@ -518,7 +512,8 @@ def decisions(text: str, live: Optional[int] = None) -> list[Decision]:
     return out
 
 
-def sessions(text: str, live: Optional[int] = None) -> list[SessionEntry]:
+def sessions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[SessionEntry]:
+    docs = "|".join(re.escape(x) for x in lang.session_wrote + lang.session_published)
     raw = re.split(r"^## ", text or "", flags=re.M)[1:]
     out: list[SessionEntry] = []
     for i, p in enumerate(raw):
@@ -529,22 +524,22 @@ def sessions(text: str, live: Optional[int] = None) -> list[SessionEntry]:
         for l in body.split("\n"):
             s = l.strip()
             low = s.lower()
-            m_doc = re.match(r"^(escribió|escribio|publicó|publico)\s*:\s*(.*)$", low)
+            m_doc = re.match(r"^(" + docs + r")\s*:\s*(.*)$", low)
             if m_doc:
                 current = None
-                target = e.wrote if m_doc.group(1).startswith("escrib") else e.published
+                target = e.wrote if m_doc.group(1) in lang.session_wrote else e.published
                 for r in s.split(":", 1)[1].split(","):
                     r = r.strip().strip("`").strip()
-                    if r and "restringido" not in r.split("/") and r not in target and len(target) < 20:
+                    if r and lang.restricted not in r.split("/") and r not in target and len(target) < 20:
                         target.append(r[:160])
                 continue
-            if low.startswith("trabajamos en:") or low.startswith("tema:"):
+            if low.startswith(lang.session_topic):
                 current = "topic"; e.topic = s.split(":", 1)[1].strip()
-            elif low.startswith("avances:"):
+            elif low.startswith(lang.session_progress):
                 current = "progress"; e.progress = s.split(":", 1)[1].strip()
-            elif low.startswith("pendiente:"):
+            elif low.startswith(lang.session_pending):
                 current = "pending"; e.pending = s.split(":", 1)[1].strip()
-            elif low.startswith("sesión de:") or low.startswith("sesion de:"):
+            elif low.startswith(lang.session_by):
                 current = None
                 rest = s.split(":", 1)[1].strip()
                 e.by = re.split(r"\s+[·\-–—]\s+|\s*\(", rest, maxsplit=1)[0].strip()[:80]
@@ -559,11 +554,11 @@ def sessions(text: str, live: Optional[int] = None) -> list[SessionEntry]:
 
 # ── area.md and proyecto.md ────────────────────────────────────────────────────────────────────────────────────────
 
-def project_index(area_text: str) -> dict[str, IndexEntry]:
+def project_index(area_text: str, lang: Pack = ES) -> dict[str, IndexEntry]:
     """The «Proyectos» block of area.md: one entry per «- `slug/` — description», with its deliverable sub-lines."""
     idx: dict[str, IndexEntry] = {}
     current = None
-    for l in section(area_text, "Proyectos").split("\n"):
+    for l in section(area_text, lang.projects).split("\n"):
         m1 = re.match(r"^- `([^`]+?)/?`\s*[—–:-]?\s*(.*)$", l)
         if m1 and ("/" in m1.group(1) or m1.group(1).startswith(".")):
             current = None; continue
@@ -584,53 +579,54 @@ def project_index(area_text: str) -> dict[str, IndexEntry]:
     return idx
 
 
-def who_takes_part(body: str) -> tuple[str, list[str], str, str]:
+def who_takes_part(body: str, lang: Pack = ES) -> tuple[str, list[str], str, str]:
     """(responsible, collaborator lines' names, consumers, raw section) of «Quién participa»."""
-    raw = section(body, "Quién participa")
+    raw = section(body, lang.who)
     resp, coll, cons = "", [], ""
     for l in raw.split("\n"):
-        m = re.match(r"^\s*[-*]?\s*\**\s*(responsable|dueño|dueno|dueña)\s*\**\s*:\s*(.+)$", l, re.I)
+        m = re.match(r"^\s*[-*]?\s*\**\s*(" + "|".join(lang.responsible_labels) + r")\s*\**\s*:\s*(.+)$", l, re.I)
         if m and not resp:
             resp = re.sub(r"\s*\([^)]*\)\s*$", "", m.group(2).strip()).strip()
         elif _LINE_COLLABORATES.match(l):
             coll += names_in(l)
         else:
-            mc = re.match(r"^\s*[-*]?\s*consumen esto\s*:\s*(.+)$", l, re.I)
+            mc = re.match(r"^\s*[-*]?\s*" + lang.consumers_label + r"\s*:\s*(.+)$", l, re.I)
             if mc:
                 cons = mc.group(1).strip()
     return resp, coll, cons, raw
 
 
-def project_file(area: str, slug: str, text: str) -> Project:
+def project_file(area: str, slug: str, text: str, lang: Pack = ES) -> Project:
     fm, body = frontmatter(text or "")
-    resp, coll, cons, _ = who_takes_part(body)
-    steps_ = [Step(text=b, dates=dates_in(b)) for b in bullets(section(body, "Siguientes pasos"))]
-    return Project(area=area, slug=slug, state=fm.get("estado") or None, updated=fm.get("actualizado") or None,
-                   title=h1(body), objective=section(body, "Objetivo"), done_means=section(body, "Terminado significa"),
-                   scope=section(body, "Alcance"), status=status(body), steps=steps_, responsible=resp,
+    resp, coll, cons, _ = who_takes_part(body, lang)
+    steps_ = [Step(text=b, dates=dates_in(b)) for b in bullets(section(body, lang.steps))]
+    return Project(area=area, slug=slug, state=fm.get(lang.key_state) or None, updated=fm.get(lang.key_updated) or None,
+                   title=h1(body), objective=section(body, lang.objective), done_means=section(body, lang.done_means),
+                   scope=section(body, lang.scope), status=status(body, lang=lang), steps=steps_, responsible=resp,
                    collaborators=coll, consumers=cons)
 
 
-def area_file(slug: str, text: str) -> Area:
+def area_file(slug: str, text: str, lang: Pack = ES) -> Area:
     fm, body = frontmatter(text or "")
-    resp, _, _, _ = who_takes_part(body)
-    return Area(slug=slug, state=fm.get("estado") or None, updated=fm.get("actualizado") or None, title=h1(body),
-                what=section(body, "Qué es"), status=status(body, legacy=("Panorama",)),
-                priorities=area_priorities(body), responsible=resp, index=project_index(text or ""))
+    resp, _, _, _ = who_takes_part(body, lang)
+    return Area(slug=slug, state=fm.get(lang.key_state) or None, updated=fm.get(lang.key_updated) or None, title=h1(body),
+                what=section(body, lang.what), status=status(body, legacy=lang.status_legacy_area, lang=lang),
+                priorities=area_priorities(body, lang), responsible=resp, index=project_index(text or "", lang))
 
 
-def deliverable(file: str, text: Optional[str], index: Optional[IndexEntry]) -> Deliverable:
+def deliverable(file: str, text: Optional[str], index: Optional[IndexEntry], lang: Pack = ES) -> Deliverable:
     stem = file.rsplit(".", 1)[0] if "." in file else file
     d = Deliverable(file=file, name=stem, format=file.rsplit(".", 1)[1] if "." in file else "")
     if text is not None and file.endswith(".md"):
         fm, body = frontmatter(text)
         d.title = h1(body) or None
-        d.state = fm.get("estado") or None
-        d.updated = fm.get("actualizado") or None
-        if isinstance(fm.get("basado_en"), list):
-            d.based_on = [re.sub(r"^\./", "", b) for b in fm["basado_en"]]
-        d.replaced_by = fm.get("reemplazado_por") or None
-        ap = fm.get("aportacion") if isinstance(fm.get("aportacion"), str) and fm["aportacion"].strip() else fm.get("afirma")
+        d.state = fm.get(lang.key_state) or None
+        d.updated = fm.get(lang.key_updated) or None
+        if isinstance(fm.get(lang.key_based_on), list):
+            d.based_on = [re.sub(r"^\./", "", b) for b in fm[lang.key_based_on]]
+        d.replaced_by = fm.get(lang.key_replaced_by) or None
+        new_key, old_key = lang.key_contribution
+        ap = fm.get(new_key) if isinstance(fm.get(new_key), str) and fm[new_key].strip() else fm.get(old_key)
         if isinstance(ap, str) and ap.strip():
             d.contribution = ap.strip()[:240]
     ref = index.deliverables.get(stem) if index else None
