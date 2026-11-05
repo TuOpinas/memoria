@@ -6,7 +6,7 @@ Uso: python3 pruebas/sesion/probar_cuentas.py
 import pathlib, re, sys
 AQUI = pathlib.Path(__file__).resolve().parent
 PL = AQUI.parent.parent / "plugins" / "memoria"
-sitios = [PL / "skills/sesion/abrir.py", PL / "skills/sesion/permisos.py", PL / "skills/sesion/cerrar.py", PL / "skills/sesion/migrar_estructura.py", PL / "skills/tablero/aplicar_cambios.py", PL / "skills/tablero/generar_vista.py", PL / "skills/tablero/barrido.py", PL / "verificar.sh"]
+sitios = [PL / "skills/sesion/permisos.py", PL / "skills/sesion/cerrar.py", PL / "skills/sesion/migrar_estructura.py", PL / "skills/tablero/aplicar_cambios.py", PL / "skills/tablero/generar_vista.py", PL / "skills/tablero/barrido.py", PL / "verificar.sh"]
 fallos = 0
 def ok(c, t):
     global fallos
@@ -17,7 +17,14 @@ def bloque(p):
     return t[a:b]
 print("Quién escribe")
 bs = [bloque(p) for p in sitios]
-ok(all(b == bs[0] for b in bs), "la función es idéntica en abrir.py, permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py, barrido.py y verificar.sh")
+ok(all(b == bs[0] for b in bs), "la función es idéntica en permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py, barrido.py y verificar.sh")
+# abrir.py ya no lleva su copia: la toma de memoria_core (paso 0 de la versión alojada), que core/tests/test_compat.py
+# compara con estas copias; aquí se comprueba que la importa y que lo metido en el script es lo que dice el paquete
+_ab = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8")
+_ab = _ab[:_ab.index("# --- memoria_core:")] + _ab[_ab.index("# --- end of memoria_core ---"):]
+ok("from memoria_core.compat import (" in bloque(PL / "skills/sesion/abrir.py") and "def registro_personas" not in _ab, "abrir.py toma quién escribe de memoria_core, sin copia propia")
+import subprocess
+ok(subprocess.run([sys.executable, str(AQUI.parent.parent / "core" / "inline.py"), "--check"], capture_output=True).returncode == 0, "memoria_core está al día dentro de abrir.py (core/inline.py --check)")
 ns = {"re": re}; exec(bs[0], ns); cuentas, colaboran_en = ns["cuentas"], ns["colaboran_en"]
 ok(cuentas("ana@x.com")[:2] == ({"ana@x.com"}, set()) and cuentas("ana@x.com")[2] is None, "una sola cuenta sigue siendo la del dueño, sin aviso")
 ok(cuentas("Ana@X.com · colabora: b@x.com, c+1@sub.x.com")[:2] == ({"ana@x.com"}, {"b@x.com", "c+1@sub.x.com"}), "dueño y colaboradores, sin mayúsculas, con «+» y subdominios")

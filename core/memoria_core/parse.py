@@ -640,3 +640,23 @@ def deliverable(file: str, text: Optional[str], index: Optional[IndexEntry]) -> 
         d.description = ref["description"]
         d.updated = d.updated or ref["updated"]
     return d
+
+
+def context_owner_name(line: str) -> str:
+    """The name of «Contexto común: Name», without the account in parentheses or what follows a comma, stop or dash."""
+    t = re.sub(r"\s*\([^)]*\)", "", (line or "").split(":", 1)[-1])
+    return re.split(r",|\.\s|\.$|\s[—–-]\s|;", t.strip())[0].strip()
+
+
+def context_owner_accounts(line: str, reg: PeopleRegistry) -> set[str]:
+    """The account in parentheses (up to 1.24) or the registry's for that name (1.25)."""
+    c = set(EMAIL.findall((line or "").split(":", 1)[-1].lower()))
+    if c:
+        return c
+    p = find_person(context_owner_name(line), reg)
+    return set(p.accounts) if p and not p.left_on else set()
+
+
+def name_of_account(account: str, reg: PeopleRegistry) -> str:
+    p = reg.by_account.get((account or "").lower())
+    return p.name if p and p.name != "?" else ""

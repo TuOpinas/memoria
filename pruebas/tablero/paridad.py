@@ -48,9 +48,10 @@ for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-s
     j_ = subprocess.run(["node", "-e", js.split("\nconst c = ")[0] + f"\nconsole.log(soloNombre({json.dumps(d)}))"], capture_output=True, text=True).stdout.strip()
     bien = A["solo_nombre"](d) == j_
     print(("  bien  " if bien else "  FALLA ") + f"el dueño «{d}» sale igual"); fallos += not bien
-# cuentas (1.24.2): la celda Cuenta de guia.md se lee igual en los ocho scripts que la copian (cada uno se descarga suelto)
-CON_CUENTAS = ["skills/sesion/abrir.py", "verificar.sh", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
-               "skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py"]
+# cuentas (1.24.2): la celda Cuenta de guia.md se lee igual en los scripts que la copian (cada uno se descarga suelto);
+# abrir.py la toma de memoria_core desde el paso 0 de la versión alojada, y core/tests/test_compat.py la compara con estas
+CON_CUENTAS = ["skills/tablero/generar_vista.py", "verificar.sh", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
+               "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py"]
 def con_cuentas(ruta):
     src = (P / ruta).read_text(encoding="utf-8"); ns = {"re": re}
     for c in ("CORREO", "PALABRA_COLABORA"):
@@ -63,7 +64,7 @@ _ref = [con_cuentas(CON_CUENTAS[0])(c) for c in CELDAS_CUENTA]
 for ruta in CON_CUENTAS[1:]:
     _f = con_cuentas(ruta); dif = [c for c, r in zip(CELDAS_CUENTA, _ref) if _f(c) != r]
     bien = not dif
-    print(("  bien  " if bien else "  FALLA ") + f"cuentas() de {ruta.split('/')[-1]} lee la celda Cuenta como abrir.py" + ("" if bien else f": difiere en {dif}")); fallos += not bien
+    print(("  bien  " if bien else "  FALLA ") + f"cuentas() de {ruta.split('/')[-1]} lee la celda Cuenta como generar_vista.py" + ("" if bien else f": difiere en {dif}")); fallos += not bien
 # la línea «Zona horaria:» de guia.md se reconoce igual en abrir.py y en espejo.py (1.24.2)
 def _rx_zona(ruta):
     src = (P / ruta).read_text(encoding="utf-8")
