@@ -20,7 +20,8 @@ NAMES = ["fecha_valida", "fechas_en", "frontmatter", "seccion", "bullets", "clav
 
 REF = pathlib.Path(__file__).resolve().parent / "reference" / "quien_escribe_1_25_1.py"
 WHO = {"clave_nombre", "_titulo", "cuentas", "registro_personas", "persona", "nombres_de", "colaboran_en",
-       "cuentas_de_nombres", "altas_provisionales"}
+       "cuentas_de_nombres", "altas_provisionales", "restringida_celda"}
+RULES = pathlib.Path(__file__).resolve().parent / "reference" / "reglas_1_25_1.py"
 
 
 def script_functions():
@@ -29,6 +30,7 @@ def script_functions():
     src = GEN.read_text(encoding="utf-8")
     ns = {"re": re, "unicodedata": unicodedata, "datetime": datetime, "os": os}
     exec(REF.read_text(encoding="utf-8"), ns)
+    exec(RULES.read_text(encoding="utf-8"), ns)
     for n in NAMES:
         if n not in WHO:
             exec(re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S).group(0), ns)

@@ -6,12 +6,15 @@ that has moved no longer carries the copy; `packages/context-core/tests/test_com
 """
 from __future__ import annotations
 
+import pathlib
+import re
 from typing import Optional
 
 from . import parse
 from .records import PeopleRegistry, Person
 
-__all__ = ["CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas", "clave_nombre", "_titulo", "registro_personas",
+__all__ = ["SOBRE_LA_CARPETA", "sin_carpeta", "ARCHIVADO", "archivados_de", "con_archivados", "respuestas_viejas",
+           "restringida_celda", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas", "clave_nombre", "_titulo", "registro_personas",
            "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",
            "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]
 
@@ -93,3 +96,36 @@ def nombre_de(cuenta: str, reg) -> str:
 
 def colaboran_en(quien: str, reg=None) -> set:
     return parse.collaborator_accounts(quien, _reg(reg) if reg else None)
+
+
+# ── el primer párrafo de guia.md, los registros con sus archivados y la regla de lo restringido ──────────────────────
+
+SOBRE_LA_CARPETA = parse.ABOUT_THE_FOLDER
+sin_carpeta = parse.drop_folder_talk
+ARCHIVADO = parse.ARCHIVED
+restringida_celda = parse.is_restricted_cell
+
+
+def _nombres(carpeta) -> list:
+    try:
+        return [x.name for x in pathlib.Path(carpeta).iterdir()]
+    except OSError:
+        return []
+
+
+def archivados_de(carpeta, nombre, anio) -> list:
+    return parse.archived_names(_nombres(carpeta), nombre, anio)
+
+
+def con_archivados(carpeta, nombre, vivo, anio, leer_) -> tuple:
+    return parse.with_archives(vivo, [leer_(pathlib.Path(carpeta) / n) for n in archivados_de(carpeta, nombre, anio)])
+
+
+def respuestas_viejas(carpeta, anio, leer_) -> list:
+    """The «Responde a:» lines of decision archives older than last year, which are not read whole."""
+    recientes = set(archivados_de(carpeta, "decisiones", anio))
+    out = []
+    for n in archivados_de(carpeta, "decisiones", 0):
+        if n not in recientes:
+            out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
+    return out

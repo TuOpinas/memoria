@@ -77,5 +77,44 @@ class Compat(unittest.TestCase):
             self.assertEqual(compat.cuentas(c), S["cuentas"](c), c)
 
 
+
+REGLAS = pathlib.Path(__file__).resolve().parent / "reference" / "reglas_1_25_1.py"
+
+
+class Rules(unittest.TestCase):
+    """The first paragraph of guia.md, the registers with their archives and the restricted cell, as in 1.25.1."""
+    @classmethod
+    def setUpClass(cls):
+        cls.R = {"re": re}
+        exec(REGLAS.read_text(encoding="utf-8"), cls.R)
+
+    def test_first_paragraph(self):
+        for f in (["Acme fabrica muebles.", "Cómo se trabaja está en `metodo.md`."],
+                  ["Acme fabrica muebles; lo demás está en `guia.md`."], ["Acme (ver `guia.md`; abajo) fabrica muebles."],
+                  ["Acme fabrica muebles para oficinas, como explica `guia.md`."],
+                  ["Acme fabrica muebles: el mapa está en `guia.md`; lo aplica el plugin `memoria`."],
+                  ["Sigue el método del plugin `memoria`, porque la ventaja es la misma."], ["Acme, ver `guia.md`."]):
+            self.assertEqual(compat.sin_carpeta(f), self.R["sin_carpeta"](f), f)
+
+    def test_archives(self):
+        import tempfile
+        d = pathlib.Path(tempfile.mkdtemp())
+        for n, t in {"decisiones.md": "# D\n\n## 2026-02-01 · c\n", "decisiones-2025.md": "# D\n\n## 2025-12-31 · b\nResponde a: x#1\n",
+                     "decisiones-2025-2.md": "## 2025-12-30 · a\n", "decisiones-2023.md": "## 2023-01-01 · v\nResponde a: y#2\n",
+                     "sesiones-2026.md": "## 2026-01-01\n", "otro.md": "x"}.items():
+            (d / n).write_text(t, encoding="utf-8")
+        leer = lambda p: pathlib.Path(p).read_text(encoding="utf-8")
+        for reg in ("decisiones", "sesiones"):
+            self.assertEqual(compat.archivados_de(d, reg, 2026), self.R["archivados_de"](d, reg, 2026))
+            vivo = (d / f"{reg}.md").read_text(encoding="utf-8") if (d / f"{reg}.md").exists() else ""
+            self.assertEqual(compat.con_archivados(d, reg, vivo, 2026, leer), self.R["con_archivados"](d, reg, vivo, 2026, leer))
+        self.assertEqual(compat.respuestas_viejas(d, 2026, leer), self.R["respuestas_viejas"](d, 2026, leer))
+
+    def test_restricted_cell(self):
+        for c in ["Restringida: Ana", "Dirección (restringida)", "Todo el equipo", "nunca restringida", "Abierta (antes restringida)",
+                  "Todo el equipo; los proyectos restringidos aparte", "Restringido al equipo directivo", ""]:
+            self.assertEqual(compat.restringida_celda(c), self.R["restringida_celda"](c), c)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,13 +4,16 @@ vista.html (la página). Saca las funciones de cada archivo, las corre con las m
 Uso: paridad.py <raíz del plugin>. Sale con 1 si algo difiere o no da lo esperado."""
 import json, pathlib, re, subprocess, sys
 P = pathlib.Path(sys.argv[1])
+# desde el paso 0 de la versión alojada, la regla de lo restringido, el primer párrafo y los archivados viven en context_core
+sys.path.insert(0, str(P.resolve().parent.parent / "packages" / "context-core"))
+from context_core import compat as _cc  # noqa: E402
 def funciones(ruta, nombres):
     src = (P / ruta).read_text(encoding="utf-8"); ns = {"re": re}
     for n in nombres:
         m = re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S); exec(m.group(0), ns)
     return ns
-A = funciones("skills/sesion/abrir.py", ["restringida_celda", "lectores_de", "solo_nombre"])
-G = funciones("skills/tablero/generar_vista.py", ["restringida_celda"])
+A = funciones("skills/sesion/abrir.py", ["lectores_de", "solo_nombre"]); A["restringida_celda"] = _cc.restringida_celda
+G = {"restringida_celda": _cc.restringida_celda}   # la de abrir.py y generar_vista.py es una sola: context_core
 CELDAS = {  # celda: (restringida, a quiénes)
     "Restringida: Ana Prueba y Beto Prueba": (True, "a Ana Prueba y Beto Prueba"),
     "Restringida a dirección": (True, "a dirección"),

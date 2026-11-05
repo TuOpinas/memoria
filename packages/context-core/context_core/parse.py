@@ -660,3 +660,56 @@ def context_owner_accounts(line: str, reg: PeopleRegistry) -> set[str]:
 def name_of_account(account: str, reg: PeopleRegistry) -> str:
     p = reg.by_account.get((account or "").lower())
     return p.name if p and p.name != "?" else ""
+
+
+# ── guia.md's first paragraph, and archived registers ──────────────────────────────────────────────────────────────
+
+ABOUT_THE_FOLDER = r"`(?:metodo|guia)\.md`|plugin `memoria`|Aquí solo está lo nuestro"
+
+
+def drop_folder_talk(sentences: list[str], rx: str = ABOUT_THE_FOLDER) -> list[str]:
+    """The sentences of guia.md's first paragraph without what talks about the folder or the method. Of a sentence joined
+    by «;» to one that does not, the other stays (not split by a «;» in parentheses); within each part, what comes before
+    the comma, colon or dash that opens the folder talk stays if it has three words or more. Same as sin_carpeta()."""
+    out = []
+    for f in sentences:
+        if not re.search(rx, f):
+            out.append(f); continue
+        keep = []
+        for c in [c.strip() for c in re.split(r";(?![^()]*\))", f)]:
+            m = re.search(rx, c) if c else None
+            if c and not m:
+                keep.append(c); continue
+            cuts = [s.start() for s in re.finditer(r"[,:—](?![^()]*\))", c[:m.start()] if m else "")]
+            t = c[:cuts[-1]].strip() if cuts else ""
+            if len(t.split()) >= 3 and not re.search(rx, t):
+                keep.append(t)
+        if keep:
+            t = "; ".join(keep); t = t[0].upper() + t[1:]
+            out.append(t if t[-1] in ".!?" else t + ".")
+    return out
+
+
+ARCHIVED = re.compile(r"^(sesiones|decisiones)-(20\d\d)(?:-(\d+))?\.md$")
+
+
+def archived_names(names: list[str], register: str, year) -> list[str]:
+    """Of the names in a project folder, the archives of a register («sesiones» or «decisiones») from `year` - 1 on,
+    newest first. Older ones are not read whole (escribir.md, section 8)."""
+    seen = []
+    for n in names:
+        m = ARCHIVED.match(n)
+        if m and m.group(1) == register and int(m.group(2)) >= int(year) - 1:
+            seen.append((int(m.group(2)), int(m.group(3) or 1), n))
+    return [n for _, _, n in sorted(seen, reverse=True)]
+
+
+def with_archives(live: Optional[str], archives: list[Optional[str]]) -> tuple[str, int]:
+    """(text, entries of the live register): the live register followed by the entries of its archives, as if they had
+    not been archived, so every decision keeps its identifier. Same as con_archivados()."""
+    parts = [live or ""]
+    for t in archives:
+        m = re.search(r"^## ", t or "", re.M)
+        if m:
+            parts.append((t or "")[m.start():])
+    return "\n\n".join(p.strip("\n") for p in parts if p.strip()) + "\n", len(re.findall(r"^## ", live or "", re.M))
