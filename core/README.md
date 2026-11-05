@@ -6,7 +6,8 @@ The Memoria method as records: one Python package that the plugin scripts, the h
 - `memoria_core/records.py` — the record model: root, people, area rows, areas, projects, Estatus, decisions, sessions,
   steps, deliverables, workshop files, premises.
 - `memoria_core/parse.py` — one method file's text to records. Pure functions, ported from the scripts with the same rules.
-- `memoria_core/load.py` — a whole root to a `Root`. Reads a folder directly until the storage adapter lands.
+- `memoria_core/storage.py` — the storage adapter: read, stat, list, conditional write, make_dir, move, lock; no delete. `FolderStorage` first.
+- `memoria_core/load.py` — a whole root to a `Root`. Reads through the storage adapter.
 
 The method's files keep their Spanish names and keys; the code names them in English.
 
