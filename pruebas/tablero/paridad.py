@@ -49,7 +49,7 @@ for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-s
     bien = A["solo_nombre"](d) == j_
     print(("  bien  " if bien else "  FALLA ") + f"el dueño «{d}» sale igual"); fallos += not bien
 # cuentas (1.24.2): la celda Cuenta de guia.md se lee igual en los scripts que la copian (cada uno se descarga suelto);
-# abrir.py la toma de memoria_core desde el paso 0 de la versión alojada, y core/tests/test_compat.py la compara con estas
+# abrir.py la toma de context_core desde el paso 0 de la versión alojada, y packages/context-core/tests/test_compat.py la compara con estas
 CON_CUENTAS = ["skills/tablero/generar_vista.py", "verificar.sh", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
                "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py"]
 def con_cuentas(ruta):

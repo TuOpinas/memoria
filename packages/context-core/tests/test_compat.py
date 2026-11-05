@@ -3,10 +3,10 @@ and on the cases of pruebas/sesion/probar_cuentas.py. The copy is taken from gen
 import pathlib, re, sys, unicodedata, unittest
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
-REPO = CORE.parent
+REPO = CORE.parent.parent
 sys.path[:0] = [str(CORE), str(REPO / "pruebas")]
 
-from memoria_core import compat, parse  # noqa: E402
+from context_core import compat, parse  # noqa: E402
 import comun  # noqa: E402
 
 GEN = REPO / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"

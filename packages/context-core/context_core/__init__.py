@@ -1,4 +1,4 @@
-"""memoria-core: the Memoria method as records.
+"""context-core: the Memoria method as records.
 
 The method's files keep their Spanish names and keys (`estado`, `Afecta a`, `Siguientes pasos`) until the language
 packs; this package reads them as they are and names them in English inside the code (decision of 2026-11-04).

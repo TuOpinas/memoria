@@ -5,7 +5,7 @@ import os, pathlib, sys, tempfile, unittest
 CORE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CORE))
 
-from memoria_core.storage import Conflict, FolderStorage, OutsideRoot, Storage  # noqa: E402
+from context_core.storage import Conflict, FolderStorage, OutsideRoot, Storage  # noqa: E402
 
 
 class Folder(unittest.TestCase):

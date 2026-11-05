@@ -1,13 +1,13 @@
-# memoria-core
+# context-core
 
 The Memoria method as records: one Python package that the plugin scripts, the hosted server and the board will share
 (step 0 of `shared-memory/product-design/entregables/hosted-path.md`). Python 3.10 or later, no dependencies.
 
-- `memoria_core/records.py` — the record model: root, people, area rows, areas, projects, Estatus, decisions, sessions,
+- `context_core/records.py` — the record model: root, people, area rows, areas, projects, Estatus, decisions, sessions,
   steps, deliverables, workshop files, premises.
-- `memoria_core/parse.py` — one method file's text to records. Pure functions, ported from the scripts with the same rules.
-- `memoria_core/storage.py` — the storage adapter: read, stat, list, conditional write, make_dir, move, lock; no delete. `FolderStorage` first.
-- `memoria_core/load.py` — a whole root to a `Root`. Reads through the storage adapter.
+- `context_core/parse.py` — one method file's text to records. Pure functions, ported from the scripts with the same rules.
+- `context_core/storage.py` — the storage adapter: read, stat, list, conditional write, make_dir, move, lock; no delete. `FolderStorage` first.
+- `context_core/load.py` — a whole root to a `Root`. Reads through the storage adapter.
 
 The method's files keep their Spanish names and keys; the code names them in English.
 
@@ -15,7 +15,7 @@ The method's files keep their Spanish names and keys; the code names them in Eng
 
 From the repository root:
 
-    python3 -m unittest discover -s core/tests
+    python3 -m unittest discover -s packages/context-core/tests
 
 `test_records.py` builds the model from `pruebas/tablero/raiz` in its 1.21, 1.22 and 1.25 forms; `test_parity.py`
 runs the parsing functions of `generar_vista.py` and the package on the same files and fails on any difference.

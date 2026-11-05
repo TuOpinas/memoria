@@ -2,7 +2,7 @@
 
 The plugin scripts keep their Spanish until the language packs (decision of 2026-11-04). While each one moves onto the
 package, it imports these names in place of its own copy of the code, and nothing else in the script changes. A script
-that has moved no longer carries the copy; `core/tests/test_compat.py` checks these return exactly what the copies do.
+that has moved no longer carries the copy; `packages/context-core/tests/test_compat.py` checks these return exactly what the copies do.
 """
 from __future__ import annotations
 

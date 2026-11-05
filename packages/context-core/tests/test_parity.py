@@ -5,10 +5,10 @@ until they go too."""
 import pathlib, re, sys, unittest, unicodedata, datetime, os
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
-REPO = CORE.parent
+REPO = CORE.parent.parent
 sys.path[:0] = [str(CORE), str(REPO / "pruebas")]
 
-from memoria_core import parse  # noqa: E402
+from context_core import parse  # noqa: E402
 import comun  # noqa: E402
 
 GEN = REPO / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"

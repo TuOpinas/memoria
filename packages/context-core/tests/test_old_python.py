@@ -2,7 +2,7 @@
 are inlined as strings, so pruebas/probar_compila.py does not see them. They must parse as 3.9 and use nothing newer."""
 import ast, pathlib, unittest
 
-PKG = pathlib.Path(__file__).resolve().parents[1] / "memoria_core"
+PKG = pathlib.Path(__file__).resolve().parents[1] / "context_core"
 NEWER = ("match ", "kw_only=", "slots=True", "zip(strict", "removeprefix", "TypeAlias", "ParamSpec")
 
 

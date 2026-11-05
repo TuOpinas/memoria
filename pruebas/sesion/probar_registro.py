@@ -14,8 +14,8 @@ def ok(c, t):
     print(("  bien  " if c else "  FALLA ") + t); fallos += 0 if c else 1
 
 print("El registro de personas")
-# abrir.py lo toma de memoria_core (paso 0 de la versión alojada): estos casos prueban el paquete, que es lo que corre
-sys.path.insert(0, str(PL.parent.parent / "core"))
+# abrir.py lo toma de context_core (paso 0 de la versión alojada): estos casos prueban el paquete, que es lo que corre
+sys.path.insert(0, str(PL.parent.parent / "packages" / "context-core"))
 t = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8")
 ns = {"re": re}; exec(t[t.index("# --- quién escribe"):t.index("# --- fin de quién escribe ---")], ns)
 R_ = ns["registro_personas"]; F = ns["fila_cuentas"]; C = ns["colaboran_en"]

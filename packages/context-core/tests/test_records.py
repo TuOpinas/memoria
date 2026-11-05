@@ -1,13 +1,13 @@
 """The record model builds from the test root in its three forms: 1.21 as written, migrated to 1.22 by the real
 migration, and in the 1.25 form («Quién es quién»). Same areas, projects and people must come out of all three.
-Run: python3 -m unittest discover -s core/tests (from the repository root)."""
+Run: python3 -m unittest discover -s packages/context-core/tests (from the repository root)."""
 import pathlib, sys, unittest
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
-REPO = CORE.parent
+REPO = CORE.parent.parent
 sys.path[:0] = [str(CORE), str(REPO / "pruebas")]
 
-from memoria_core.load import load_root  # noqa: E402
+from context_core.load import load_root  # noqa: E402
 import comun  # noqa: E402
 
 FORMS = {}
@@ -92,7 +92,7 @@ x
 """
 
     def test_fields(self):
-        from memoria_core import parse
+        from context_core import parse
         st = parse.status(self.TEXT)
         self.assertEqual((st.source, st.date, st.headline), ("Estatus", "2026-11-05", "Step 0 starts."))
         self.assertEqual(st.completed, "the stack.")
