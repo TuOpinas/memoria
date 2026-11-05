@@ -116,6 +116,7 @@ python3 "$TABLERO/generar_vista.py" "$OUT/raiz-122" "$OUT/estructura" --version 
 python3 "$AQUI/comprobar_122.py" "$OUT/completo" "$OUT/estructura"
 python3 "$AQUI/montar.py" "$TABLERO/vista.html" "$OUT/estructura" "$OUT/estructura.html"
 if command -v node >/dev/null && node -e "require('playwright')" 2>/dev/null; then
+  node "$AQUI/qh_abierto.js" "$OUT/completo.html"
   node "$AQUI/recorrer.js" "$OUT" "$OUT/capturas"
   echo "Capturas en $OUT/capturas"
 else

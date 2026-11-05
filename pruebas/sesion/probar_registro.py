@@ -14,6 +14,8 @@ def ok(c, t):
     print(("  bien  " if c else "  FALLA ") + t); fallos += 0 if c else 1
 
 print("El registro de personas")
+# abrir.py lo toma de context_core (paso 0 de la versión alojada): estos casos prueban el paquete, que es lo que corre
+sys.path.insert(0, str(PL.parent.parent / "packages" / "context-core"))
 t = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8")
 ns = {"re": re}; exec(t[t.index("# --- quién escribe"):t.index("# --- fin de quién escribe ---")], ns)
 R_ = ns["registro_personas"]; F = ns["fila_cuentas"]; C = ns["colaboran_en"]
@@ -50,7 +52,7 @@ ok(C("Colabora: Marco Herrero (marco.herrero@smilepill.mx)") == {"marco.herrero@
 for av_, g_ in [("dos veces", "## Quién es quién\n- Ana · a@x.mx\n- Ana · b@x.mx\n"), ("dos líneas", "## Quién es quién\n- Ana · a@x.mx\n- Beto · a@x.mx\n"),
                 ("no lleva", "## Quién es quién\n- Ana\n"), ("no se entiende", "## Quién es quién\n- Ana · a@x.mx · jefa\n")]:
     ok(any(av_ in x for x in R_(g_)["avisos"]), f"avisa: {av_}")
-# las ocho copias son idénticas
+# el bloque es idéntico en los ocho scripts (desde el paso 0, todos lo toman de context_core)
 SITIOS = ["skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
           "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py", "skills/tablero/generar_vista.py", "verificar.sh"]
 bl = lambda p: (lambda s: s[s.index("# --- quién escribe"):s.index("# --- fin de quién escribe ---")])((PL / p).read_text(encoding="utf-8"))

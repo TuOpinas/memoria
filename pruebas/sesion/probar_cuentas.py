@@ -17,7 +17,11 @@ def bloque(p):
     return t[a:b]
 print("Quién escribe")
 bs = [bloque(p) for p in sitios]
-ok(all(b == bs[0] for b in bs), "la función es idéntica en abrir.py, permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py, barrido.py y verificar.sh")
+ok(all(b == bs[0] for b in bs), "el bloque es idéntico en abrir.py, permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py, barrido.py y verificar.sh")
+# desde el paso 0 de la versión alojada el bloque no lleva el código: mete context_core (inline.py) y lo importa
+ok("from context_core.compat import (" in bs[0] and "def registro_personas" not in bs[0].split("# --- end of context_core ---")[1], "el bloque toma quién escribe de context_core, sin copia propia")
+import subprocess
+ok(subprocess.run([sys.executable, str(AQUI.parent.parent / "packages" / "context-core" / "inline.py"), "--check"], capture_output=True).returncode == 0, "context_core está al día dentro de los ocho scripts (packages/context-core/inline.py --check)")
 ns = {"re": re}; exec(bs[0], ns); cuentas, colaboran_en = ns["cuentas"], ns["colaboran_en"]
 ok(cuentas("ana@x.com")[:2] == ({"ana@x.com"}, set()) and cuentas("ana@x.com")[2] is None, "una sola cuenta sigue siendo la del dueño, sin aviso")
 ok(cuentas("Ana@X.com · colabora: b@x.com, c+1@sub.x.com")[:2] == ({"ana@x.com"}, {"b@x.com", "c+1@sub.x.com"}), "dueño y colaboradores, sin mayúsculas, con «+» y subdominios")

@@ -4,13 +4,16 @@ vista.html (la página). Saca las funciones de cada archivo, las corre con las m
 Uso: paridad.py <raíz del plugin>. Sale con 1 si algo difiere o no da lo esperado."""
 import json, pathlib, re, subprocess, sys
 P = pathlib.Path(sys.argv[1])
+# desde el paso 0 de la versión alojada, la regla de lo restringido, el primer párrafo y los archivados viven en context_core
+sys.path.insert(0, str(P.resolve().parent.parent / "packages" / "context-core"))
+from context_core import compat as _cc  # noqa: E402
 def funciones(ruta, nombres):
     src = (P / ruta).read_text(encoding="utf-8"); ns = {"re": re}
     for n in nombres:
         m = re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S); exec(m.group(0), ns)
     return ns
-A = funciones("skills/sesion/abrir.py", ["restringida_celda", "lectores_de", "solo_nombre"])
-G = funciones("skills/tablero/generar_vista.py", ["restringida_celda"])
+A = funciones("skills/sesion/abrir.py", ["lectores_de", "solo_nombre"]); A["restringida_celda"] = _cc.restringida_celda
+G = {"restringida_celda": _cc.restringida_celda}   # la de abrir.py y generar_vista.py es una sola: context_core
 CELDAS = {  # celda: (restringida, a quiénes)
     "Restringida: Ana Prueba y Beto Prueba": (True, "a Ana Prueba y Beto Prueba"),
     "Restringida a dirección": (True, "a dirección"),
@@ -48,22 +51,8 @@ for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-s
     j_ = subprocess.run(["node", "-e", js.split("\nconst c = ")[0] + f"\nconsole.log(soloNombre({json.dumps(d)}))"], capture_output=True, text=True).stdout.strip()
     bien = A["solo_nombre"](d) == j_
     print(("  bien  " if bien else "  FALLA ") + f"el dueño «{d}» sale igual"); fallos += not bien
-# cuentas (1.24.2): la celda Cuenta de guia.md se lee igual en los ocho scripts que la copian (cada uno se descarga suelto)
-CON_CUENTAS = ["skills/sesion/abrir.py", "verificar.sh", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
-               "skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py"]
-def con_cuentas(ruta):
-    src = (P / ruta).read_text(encoding="utf-8"); ns = {"re": re}
-    for c in ("CORREO", "PALABRA_COLABORA"):
-        exec(re.search(rf"^{c}\s*=.*$", src, re.M).group(0), ns)
-    exec(re.search(r"^def cuentas\(.*?(?=^\S)", src, re.M | re.S).group(0), ns)
-    return ns["cuentas"]
-CELDAS_CUENTA = ["ana@x.mx", "ana@x.mx · colabora: beto@x.mx, carla@x.mx", "ana@x.mx, beto@x.mx", "", "Sin cuenta de Claude",
-                 "ana@x.mx colaboradora: beto@x.mx", "ana@x.mx · colabora beto@x.mx", "ANA@X.MX · Colabora: Beto@X.mx", "ana@x.mx · co-labora: b@x.mx"]
-_ref = [con_cuentas(CON_CUENTAS[0])(c) for c in CELDAS_CUENTA]
-for ruta in CON_CUENTAS[1:]:
-    _f = con_cuentas(ruta); dif = [c for c, r in zip(CELDAS_CUENTA, _ref) if _f(c) != r]
-    bien = not dif
-    print(("  bien  " if bien else "  FALLA ") + f"cuentas() de {ruta.split('/')[-1]} lee la celda Cuenta como abrir.py" + ("" if bien else f": difiere en {dif}")); fallos += not bien
+# cuentas (1.24.2): desde el paso 0 de la versión alojada la celda Cuenta se lee en un solo sitio, context_core; los ocho
+# scripts lo llevan metido igual (pruebas/sesion/probar_cuentas.py) y test_compat.py lo compara con la copia de la 1.25.1
 # la línea «Zona horaria:» de guia.md se reconoce igual en abrir.py y en espejo.py (1.24.2)
 def _rx_zona(ruta):
     src = (P / ruta).read_text(encoding="utf-8")

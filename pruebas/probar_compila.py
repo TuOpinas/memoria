@@ -20,12 +20,20 @@ if f.endswith(".sh"):   # el Python que verificar.sh lleva dentro, entre «<<'PY
 compile(src, f, "exec")
 """
 archivos = sorted(PLUGIN.rglob("*.py")) + [PLUGIN / "verificar.sh"]
+FALLOS_X = 0
+# los scripts que se corren como «./script» conservan su permiso de ejecución (la 1.25.2 perdió el de release.sh al moverse
+# el repo por una carpeta que no guarda permisos; las pruebas lo llamaban con bash y no lo vieron)
+import os
+for rel in ("release.sh", "verificar.sh", "build-metodo.sh"):
+    x = os.access(PLUGIN / rel, os.X_OK)
+    print(("  bien  " if x else "  FALLA ") + f"{rel} se puede ejecutar")
+    FALLOS_X += 0 if x else 1
 viejos = [v for v in ("python3.9", "python3.10", "python3.11") if shutil.which(v)]
 if not viejos:
     print("  aviso  no hay python3.9, 3.10 ni 3.11 en esta máquina: no se comprobó que los scripts compilen con un Python viejo"
           " (se instalan con «uv python install 3.9 3.10»)")
-    sys.exit(0)
-fallos = 0
+    sys.exit(1 if FALLOS_X else 0)
+fallos = FALLOS_X
 for py in viejos:
     malos = 0
     for f in archivos:

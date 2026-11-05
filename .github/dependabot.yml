@@ -1,0 +1,8 @@
+# Pinned actions (by SHA): a weekly pull request when a new version exists. Playwright is pinned inline in
+# pruebas.yml (playwright@1.64.1), which Dependabot does not read: raise it by hand after checking a publish works.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

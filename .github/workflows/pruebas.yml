@@ -4,6 +4,7 @@
 # sesión y los scripts del tablero que no necesitan navegador corren con 3.9, 3.10 y el actual, y probar_compila.py tiene
 # siempre python3.9 y python3.10 a mano.
 # El tablero (probar.sh) corre una vez, con el Python actual, Node 22 y Playwright con Chromium.
+# Las acciones van fijadas por commit, con su etiqueta al lado: una etiqueta que se mueve no cambia lo que corre (paso 0).
 name: Pruebas
 on:
   pull_request:
@@ -19,9 +20,9 @@ jobs:
       matrix:
         python: ['3.9', '3.10', '3.x']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       # el último de la lista queda como python3
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: |
             3.9
@@ -29,6 +30,12 @@ jobs:
             ${{ matrix.python }}
       - name: Los scripts compilan con un Python viejo
         run: python3 pruebas/probar_compila.py
+      # context-core (paso 0 de la versión alojada): sus pruebas con cada Python de la matriz, y que la copia metida en los
+      # ocho scripts sea la del paquete
+      - name: context-core
+        run: |
+          python3 -m unittest discover -s packages/context-core/tests -v
+          python3 packages/context-core/inline.py --check
       - name: Pruebas de sesión
         run: |
           python3 --version
@@ -54,21 +61,22 @@ jobs:
   tablero:
     runs-on: ubuntu-24.04   # ubuntu-latest pasó a 26.04 el 2026-11-03 y setup-python no tiene ahí el 3.9
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: |
             3.9
             3.10
             3.x
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '22'
-      # Playwright fuera del repositorio; NODE_PATH para que lo encuentren probar.sh y recorrer.js
+      # Playwright fuera del repositorio; NODE_PATH para que lo encuentren probar.sh y recorrer.js. Con versión fija: el
+      # 2026-11-05 playwright 1.65.0 salió antes que su playwright-core y la instalación sin versión dejó de funcionar
       - name: Playwright con Chromium
         run: |
           mkdir -p "$RUNNER_TEMP/pw"
-          npm install --prefix "$RUNNER_TEMP/pw" --no-save --no-audit --no-fund playwright
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save --no-audit --no-fund playwright@1.64.1
           echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
           "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
       - name: Tablero
@@ -77,7 +85,7 @@ jobs:
           bash pruebas/tablero/probar.sh /tmp/salida
       - name: Capturas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: capturas-tablero
           path: /tmp/salida/capturas

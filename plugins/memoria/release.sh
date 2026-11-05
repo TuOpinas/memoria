@@ -30,6 +30,13 @@ if [ -f "$COMPILA" ]; then   # fuera del repo (una copia del plugin en las prueb
   fi
   python3 "$COMPILA" >/dev/null || { echo "Algún script del plugin no compila con un Python viejo: corre pruebas/probar_compila.py y corrígelo antes de publicar." >&2; exit 1; }
 fi
+# context_core (paso 0 de la versión alojada): los scripts que lo usan lo llevan metido; lo metido tiene que ser lo que dice
+# el paquete, y el paquete pasar sus pruebas (también la de que corre con un Python viejo)
+CORE="$(cd "$(dirname "$0")" && pwd)/../../packages/context-core"
+if [ -d "$CORE" ]; then
+  python3 "$CORE/inline.py" --check >/dev/null || { echo "context_core no está al día dentro de los scripts: corre packages/context-core/inline.py." >&2; exit 1; }
+  SALIDA="$(cd "$CORE/../.." && python3 -m unittest discover -s packages/context-core/tests 2>&1)" || { printf '%s\n' "$SALIDA" | tail -40 >&2; echo "Las pruebas de context-core fallan: python3 -m unittest discover -s packages/context-core/tests" >&2; exit 1; }
+fi
 CONTRATO_VER="${VERSION%.*}"
 
 PLUGIN_DIR="$(cd "$(dirname "$0")" && pwd)"

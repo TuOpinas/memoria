@@ -64,7 +64,10 @@ if "--guardada" in sys.argv:
     _hb = hashlib.sha1()
     try:
         for _n in ("barrido.py",):
-            _hb.update(pathlib.Path(__file__).with_name(_n).read_bytes())
+            _b = pathlib.Path(__file__).with_name(_n).read_bytes()
+            # sin la copia de context_core metida (1.25.2), como huella_barrido() de generar_vista.py
+            _i, _j = _b.find(b"# --- context_core: generated"), _b.find(b"# --- end of context_core ---")
+            _hb.update(_b[:_i] + _b[_j:] if 0 <= _i < _j else _b)
         _hb = _hb.hexdigest()[:12]
     except OSError:
         _hb = None

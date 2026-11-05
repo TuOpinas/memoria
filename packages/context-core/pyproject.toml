@@ -1,0 +1,13 @@
+[project]
+name = "context-core"
+version = "0.0.1"
+description = "The Memoria method as records: one package shared by the plugin scripts, the server and the board."
+requires-python = ">=3.9"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["context_core"]
