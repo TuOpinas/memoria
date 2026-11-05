@@ -44,6 +44,10 @@ con saltos de línea no se aplica. Lo que no cumple va a "rechazados" y se borra
 import sys, re, json, pathlib, datetime
 
 RAIZ = pathlib.Path(sys.argv[1])
+# Con una ruta que no es la raíz, todo saldría rechazado y se borraría de la cola (1.25.3): sin guia.md no se sigue.
+if not (RAIZ / "guia.md").is_file():
+    print(f"ERROR: {RAIZ} no es la raíz: no tiene guia.md en su primer nivel. Busca en `ls $HOME/mnt/` la carpeta que lo tiene.", file=sys.stderr)
+    sys.exit(2)
 ENTRADA = pathlib.Path(sys.argv[2])
 DRY = "--dry-run" in sys.argv
 CUENTA = (sys.argv[sys.argv.index("--cuenta") + 1] if "--cuenta" in sys.argv and len(sys.argv) > sys.argv.index("--cuenta") + 1 else "").strip().lower()

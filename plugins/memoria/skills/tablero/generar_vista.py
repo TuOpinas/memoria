@@ -1292,6 +1292,11 @@ from context_core.compat import SOBRE_LA_CARPETA, sin_carpeta  # noqa: E402,F401
 from context_core.compat import ARCHIVADO, archivados_de, con_archivados, respuestas_viejas  # noqa: E402,F401
 # --- fin de los registros ---
 RAIZ = pathlib.Path(sys.argv[1])
+# Una ruta que no es la raíz (otra carpeta de $HOME/mnt, un nombre mal armado) daba «RAIZ ATRASADA» y un inventario vacío
+# sin error, y la puesta al día podía publicar un tablero sin nada (1.25.3): sin guia.md no se sigue.
+if not (RAIZ / "guia.md").is_file():
+    print(f"ERROR: {RAIZ} no es la raíz: no tiene guia.md en su primer nivel. Busca en `ls $HOME/mnt/` la carpeta que lo tiene.", file=sys.stderr)
+    sys.exit(2)
 ZONA_AVISO = None
 def zona_horaria(raiz, defecto="America/Mexico_City"):
     """La zona de la organización: la línea «Zona horaria: Europe/Madrid» de guia.md (con viñeta, negrita o comillas

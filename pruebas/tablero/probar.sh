@@ -19,6 +19,11 @@ for d, _, fs in os.walk(sys.argv[1]):
     for f in fs: os.utime(os.path.join(d, f), (viejo, viejo))
 os.utime(os.path.join(sys.argv[1], "ventas/cuentas/entregables/kit-cuentas.md"), None)
 PY
+# 1.25.3: una ruta que no es la raíz para en seco, en los dos scripts que corren en la computadora
+mkdir -p "$OUT/no-raiz"
+if python3 "$TABLERO/generar_vista.py" "$OUT/no-raiz" --inventario --lineas >/dev/null 2>&1; then echo "MAL: generar_vista.py siguió con una carpeta sin guia.md"; exit 1; fi
+if python3 "$TABLERO/aplicar_cambios.py" "$OUT/no-raiz" /dev/null >/dev/null 2>&1; then echo "MAL: aplicar_cambios.py siguió con una carpeta sin guia.md"; exit 1; fi
+echo "  bien  una ruta que no es la raíz para en seco, sin inventario vacío ni cola borrada"
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/completo" --version "${VERSION:-prueba}" >/dev/null
 # una tarea montada antes de la 1.18 pasa --modo publico: sale lo mismo, el tablero de un solo modo
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/viejo" --modo publico --version "${VERSION:-prueba}" >/dev/null

@@ -323,8 +323,19 @@ const path = require('path');
     if(!(await p.evaluate(() => document.body.textContent.includes('Inventario del sistema anterior') && document.querySelector('h1').textContent==='Entregables'))) errores.push(`${etiqueta}: la vista Entregables no se llama así o perdió lo publicado de un área archivada`);
     // en el teléfono el menú es un botón con icono que abre y cierra el lateral; un velo lo cierra
     if((opciones.viewport||{}).width <= 760){
+      // 1.25.3: una URL larga en «Avanzaron otros» no ensancha la página (en el teléfono se movía de lado)
       await p.goto(url + '#'); await p.waitForTimeout(300);
-      const t0 = await p.evaluate(() => { const t = document.getElementById('side-toggle'); return { icono: !!t.querySelector('svg'), texto: t.textContent.trim(), org: (document.getElementById('mob-org')||{}).textContent || '' }; });
+      const ancho = await p.evaluate(async () => {
+        META = {...(META||{}), tablero_de: "Ana Prueba"};
+        const yo = persona(VIEWER()||""), mio = PROJ.find(x=>esMio(x) && !x.restringido && !x.cerrado), otro = [...escribenSet()].find(n=>n && n!==yo);
+        if(!mio || !otro) return null;
+        mio.sesiones_recientes = [{fecha: today(), titulo: "PRUEBA-ANCHO", quien: otro, n: 998, avances: "Creó la tarea (https://app.clickup.com/t/1dfgkcn2ajy-una-ruta-muy-larga-sin-espacios-que-no-se-puede-partir-por-ningun-sitio)"}, ...(mio.sesiones_recientes||[])];
+        if(_M) _M.clear(); render(); await new Promise(r=>setTimeout(r,150));
+        return { sale: !!document.getElementById('avanzaron'), scroll: document.documentElement.scrollWidth, vista: innerWidth };
+      });
+      if(!ancho || !ancho.sale || ancho.scroll > ancho.vista) errores.push(`${etiqueta}: «Avanzaron otros» con una URL larga ensancha la página en el teléfono (${JSON.stringify(ancho)})`);
+      await p.goto(url + '#'); await p.reload(); await p.waitForTimeout(300);
+      const t0 =await p.evaluate(() => { const t = document.getElementById('side-toggle'); return { icono: !!t.querySelector('svg'), texto: t.textContent.trim(), org: (document.getElementById('mob-org')||{}).textContent || '' }; });
       await p.click('#side-toggle'); await p.waitForTimeout(200);
       const abierto = await p.evaluate(() => document.body.classList.contains('side-open'));
       await p.click('.side-veil', { position: { x: 380, y: 400 } }).catch(() => {}); await p.waitForTimeout(200);
