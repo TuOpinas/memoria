@@ -1493,6 +1493,9 @@ function registroTab(p){
 const REG_TODO = new Set();
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-reg-todo]"); if(!b) return; REG_TODO.add(b.dataset.regTodo); render(); });
 const TAREAS_OPEN = new Set();
+// Entregables y Taller de Qué hay siguen abiertos al volver de ver una pieza: abrirla redibuja la página (1.25.2)
+const QH_OPEN = new Set();
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-qh-open]"); if(!b) return; const k = b.dataset.qhOpen, d = b.closest("details"); setTimeout(()=>{ if(d && d.open) QH_OPEN.add(k); else QH_OPEN.delete(k); }, 0); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-tareas-open]"); if(!b) return; const id = b.dataset.tareasOpen; setTimeout(()=>{ const d = document.getElementById("todas-tareas"); if(d && d.open) TAREAS_OPEN.add(id); else TAREAS_OPEN.delete(id); }, 0); });
 function enfoqueProyecto(p){
   const g = ENFOQUE && (ENFOQUE.grupos||[]).find(g=>(g.pasos||[]).some(x=>x.proyecto===p.id));
@@ -1885,7 +1888,7 @@ function queHayTab(p){
     ${pend.length && CAN && OWNER && escribeAqui(p)?`<div class="prov-bar"><span>${cuantos(pend.length,"pieza tiene","piezas tienen")} una frase de resumen sugerida por la memoria a partir del título y el primer párrafo; la ves en cada pieza, en Entregables y Taller, marcada como provisional.</span><button type="button" class="btn" data-prov-ok="${esc(p.id)}">${pend.length===1?"Aceptar la 1":`Aceptar las ${pend.length}`}</button></div>`:""}</section>`;
   // las listas enteras, plegadas: son para consultar (1.24)
   const cuenta = list => { const n = {}; for(const z of list) n[z.estado||"otro"] = (n[z.estado||"otro"]||0)+1; return [n.vigente?`${n.vigente} vigente${n.vigente===1?"":"s"}`:"", n.borrador?cuantos(n.borrador,"borrador","borradores"):"", n.reemplazado?cuantos(n.reemplazado,"reemplazado","reemplazados"):""].filter(Boolean).join(" · "); };
-  const grupo = (t, list) => `<details class="card mas-c"><summary><h2 style="display:inline">${t}</h2><span class="more"> · ${list.length}${cuenta(list)?` · ${cuenta(list)}`:""}</span></summary><div style="margin-top:10px">${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</div></details>`;
+  const grupo = (t, list) => `<details class="card mas-c"${QH_OPEN.has(p.id+"|"+t)?" open":""}><summary data-qh-open="${esc(p.id+"|"+t)}"><h2 style="display:inline">${t}</h2><span class="more"> · ${list.length}${cuenta(list)?` · ${cuenta(list)}`:""}</span></summary><div style="margin-top:10px">${list.length ? list.slice().sort((x,y)=>(y.actualizado||"").localeCompare(x.actualizado||"")).map(z=>piezaFila(p,z)).join("") : `<p class="empty">Nada todavía.</p>`}</div></details>`;
   return top + grupo("Entregables", piezas.filter(z=>z.tipo==="entregable")) + grupo("Taller", piezas.filter(z=>z.tipo==="taller"));
 }
 document.addEventListener("click", async e => { const b = e.target.closest && e.target.closest("[data-prov-ok]"); if(!b || !CAN || !OWNER) return;
