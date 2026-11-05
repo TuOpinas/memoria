@@ -18,3 +18,18 @@ class OldPython(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InlinedRegion(unittest.TestCase):
+    """Python 3.9 misreads very long source lines with non-ASCII characters («Non-UTF-8 code»): the region inline.py
+    writes into the scripts is short ASCII lines only (found by CI on 2026-11-05, in permisos.py)."""
+    def test_region_is_short_ascii(self):
+        import sys as _sys
+        _sys.path.insert(0, str(PKG.parent))
+        import inline
+        for script in inline.SCRIPTS:
+            t = script.read_text(encoding="utf-8")
+            region = t[t.index(inline.BEGIN):t.index(inline.END)]
+            with self.subTest(script=script.name):
+                self.assertTrue(region.isascii())
+                self.assertLess(max(len(l) for l in region.split("\n")), 1000)

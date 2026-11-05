@@ -24,7 +24,10 @@ SCRIPTS = [PL / "skills/sesion/abrir.py", PL / "skills/sesion/cerrar.py", PL / "
 
 def region() -> str:
     src = {m: (CORE / "context_core" / f"{m}.py").read_text(encoding="utf-8") for m in MODULES}
-    body = ",\n".join(f"    {m!r}: {src[m]!r}" for m in MODULES)
+    # one short ASCII literal per source line: Python 3.9's tokenizer misreads very long lines with non-ASCII characters
+    # («Non-UTF-8 code»), which is what each person's Mac runs
+    lit = lambda text: "(\n" + "".join(f"        {ascii(l)}\n" for l in text.splitlines(keepends=True)) + "    )"
+    body = ",\n".join(f"    {m!r}: {lit(src[m])}" for m in MODULES)
     return f'''{BEGIN}
 def _context_core():
     import sys as _s, types as _t
