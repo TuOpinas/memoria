@@ -23,10 +23,12 @@ def summary(r):
 
 
 class Packs(unittest.TestCase):
-    def test_unknown_language_is_spanish(self):
+    def test_no_language_is_spanish_unknown_fails(self):
         self.assertIs(language.pack(None), language.ES)
-        self.assertIs(language.pack("xx"), language.ES)
-        self.assertEqual(load_root(ROOT, "xx").language, "es")
+        self.assertEqual(load_root(ROOT).language, "es")
+        for code in ("xx", "en"):
+            with self.subTest(code=code), self.assertRaises(ValueError):
+                load_root(ROOT, code)
 
     def test_renamed_root_reads_the_same(self):
         test_pack = dataclasses.replace(language.ES, code="zz", **NAMES)

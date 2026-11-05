@@ -16,10 +16,6 @@ class OldPython(unittest.TestCase):
                 self.assertEqual([n for n in NEWER if n in src], [])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class InlinedRegion(unittest.TestCase):
     """Python 3.9 misreads very long source lines with non-ASCII characters («Non-UTF-8 code»): the region inline.py
     writes into the scripts is short ASCII lines only (found by CI on 2026-11-05, in permisos.py)."""
@@ -33,3 +29,7 @@ class InlinedRegion(unittest.TestCase):
             with self.subTest(script=script.name):
                 self.assertTrue(region.isascii())
                 self.assertLess(max(len(l) for l in region.split("\n")), 1000)
+
+
+if __name__ == "__main__":
+    unittest.main()

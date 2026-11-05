@@ -89,7 +89,7 @@ def main(argv):
         for nombre, ruta, h in huellas:
             n = shlex.quote(nombre)
             url = shlex.quote(f"{REPO}/{ref}/plugins/memoria/{ruta}")
-            partes.append(f"{{ echo '{h}  {nombre}' | sha256sum -c --status 2>/dev/null || curl -sfL -o {n} {url}; }}")
+            partes.append(f"{{ echo '{h}  {nombre}' | sha256sum -c --status 2>/dev/null || curl -sfL --compressed -o {n} {url}; }}")
         lista = " ".join(f"{h} {shlex.quote(n)}" for n, _, h in huellas)
         partes.append(f"printf '%s  %s\\n' {lista} | sha256sum -c --quiet")
         return " && ".join(partes)

@@ -7,7 +7,7 @@ The Memoria method as records: one Python package that the plugin scripts, the h
 |---|---|
 | `context_core/records.py` | The record model: root, people, area rows, areas, projects, Estatus, decisions, sessions, steps, deliverables, workshop files, premises |
 | `context_core/language.py` | Language packs: how a root in one language names its reserved folders and files, sections, register fields and header keys. Spanish is the first pack; a root has one language (decision of 2026-11-05) |
-| `context_core/parse.py` | One method file's text to records. Pure functions; the one copy of the rules the scripts used to duplicate |
+| `context_core/parse.py` | One method file's text to records. Pure functions. Where the scripts' shared rules move one by one: today the «who writes» rules (via `compat`); the rest in step 1 |
 | `context_core/storage.py` | The storage adapter: read with a version, stat, list, write only if unchanged, make_dir, move without overwriting, lock. No delete; nothing outside the root. `FolderStorage` first |
 | `context_core/load.py` | A whole root to a `Root`, through the storage adapter, never reading `restringido/`, `fuentes/` or restricted areas |
 | `context_core/compat.py` | The scripts' Spanish names and dict shapes over the package, while they move; retires with the language packs |

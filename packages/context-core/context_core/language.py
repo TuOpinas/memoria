@@ -100,5 +100,9 @@ PACKS = {"es": ES}
 
 
 def pack(code: Optional[str]) -> Pack:
-    """The pack for a language code; Spanish when the code is missing or has no pack yet."""
-    return PACKS.get((code or "es").lower(), ES)
+    """The pack for a language code; Spanish when no code is given. A code with no pack is an error, not Spanish:
+    reading an English root with Spanish names would find nothing and look empty."""
+    c = (code or "es").lower()
+    if c not in PACKS:
+        raise ValueError(f"no language pack for {code!r} (have: {', '.join(sorted(PACKS))})")
+    return PACKS[c]

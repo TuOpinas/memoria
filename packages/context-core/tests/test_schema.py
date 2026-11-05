@@ -1,5 +1,5 @@
-"""The first SQL schema covers the record model: every field of every stored record has a column, every table carries
-org_id and row-level security. Parses the SQL with pglast when it is installed (it is not a dependency)."""
+"""The first SQL schema covers the record model: every field of every stored record has a column, every tenant table
+carries org_id, and every table, organization included, has row-level security. Parses the SQL with pglast when it is installed (it is not a dependency)."""
 import dataclasses, pathlib, re, sys, unittest
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
@@ -40,6 +40,14 @@ class Schema(unittest.TestCase):
                 self.assertIn("org_id", columns(table))
                 self.assertIn(f"'{table}'", listed)
         self.assertIn("FORCE ROW LEVEL SECURITY", SQL)
+
+    def test_no_table_without_isolation(self):
+        """Every table the file creates is isolated: the tenant tables by org_id in the loop, organization by its id."""
+        created = set(re.findall(r"^CREATE TABLE (\w+)", SQL, re.M))
+        listed = set(re.findall(r"'(\w+)'", re.search(r"ARRAY\[(.*?)\] LOOP", SQL, re.S).group(1)))
+        self.assertEqual(created - listed, {"organization"})
+        self.assertRegex(SQL, r"ALTER TABLE organization FORCE ROW LEVEL SECURITY")
+        self.assertRegex(SQL, r"CREATE POLICY tenant ON organization USING \(id = ")
 
     def test_parses(self):
         try:

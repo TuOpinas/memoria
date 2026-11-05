@@ -51,8 +51,25 @@ def apply(text: str) -> str:
     return text[:a] + region() + text[b:]
 
 
+def unlisted() -> list:
+    """Files of the plugin that use context_core but are not in SCRIPTS: they would pass every check and fail with
+    «No module named 'context_core'» on each person's computer (review of 1.25.2, finding 5)."""
+    out = []
+    for p in sorted((REPO / "plugins").rglob("*")):
+        if p.is_file() and p.suffix in (".py", ".sh") and p not in SCRIPTS:
+            t = p.read_text(encoding="utf-8", errors="replace")
+            if re.search(r"^\s*(?:from|import)\s+context_core\b", t, re.M):
+                out.append(p.relative_to(REPO))
+    return out
+
+
 def main(argv):
     check = "--check" in argv
+    stray = unlisted()
+    if stray:
+        print("these files use context_core and inline.py does not fill them: " + ", ".join(map(str, stray))
+              + " (add them to SCRIPTS with a region)")
+        return 1
     stale = []
     for p in SCRIPTS:
         t = p.read_text(encoding="utf-8")

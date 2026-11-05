@@ -2,8 +2,8 @@
 -- Step 2 fills these tables as the index of each root (a cache rebuilt from the folder); step 4 makes them the source.
 -- Plain PostgreSQL only, so changing host is a dump and a restore (hosted-stack.md, «Rule for the database»).
 --
--- Every table carries org_id, and row-level security filters by the organization set in each transaction from the
--- verified request (hosted-security.md, gap 3): the application role cannot bypass it, migrations run with another role.
+-- Every table but organization carries org_id, and row-level security filters every table, organization included
+-- (by its id), by the organization set in each transaction from the verified request (hosted-security.md, gap 3): the application role cannot bypass it, migrations run with another role.
 -- Nested parts of a record that are always read with it (the Estatus, a decision reference) are jsonb; lists of names
 -- are text[]. Names follow records.py; tests/test_schema.py fails if a record field has no column.
 
@@ -11,7 +11,6 @@ CREATE TABLE organization (
     id          uuid PRIMARY KEY,
     name        text NOT NULL,
     region      text NOT NULL DEFAULT 'us-central1',
-    language    text NOT NULL DEFAULT 'es',          -- the root's language: reserved names and spellings (2026-11-05)
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -22,7 +21,7 @@ CREATE TABLE root (
     method_line         text NOT NULL DEFAULT '',
     method_version      integer[],
     method_fingerprint  text,
-    language            text NOT NULL DEFAULT 'es',
+    language            text NOT NULL DEFAULT 'es',      -- the root's language pack (language.py)
     timezone            text NOT NULL DEFAULT 'America/Mexico_City',
     context_owner       text NOT NULL DEFAULT '',
     administrator       text NOT NULL DEFAULT '',
@@ -204,3 +203,9 @@ BEGIN
                        'WITH CHECK (org_id = current_setting(''app.org_id'')::uuid)', t);
     END LOOP;
 END $$;
+ALTER TABLE organization ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant ON organization USING (id = current_setting('app.org_id')::uuid)
+    WITH CHECK (id = current_setting('app.org_id')::uuid);
+-- Finding the organization of a verified account happens before app.org_id is set: it belongs to a separate lookup with
+-- its own role (step 1), never to the application role.

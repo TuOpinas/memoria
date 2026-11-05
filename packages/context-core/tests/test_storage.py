@@ -5,7 +5,7 @@ import os, pathlib, sys, tempfile, unittest
 CORE = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CORE))
 
-from context_core.storage import Conflict, FolderStorage, OutsideRoot, Storage  # noqa: E402
+from context_core.storage import Conflict, FolderStorage, NotUTF8, OutsideRoot, Storage  # noqa: E402
 
 
 class Folder(unittest.TestCase):
@@ -35,8 +35,8 @@ class Folder(unittest.TestCase):
         doc = self.st.read("ventas/area.md")
         self.assertEqual(doc.text, "# Ventas\n\nx\n")
         self.assertTrue(doc.crlf)
-        self.st.write("ventas/area.md", doc.text + "y\n", expected=doc.version, crlf=doc.crlf)
-        self.assertEqual((self.root / "ventas" / "area.md").read_bytes(), b"# Ventas\r\n\r\nx\r\ny\r\n")
+        self.st.write("ventas/area.md", doc.text + "y\n", expected=doc.version)   # CRLF and BOM follow the version
+        self.assertEqual((self.root / "ventas" / "area.md").read_bytes(), b"\xef\xbb\xbf# Ventas\r\n\r\nx\r\ny\r\n")
         self.assertEqual([e.name for e in self.st.list("ventas")], ["area.md"])   # no temporary left behind
 
     def test_write_fails_on_a_changed_file(self):
@@ -58,8 +58,20 @@ class Folder(unittest.TestCase):
         self.assertEqual(self.st.read("ventas/archivo/a.md").text, "a")
 
     def test_lock(self):
-        with self.st.lock("ventas"):
-            pass
+        with self.st.lock("ventas") as taken:
+            self.assertEqual(taken, os.name == "posix")
+
+    def test_not_utf8_is_refused(self):
+        (self.root / "ventas" / "latin1.md").write_bytes("año".encode("latin-1"))
+        doc = self.st.read("ventas/latin1.md")
+        self.assertFalse(doc.utf8)
+        with self.assertRaises(NotUTF8):
+            self.st.write("ventas/latin1.md", doc.text, expected=doc.version)
+        self.assertEqual((self.root / "ventas" / "latin1.md").read_bytes(), "año".encode("latin-1"))
+
+    def test_list_skips_links_out_of_the_root(self):
+        os.symlink(self.tmp / "fuera.md", self.root / "ventas" / "enlace.md")
+        self.assertEqual([e.name for e in self.st.list("ventas")], ["area.md"])
 
 
 if __name__ == "__main__":

@@ -107,5 +107,47 @@ x
                 self.assertEqual(FORMS[v].project("ventas--cuentas").status.source, "Estatus")
 
 
+class FailsClosed(unittest.TestCase):
+    """What the 1.25.1 scripts do not read, the loader does not read either (review of 1.25.2, finding 3)."""
+    def copy(self):
+        import shutil, tempfile
+        d = pathlib.Path(tempfile.mkdtemp()) / "raiz"
+        shutil.copytree(comun.RAIZ, d)
+        return d
+
+    def test_area_without_row(self):
+        d = self.copy()
+        (d / "oculta").mkdir(); (d / "oculta" / "area.md").write_text("# Oculta\n\n## Qué es\nSECRETO\n", encoding="utf-8")
+        a = load_root(d).area("oculta")
+        self.assertTrue(a.restricted)
+        self.assertEqual(a.what, "")
+
+    def test_row_without_backticks_keeps_restricted(self):
+        d = self.copy()
+        g = d / "guia.md"
+        g.write_text(g.read_text(encoding="utf-8").replace("| `personas/` |", "| personas/ |"), encoding="utf-8")
+        r = load_root(d)
+        self.assertTrue(r.area("personas").restricted)
+        self.assertTrue(next(x for x in r.area_rows if x.slug == "personas").restricted)
+
+    def test_short_row_is_left_out_and_said(self):
+        d = self.copy()
+        g = d / "guia.md"
+        t = g.read_text(encoding="utf-8")
+        line = next(l for l in t.split("\n") if l.startswith("| `personas/`"))
+        g.write_text(t.replace(line, "| `personas/` | Nómina |"), encoding="utf-8")
+        r = load_root(d)
+        self.assertTrue(r.area("personas").restricted)
+        self.assertTrue(any("personas" in w and "columnas" in w for w in r.warnings))
+
+    def test_project_outside_the_index(self):
+        d = self.copy()
+        (d / "ventas" / "suelto").mkdir()
+        (d / "ventas" / "suelto" / "proyecto.md").write_text("# Suelto\n\n## Objetivo\nSECRETO\n", encoding="utf-8")
+        p = load_root(d).project("ventas/suelto")
+        self.assertTrue(p.restricted)
+        self.assertEqual(p.objective, "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -338,23 +338,30 @@ def _table_rows(block: str) -> tuple[Optional[list[str]], list[list[str]]]:
     return header, rows
 
 
-def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES) -> list[AreaRow]:
+def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optional[list] = None) -> list[AreaRow]:
+    """The rows of the «Áreas» table. The slug is the first cell without backticks and the trailing slash, as the 1.25.1
+    generator reads it; a row with fewer cells than the header needs is left out and said in `warnings`, so its area has
+    no row and loads closed."""
     header, rows = _table_rows(section(guia, lang.areas))
     if header is None:
         return []
     col = _area_columns(header)
     pcol = _people_columns(header)
+    needed = max(v for v in col.values() if v is not None) + 1
     out = []
     for cells in rows:
-        m = re.search(r"`([^`/]+)/?`", cells[0]) if cells else None
-        if not m:
+        if not cells or not cells[0].strip("`").rstrip("/"):
+            continue
+        if len(cells) < needed:
+            if warnings is not None:
+                warnings.append(f"la fila «{cells[0].strip('`')}» de la tabla de áreas tiene {len(cells)} columnas y hacen falta {needed}")
             continue
         get = lambda i: cells[i] if i is not None and i < len(cells) else ""
         resp_acc, coll_acc, warning = row_accounts(header, cells, reg)
         collaborators = (names_in(get(pcol["collaborates"]), reg) if pcol["collaborates"] is not None and pcol["account"] is None
                          else sorted(coll_acc))
         out.append(AreaRow(
-            slug=m.group(1), what=get(col["what"]), responsible=get(col["responsible"]),
+            slug=cells[0].strip("`").rstrip("/"), what=get(col["what"]), responsible=get(col["responsible"]),
             responsible_accounts=resp_acc, collaborators=collaborators, collaborator_accounts=coll_acc,
             readers=get(col["readers"]), access=get(col["access"]), restricted=area_is_restricted(cells, header),
             warnings=[warning] if warning else []))

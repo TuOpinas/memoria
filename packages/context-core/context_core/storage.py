@@ -22,7 +22,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Iterator, Optional, Protocol, runtime_checkable
 
-__all__ = ["Version", "Document", "Entry", "Conflict", "OutsideRoot", "Storage", "FolderStorage"]
+__all__ = ["Version", "Document", "Entry", "Conflict", "OutsideRoot", "NotUTF8", "Storage", "FolderStorage"]
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,8 @@ class Version:
     token: str
     size: int
     modified_ns: int
+    crlf: bool = False   # the file used «\r\n»: a write that names this version keeps it
+    bom: bool = False    # it started with a UTF-8 BOM: kept too
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,7 @@ class Document:
     text: str          # «\r\n» turned into «\n», BOM dropped
     version: Version
     crlf: bool         # the file used «\r\n»: a write keeps it
+    utf8: bool = True  # False: the bytes are not valid UTF-8; the text is a lossy reading and `write` refuses it
 
 
 @dataclass(frozen=True)
@@ -52,6 +55,10 @@ class Conflict(Exception):
     """The file changed between the read and the write."""
 
 
+class NotUTF8(ValueError):
+    """The file is not valid UTF-8: rewriting it from a lossy reading would corrupt it."""
+
+
 class OutsideRoot(ValueError):
     """The path is absolute, climbs with «..», or resolves outside the root."""
 
@@ -61,10 +68,10 @@ class Storage(Protocol):
     def read(self, path: str) -> Optional[Document]: ...
     def stat(self, path: str) -> Optional[Entry]: ...
     def list(self, path: str = "") -> list[Entry]: ...
-    def write(self, path: str, text: str, *, expected: Optional[Version], crlf: bool = False) -> Version: ...
+    def write(self, path: str, text: str, *, expected: Optional[Version], crlf: Optional[bool] = None) -> Version: ...
     def make_dir(self, path: str) -> None: ...
     def move(self, src: str, dst: str) -> None: ...
-    def lock(self, path: str) -> contextlib.AbstractContextManager: ...
+    def lock(self, path: str) -> contextlib.AbstractContextManager[bool]: ...
     @property
     def name(self) -> str: ...
 
@@ -94,14 +101,18 @@ class FolderStorage:
         rel = clean(path)
         p = self.root / rel if rel else self.root
         # a symlink inside the root must not lead out of it
-        real = pathlib.Path(os.path.realpath(p))
-        if real != self.root and self.root not in real.parents:
+        if not self._inside(p):
             raise OutsideRoot(path)
         return p
 
     @staticmethod
     def _version(b: bytes, st: os.stat_result) -> Version:
-        return Version(hashlib.sha1(b).hexdigest(), st.st_size, st.st_mtime_ns)
+        return Version(hashlib.sha1(b).hexdigest(), st.st_size, st.st_mtime_ns,
+                       b"\r\n" in b, b.startswith(b"\xef\xbb\xbf"))
+
+    def _inside(self, p: pathlib.Path) -> bool:
+        real = pathlib.Path(os.path.realpath(p))
+        return real == self.root or self.root in real.parents
 
     def read(self, path: str) -> Optional[Document]:
         p = self._p(path)
@@ -111,8 +122,12 @@ class FolderStorage:
             st = os.stat(p)
         except (FileNotFoundError, IsADirectoryError, NotADirectoryError, PermissionError):
             return None
-        t = b.decode("utf-8-sig", errors="replace")
-        return Document(t.replace("\r\n", "\n"), self._version(b, st), "\r\n" in t)
+        try:
+            t, ok = b.decode("utf-8-sig"), True
+        except UnicodeDecodeError:
+            t, ok = b.decode("utf-8-sig", errors="replace"), False
+        v = self._version(b, st)
+        return Document(t.replace("\r\n", "\n"), v, v.crlf, ok)
 
     def stat(self, path: str) -> Optional[Entry]:
         p = self._p(path)
@@ -130,6 +145,9 @@ class FolderStorage:
         except OSError:
             return out
         for n in names:
+            # an entry that resolves outside the root (a symlink) is not part of it
+            if not self._inside(p / n):
+                continue
             try:
                 st = os.stat(p / n)
             except OSError:
@@ -145,15 +163,26 @@ class FolderStorage:
         except FileNotFoundError:
             return None
 
-    def write(self, path: str, text: str, *, expected: Optional[Version], crlf: bool = False) -> Version:
+    def write(self, path: str, text: str, *, expected: Optional[Version], crlf: Optional[bool] = None) -> Version:
         """Writes whole and atomically (a temporary beside it, then a rename). `expected=None` means the file must not
-        exist yet; otherwise its content must still be the one read. Callers hold `lock()` around read and write."""
+        exist yet; otherwise its content must still be the one read. Line endings and BOM follow `expected` unless
+        `crlf` says otherwise. A file that is not valid UTF-8 is refused (`NotUTF8`). Callers hold `lock()` around read
+        and write."""
         p = self._p(path)
         now = self._current(p)
         if (expected is None) != (now is None) or (now and expected and now.token != expected.token):
             raise Conflict(path)
-        if crlf:
+        if now is not None:
+            try:
+                p.read_bytes().decode("utf-8")
+            except UnicodeDecodeError:
+                raise NotUTF8(path)
+        use_crlf = crlf if crlf is not None else bool(expected and expected.crlf)
+        text = text.replace("\r\n", "\n")
+        if use_crlf:
             text = text.replace("\n", "\r\n")
+        if expected and expected.bom and not text.startswith("\ufeff"):
+            text = "\ufeff" + text
         fd, tmp = tempfile.mkstemp(prefix="." + p.name + ".", suffix=".memoria-tmp", dir=p.parent)
         try:
             with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
@@ -170,24 +199,36 @@ class FolderStorage:
     def move(self, src: str, dst: str) -> None:
         """Moves a file within the root; fails if the destination exists (archiving never overwrites)."""
         s, d = self._p(src), self._p(dst)
-        if d.exists():
-            raise Conflict(dst)
         d.parent.mkdir(parents=True, exist_ok=True)
-        os.rename(s, d)
+        # link + unlink: the link fails if the destination exists, with no window between a check and a rename
+        try:
+            os.link(s, d)
+        except FileExistsError:
+            raise Conflict(dst)
+        except OSError:
+            # a filesystem without hard links (some synced folders): the check-then-rename fallback
+            if d.exists() or d.is_symlink():
+                raise Conflict(dst)
+            os.rename(s, d)
+            return
+        os.unlink(s)
 
     @contextlib.contextmanager
-    def lock(self, path: str) -> Iterator[None]:
-        """A lock between processes of this machine, as cerrar.py's Cerrojo: a file in the shared temp folder."""
+    def lock(self, path: str) -> Iterator[bool]:
+        """A lock between processes of this machine, the same file as cerrar.py's Cerrojo so both exclude each other.
+        Yields whether the lock was taken: False where there is no flock (Windows), and the caller decides."""
         h = hashlib.sha1(str(self._p(path).resolve()).encode()).hexdigest()[:16]
         f = None
         try:
             import fcntl
-            f = open(os.path.join(tempfile.gettempdir(), f"memoria-lock-{h}.lock"), "a+")
+            f = open(os.path.join(tempfile.gettempdir(), f"memoria-cerrar-{h}.lock"), "a+")
             fcntl.flock(f, fcntl.LOCK_EX)
         except Exception:
+            if f:
+                f.close()
             f = None
         try:
-            yield
+            yield f is not None
         finally:
             if f:
                 try:

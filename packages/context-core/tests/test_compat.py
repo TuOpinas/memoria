@@ -9,7 +9,6 @@ sys.path[:0] = [str(CORE), str(REPO / "pruebas")]
 from context_core import compat, parse  # noqa: E402
 import comun  # noqa: E402
 
-GEN = REPO / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"
 
 
 REF = pathlib.Path(__file__).resolve().parent / "reference" / "quien_escribe_1_25_1.py"
