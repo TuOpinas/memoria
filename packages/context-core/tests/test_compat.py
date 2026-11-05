@@ -1,5 +1,5 @@
 """compat returns exactly what the scripts' own copies of «quién escribe» return, on the test root in its three forms
-and on the cases of pruebas/sesion/probar_cuentas.py. The copy is taken from generar_vista.py, which has not moved."""
+and on the cases of pruebas/sesion/probar_cuentas.py. The copy is the frozen 1.25.1 block in tests/reference/, since every script now takes it from the package."""
 import pathlib, re, sys, unicodedata, unittest
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
@@ -12,10 +12,13 @@ import comun  # noqa: E402
 GEN = REPO / "plugins" / "memoria" / "skills" / "tablero" / "generar_vista.py"
 
 
+REF = pathlib.Path(__file__).resolve().parent / "reference" / "quien_escribe_1_25_1.py"
+
+
 def block():
-    t = GEN.read_text(encoding="utf-8")
+    """The block as the scripts carried it in 1.25.1, frozen in tests/reference/."""
     ns = {"re": re, "unicodedata": unicodedata}
-    exec(t[t.index("# --- quién escribe"):t.index("# --- fin de quién escribe ---")], ns)
+    exec(REF.read_text(encoding="utf-8"), ns)
     return ns
 
 

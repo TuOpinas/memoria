@@ -18,13 +18,20 @@ NAMES = ["fecha_valida", "fechas_en", "frontmatter", "seccion", "bullets", "clav
          "altas_provisionales"]
 
 
+REF = pathlib.Path(__file__).resolve().parent / "reference" / "quien_escribe_1_25_1.py"
+WHO = {"clave_nombre", "_titulo", "cuentas", "registro_personas", "persona", "nombres_de", "colaboran_en",
+       "cuentas_de_nombres", "altas_provisionales"}
+
+
 def script_functions():
+    """The parsing functions of generar_vista.py, and «quién escribe» from its 1.25.1 copy (the scripts now take it from
+    the package, so comparing against them would compare the package with itself)."""
     src = GEN.read_text(encoding="utf-8")
     ns = {"re": re, "unicodedata": unicodedata, "datetime": datetime, "os": os}
-    for line in ("CORREO", "PALABRA_COLABORA", "LINEA_COLABORA"):
-        exec(re.search(rf"^{line} = .*$", src, re.M).group(0), ns)
+    exec(REF.read_text(encoding="utf-8"), ns)
     for n in NAMES:
-        exec(re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S).group(0), ns)
+        if n not in WHO:
+            exec(re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S).group(0), ns)
     return ns
 
 

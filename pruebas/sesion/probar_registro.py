@@ -52,11 +52,11 @@ ok(C("Colabora: Marco Herrero (marco.herrero@smilepill.mx)") == {"marco.herrero@
 for av_, g_ in [("dos veces", "## Quién es quién\n- Ana · a@x.mx\n- Ana · b@x.mx\n"), ("dos líneas", "## Quién es quién\n- Ana · a@x.mx\n- Beto · a@x.mx\n"),
                 ("no lleva", "## Quién es quién\n- Ana\n"), ("no se entiende", "## Quién es quién\n- Ana · a@x.mx · jefa\n")]:
     ok(any(av_ in x for x in R_(g_)["avisos"]), f"avisa: {av_}")
-# las siete copias que quedan son idénticas (abrir.py ya no lleva la suya)
-SITIOS = ["skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
+# el bloque es idéntico en los ocho scripts (desde el paso 0, todos lo toman de context_core)
+SITIOS = ["skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
           "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py", "skills/tablero/generar_vista.py", "verificar.sh"]
 bl = lambda p: (lambda s: s[s.index("# --- quién escribe"):s.index("# --- fin de quién escribe ---")])((PL / p).read_text(encoding="utf-8"))
-ok(all(bl(p) == bl(SITIOS[0]) for p in SITIOS), "el bloque es idéntico en los siete scripts que aún lo copian")
+ok(all(bl(p) == bl(SITIOS[0]) for p in SITIOS), "el bloque es idéntico en los ocho scripts")
 
 print("\nLa misma raíz en la forma de la 1.22 y en la de la 1.25")
 R2, _ = raiz_migrada(); R5, _ = raiz_125()
