@@ -305,6 +305,44 @@ try:
                                                     "a1": {"clase": "afirma", "proyecto": "ventas--cuentas", "texto": "Una frase"}}), encoding="utf-8")
     rc, out, err = corre(DATOS, "propuestas", rot, "ventas--cuentas")
     ok(rc == 0 and '"a1"' in out and '"r1"' not in out, "una sugerencia «rotacion» de antes de la 1.23 no sale en la apertura (1.24.9)")
+
+    print("El prompt de la tarea, comparado por el script (1.25.4)")
+    plantilla = TABLERO / "tarea-prompt.md"
+    huecos = {"ORGANIZACION": "Acme \"$2025\"", "RUTA_RAIZ": "/Users/ana/Mi Drive/Acme `x`", "URL": "https://claude.ai/artifact/x", "MODO": "completo"}
+    hj = tmp / "huecos.json"; hj.write_text(json.dumps(huecos, ensure_ascii=False), encoding="utf-8")
+    vivo = plantilla.read_text(encoding="utf-8")
+    for k, v in huecos.items():
+        vivo = vivo.replace("{{" + k + "}}", v)
+    pv = tmp / "prompt.txt"
+    def compara(texto, h=hj):
+        pv.write_text(texto, encoding="utf-8")
+        return corre(DATOS, "prompt", pv, plantilla, h)
+    rc, out, err = compara("\n" + vivo.replace("\n", "  \r\n") + "\n\n")
+    ok(rc == 0 and out.strip() == "false", "el mismo prompt, con espacios y saltos de otra plataforma, no se marca desfasado")
+    rc, out, err = compara(json.dumps(vivo, ensure_ascii=False)[1:-1])
+    ok(rc == 0 and out.strip() == "false", "el prompt copiado del JSON con los saltos escritos como \\n tampoco")
+    import unicodedata
+    rc, out, err = compara(unicodedata.normalize("NFD", vivo))
+    ok(rc == 0 and out.strip() == "false", "los acentos en otra forma Unicode tampoco")
+    rc, out, err = compara(vivo.replace("tarea-tablero", "tablero"))
+    ok(rc == 0 and out.strip() == "true" and "difiere en la línea" in err, "un prompt distinto se marca desfasado y dice dónde")
+    otra = tmp / "otra.json"; otra.write_text(json.dumps(dict(huecos, ORGANIZACION="Otra")), encoding="utf-8")
+    rc, out, err = compara(vivo, otra)
+    ok(rc == 0 and out.strip() == "true", "un prompt de otra organización se marca desfasado")
+    pv.unlink()
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, hj)
+    ok(rc == 2 and not out.strip(), "sin el prompt guardado, sale con 2 y no imprime nada")
+    pv.write_text(vivo, encoding="utf-8")
+    rc, out, err = corre(DATOS, "prompt", pv, tmp / "no.md", hj)
+    ok(rc == 2 and not out.strip(), "sin la plantilla, igual")
+    malo = tmp / "malo.json"; malo.write_text('{"ORGANIZACION": "Acme"}', encoding="utf-8")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, malo)
+    ok(rc == 2 and "cuatro huecos" in err, "huecos.json sin los cuatro valores, igual")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla)
+    ok(rc == 2 and not out.strip(), "con los argumentos mal, igual")
+    pv.write_bytes(b"\xff\xfe no es utf-8")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, hj)
+    ok(rc == 2 and not out.strip(), "un prompt que no es UTF-8, igual")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{len(fallos)} fallo(s).")

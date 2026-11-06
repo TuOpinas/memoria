@@ -21,7 +21,7 @@ Uso: python3 preparar.py <destino en la computadora> <ruta dentro del plugin>...
 
 Con --trabajo deja la carpeta de trabajo lista para la puesta al día del tablero: la crea, vacía lo que haya de otra
 corrida o de otro tablero (`base`, `salida`, `cola`, `cierres`, `copia-tablero` y, con --copia, la copia de los archivos de
-la raíz), deja `retenidos.json` y `ajenos.json` vacíos y escribe `inicio.json` con el instante en que empieza, del que
+la raíz), borra lo que la corrida anterior copió con Write (`retenidos.json`, `ajenos.json`, los .jsonl de la base, el inventario, el juicio, el enfoque y el prompt) y escribe `inicio.json` con el instante en que empieza, del que
 plan_subida.py saca la duración. Corre antes que nada, también sin consola.
 """
 import hashlib
@@ -57,9 +57,15 @@ def main(argv):
             shutil.rmtree(os.path.join(trabajo, sub), ignore_errors=True)
         if copia:
             shutil.rmtree(copia, ignore_errors=True)
-        for nombre in ("retenidos.json", "ajenos.json"):
-            with open(os.path.join(trabajo, nombre), "w", encoding="utf-8") as f:
-                f.write("[]")         # la cola los rellena si hay algo que retener; si no, ya están
+        # lo que la corrida escribe con la herramienta Write (1.25.4) se borra, para que una copia que esta corrida no
+        # hizo no se lea como suya; Write solo crea archivos nuevos o reescribe los que esta misma sesión escribió.
+        # retenidos.json y ajenos.json que falten cuentan como listas vacías
+        for nombre in ("retenidos.json", "ajenos.json", "cola.jsonl", "cierres.jsonl", "publicado.jsonl", "inventario.json",
+                       "juicio.json", "enfoque.json", "prompt-tarea.txt", "huecos.json"):
+            try:
+                os.remove(os.path.join(trabajo, nombre))
+            except FileNotFoundError:
+                pass
         with open(os.path.join(trabajo, "inicio.json"), "w", encoding="utf-8") as f:
             json.dump({"inicio": datetime.datetime.now().astimezone().isoformat(timespec="seconds")}, f)
     plugin = os.path.dirname(os.path.abspath(__file__))
