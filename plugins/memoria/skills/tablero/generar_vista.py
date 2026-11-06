@@ -1081,9 +1081,9 @@ PREVIOS = pathlib.Path(_arg("--previos")) if _arg("--previos") else None
 # a una sesión, o no encontraron su paso); el botón no los cuenta como «hace falta sincronizar».
 # --cola-ajena <json>: de esos, los que son de un área de otra cuenta; la página dice a quién pasárselos
 _aj = _arg("--cola-ajena")
-COLA_AJENA = json.loads(pathlib.Path(_aj).read_text(encoding="utf-8")) if _aj else None
+COLA_AJENA = json.loads(pathlib.Path(_aj).read_text(encoding="utf-8")) if _aj and pathlib.Path(_aj).exists() else ([] if _aj else None)   # sin escribir: nada retenido (1.25.4)
 _ret = _arg("--cola-retenida")
-COLA_RETENIDA = json.loads(pathlib.Path(_ret).read_text(encoding="utf-8")) if _ret else None
+COLA_RETENIDA = json.loads(pathlib.Path(_ret).read_text(encoding="utf-8")) if _ret and pathlib.Path(_ret).exists() else ([] if _ret else None)
 # --ruta se acepta por compatibilidad con tareas viejas y no se guarda: la ruta de Drive lleva el correo de la persona
 # un solo modo desde la 1.18; --modo, si llega de una tarea vieja, no cambia nada
 MODO = "completo"

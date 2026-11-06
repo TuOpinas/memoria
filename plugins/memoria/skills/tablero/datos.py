@@ -58,11 +58,13 @@ Uso, en el orden de la puesta al día:
       propuestas.json, los proyectos y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
   datos.py propuestas <propuestas.json> <area>--<proyecto>
       Las sugerencias de un proyecto, una por línea en JSON con su id, para la apertura de una sesión (skill sesion).
-  datos.py prompt <prompt de la tarea> <tarea-prompt.md> <organización> <ruta de la raíz> <url> <modo>
+  datos.py prompt <prompt de la tarea> <tarea-prompt.md> <huecos.json>
       1.25.4: compara el prompt de la tarea del tablero (el `derived_state.prompt` de list_triggers, guardado tal cual
-      con la herramienta Write) con tarea-prompt.md con sus cuatro huecos sustituidos, sin contar espacios al final de
-      línea ni líneas vacías al final. Imprime «true» si la tarea está desfasada y «false» si coincide: es lo que va en
-      --tarea-desfasada. Sale con 2 si falta alguno de los dos archivos.
+      con la herramienta Write) con tarea-prompt.md con sus cuatro huecos sustituidos por los de huecos.json
+      ({"ORGANIZACION": …, "RUTA_RAIZ": …, "URL": …, "MODO": …}, también escrito con Write: así ningún valor copiado va
+      en el comando), sin contar espacios al final de línea ni líneas vacías al principio o al final. Imprime «true» si la
+      tarea está desfasada y «false» si coincide: es lo que va en --tarea-desfasada. Sale con 2, sin imprimir nada, si
+      algún archivo falta, no es UTF-8 o huecos.json no trae los cuatro.
 No lee ni escribe nada de la carpeta de memoria.
 """
 import sys, json, pathlib, re, html, shutil, time
@@ -646,19 +648,39 @@ def pagina(vista, destino, titulo):
 
 
 def _sin_bordes(txt):
-    return "\n".join(l.rstrip() for l in txt.replace("\r\n", "\n").strip("\n").split("\n"))
+    import unicodedata
+    if "\n" not in txt.strip() and "\\n" in txt:   # copiado del JSON con los saltos escritos como \n: se decodifica
+        try:
+            txt = json.loads('"' + txt.strip().strip('"') + '"')
+        except ValueError:
+            pass
+    txt = unicodedata.normalize("NFC", txt.replace("\r\n", "\n"))
+    return "\n".join(l.rstrip() for l in txt.strip("\n").split("\n"))
 
 
-def prompt(vivo, plantilla, org, ruta, url, modo):
+HUECOS = ("ORGANIZACION", "RUTA_RAIZ", "URL", "MODO")
+
+
+def prompt(vivo, plantilla, huecos):
     try:
         v = pathlib.Path(vivo).read_text(encoding="utf-8")
         p = pathlib.Path(plantilla).read_text(encoding="utf-8")
-    except OSError as e:
-        print(f"ERROR: no se pudo leer {e.filename}", file=sys.stderr)
+        h = json.loads(pathlib.Path(huecos).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"ERROR: no se pudo leer {getattr(e, 'filename', None) or e}", file=sys.stderr)
         sys.exit(2)
-    for k, val in (("ORGANIZACION", org), ("RUTA_RAIZ", ruta), ("URL", url), ("MODO", modo)):
-        p = p.replace("{{" + k + "}}", val)
-    print("false" if _sin_bordes(v) == _sin_bordes(p) else "true")
+    if not isinstance(h, dict) or not all(isinstance(h.get(k), str) and h.get(k) for k in HUECOS):
+        print(f"ERROR: {huecos} no trae los cuatro huecos ({', '.join(HUECOS)})", file=sys.stderr)
+        sys.exit(2)
+    for k in HUECOS:
+        p = p.replace("{{" + k + "}}", h[k])
+    a, b = _sin_bordes(v).split("\n"), _sin_bordes(p).split("\n")
+    if a == b:
+        print("false")
+        return
+    n = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    print(f"difiere en la línea {n + 1}: tarea «{a[n] if n < len(a) else ''}» · plugin «{b[n] if n < len(b) else ''}»", file=sys.stderr)
+    print("true")
 
 
 def main():
@@ -675,8 +697,11 @@ def main():
         publicar(a[1], a[2:])
     elif len(a) == 4 and a[0] == "partir":
         partir(a[1], a[2], a[3])
-    elif len(a) == 7 and a[0] == "prompt":
+    elif len(a) == 4 and a[0] == "prompt":
         prompt(*a[1:])
+    elif a and a[0] == "prompt":
+        print("ERROR: datos.py prompt <prompt de la tarea> <tarea-prompt.md> <huecos.json>", file=sys.stderr)
+        sys.exit(2)
     elif len(a) == 5 and a[0] == "pagina" and a[3] == "--titulo":
         pagina(a[1], a[2], a[4])
     else:
