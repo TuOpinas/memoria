@@ -58,6 +58,11 @@ Uso, en el orden de la puesta al día:
       propuestas.json, los proyectos y el detalle de cada área que el tablero tiene; el detalle.json único si es de la 1.24.1).
   datos.py propuestas <propuestas.json> <area>--<proyecto>
       Las sugerencias de un proyecto, una por línea en JSON con su id, para la apertura de una sesión (skill sesion).
+  datos.py prompt <prompt de la tarea> <tarea-prompt.md> <organización> <ruta de la raíz> <url> <modo>
+      1.25.4: compara el prompt de la tarea del tablero (el `derived_state.prompt` de list_triggers, guardado tal cual
+      con la herramienta Write) con tarea-prompt.md con sus cuatro huecos sustituidos, sin contar espacios al final de
+      línea ni líneas vacías al final. Imprime «true» si la tarea está desfasada y «false» si coincide: es lo que va en
+      --tarea-desfasada. Sale con 2 si falta alguno de los dos archivos.
 No lee ni escribe nada de la carpeta de memoria.
 """
 import sys, json, pathlib, re, html, shutil, time
@@ -639,6 +644,23 @@ def pagina(vista, destino, titulo):
     print(json.dumps({"archivos": archivos}, ensure_ascii=False))
 
 
+
+def _sin_bordes(txt):
+    return "\n".join(l.rstrip() for l in txt.replace("\r\n", "\n").strip("\n").split("\n"))
+
+
+def prompt(vivo, plantilla, org, ruta, url, modo):
+    try:
+        v = pathlib.Path(vivo).read_text(encoding="utf-8")
+        p = pathlib.Path(plantilla).read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"ERROR: no se pudo leer {e.filename}", file=sys.stderr)
+        sys.exit(2)
+    for k, val in (("ORGANIZACION", org), ("RUTA_RAIZ", ruta), ("URL", url), ("MODO", modo)):
+        p = p.replace("{{" + k + "}}", val)
+    print("false" if _sin_bordes(v) == _sin_bordes(p) else "true")
+
+
 def main():
     a = sys.argv[1:]
     if len(a) == 2 and a[0] == "rutas":
@@ -653,6 +675,8 @@ def main():
         publicar(a[1], a[2:])
     elif len(a) == 4 and a[0] == "partir":
         partir(a[1], a[2], a[3])
+    elif len(a) == 7 and a[0] == "prompt":
+        prompt(*a[1:])
     elif len(a) == 5 and a[0] == "pagina" and a[3] == "--titulo":
         pagina(a[1], a[2], a[4])
     else:

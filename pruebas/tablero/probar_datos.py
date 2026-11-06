@@ -305,6 +305,24 @@ try:
                                                     "a1": {"clase": "afirma", "proyecto": "ventas--cuentas", "texto": "Una frase"}}), encoding="utf-8")
     rc, out, err = corre(DATOS, "propuestas", rot, "ventas--cuentas")
     ok(rc == 0 and '"a1"' in out and '"r1"' not in out, "una sugerencia «rotacion» de antes de la 1.23 no sale en la apertura (1.24.9)")
+
+    print("El prompt de la tarea, comparado por el script (1.25.4)")
+    plantilla = TABLERO / "tarea-prompt.md"
+    huecos = ("Acme", "/Users/ana/Mi Drive/Acme", "https://claude.ai/artifact/x", "completo")
+    vivo = plantilla.read_text(encoding="utf-8")
+    for k, v in zip(("ORGANIZACION", "RUTA_RAIZ", "URL", "MODO"), huecos):
+        vivo = vivo.replace("{{" + k + "}}", v)
+    pv = tmp / "prompt.txt"
+    pv.write_text("\n" + vivo.replace("\n", "  \r\n") + "\n\n", encoding="utf-8")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, *huecos)
+    ok(rc == 0 and out.strip() == "false", "el mismo prompt, con espacios y saltos de otra plataforma, no se marca desfasado")
+    pv.write_text(vivo.replace("tarea-tablero", "tablero"), encoding="utf-8")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, *huecos)
+    ok(rc == 0 and out.strip() == "true", "un prompt distinto se marca desfasado")
+    rc, out, err = corre(DATOS, "prompt", pv, plantilla, "Otra", *huecos[1:])
+    ok(rc == 0 and out.strip() == "true", "un prompt de otra organización se marca desfasado")
+    rc, out, err = corre(DATOS, "prompt", tmp / "no.txt", plantilla, *huecos)
+    ok(rc == 2 and "no se pudo leer" in err, "sin el prompt guardado, para en vez de decir que coincide")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{len(fallos)} fallo(s).")
