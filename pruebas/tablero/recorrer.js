@@ -323,17 +323,23 @@ const path = require('path');
     if(!(await p.evaluate(() => document.body.textContent.includes('Inventario del sistema anterior') && document.querySelector('h1').textContent==='Entregables'))) errores.push(`${etiqueta}: la vista Entregables no se llama así o perdió lo publicado de un área archivada`);
     // en el teléfono el menú es un botón con icono que abre y cierra el lateral; un velo lo cierra
     if((opciones.viewport||{}).width <= 760){
-      // 1.25.3: una URL larga en «Avanzaron otros» no ensancha la página (en el teléfono se movía de lado)
+      // 1.25.3: nada de «Avanzaron otros» sobresale por la derecha en el teléfono. Se mide cada elemento de la sección, no
+      // la página: con overflow-x:clip en html la página siempre mide lo mismo. Y la medida se prueba a sí misma: un bloque
+      // de 2000 px metido a propósito tiene que salir
       await p.goto(url + '#'); await p.waitForTimeout(300);
       const ancho = await p.evaluate(async () => {
         META = {...(META||{}), tablero_de: "Ana Prueba"};
         const yo = persona(VIEWER()||""), mio = PROJ.find(x=>esMio(x) && !x.restringido && !x.cerrado), otro = [...escribenSet()].find(n=>n && n!==yo);
         if(!mio || !otro) return null;
-        mio.sesiones_recientes = [{fecha: today(), titulo: "PRUEBA-ANCHO", quien: otro, n: 998, avances: "Creó la tarea (https://app.clickup.com/t/1dfgkcn2ajy-una-ruta-muy-larga-sin-espacios-que-no-se-puede-partir-por-ningun-sitio)"}, ...(mio.sesiones_recientes||[])];
+        mio.sesiones_recientes = [{fecha: today(), titulo: "PRUEBA-ANCHO https://app.clickup.com/t/1dfgkcn2ajy-una-ruta-muy-larga-sin-espacios", quien: otro, n: 998, avances: "Creó la tarea (https://app.clickup.com/t/1dfgkcn2ajy-una-ruta-muy-larga-sin-espacios-que-no-se-puede-partir)"}, ...(mio.sesiones_recientes||[])];
         if(_M) _M.clear(); render(); await new Promise(r=>setTimeout(r,150));
-        return { sale: !!document.getElementById('avanzaron'), scroll: document.documentElement.scrollWidth, vista: innerWidth };
+        const sec = document.getElementById('avanzaron'); if(!sec) return { sale: false };
+        const sobra = () => Math.max(0, ...[sec, ...sec.querySelectorAll('*')].map(e => e.getBoundingClientRect().right)) - innerWidth;
+        const real = sobra();
+        const d = document.createElement('div'); d.style.width = '2000px'; d.textContent = 'x'; sec.appendChild(d); const control = sobra(); d.remove();
+        return { sale: true, real: Math.round(real), control: Math.round(control) };
       });
-      if(!ancho || !ancho.sale || ancho.scroll > ancho.vista) errores.push(`${etiqueta}: «Avanzaron otros» con una URL larga ensancha la página en el teléfono (${JSON.stringify(ancho)})`);
+      if(!ancho || !ancho.sale || ancho.real > 0.5 || !(ancho.control > 0)) errores.push(`${etiqueta}: «Avanzaron otros» sobresale por la derecha en el teléfono, o la medida no detecta un bloque de 2000 px (${JSON.stringify(ancho)})`);
       await p.goto(url + '#'); await p.reload(); await p.waitForTimeout(300);
       const t0 =await p.evaluate(() => { const t = document.getElementById('side-toggle'); return { icono: !!t.querySelector('svg'), texto: t.textContent.trim(), org: (document.getElementById('mob-org')||{}).textContent || '' }; });
       await p.click('#side-toggle'); await p.waitForTimeout(200);

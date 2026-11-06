@@ -19,11 +19,22 @@ for d, _, fs in os.walk(sys.argv[1]):
     for f in fs: os.utime(os.path.join(d, f), (viejo, viejo))
 os.utime(os.path.join(sys.argv[1], "ventas/cuentas/entregables/kit-cuentas.md"), None)
 PY
-# 1.25.3: una ruta que no es la raíz para en seco, en los dos scripts que corren en la computadora
-mkdir -p "$OUT/no-raiz"
-if python3 "$TABLERO/generar_vista.py" "$OUT/no-raiz" --inventario --lineas >/dev/null 2>&1; then echo "MAL: generar_vista.py siguió con una carpeta sin guia.md"; exit 1; fi
-if python3 "$TABLERO/aplicar_cambios.py" "$OUT/no-raiz" /dev/null >/dev/null 2>&1; then echo "MAL: aplicar_cambios.py siguió con una carpeta sin guia.md"; exit 1; fi
+# 1.25.3: una ruta que no es la raíz para en seco (código 2 y «no es la raíz»), en los dos scripts que corren en la
+# computadora; con una cola válida, para que aplicar_cambios.py no falle antes por otra cosa
+mkdir -p "$OUT/no-raiz"; printf '[]' > "$OUT/cola-vacia.json"
+set +e
+python3 "$TABLERO/generar_vista.py" "$OUT/no-raiz" --inventario --lineas >/dev/null 2>"$OUT/err1"; c1=$?
+python3 "$TABLERO/aplicar_cambios.py" "$OUT/no-raiz" "$OUT/cola-vacia.json" >/dev/null 2>"$OUT/err2"; c2=$?
+set -e
+if [ $c1 -ne 2 ] || [ $c2 -ne 2 ] || ! grep -q "no es la raíz" "$OUT/err1" || ! grep -q "no es la raíz" "$OUT/err2"; then echo "MAL: una carpeta sin guia.md no para en seco ($c1, $c2)"; exit 1; fi
 echo "  bien  una ruta que no es la raíz para en seco, sin inventario vacío ni cola borrada"
+# y la ruta de la computadora (/Users/…/Memoria/Prueba) se resuelve sola bajo $HOME/mnt, con el nombre suelto o con «--»
+for NOMBRE in Prueba Memoria--Prueba; do
+  rm -rf "$OUT/home"; mkdir -p "$OUT/home/mnt"; cp -R "$AQUI/raiz" "$OUT/home/mnt/$NOMBRE"
+  if ! HOME="$OUT/home" python3 "$TABLERO/generar_vista.py" "/Users/alguien/Memoria/Prueba" --inventario --lineas >/dev/null 2>&1; then echo "MAL: la ruta de la computadora no se resolvió a \$HOME/mnt/$NOMBRE"; exit 1; fi
+done
+rm -rf "$OUT/home"
+echo "  bien  la ruta de la computadora se resuelve a la carpeta de \$HOME/mnt, con su nombre o con «--»"
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/completo" --version "${VERSION:-prueba}" >/dev/null
 # una tarea montada antes de la 1.18 pasa --modo publico: sale lo mismo, el tablero de un solo modo
 python3 "$TABLERO/generar_vista.py" "$OUT/raiz" "$OUT/viejo" --modo publico --version "${VERSION:-prueba}" >/dev/null

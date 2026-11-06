@@ -68,8 +68,8 @@ def _area_columns(header: list[str], lang: Pack = ES) -> dict:
 
 
 def area_is_restricted(cells: list[str], header: list[str], lang: Pack = ES) -> bool:
-    """Whether an area row of guia.md is restricted: the one rule that the opening, the board, the permissions check, the
-    migration and verificar.sh use (review of 1.25.2, finding 10). With an «Acceso» column (1.22+), its word; otherwise,
+    """Whether an area row of guia.md is restricted: the one rule that the opening, the board, the permissions check and the
+    migration use (verificar.sh reads only the «Acceso» word, with access_word) (review of 1.25.2, finding 10). With an «Acceso» column (1.22+), its word; otherwise,
     or when it is empty or unclear, restricted if the table has a «Colabora» column (1.25: «Quién la lee» no longer
     carries «Restringida:», so it fails closed), and else the «Quién la lee» rule. Same as area_restringida() in the
     1.25.1 abrir.py, frozen in tests/reference/acceso_1_25_1.py."""

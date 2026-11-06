@@ -106,6 +106,13 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
     col = _area_columns(header, lang)
     pcol = _people_columns(header, lang)
     needed = max(v for v in col.values() if v is not None) + 1
+    # Stricter than the scripts' 1.25.1 rule, for the server only (review of 1.25.3): a header in which none of the pack's
+    # column names appears (another language, a misspelling) is read by position and could read a restricted area open,
+    # and so could an «Acceso» word the pack does not know. Both load closed, with a warning.
+    norm = [re.sub(r"[*_`]", "", x).strip().lower() for x in header]
+    unknown_header = not any(x in names for names in lang.area_columns.values() for x in norm)
+    if unknown_header and warnings is not None:
+        warnings.append("ninguna columna de la tabla de áreas lleva un nombre conocido: todas las áreas se leen restringidas")
     out = []
     for cells in rows:
         if not cells or not cells[0].strip("`").rstrip("/"):
@@ -121,7 +128,9 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
         out.append(AreaRow(
             slug=cells[0].strip("`").rstrip("/"), what=get(col["what"]), responsible=get(col["responsible"]),
             responsible_accounts=resp_acc, collaborators=collaborators, collaborator_accounts=coll_acc,
-            readers=get(col["readers"]), access=get(col["access"]), restricted=area_is_restricted(cells, header, lang),
+            readers=get(col["readers"]), access=get(col["access"]),
+            restricted=(unknown_header or area_is_restricted(cells, header, lang)
+                        or (col["access"] is not None and get(col["access"]).strip() != "" and access_word(get(col["access"]), lang) is None)),
             warnings=[warning] if warning else []))
     return out
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Si un área está restringida lo decide una sola regla, la de context_core (la lectura de abrir.py de la 1.25.1), en la
-apertura, el tablero, permisos.py, la migración y verificar.sh (revisión de la 1.25.2, hallazgo 10). Con «Acceso:
+apertura, el tablero, permisos.py y la migración; verificar.sh solo lee la palabra de «Acceso» (revisión de la 1.25.2, hallazgo 10). Con «Acceso:
 Restringidas» el tablero de la 1.25.2 daba el área abierta y abrir.py cerrada: ahora todos la leen restringida.
 
 Uso: python3 pruebas/sesion/probar_acceso.py

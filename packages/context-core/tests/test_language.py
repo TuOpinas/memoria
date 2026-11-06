@@ -77,8 +77,15 @@ class Packs(unittest.TestCase):
         try:
             self.assertEqual(read("zz"), {"sales": (False, {"deals": False, "margins": True}), "people": (True, {}),
                                           "legal": (True, {}), "ops": (False, {})})
-            # with the Spanish words, the same root would read its restricted area open: the words are the pack's
-            self.assertFalse(read("zz-names-only")["people"][0])
+            # with the Spanish words the scripts' 1.25.1 rule would read «Restricted» open; the package, for the server,
+            # reads an «Acceso» word it does not know as restricted (review of 1.25.3)
+            self.assertTrue(read("zz-names-only")["people"][0])
+            # and a table whose header the pack does not know at all reads every area restricted, with a warning
+            from context_core import parse
+            warns = []
+            rows = parse.area_rows(files["guide.md"].replace("## Areas", "## Áreas"), parse.people_registry(""), language.ES, warns)
+            self.assertEqual([(r.slug, r.restricted) for r in rows], [("sales", True), ("people", True), ("legal", True), ("ops", True)])
+            self.assertTrue(any("nombre conocido" in w for w in warns))
         finally:
             del language.PACKS["zz"], language.PACKS["zz-names-only"]
 
