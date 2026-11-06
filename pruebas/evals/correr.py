@@ -654,7 +654,10 @@ def _(ctx, arg):
 
 @comprobacion("sin-herramienta")
 def _(ctx, arg):
-    n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg))
+    """sin-herramienta <nombre>: no se llamó. El listado de «Claude outputs» que la apertura mínima escribe con Write en
+    /tmp (1.25.1) no cuenta: no toca la raíz (1.25.3)."""
+    fuera = lambda h: str((h.get("entrada") or {}).get("file_path", "")).startswith("/tmp/claude-outputs-")
+    n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg) and not fuera(h))
     return n == 0, f"{arg}: {n} llamadas"
 
 

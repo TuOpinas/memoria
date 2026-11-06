@@ -1514,11 +1514,22 @@ SIN_CONSOLA, RAIZ_COPIA = False, None
 
 
 # ---------- main ----------
+def raiz_en_consola(ruta):
+    """La raíz en esta consola (1.25.3): la ruta tal cual si tiene guia.md; si no, la carpeta de $HOME/mnt que se llama
+    como su último tramo o «<padre>--<tramo>», con guia.md, si hay exactamente una. Como abrir.py y el tablero."""
+    p = pathlib.Path(ruta)
+    if (p / "guia.md").exists():
+        return p
+    mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    c = [d for d in (sorted(mnt.glob("*")) if mnt.is_dir() else []) if (d.name == p.name or d.name.endswith("--" + p.name)) and (d / "guia.md").exists()]
+    return c[0] if len(c) == 1 else p
+
+
 def main(argv):
     if len(argv) < 2 or "--cuenta" not in argv:
         print(__doc__.strip(), file=sys.stderr)
         return 2
-    raiz = pathlib.Path(argv[1])
+    raiz = pathlib.Path(argv[1]) if "--sin-consola" in argv else raiz_en_consola(argv[1])
     global SIN_CONSOLA, RAIZ_COPIA
     SIN_CONSOLA, RAIZ_COPIA = "--sin-consola" in argv, raiz
     if not (raiz / "guia.md").is_file():

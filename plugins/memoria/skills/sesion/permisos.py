@@ -19,7 +19,7 @@ Los permisos de una carpeta incluyen los heredados de la unidad, como los da el 
 (user, group, domain, anyone); sin él se toma por user. Un grupo se avisa y no se cuenta como persona; un dominio o
 «cualquiera con el enlace» se avisa siempre.
 """
-import json, pathlib, re, sys
+import json, os, pathlib, re, sys
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -1446,7 +1446,20 @@ JSON_TABLERO = "--tablero" in sys.argv
 if JSON_TABLERO:
     sys.argv.remove("--tablero")
 
+def raiz_en_consola(ruta):
+    """La raíz en esta consola (1.25.3): la ruta tal cual si tiene guia.md; si no, la carpeta de $HOME/mnt que se llama
+    como su último tramo o «<padre>--<tramo>», con guia.md, si hay exactamente una. Como abrir.py y el tablero."""
+    p = pathlib.Path(ruta)
+    if (p / "guia.md").exists():
+        return p
+    mnt = pathlib.Path(os.path.expanduser("~")) / "mnt"
+    c = [d for d in (sorted(mnt.glob("*")) if mnt.is_dir() else []) if (d.name == p.name or d.name.endswith("--" + p.name)) and (d / "guia.md").exists()]
+    return c[0] if len(c) == 1 else p
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        sys.argv[1] = str(raiz_en_consola(sys.argv[1]))
     if len(sys.argv) < 3 or not (pathlib.Path(sys.argv[1]) / "guia.md").is_file():
         sys.exit("Uso: permisos.py <raiz> --plan | --drive drive.json  (la raíz es la carpeta con guia.md y metodo.md)")
     R = pathlib.Path(sys.argv[1])
