@@ -1081,7 +1081,9 @@ if guia_txt:
             h("fila de la tabla de áreas que no se deja leer", slug, _av + ": Responsable y Colabora llevan nombres de «Quién es quién»")
         elif _av:
             h("celda Cuenta mal escrita en guia.md", slug, _av + ": primero el correo del responsable y, si hace falta, «· colabora: correo, correo»")
-        if NUEVA and area_restringida(celdas, cab_guia):   # la regla de abrir.py, de context_core (arriba)
+        # los nombres de «Quién la lee» se comprueban solo con «Restringida» escrita: con «Acceso» vacía o dudosa la regla
+        # cierra el área, pero lo que hay que arreglar es la celda (aviso de arriba), y «Todo el equipo» no es un nombre
+        if NUEVA and col["acceso"] is not None and acceso_de(celdas[col["acceso"]]) is True:
             for _n in nombres_de(re.sub(r"^[\W_]*restringid[oa]s?\s*:?", "", celdas[col["lee"]], flags=re.I)):
                 if not persona(_n, REG):
                     h("nombre que no está en «Quién es quién»", slug, "«%s», en «Quién la lee»" % _n)

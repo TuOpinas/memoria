@@ -45,8 +45,8 @@ for forma, (raiz, _) in (("1.22", raiz_migrada()), ("1.25", raiz_125())):
     ok(a.get("personas") is True and a.get("operacion") is False, f"{forma}: el tablero también (hasta la 1.25.2 daba «Restringidas» abierta)")
     o = correr(PL / "skills/sesion/permisos.py", raiz, "--plan")
     ok("área personas/ (declarada restringida)" in o and "área operacion/ (declarada" not in o, f"{forma}: permisos.py también")
-# 1.25, «Acceso» que no dice ni Abierta ni Restringida: falla cerrado en todos, también en verificar.sh, que pide entonces
-# que «Quién la lee» nombre personas de «Quién es quién»
+# 1.25, «Acceso» que no dice ni Abierta ni Restringida: falla cerrado en la apertura y el tablero; verificar.sh pide arreglar
+# la celda y no toma «Todo el equipo» por un nombre
 raiz, _ = raiz_125()
 con_acceso(raiz, "operacion", "Restr.")
 o = correr(PL / "skills/sesion/abrir.py", raiz, "--cuenta", "carla@ejemplo.test", "--sin-fechas")
@@ -54,7 +54,7 @@ ok(re.search(r"^- operacion/ · restringida", o, re.M), "1.25: un «Acceso» que
 s = pathlib.Path(tempfile.mkdtemp()); correr(PL / "skills/tablero/generar_vista.py", raiz, s, "--sin-fechas")
 ok(areas_del_tablero(s).get("operacion") is True, "y en el tablero")
 v = subprocess.run(["bash", str(PL / "verificar.sh"), str(raiz)], capture_output=True, text=True).stdout
-ok(re.search(r"columna Acceso sin «Abierta» ni «Restringida»\s+operacion", v) and re.search(r"nombre que no está en «Quién es quién»\s+operacion\s+\(«Todo el equipo», en «Quién la lee»\)", v),
-   "verificar.sh dice que «Acceso» no se entiende y, como el área queda restringida, que «Quién la lee» no nombra personas")
+ok(re.search(r"columna Acceso sin «Abierta» ni «Restringida»\s+operacion", v) and "«Todo el equipo», en «Quién la lee»" not in v,
+   "verificar.sh dice que «Acceso» no se entiende, sin tomar «Todo el equipo» por un nombre")
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

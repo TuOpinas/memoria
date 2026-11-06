@@ -17,7 +17,8 @@ def region_of(path=SCRIPT):
 
 def run(code, *path):
     env_path = ":".join(str(p) for p in path)
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+    # -S and a neutral cwd: neither an installed package nor the current directory may shadow the copy on PYTHONPATH
+    r = subprocess.run([sys.executable, "-S", "-c", code], capture_output=True, text=True, cwd=tempfile.gettempdir(),
                        env={"PYTHONPATH": env_path, "PATH": "/usr/bin:/bin"})
     return r.returncode, r.stdout + r.stderr
 
