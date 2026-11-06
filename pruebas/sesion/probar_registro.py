@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""«Quién es quién» (1.25): el registro de personas se lee igual en los ocho scripts, y una raíz en la forma de la 1.25 da
+"""«Quién es quién» (1.25): el registro de personas, y una raíz en la forma de la 1.25 da
 a cada cuenta exactamente lo mismo que la misma raíz en la forma de la 1.22 (la celda Cuenta con correos).
 
 Uso: python3 pruebas/sesion/probar_registro.py
@@ -14,10 +14,11 @@ def ok(c, t):
     print(("  bien  " if c else "  FALLA ") + t); fallos += 0 if c else 1
 
 print("El registro de personas")
-# abrir.py lo toma de context_core (paso 0 de la versión alojada): estos casos prueban el paquete, que es lo que corre
-sys.path.insert(0, str(PL.parent.parent / "packages" / "context-core"))
+# abrir.py lo toma de context_core (paso 0 de la versión alojada): estos casos prueban el paquete, que es lo que corre, tal
+# como va metido en el script
 t = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8")
-ns = {"re": re}; exec(t[t.index("# --- quién escribe"):t.index("# --- fin de quién escribe ---")], ns)
+exec(t[t.index("# --- quién escribe"):t.index("# --- fin de quién escribe ---")], {"re": re})
+ns = vars(sys.modules["context_core.compat"])
 R_ = ns["registro_personas"]; F = ns["fila_cuentas"]; C = ns["colaboran_en"]
 G = """## Quién es quién
 - Juanjo Jiménez-Alfaro · jjalfaro@me.com · de: TuOpinas
@@ -52,11 +53,6 @@ ok(C("Colabora: Marco Herrero (marco.herrero@smilepill.mx)") == {"marco.herrero@
 for av_, g_ in [("dos veces", "## Quién es quién\n- Ana · a@x.mx\n- Ana · b@x.mx\n"), ("dos líneas", "## Quién es quién\n- Ana · a@x.mx\n- Beto · a@x.mx\n"),
                 ("no lleva", "## Quién es quién\n- Ana\n"), ("no se entiende", "## Quién es quién\n- Ana · a@x.mx · jefa\n")]:
     ok(any(av_ in x for x in R_(g_)["avisos"]), f"avisa: {av_}")
-# el bloque es idéntico en los ocho scripts (desde el paso 0, todos lo toman de context_core)
-SITIOS = ["skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/permisos.py", "skills/sesion/migrar_estructura.py",
-          "skills/tablero/aplicar_cambios.py", "skills/tablero/barrido.py", "skills/tablero/generar_vista.py", "verificar.sh"]
-bl = lambda p: (lambda s: s[s.index("# --- quién escribe"):s.index("# --- fin de quién escribe ---")])((PL / p).read_text(encoding="utf-8"))
-ok(all(bl(p) == bl(SITIOS[0]) for p in SITIOS), "el bloque es idéntico en los ocho scripts")
 
 print("\nLa misma raíz en la forma de la 1.22 y en la de la 1.25")
 R2, _ = raiz_migrada(); R5, _ = raiz_125()
@@ -218,7 +214,7 @@ _, o_ = cuenta_de(R5, "fede@ejemplo.test", "operacion/soporte")
 ok("alta provisional" in o_ and "no escribes en ninguna área" not in o_, "quien entra por alta provisional oye que escribe en el proyecto, no que no escribe")
 con()
 ok(not re.search(r"^NOMBRE", cuenta_de(R5, "ana@ejemplo.test", "--minima")[0], re.M), "la apertura mínima no imprime NOMBRE (no cierra sesión)")
-t_ = (PL / "skills/sesion/abrir.py").read_text(encoding="utf-8"); n_ = {"re": re}; exec(t_[t_.index("# --- quién escribe"):t_.index("# --- fin de quién escribe ---")], n_)
+n_ = ns
 ok(n_["fila_cuentas"](["Área", "Qué es", "Quién la lee", "Acceso", "Responsable", "Colabora"], ["a", "b", "c"], n_["registro_personas"](g0))[0] == set(), "una fila corta no rompe nada")
 o3, j3 = tablero(R5, "ana@ejemplo.test")
 _base = pathlib.Path(tempfile.mkdtemp()) / "t2"

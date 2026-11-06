@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quién escribe: la misma función en los cuatro sitios, y los casos que no pueden convertir a nadie en dueño.
+"""Quién escribe: una sola copia, la de context_core, en los ocho scripts, y los casos que no pueden convertir a nadie en dueño.
 
 Uso: python3 pruebas/sesion/probar_cuentas.py
 """
@@ -17,12 +17,11 @@ def bloque(p):
     return t[a:b]
 print("Quién escribe")
 bs = [bloque(p) for p in sitios]
-ok(all(b == bs[0] for b in bs), "el bloque es idéntico en abrir.py, permisos.py, cerrar.py, migrar_estructura.py, aplicar_cambios.py, generar_vista.py, barrido.py y verificar.sh")
-# desde el paso 0 de la versión alojada el bloque no lleva el código: mete context_core (inline.py) y lo importa
-ok("from context_core.compat import (" in bs[0] and "def registro_personas" not in bs[0].split("# --- end of context_core ---")[1], "el bloque toma quién escribe de context_core, sin copia propia")
-import subprocess
-ok(subprocess.run([sys.executable, str(AQUI.parent.parent / "packages" / "context-core" / "inline.py"), "--check"], capture_output=True).returncode == 0, "context_core está al día dentro de los ocho scripts (packages/context-core/inline.py --check)")
-ns = {"re": re}; exec(bs[0], ns); cuentas, colaboran_en = ns["cuentas"], ns["colaboran_en"]
+# desde el paso 0 de la versión alojada el bloque no lleva el código: mete context_core (inline.py) y lo importa. Que la
+# copia metida sea la misma en los ocho y la del paquete lo comprueba inline.py --check (CI y release.sh)
+ok(all("from context_core.compat import (" in b and "def registro_personas" not in b.split("# --- end of context_core ---")[1] for b in bs), "los ocho scripts toman quién escribe de context_core, sin copia propia")
+# el bloque de abrir.py carga context_core; los casos prueban el paquete, que es lo que corre
+exec(bs[0], {"re": re}); cuentas, colaboran_en = sys.modules["context_core.compat"].cuentas, sys.modules["context_core.compat"].colaboran_en
 ok(cuentas("ana@x.com")[:2] == ({"ana@x.com"}, set()) and cuentas("ana@x.com")[2] is None, "una sola cuenta sigue siendo la del dueño, sin aviso")
 ok(cuentas("Ana@X.com · colabora: b@x.com, c+1@sub.x.com")[:2] == ({"ana@x.com"}, {"b@x.com", "c+1@sub.x.com"}), "dueño y colaboradores, sin mayúsculas, con «+» y subdominios")
 for v in ("colaboradora:", "colaborador:", "colabora", "colaboran:", "Colaboración:", "co-labora:"):

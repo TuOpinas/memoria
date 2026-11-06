@@ -10,22 +10,22 @@ import pathlib
 import re
 from typing import Optional
 
-from . import parse
+from . import rules
 from .records import PeopleRegistry, Person
 
 __all__ = ["SOBRE_LA_CARPETA", "sin_carpeta", "ARCHIVADO", "archivados_de", "con_archivados", "respuestas_viejas",
-           "restringida_celda", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas", "clave_nombre", "_titulo", "registro_personas",
+           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",
+           "clave_nombre", "registro_personas",
            "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",
            "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]
 
-CORREO = parse.EMAIL
-PALABRA_COLABORA = parse._WORD_COLLABORATES
-LINEA_COLABORA = parse._LINE_COLLABORATES
+CORREO = rules.EMAIL
+PALABRA_COLABORA = rules._WORD_COLLABORATES
+LINEA_COLABORA = rules._LINE_COLLABORATES
 
-cuentas = parse.account_cell
-clave_nombre = parse.name_key
-_titulo = parse.heading_key
-nombre_contexto = parse.context_owner_name
+cuentas = rules.account_cell
+clave_nombre = rules.name_key
+nombre_contexto = rules.context_owner_name
 
 
 def _persona(p: Person) -> dict:
@@ -54,7 +54,7 @@ def _reg(reg) -> PeopleRegistry:
 
 
 def registro_personas(guia: str) -> dict:
-    return _registro(parse.people_registry(guia))
+    return _registro(rules.people_registry(guia))
 
 
 def persona(nombre: str, reg) -> Optional[dict]:
@@ -66,44 +66,55 @@ def persona(nombre: str, reg) -> Optional[dict]:
 
 
 def nombres_de(texto: str, reg=None) -> list[str]:
-    return parse.names_in(texto, _reg(reg))
+    return rules.names_in(texto, _reg(reg))
 
 
 def cuentas_de_nombres(texto: str, reg) -> tuple[set, list]:
-    return parse.accounts_of_names(texto, _reg(reg))
+    return rules.accounts_of_names(texto, _reg(reg))
 
 
 def altas_provisionales(quien: str, reg) -> list:
-    return parse.provisional_people(quien, _reg(reg))
+    return rules.provisional_people(quien, _reg(reg))
 
 
 def columnas_personas(cab: list) -> dict:
-    c = parse._people_columns(cab)
+    c = rules._people_columns(cab)
     return {"responsable": c["responsible"], "cuenta": c["account"], "colabora": c["collaborates"]}
 
 
 def fila_cuentas(cab: list, celdas: list, reg) -> tuple:
-    return parse.row_accounts(cab, celdas, _reg(reg))
+    return rules.row_accounts(cab, celdas, _reg(reg))
 
 
 def cuentas_contexto(linea: str, reg) -> set:
-    return parse.context_owner_accounts(linea, _reg(reg))
+    return rules.context_owner_accounts(linea, _reg(reg))
 
 
 def nombre_de(cuenta: str, reg) -> str:
-    return parse.name_of_account(cuenta, _reg(reg))
+    return rules.name_of_account(cuenta, _reg(reg))
 
 
 def colaboran_en(quien: str, reg=None) -> set:
-    return parse.collaborator_accounts(quien, _reg(reg) if reg else None)
+    return rules.collaborator_accounts(quien, _reg(reg) if reg else None)
 
 
 # ── el primer párrafo de guia.md, los registros con sus archivados y la regla de lo restringido ──────────────────────
 
-SOBRE_LA_CARPETA = parse.ABOUT_THE_FOLDER
-sin_carpeta = parse.drop_folder_talk
-ARCHIVADO = parse.ARCHIVED
-restringida_celda = parse.is_restricted_cell
+SOBRE_LA_CARPETA = rules.ABOUT_THE_FOLDER
+sin_carpeta = rules.drop_folder_talk
+ARCHIVADO = rules.ARCHIVED
+restringida_celda = rules.is_restricted_cell
+
+
+def area_restringida(celdas: list, cab: list) -> bool:
+    """Whether a row of the area table is restricted, from the row and the table's header: the one rule (finding 10 of
+    the review of 1.25.2), the 1.25.1 abrir.py's area_restringida()."""
+    return rules.area_is_restricted(celdas, cab)
+
+
+def acceso_de(celda: str) -> Optional[bool]:
+    """«Acceso»: True «Restringida», False «Abierta», None anything else."""
+    return rules.access_word(celda)
 
 
 def _nombres(carpeta) -> list:
@@ -114,11 +125,11 @@ def _nombres(carpeta) -> list:
 
 
 def archivados_de(carpeta, nombre, anio) -> list:
-    return parse.archived_names(_nombres(carpeta), nombre, anio)
+    return rules.archived_names(_nombres(carpeta), nombre, anio)
 
 
 def con_archivados(carpeta, nombre, vivo, anio, leer_) -> tuple:
-    return parse.with_archives(vivo, [leer_(pathlib.Path(carpeta) / n) for n in archivados_de(carpeta, nombre, anio)])
+    return rules.with_archives(vivo, [leer_(pathlib.Path(carpeta) / n) for n in archivados_de(carpeta, nombre, anio)])
 
 
 def respuestas_viejas(carpeta, anio, leer_) -> list:
