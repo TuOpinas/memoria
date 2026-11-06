@@ -13,7 +13,7 @@ The Memoria method as records: one Python package that the plugin scripts, the h
 | `context_core/load.py` | A whole root to a `Root`, through the storage adapter, never reading `restringido/`, `fuentes/` or restricted areas |
 | `context_core/compat.py` | The scripts' Spanish names and dict shapes over the package, while they move; retires with the language packs |
 | `schema/records.sql` | The record model as PostgreSQL tables with row-level security per organization; unused until step 2 |
-| `inline.py` | Puts the package inside the eight plugin scripts that use it, so each runs when downloaded alone; `--check` in CI and `release.sh` |
+| `inline.py` | Puts what `compat` reaches (language, records, rules, compat) inside the eight plugin scripts that use it, so each runs when downloaded alone, with a fingerprint per module: a script stops if another version of the package is already loaded in its process; `--check` in CI and `release.sh` |
 
 The method's files keep their Spanish names and keys; the code names them in English.
 
@@ -27,7 +27,8 @@ From the repository root:
 compares the parsers with `generar_vista.py`'s; `test_compat.py` compares `compat` with the 1.25.1 rules frozen in
 `tests/reference/`, and `test_access.py` the area access rule with abrir.py's 1.25.1 reading and its frozen cases;
 `test_language.py` reads a root with renamed reserved names, and one whose area table and restricted words are in
-another (made-up) language, through test packs; `test_schema.py` checks every record field has a column and every table
+another (made-up) language, through test packs; `test_inline.py` checks what goes into the scripts and that a script
+refuses another version of the package; `test_schema.py` checks every record field has a column and every table
 row-level security; `test_old_python.py` checks the package parses as Python 3.9. CI runs them on 3.9, 3.10 and the
 current Python.
 
