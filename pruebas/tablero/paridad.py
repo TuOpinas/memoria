@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Las tres copias de la regla de lo restringido dicen lo mismo: abrir.py (sesión), generar_vista.py (tablero) y
-vista.html (la página). Saca las funciones de cada archivo, las corre con las mismas celdas de «Quién la lee» y compara.
+"""Las dos copias de la regla de lo restringido dicen lo mismo: context_core (la sesión y el tablero, desde el paso 0 de
+la versión alojada) y vista.html (la página). Las corre con las mismas celdas de «Quién la lee» y compara.
 Uso: paridad.py <raíz del plugin>. Sale con 1 si algo difiere o no da lo esperado."""
 import json, pathlib, re, subprocess, sys
 P = pathlib.Path(sys.argv[1])
@@ -13,7 +13,6 @@ def funciones(ruta, nombres):
         m = re.search(rf"^def {n}\(.*?(?=^\S)", src, re.M | re.S); exec(m.group(0), ns)
     return ns
 A = funciones("skills/sesion/abrir.py", ["lectores_de", "solo_nombre"]); A["restringida_celda"] = _cc.restringida_celda
-G = {"restringida_celda": _cc.restringida_celda}   # la de abrir.py y generar_vista.py es una sola: context_core
 CELDAS = {  # celda: (restringida, a quiénes)
     "Restringida: Ana Prueba y Beto Prueba": (True, "a Ana Prueba y Beto Prueba"),
     "Restringida a dirección": (True, "a dirección"),
@@ -40,12 +39,12 @@ js = h[h.index("const restringidaCelda"):h.index("\nfunction noLeido")] + "\n" +
 js += "\nconst c = " + json.dumps(list(CELDAS)) + ";\nconsole.log(JSON.stringify(c.map(x => [restringidaCelda(x), lectoresDe(x)])));"
 J = json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True).stdout)
 fallos = 0
-print("La regla de lo restringido, igual en la sesión, el tablero y la página")
+print("La regla de lo restringido, igual en la sesión y el tablero (context_core) y en la página")
 for (celda, (r, lect)), (rj, lj) in zip(CELDAS.items(), J):
-    ra, rg = A["restringida_celda"](celda), G["restringida_celda"](celda)
+    ra = A["restringida_celda"](celda)
     la = A["lectores_de"](celda) if r else None
-    bien = ra == rg == rj == r and (not r or la == lj == lect)
-    print(("  bien  " if bien else "  FALLA ") + f"«{celda}»" + ("" if bien else f": abrir {ra}/{la!r}, tablero {rg}, página {rj}/{lj!r}"))
+    bien = ra == rj == r and (not r or la == lj == lect)
+    print(("  bien  " if bien else "  FALLA ") + f"«{celda}»" + ("" if bien else f": sesión y tablero {ra}/{la!r}, página {rj}/{lj!r}"))
     fallos += not bien
 for d in ("Agustín Torres (escribe también Patricio Torres, dueño de `ronda-semilla/`)", "Dirección (Ana, Beto)"):
     j_ = subprocess.run(["node", "-e", js.split("\nconst c = ")[0] + f"\nconsole.log(soloNombre({json.dumps(d)}))"], capture_output=True, text=True).stdout.strip()
@@ -61,12 +60,8 @@ def _rx_zona(ruta):
 _za, _ze = _rx_zona("skills/sesion/abrir.py"), _rx_zona("espejo.py")
 bien = bool(_za) and _za == _ze
 print(("  bien  " if bien else "  FALLA ") + "la línea «Zona horaria:» se lee igual en abrir.py y en espejo.py"); fallos += not bien
-# sin_carpeta (1.23): el primer párrafo de guia.md, igual en la sesión y en el tablero
-bloque = lambda ruta: (lambda s: s[s.index("# --- el primer párrafo de guia.md"):s.index("# --- fin del primer párrafo ---")])((P / ruta).read_text(encoding="utf-8"))
-ba, bg = bloque("skills/sesion/abrir.py"), bloque("skills/tablero/generar_vista.py")
-bien = ba == bg
-print(("  bien  " if bien else "  FALLA ") + "sin_carpeta es la misma en abrir.py y en generar_vista.py"); fallos += not bien
-ns = {"re": re}; exec(ba, ns)
+# sin_carpeta (1.23): el primer párrafo de guia.md; la sesión y el tablero la toman de context_core
+ns = {"sin_carpeta": _cc.sin_carpeta}
 casos = [(["Acme fabrica muebles.", "Cómo se trabaja está en `metodo.md`."], ["Acme fabrica muebles."]),
          (["Acme fabrica muebles; lo demás está en `guia.md`."], ["Acme fabrica muebles."]),
          (["Acme (ver `guia.md`; abajo) fabrica muebles."], []),
@@ -82,9 +77,5 @@ for entrada, sale in casos:
 _idv = lambda ruta: (re.search(r'^ID_VALIDO = re\.compile\((r"[^"]*")\)', (P / ruta).read_text(encoding="utf-8"), re.M) or [None, None])[1]
 bien = bool(_idv("skills/tablero/datos.py")) and _idv("skills/tablero/datos.py") == _idv("skills/tablero/generar_vista.py") and "ID_VALIDO = " not in (P / "skills/tablero/plan_subida.py").read_text(encoding="utf-8")
 print(("  bien  " if bien else "  FALLA ") + "ID_VALIDO es el mismo en datos.py y generar_vista.py, y plan_subida.py usa el de datos.py"); fallos += not bien
-# con_archivados (1.23): los registros con sus archivados, igual en la sesión, el tablero y el barrido
-bloque2 = lambda ruta: (lambda s: s[s.index("# --- los registros con sus archivados ---"):s.index("# --- fin de los registros ---")])((P / ruta).read_text(encoding="utf-8"))
-b3 = [bloque2(r_) for r_ in ("skills/sesion/abrir.py", "skills/tablero/generar_vista.py", "skills/tablero/barrido.py")]
-bien = b3[0] == b3[1] == b3[2]
-print(("  bien  " if bien else "  FALLA ") + "con_archivados es la misma en abrir.py, generar_vista.py y barrido.py"); fallos += not bien
+# con_archivados (1.23): la sesión, el tablero y el barrido la toman de context_core; test_compat.py la compara con la 1.25.1
 sys.exit(1 if fallos else 0)

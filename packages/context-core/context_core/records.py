@@ -150,8 +150,7 @@ class Deliverable:
     format: str                                 # extension without the dot
     title: Optional[str] = None                 # the H1
     state: Optional[str] = None                 # «estado»: borrador, vigente, reemplazado…
-    updated: Optional[str] = None               # «actualizado», else the area index, else the file date
-    updated_from_file: bool = False
+    updated: Optional[str] = None               # «actualizado», else the date of its line in the area index
     based_on: list[str] = field(default_factory=list)     # «basado_en», paths from the root
     replaced_by: Optional[str] = None           # «reemplazado_por»
     contribution: Optional[str] = None          # «aportacion» (1.22+; «afirma» before): one line on what it holds

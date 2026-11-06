@@ -28,6 +28,8 @@ lineas = dict(l.split(" ", 1) for l in o.strip().split("\n"))
 ok(c == 0 and set(lineas) == {"VERSION", "METODO", "DESCARGA", "REINTENTO"}, "imprime VERSION, METODO, DESCARGA y REINTENTO (sin METODO_DESCARGA desde la 1.25.1: el método se escribe con device_commit_files)")
 ok('mkdir -p "$HOME/memoria"' in lineas["DESCARGA"], "deja $HOME sin expandir, entre comillas dobles, para que se expanda en la computadora")
 ok("/v" + lineas["VERSION"] + "/plugins/memoria/skills/sesion/abrir.py" in lineas["DESCARGA"] and "/main/plugins/memoria/" in lineas["REINTENTO"], "DESCARGA va a la etiqueta de la versión y REINTENTO a main")
+# comprimido (revisión de la 1.25.2, hallazgo 4): raw.githubusercontent.com sirve gzip, y cada script lleva context_core
+ok(all(l.count("curl -sfL --compressed ") == l.count("curl ") for l in (lineas["DESCARGA"], lineas["REINTENTO"])), "cada descarga pide el archivo comprimido (curl --compressed)")
 ok(lineas["METODO"] == (PLUGIN / "metodo.md").read_text(encoding="utf-8").split("\n")[0], "METODO es la primera línea del metodo.md del plugin")
 
 tmp = pathlib.Path(tempfile.mkdtemp())

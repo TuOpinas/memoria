@@ -727,6 +727,10 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.nc-i .t{min-width:0}
 .q-form{grid-column:1/-1;display:grid;gap:8px} .q-form textarea{width:100%;min-height:56px;resize:vertical} .q-form .ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .hoy-linea.semana b{color:var(--ink)}
 .av-sec{border-color:var(--signal)} .pie-a{color:var(--signal);font-weight:600}
+/* 1.25.3: una URL o una ruta larga en los avances ensanchaba la columna implícita de .due y la página se movía de lado en el teléfono */
+.av-sec{grid-template-columns:minmax(0,1fr)} .av-g,.av-i .t,.av-a,.av-h{min-width:0;overflow-wrap:anywhere}
+/* y la página nunca se mueve de lado: en el visor de Claude del iPhone el marco crece con lo que sobresale, aunque sea un píxel */
+html,body{overflow-x:clip}
 .av-g{padding:10px 0;border-top:1px solid var(--rule-soft)} .av-g:first-of-type{border-top:0}
 .av-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:4px} .av-h .ctx{font-size:12.5px;color:var(--muted)} .av-h .more{margin-left:auto;font-size:12.5px}
 .av-i{display:grid;grid-template-columns:64px minmax(0,1fr);gap:2px 12px;padding:6px 0;font-size:14px}
@@ -760,7 +764,7 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.nc-i .t{min-width:0}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.25.2"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.25.3"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

@@ -5,8 +5,10 @@ sections, the fields of its registers and the keys of its headers. A root has on
 by default its owner's (decision of 2026-11-05: reserved names follow the root's language and existing roots keep their
 Spanish names). Spanish is the first and only complete pack; English comes with the language packs after area types.
 
-Not here yet, and still spelled inside `parse.py`: the words of «Quién es quién» and of the area table (they are the
-1.25.1 rules, frozen in tests/reference/ and compared line by line) and the markers of the first paragraph of guia.md.
+The words that decide what is restricted are here (review of 1.25.2, finding 9): the column names of the area table, the
+words of «Acceso» and «Quién la lee», and the word that marks a project line, so a root in another language with its
+restricted area reads restricted. Not here yet, and still spelled inside `rules.py`: the fields of «Quién es quién» and
+the markers of the first paragraph of guia.md.
 """
 from __future__ import annotations
 
@@ -50,6 +52,16 @@ class Pack:
     consumers_label: str
     context_owner_label: str
     administrator_label: str
+    # what decides restricted (rules.area_is_restricted, rules.is_restricted_cell, rules.starts_restricted), as regular
+    # expressions matched case-insensitively. Area table columns: lowercase header text without «*_`», as written
+    area_columns: dict            # responsible, account, readers, access, what -> tuple of header names
+    people_columns: dict          # responsible, account, collaborates -> tuple of header names, as heading_key() leaves them
+    restricted_lead: str          # the word at the start of «Acceso» or «Quién la lee» that makes the area restricted
+    open_lead: str                # the word at the start of «Acceso» that makes it open
+    restricted_inline: str        # the same word on its own elsewhere in «Quién la lee» («Dirección (restringida)»)
+    restricted_stem: str          # what a negation must precede to cancel restricted_inline
+    restricted_negations: tuple   # «nunca restringida», «antes restringida»
+    restricted_line: str          # the word at the start of a project's index line (after its name) that makes it restricted
     # Estatus bullets, as heading_key() leaves them
     status_fields: dict = field(default_factory=dict)
     finished_marker: str = ""
@@ -82,6 +94,13 @@ ES = Pack(
     done_means="Terminado significa", scope="Alcance", what="Qué es", projects="Proyectos", areas="Áreas",
     responsible_labels=("responsable", "dueño", "dueno", "dueña"), consumers_label="consumen esto",
     context_owner_label="Contexto común", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",
+    area_columns={"responsible": ("responsable", "dueño", "dueno"), "account": ("cuenta", "colabora"),
+                  "readers": ("quién la lee", "quien la lee"), "access": ("acceso",), "what": ("qué es", "que es")},
+    people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),
+                    "collaborates": ("colabora", "colaboran", "colaboradores", "colaboradoras")},
+    restricted_lead=r"restringid[oa]s?", open_lead=r"abiert[oa]s?", restricted_inline=r"restringidas?",
+    restricted_stem="restringid", restricted_negations=("nada", "no", "nunca", "sin", "antes"),
+    restricted_line=r"restringid[oa]",
     status_fields={"se completo": "completed", "siguiente": "next", "falta decidir": "to_decide", "preocupa": "concern"},
     finished_marker="Proyecto terminado el",
     decision_fields=(("decidió:", "decided_by"), ("decidio:", "decided_by"), ("por qué:", "why"), ("por que:", "why"),

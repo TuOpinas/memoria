@@ -34,7 +34,8 @@ class Dispositivo:
         self.hogar = pathlib.Path(hogar or (self.raiz.parent / "hogar")).resolve()
         self.hogar.mkdir(parents=True, exist_ok=True)
         (self.hogar / "mnt").mkdir(exist_ok=True)
-        monte = self.hogar / "mnt" / f"Memoria--{nombre}"
+        # la app monta una carpeta con el último tramo de su ruta; solo con otra conectada del mismo nombre antepone «<padre>--»
+        monte = self.hogar / "mnt" / nombre
         if consola:
             if monte.is_symlink() or monte.exists():
                 monte.unlink()
@@ -57,7 +58,7 @@ class Dispositivo:
             rel = r[len(base):].lstrip("/")
         else:
             # lo que dice device_bash ($HOME/mnt/...) también vale
-            m = f"mnt/Memoria--{self.nombre}"
+            m = f"mnt/{self.nombre}"
             if m in r:
                 rel = r.split(m, 1)[1].lstrip("/")
         if rel is None:
@@ -105,7 +106,7 @@ class Dispositivo:
     async def device_bash(self, args):
         self.llamadas.append(("device_bash", args))
         cmd = args.get("command", "")
-        if not self.borrar and re.search(r"(^|[;&|\s])(rm|rmdir|unlink)\s", cmd + " ") and f"mnt/Memoria--{self.nombre}" in cmd:
+        if not self.borrar and re.search(r"(^|[;&|\s])(rm|rmdir|unlink)\s", cmd + " ") and f"mnt/{self.nombre}" in cmd:
             return {"content": [{"type": "text", "text": "rm: Operation not permitted\n[exit 1]"}]}
         env = {"HOME": str(self.hogar), "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C.UTF-8", "TZ": "America/Mexico_City"}
         try:

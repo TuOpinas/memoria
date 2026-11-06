@@ -4,6 +4,7 @@ The method's files keep their Spanish names and keys (`estado`, `Afecta a`, `Sig
 packs; this package reads them as they are and names them in English inside the code (decision of 2026-11-04).
 
 - `records`: the record model, the types every caller works on.
+- `rules`: the rules the plugin scripts share (who writes, what is restricted). Pure functions, no I/O.
 - `parse`: text of one method file -> records. Pure functions, no I/O.
 - `load`: a whole root -> `Root`. Reads through a storage adapter (step 0, task 2); for now, a folder on disk.
 """

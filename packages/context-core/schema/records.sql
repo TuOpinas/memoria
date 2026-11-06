@@ -173,7 +173,6 @@ CREATE TABLE deliverable (
     title              text,
     state              text,
     updated            text,
-    updated_from_file  boolean NOT NULL DEFAULT false,
     based_on           text[] NOT NULL DEFAULT '{}',
     replaced_by        text,
     contribution       text,
