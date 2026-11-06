@@ -175,7 +175,7 @@ def _context_core():
     import sys as _s, types as _t
     _fp = {
     'language': '864af00a6001d879a83ab431d358a0c78eb5fb9dfe7121c1fef5e4fe215c5281',
-    'records': '0b9438f09fa9967642cf805164812b34542656b6b4450bc989923e74d4736ebc',
+    'records': '08a62214b5e10c0e46494a5904268e5aa8e7595e2547166ba6c60a520530c36d',
     'rules': '378ace8cc2a292e3ce1c47de39e320bd5e92699f19488a67cae2c66334c33608',
     'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
     }
@@ -484,8 +484,7 @@ def _context_core():
         '    format: str                                 # extension without the dot\n'
         '    title: Optional[str] = None                 # the H1\n'
         '    state: Optional[str] = None                 # \xabestado\xbb: borrador, vigente, reemplazado\u2026\n'
-        '    updated: Optional[str] = None               # \xabactualizado\xbb, else the area index, else the file date\n'
-        '    updated_from_file: bool = False\n'
+        '    updated: Optional[str] = None               # \xabactualizado\xbb, else the date of its line in the area index\n'
         '    based_on: list[str] = field(default_factory=list)     # \xabbasado_en\xbb, paths from the root\n'
         '    replaced_by: Optional[str] = None           # \xabreemplazado_por\xbb\n'
         '    contribution: Optional[str] = None          # \xabaportacion\xbb (1.22+; \xabafirma\xbb before): one line on what it holds\n'

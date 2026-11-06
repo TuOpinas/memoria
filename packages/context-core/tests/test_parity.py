@@ -1,7 +1,8 @@
 """The package parses like the scripts. Takes the functions out of generar_vista.py (the board's generator, the widest
 reader of the method), runs them and the package on every file of the test root in its three forms, and compares.
 When a script moves onto the package (step 0, task 3) its copy goes away and this test keeps the other copies honest
-until they go too."""
+until they go too. What the scripts already take from the package (who writes, the restricted cell and row, the first
+paragraph, the archives) is compared with its 1.25.1 copy in test_compat.py and test_access.py, not here."""
 import pathlib, re, sys, unittest, unicodedata, datetime, os
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
@@ -97,24 +98,6 @@ class Parity(unittest.TestCase):
                 t = f.read_text(encoding="utf-8")
                 with self.subTest(form=v, file=str(f.relative_to(root))):
                     self.assertEqual(S["frontmatter"](t), parse.frontmatter(t))
-
-    def test_people_and_accounts(self):
-        for v, root in ROOTS.items():
-            g = (root / "guia.md").read_text(encoding="utf-8")
-            old, new = S["registro_personas"](g), parse.people_registry(g)
-            with self.subTest(form=v):
-                self.assertEqual(old["hay"], new.declared)
-                self.assertEqual([(p["nombre"], p["cuentas"], p["baja"], p["alias"]) for p in old["personas"]],
-                                 [(p.name, p.accounts, p.left_on, p.aliases) for p in new.people])
-                self.assertEqual(old["avisos"], new.warnings)
-                for pm in files(root, "proyecto.md"):
-                    q = parse.section(parse.frontmatter(pm.read_text(encoding="utf-8"))[1], "Quién participa")
-                    self.assertEqual(S["colaboran_en"](q, old), parse.collaborator_accounts(q, new), str(pm))
-
-    def test_restricted_cells(self):
-        for c in ["Restringida: Ana Prueba y Beto Prueba", "Dirección (restringida)", "Todo el equipo",
-                  "Todo el equipo; los proyectos restringidos aparte", "Abierta (antes restringida)", "nunca restringida"]:
-            self.assertEqual(S["restringida_celda"](c), parse.is_restricted_cell(c), c)
 
 
 if __name__ == "__main__":
