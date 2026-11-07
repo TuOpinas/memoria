@@ -10,7 +10,8 @@ The Memoria method as records: one Python package that the plugin scripts, the h
 | `context_core/rules.py` | The rules the plugin scripts already take from the package: who writes, whether an area or a cell is restricted (one rule for the opening, the board, permissions and the migration; `verificar.sh` reads only the «Acceso» word), guia.md's first paragraph, the archived registers. Pure functions |
 | `context_core/parse.py` | One method file's text to records (decisions, sessions, Estatus, the area index, deliverables). Pure functions. Re-exports `rules`; the scripts still carry their own copy of these parsers, compared in `test_parity.py`, and move onto them in step 1 |
 | `context_core/storage.py` | The storage adapter: read with a version, stat, list, write only if unchanged, make_dir, move without overwriting, lock. No delete; nothing outside the root. `FolderStorage` first |
-| `context_core/load.py` | A whole root to a `Root`, through the storage adapter, never reading `restringido/`, `fuentes/` or restricted areas |
+| `context_core/load.py` | A root to a `Root`, through the storage adapter, never reading `restringido/`, `fuentes/` or restricted areas. By level: the guide, the premises and the open areas always; projects and their parts (`PARTS`, `PUBLIC`, `REGISTERS`) only when asked. Decisions with this year's and last year's archives, so ids are counted over the merged register; sessions without their bodies unless asked, and with their archives only on request. `load_public` is what a reader outside a session gets, with every reference cut at a restricted zone |
+| `context_core/views.py` | What a reader may be served of a loaded root: the challenge index (each challenge with what answers it, in any project or archive) and references cut at the edge of a restricted zone |
 | `context_core/write.py` | Writing the method's files: the text changes every writer applies (the header's `actualizado`, a register entry on top, a whole «## » block), moved from `cerrar.py` with the same results; and the entries a writer composes from fields (session, decision, Estatus), each field checked so it cannot carry a heading, a line break of another kind or a line a reader would take for another field. The plugin's `cerrar.py` and the hosted server call the same functions |
 | `context_core/compat.py` | The scripts' Spanish names and dict shapes over the package, while they move; retires with the language packs |
 | `schema/records.sql` | The record model as PostgreSQL tables with row-level security per organization; unused until step 2 |
@@ -36,7 +37,7 @@ current Python.
 
 ## Not yet in the package
 
-The archived registers inside `load_root` (the plugin's scripts read them through `compat`), the `fuentes/` inventory,
+the `fuentes/` inventory,
 «Claude outputs», the header of `base/contexto.md`, the fields of «Quién es quién» in the language pack, and the
 scripts' operations themselves (opening, closing, the board's generator), which move one by one as step 1
 builds each server tool.

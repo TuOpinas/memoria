@@ -6,8 +6,11 @@ files, write a file whole and atomically only if nobody changed it since it was 
 archive it, and hold a lock per project while they close. That is the whole interface. `FolderStorage` is the
 connected-folder adapter; a Drive adapter (step 1) implements the same methods with Drive's file ids and etags.
 
-Three rules every adapter keeps, because a bug above it must not reach outside the root (hosted-security.md):
+Four rules every adapter keeps, because a bug above it must not reach outside the root (hosted-security.md):
 - paths are POSIX strings relative to the root; absolute paths, «..», and anything resolving outside the root fail;
+- links are not followed: a path through a symbolic link inside the root (a Drive shortcut, for the Drive adapter) is
+  not part of the root, because a link can make a public path serve a restricted file or another project's register
+  (review of consultar, finding 4). It reads as missing, is left out of listings, and cannot be written;
 - there is no delete: the method never deletes a file, so the adapter cannot;
 - a write names the version it read, and fails with `Conflict` if the file changed since (two closes at once).
 """
@@ -105,6 +108,25 @@ class FolderStorage:
             raise OutsideRoot(path)
         return p
 
+    def _through_link(self, p: pathlib.Path) -> bool:
+        """Whether any part of the path below the root is a symbolic link: such a path is not part of the root."""
+        q = p
+        while q != self.root and self.root in q.parents:
+            if q.is_symlink():
+                return True
+            q = q.parent
+        return False
+
+    def _served(self, path: str) -> Optional[pathlib.Path]:
+        """The path to read, stat or list, or None when it goes through a link, wherever the link points: one link
+        written by anyone must not stop the whole root from loading (review of 1.25.6, finding 4). A path that is wrong
+        as written (absolute, «..») still raises."""
+        rel = clean(path)
+        p = self.root / rel if rel else self.root
+        if self._through_link(p) or not self._inside(p):
+            return None
+        return p
+
     @staticmethod
     def _version(b: bytes, st: os.stat_result) -> Version:
         return Version(hashlib.sha1(b).hexdigest(), st.st_size, st.st_mtime_ns,
@@ -115,7 +137,9 @@ class FolderStorage:
         return real == self.root or self.root in real.parents
 
     def read(self, path: str) -> Optional[Document]:
-        p = self._p(path)
+        p = self._served(path)
+        if p is None:
+            return None
         try:
             with open(p, "rb") as f:
                 b = f.read()
@@ -130,7 +154,9 @@ class FolderStorage:
         return Document(t.replace("\r\n", "\n"), v, v.crlf, ok)
 
     def stat(self, path: str) -> Optional[Entry]:
-        p = self._p(path)
+        p = self._served(path)
+        if p is None:
+            return None
         try:
             st = os.stat(p)
         except OSError:
@@ -138,15 +164,17 @@ class FolderStorage:
         return Entry(p.name, "dir" if p.is_dir() else "file", st.st_size, st.st_mtime_ns)
 
     def list(self, path: str = "") -> list[Entry]:
-        p = self._p(path)
-        out = []
+        p = self._served(path)
+        out: list[Entry] = []
+        if p is None:
+            return out
         try:
             names = sorted(os.listdir(p))
         except OSError:
             return out
         for n in names:
-            # an entry that resolves outside the root (a symlink) is not part of it
-            if not self._inside(p / n):
+            # a link, wherever it points, is not part of the root
+            if (p / n).is_symlink() or not self._inside(p / n):
                 continue
             try:
                 st = os.stat(p / n)
@@ -169,6 +197,8 @@ class FolderStorage:
         `crlf` says otherwise. A file that is not valid UTF-8 is refused (`NotUTF8`). Callers hold `lock()` around read
         and write."""
         p = self._p(path)
+        if self._through_link(p):
+            raise OutsideRoot(path)
         now = self._current(p)
         if (expected is None) != (now is None) or (now and expected and now.token != expected.token):
             raise Conflict(path)
@@ -194,11 +224,16 @@ class FolderStorage:
         return self._current(p)  # type: ignore[return-value]
 
     def make_dir(self, path: str) -> None:
-        self._p(path).mkdir(parents=True, exist_ok=True)
+        p = self._p(path)
+        if self._through_link(p):
+            raise OutsideRoot(path)
+        p.mkdir(parents=True, exist_ok=True)
 
     def move(self, src: str, dst: str) -> None:
         """Moves a file within the root; fails if the destination exists (archiving never overwrites)."""
         s, d = self._p(src), self._p(dst)
+        if self._through_link(s) or self._through_link(d):
+            raise OutsideRoot(src if self._through_link(s) else dst)
         d.parent.mkdir(parents=True, exist_ok=True)
         # link + unlink: the link fails if the destination exists, with no window between a check and a rename
         try:

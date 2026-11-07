@@ -25,8 +25,9 @@ class Folder(unittest.TestCase):
             with self.subTest(path=p), self.assertRaises(OutsideRoot):
                 self.st.read(p)
         os.symlink(self.tmp / "fuera.md", self.root / "enlace.md")
+        self.assertIsNone(self.st.read("enlace.md"))      # a link reads as missing, wherever it points (1.25.6)
         with self.assertRaises(OutsideRoot):
-            self.st.read("enlace.md")
+            self.st.write("enlace.md", "x", expected=None)
 
     def test_no_delete(self):
         self.assertFalse(any(hasattr(self.st, n) for n in ("delete", "remove", "unlink", "trash")))
