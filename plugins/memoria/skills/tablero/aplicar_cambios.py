@@ -78,7 +78,7 @@ def _context_core():
     import sys as _s, types as _t
     _fp = {
     'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
-    'records': '22bc6fac9dc4a84f9e1f74cb653896ef4db22c56d7692c5e33382943982450fe',
+    'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
     'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
     }
@@ -445,6 +445,8 @@ def _context_core():
         '    deliverables: list[Deliverable] = field(default_factory=list)\n'
         '    workshop: list[WorkshopFile] = field(default_factory=list)\n'
         '    index: Optional[IndexEntry] = None          # its line in area.md, if any\n'
+        '    old_responses: list[DecisionRef] = field(default_factory=list)  # \xabResponde a\xbb of decision archives older than last year, not read whole\n'
+        '    loaded: frozenset = frozenset()             # which parts load_project read (load.PARTS); empty: only its index line\n'
         '\n'
         '    @property\n'
         '    def key(self) -> str:\n'

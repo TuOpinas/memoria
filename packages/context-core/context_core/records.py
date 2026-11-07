@@ -198,6 +198,8 @@ class Project:
     deliverables: list[Deliverable] = field(default_factory=list)
     workshop: list[WorkshopFile] = field(default_factory=list)
     index: Optional[IndexEntry] = None          # its line in area.md, if any
+    old_responses: list[DecisionRef] = field(default_factory=list)  # «Responde a» of decision archives older than last year, not read whole
+    loaded: frozenset = frozenset()             # which parts load_project read (load.PARTS); empty: only its index line
 
     @property
     def key(self) -> str:

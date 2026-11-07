@@ -7,16 +7,25 @@ caller's job; the record says what is restricted, not who may open it.
 """
 from __future__ import annotations
 
+import datetime
 import os
 import posixpath
-from typing import Optional, Union
+import re
+from typing import Iterable, Optional, Union
 
-from . import parse
+from . import parse, rules
 from .language import Pack, pack
 from .records import Area, Project, Root, WorkshopFile
 from .storage import FolderStorage, Storage
 
 OUTPUTS = "Claude outputs"   # Claude's own folder, not the method's: the same in every language
+
+# What load_project can read of a project, by level (review of consultar, finding 6): a caller asks for what it serves,
+# so a question about one area does not read every register and workshop file of the root.
+PARTS = frozenset({"project", "decisions", "sessions", "session_bodies", "deliverables", "workshop"})
+# What a reader outside a session may be served (convenciones, section 7): no session bodies, no workshop.
+PUBLIC = frozenset({"project", "decisions", "sessions", "deliverables"})
+REGISTERS = frozenset({"decisions"})   # enough for the challenge index across the root
 
 
 def _skip_at_root(lang: Pack) -> set:
@@ -56,26 +65,70 @@ def _md_files(st: Storage, path: str, lang: Pack, prefix: str = "") -> list[str]
     return out
 
 
-def load_project(st: Storage, area: Area, slug: str, lang: Pack) -> Project:
+def _register(st: Storage, base: str, names: list[str], live_name: str, register: str, year: int) -> tuple[str, int]:
+    """The live register followed by this year's and last year's archives, and how many entries are live: the ids are
+    counted over the merged text, so a day split by a rotation keeps the same ids (finding 5c)."""
+    live = _text(st, _j(base, live_name))
+    archives = [_text(st, _j(base, n)) for n in rules.archived_names(names, register, year)]
+    return rules.with_archives(live, archives)
+
+
+def load_project(st: Storage, area: Area, slug: str, lang: Pack, parts: Iterable[str] = PARTS,
+                 year: Optional[int] = None) -> Project:
+    """One project, reading only `parts` (see PARTS). Decisions and sessions include this year's and last year's
+    archives; of older decision archives only their «Responde a» lines are kept (`old_responses`). Session bodies come
+    only with "session_bodies"; without it each entry keeps its heading and the first line of «Tema»."""
+    parts = frozenset(parts) & PARTS
     index = area.index.get(slug)
     base = _j(area.slug, slug)
     if index is None or index.restricted or area.restricted:
         return Project(area=area.slug, slug=slug, restricted=True, index=index)
-    pr = parse.project_file(area.slug, slug, _text(st, _j(base, lang.project_file)) or "", lang)
+    if not parts:
+        return Project(area=area.slug, slug=slug, index=index)
+    year = year or datetime.date.today().year
+    key = f"{area.slug}--{slug}"
+    names = [e.name for e in st.list(base) if e.kind == "file"] if parts & {"decisions", "sessions"} else []
+    if "project" in parts:
+        pr = parse.project_file(area.slug, slug, _text(st, _j(base, lang.project_file)) or "", lang)
+    else:
+        pr = Project(area=area.slug, slug=slug)
     pr.index = index
-    pr.decisions = parse.decisions(_text(st, _j(base, lang.decisions_file)) or "", lang=lang)
-    pr.sessions = parse.sessions(_text(st, _j(base, lang.sessions_file)) or "", lang=lang)
-    d = _j(base, lang.deliverables)
-    files = [e.name for e in st.list(d) if e.kind == "file" and not e.name.startswith(".")]
-    pr.deliverables = [parse.deliverable(n, _text(st, _j(d, n)) if n.endswith(".md") else None, index, lang) for n in files]
-    for rel in sorted(_md_files(st, _j(base, lang.workshop), lang)):
-        fm, body = parse.frontmatter(_text(st, _j(base, lang.workshop, rel)) or "")
-        pr.workshop.append(WorkshopFile(path=rel, title=parse.h1(body) or None, updated=fm.get(lang.key_updated) or None))
+    pr.loaded = parts
+    if "decisions" in parts:
+        stem = lang.decisions_file.rsplit(".", 1)[0]
+        text, live = _register(st, base, names, lang.decisions_file, stem, year)
+        pr.decisions = parse.decisions(text, live=live, lang=lang, here=key)
+        recent = set(rules.archived_names(names, stem, year))
+        for n in rules.archived_names(names, stem, 0):
+            if n not in recent:
+                for line in re.findall(r"^" + re.escape(lang.write_decision["responds_to"]) + r":[ \t]*(.+)$",
+                                       _text(st, _j(base, n)) or "", re.M | re.I):
+                    ref = parse.decision_ref(line, key)
+                    if ref:
+                        pr.old_responses.append(ref)
+    if "sessions" in parts:
+        stem = lang.sessions_file.rsplit(".", 1)[0]
+        text, live = _register(st, base, names, lang.sessions_file, stem, year)
+        pr.sessions = parse.sessions(text, live=live, lang=lang, headers_only="session_bodies" not in parts)
+    if "deliverables" in parts:
+        d = _j(base, lang.deliverables)
+        files = [e.name for e in st.list(d) if e.kind == "file" and not e.name.startswith(".")]
+        pr.deliverables = [parse.deliverable(n, _text(st, _j(d, n)) if n.endswith(".md") else None, index, lang) for n in files]
+    if "workshop" in parts:
+        for rel in sorted(_md_files(st, _j(base, lang.workshop), lang)):
+            fm, body = parse.frontmatter(_text(st, _j(base, lang.workshop, rel)) or "")
+            pr.workshop.append(WorkshopFile(path=rel, title=parse.h1(body) or None, updated=fm.get(lang.key_updated) or None))
     return pr
 
 
-def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] = None) -> Root:
-    """From a Storage, or a folder path (wrapped in FolderStorage), in the root's language (Spanish by default)."""
+def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] = None, *,
+              projects: Union[bool, Iterable[str]] = True, parts: Iterable[str] = PARTS,
+              year: Optional[int] = None) -> Root:
+    """From a Storage, or a folder path (wrapped in FolderStorage), in the root's language (Spanish by default).
+
+    By level: the guide, the premises and every open area's area.md are always read. `projects` says which projects are
+    read, with `parts` (True: all; False: none; or keys "area/project" or "area--project"); the others keep only their
+    index line (`loaded` empty). `year` is the current year for the archives (today's by default)."""
     st: Storage = source if isinstance(source, Storage) else FolderStorage(source)
     lang = pack(language)
     guia = _text(st, lang.guide) or ""
@@ -92,6 +145,11 @@ def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] 
              people=reg, area_rows=parse.area_rows(guia, reg, lang, warnings=row_warnings),
              premises=parse.premises(_text(st, _j(lang.base, lang.premises_file)) or ""))
     r.warnings += reg.warnings + row_warnings
+    if projects is True or projects is False:
+        want = lambda a, p: projects
+    else:
+        keys = {k.replace("--", "/").strip("/") for k in projects}
+        want = lambda a, p: f"{a}/{p}" in keys
     rows = {row.slug: row for row in r.area_rows}
     top = set(_dirs(st, ""))
     slugs = [s for s in rows if s in top]
@@ -105,8 +163,9 @@ def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] 
             area = parse.area_file(s, _text(st, _j(s, lang.area_file)) or "", lang)
             area.row = row
         sub = set(_dirs(st, s)) if not restricted else set()
-        projects = list(area.index)
-        projects += [n for n in sorted(sub) if n not in projects and _has(st, _j(s, n, lang.project_file))]
-        area.projects = [load_project(st, area, p, lang) for p in projects if p in sub or p in area.index]
+        names = list(area.index)
+        names += [n for n in sorted(sub) if n not in names and _has(st, _j(s, n, lang.project_file))]
+        area.projects = [load_project(st, area, p, lang, parts if want(s, p) else (), year)
+                         for p in names if p in sub or p in area.index]
         r.areas.append(area)
     return r

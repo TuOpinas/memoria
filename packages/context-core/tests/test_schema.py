@@ -13,7 +13,8 @@ TABLES = {"Root": "root", "Person": "person", "AreaRow": "area_row", "Premise": 
           "SessionEntry": "session_entry", "Deliverable": "deliverable", "WorkshopFile": "workshop_file"}
 # fields stored elsewhere: children in their own tables, the registry's lookups (derived), the area's own row
 ELSEWHERE = {"Root": {"people", "area_rows", "areas", "premises"}, "Area": {"row", "index", "projects"},
-             "Project": {"steps", "decisions", "sessions", "deliverables", "workshop", "index", "area"},
+             "Project": {"steps", "decisions", "sessions", "deliverables", "workshop", "index", "area",
+                         "old_responses", "loaded"},   # the last two describe a reading, not the project
              "IndexEntry": set()}
 RENAMED = {("SessionEntry", "by"): "by_name"}
 

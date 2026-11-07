@@ -132,7 +132,18 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
             restricted=(unknown_header or area_is_restricted(cells, header, lang)
                         or (col["access"] is not None and get(col["access"]).strip() != "" and access_word(get(col["access"]), lang) is None)),
             warnings=[warning] if warning else []))
-    return out
+    # A slug on two rows (review of consultar, finding 2): which row wins would decide whether a restricted area reads
+    # open. The area keeps its first row, loads closed, and the guide is said to need fixing.
+    seen: dict[str, AreaRow] = {}
+    twice: set = set()
+    for row in out:
+        first = seen.setdefault(row.slug, row)
+        if first is not row and row.slug not in twice:
+            first.restricted = True
+            twice.add(row.slug)
+            if warnings is not None:
+                warnings.append(f"el área «{row.slug}» tiene dos filas en la tabla de áreas: se lee restringida hasta que quede una")
+    return list(seen.values())
 
 
 def guia_line(guia: str, label: str) -> str:
@@ -233,8 +244,9 @@ def area_priorities(body: str, lang: Pack = ES) -> list[str]:
 
 # ── decisiones.md and sesiones.md ──────────────────────────────────────────────────────────────────────────────────
 
-def decision_ref(text: str) -> Optional[DecisionRef]:
-    """«area/project#2026-10-15-2 (…)» or «premisa P3»; None for an empty field."""
+def decision_ref(text: str, here: Optional[str] = None) -> Optional[DecisionRef]:
+    """«area/project#2026-10-15-2 (…)», «premisa P3», or the same project's bare «#2026-10-15-2» (escribir.md, section 4),
+    which takes `here` ("area--project") as its project; None for an empty field."""
     t = (text or "").strip()
     if not t:
         return None
@@ -242,11 +254,17 @@ def decision_ref(text: str) -> Optional[DecisionRef]:
     if mp:
         return DecisionRef("premisa", mp.group(1).upper(), t)
     m = re.search(r"`?([a-z0-9][\w.-]*)/([a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", t)
-    return DecisionRef(f"{m.group(1)}--{m.group(2)}", m.group(3), t) if m else DecisionRef(None, None, t)
+    if m:
+        return DecisionRef(f"{m.group(1)}--{m.group(2)}", m.group(3), t)
+    mb = re.search(r"(?<![\w/.-])#(20\d\d-\d\d-\d\d(?:-\d+)?)\b", t)
+    if mb and here:
+        return DecisionRef(here.replace("/", "--"), mb.group(1), t)
+    return DecisionRef(None, None, t)
 
 
-def decisions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[Decision]:
-    """The entries of decisiones.md, newest first. With `live`, entries after the first `live` come from an archive."""
+def decisions(text: str, live: Optional[int] = None, lang: Pack = ES, here: Optional[str] = None) -> list[Decision]:
+    """The entries of decisiones.md, newest first. With `live`, entries after the first `live` come from an archive.
+    `here` ("area--project") resolves the bare «#AAAA-MM-DD» references to this project."""
     raw: list[dict] = []
     for p in re.split(r"^## ", text or "", flags=re.M)[1:]:
         head, _, body = p.partition("\n")
@@ -267,8 +285,8 @@ def decisions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[De
     for i, r in enumerate(raw):
         d = Decision(id="", date=r["date"], title=r["title"], decided_by=r["decided_by"], why=r["why"],
                      discarded=r["discarded"], affects=r["affects"], raised_by=r["raised_by"],
-                     challenges=decision_ref(r["challenges"]), responds_to=decision_ref(r["responds_to"]),
-                     replaces=decision_ref(r["replaces"]),
+                     challenges=decision_ref(r["challenges"], here), responds_to=decision_ref(r["responds_to"], here),
+                     replaces=decision_ref(r["replaces"], here),
                      pending_confirmation=bool(re.search(lang.pending_confirmation, r["decided_by"].lower())),
                      archived=live is not None and i >= live)
         if r["challenges"] or re.match(lang.challenge_title + r"\b", d.title, re.I):
@@ -286,7 +304,10 @@ def decisions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[De
     return out
 
 
-def sessions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[SessionEntry]:
+def sessions(text: str, live: Optional[int] = None, lang: Pack = ES, headers_only: bool = False) -> list[SessionEntry]:
+    """The entries of sesiones.md, newest first. With `headers_only` (what a reader outside the session may see: review
+    of consultar, finding 1), each entry keeps its heading, the first line of «Tema», who wrote it and «Escribió» /
+    «Publicó», and nothing of its body: no «Avances», no «Pendiente», no line that follows a field."""
     docs = "|".join(re.escape(x) for x in lang.session_wrote + lang.session_published)
     raw = re.split(r"^## ", text or "", flags=re.M)[1:]
     out: list[SessionEntry] = []
@@ -323,6 +344,8 @@ def sessions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[Ses
                 e.server_version = ms.group(1) if ms else ""
             elif current and s:
                 setattr(e, current, getattr(e, current) + "\n" + s)
+        if headers_only:
+            e.topic, e.progress, e.pending = e.topic.split("\n", 1)[0][:300], "", ""
         out.append(e)
     out.sort(key=lambda e: e.date, reverse=True)
     return out
