@@ -75,9 +75,11 @@ def _key(name: str) -> str:
     return unicodedata.normalize("NFC", name).casefold()
 
 
-# A field names several references separated by «·», «,», «;» or line breaks; a reference is cut whole, never only the
-# piece a path pattern finds (review of 1.25.6, finding 1: a file name with spaces).
-_SEP = re.compile(r"(\s+·\s+|\s*[,;]\s*|\n)")
+# A field names several references separated by « · » or line breaks; a reference is cut whole, with whatever note
+# follows it, never only the piece a path pattern finds (review of 1.25.6, finding 1: a file name with spaces). Commas
+# and semicolons do not separate: they also live inside a reference's note in brackets, and splitting there let the
+# note's tail through (second review of consultar, finding 2).
+_SEP = re.compile(r"(\s+·\s+|\n)")
 
 
 def _zones(root: Root):
@@ -149,6 +151,25 @@ def public_reference(text: str, root: Root, lang: Pack = ES, here: Optional[str]
         if not piece or _SEP.fullmatch(piece):
             out.append(piece)
             continue
-        cut = _cut(piece, root, lang, here, zones)
+        cut = _cut_piece(piece, root, lang, here, zones)
         out.append(piece if cut is None else cut)
     return "".join(out)
+
+
+_TOKEN = re.compile(r"[^\s,;()\[\]{}<>]+")
+
+
+def _cut_piece(piece: str, root: Root, lang: Pack, here: Optional[str], zones) -> Optional[str]:
+    """One piece of a field (between « · » or line breaks): every path-like token in it is checked, not only the first,
+    so «a.md, ventas/secreto/plan.md» or a note «(ver también restringido/x.md)» cannot carry a restricted reference
+    past the cut (review of 1.25.7, finding 1). If any token touches a restricted zone, the whole piece becomes the
+    names of the zones it touches; otherwise it stays as written."""
+    whole = _cut(piece, root, lang, here, zones)
+    found = [whole] if whole else []
+    for tok in _TOKEN.findall(piece):
+        if not any(c in tok for c in "/\\#"):
+            continue
+        c = _cut(tok, root, lang, here, zones)
+        if c and c not in found:
+            found.append(c)
+    return " · ".join(found) if found else None

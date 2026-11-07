@@ -379,18 +379,45 @@ def sessions(text: str, live: Optional[int] = None, lang: Pack = ES, headers_onl
 
 # ── area.md and proyecto.md ────────────────────────────────────────────────────────────────────────────────────────
 
-def project_index(area_text: str, lang: Pack = ES) -> dict[str, IndexEntry]:
-    """The «Proyectos» block of area.md: one entry per «- `slug/` — description», with its deliverable sub-lines."""
+def _slug_key(slug: str) -> str:
+    """How two spellings of a project's folder compare: NFC, casefold, and the separators and dots a path cleaning
+    drops («secreto\\», «secreto/.», «secreto » name the same folder as «secreto»)."""
+    t = unicodedata.normalize("NFC", slug).replace("\\", "/").strip()
+    while t and t[-1] in "/. ":
+        t = t[:-1]
+    return t.casefold()
+
+
+def project_index(area_text: str, lang: Pack = ES, warnings: Optional[list] = None) -> dict[str, IndexEntry]:
+    """The «Proyectos» block of area.md: one entry per «- `slug/` — description», with its deliverable sub-lines.
+
+    A slug on two lines, compared as macOS, Drive and Windows compare names (NFC, casefold), keeps its first line and
+    reads restricted, with a warning: which line won would decide whether a restricted project reads open (second
+    review of consultar, finding 1), the same rule as a slug on two rows of the guide's area table."""
     idx: dict[str, IndexEntry] = {}
+    by_key: dict[str, str] = {}
+    twice: set = set()
     current = None
     for l in section(area_text, lang.projects).split("\n"):
         m1 = re.match(r"^- `([^`]+?)/?`\s*[—–:-]?\s*(.*)$", l)
         if m1 and ("/" in m1.group(1) or m1.group(1).startswith(".")):
             current = None; continue
         if m1:
-            current = m1.group(1)
-            desc = m1.group(2).strip()
-            idx[current] = IndexEntry(slug=current, description=desc, restricted=starts_restricted(desc, lang))
+            slug, desc = m1.group(1), m1.group(2).strip()
+            key = _slug_key(slug)
+            if key in by_key:
+                current = by_key[key]
+                if key not in twice and warnings is not None:
+                    warnings.append(f"el proyecto «{current}» está dos veces en el índice de su área: se lee restringido hasta que quede una línea")
+                idx[current].restricted = True
+                twice.add(key)
+                continue
+            by_key[key] = current = slug
+            # a slug that is not one plain folder name («secreto\\», «secreto.», a trailing space) can reach a real
+            # folder through the storage's path cleaning: it reads restricted (review of 1.25.7, finding 2)
+            plain = slug == slug.strip() and not slug.endswith(".") and "\\" not in slug
+            idx[current] = IndexEntry(slug=current, description=desc,
+                                      restricted=starts_restricted(desc, lang) or not plain)
             continue
         m2 = re.match(r"^\s+- (.*)$", l)
         if m2 and current:
@@ -401,6 +428,18 @@ def project_index(area_text: str, lang: Pack = ES) -> dict[str, IndexEntry]:
                     idx[current].deliverables[stem] = {"description": m3.group(2).strip(), "updated": m3.group(3)}
             else:
                 idx[current].notes.append(item)
+    # A project line marked restricted anywhere in area.md (a second «Proyectos» heading, a «*» bullet) closes the
+    # project it names: the index is read from the first block only, and an ignored mark would read it open
+    # (review of 1.25.7, finding 3).
+    for l in (area_text or "").split("\n"):
+        m = re.match(r"^\s*[-*+]\s+`([^`]+?)`\s*[—–:-]?\s*(.*)$", l)
+        if not m or not starts_restricted(m.group(2).strip(), lang):
+            continue
+        key = _slug_key(m.group(1))
+        if key in by_key and not idx[by_key[key]].restricted:
+            idx[by_key[key]].restricted = True
+            if warnings is not None:
+                warnings.append(f"el proyecto «{by_key[key]}» está marcado restringido fuera del índice de su área: se lee restringido")
     return idx
 
 
@@ -431,12 +470,12 @@ def project_file(area: str, slug: str, text: str, lang: Pack = ES) -> Project:
                    collaborators=coll, consumers=cons)
 
 
-def area_file(slug: str, text: str, lang: Pack = ES) -> Area:
+def area_file(slug: str, text: str, lang: Pack = ES, warnings: Optional[list] = None) -> Area:
     fm, body = frontmatter(text or "")
     resp, _, _, _ = who_takes_part(body, lang)
     return Area(slug=slug, state=fm.get(lang.key_state) or None, updated=fm.get(lang.key_updated) or None, title=h1(body),
                 what=section(body, lang.what), status=status(body, legacy=lang.status_legacy_area, lang=lang),
-                priorities=area_priorities(body, lang), responsible=resp, index=project_index(text or "", lang))
+                priorities=area_priorities(body, lang), responsible=resp, index=project_index(text or "", lang, warnings))
 
 
 def deliverable(file: str, text: Optional[str], index: Optional[IndexEntry], lang: Pack = ES) -> Deliverable:

@@ -194,7 +194,17 @@ class Reading(unittest.TestCase):
             "../secreto/plan.md": "ventas/secreto",
             "restringido/acta.md": "ventas/cuentas",
             "ventas/cuentas/Restringido/x.md": "ventas/cuentas",
-            "x · personas/nómina 2026.xlsx, ventas/cuentas/entregables/a b.md": "x · personas/, ventas/cuentas/entregables/a b.md",
+            "x · personas/nómina 2026.xlsx · ventas/cuentas/entregables/a b.md": "x · personas/ · ventas/cuentas/entregables/a b.md",
+            # second review of consultar, finding 2: the note after a reference goes with it
+            "ventas/secreto (el margen de Cliente Uno, que baja al 12 %) · restringido/contrato.md (firmado; vence en marzo)":
+                "ventas/secreto · ventas/cuentas",
+            "personas/nomina: sube el sueldo de Beto, efectivo en enero": "personas/",
+            # review of 1.25.7, finding 1: every reference in a piece is checked, not only the first
+            "ventas/cuentas/entregables/a.md, ventas/secreto/plan.md": "ventas/secreto",
+            "ventas/cuentas/entregables/a.md, personas/nomina/sueldos.md": "personas/",
+            "cuentas#2026-01-02, secreto#2026-01-03": "ventas/secreto",
+            "ventas/cuentas/entregables/a.md (ver también restringido/acta.md)": "ventas/cuentas",
+            "ventas/cuentas/entregables/a.md, ventas/cuentas/entregables/b.md": "ventas/cuentas/entregables/a.md, ventas/cuentas/entregables/b.md",
             "entregables/hosted-path.md (rebuilt)": "entregables/hosted-path.md (rebuilt)",
         }
         for given, want in cases.items():
@@ -208,83 +218,6 @@ class Reading(unittest.TestCase):
         self.assertEqual(views.public_reference("personas/nomina/sueldos.md", r), "personas/")
 
     def test_short_or_respelled_rows_load_closed(self):
-        make(self.root, extra="| `personas/` | Otra | Ana | ana@x.mx | Todo el equipo | Abierta |\n")
-        r = load_root(self.root, year=2026)
-        self.assertEqual([x.slug for x in r.area_rows].count("personas"), 1)
-        self.assertTrue(r.area("personas").restricted)
-        self.assertTrue(any("filas en la tabla" in w for w in r.warnings))
-        self.assertNotIn("PANORAMA-SECRET", repr(r.area("personas")))
-
-    def test_bare_reference_takes_this_project(self):
-        ref = parse.decision_ref("#2026-01-02-2", "ventas--cuentas")
-        self.assertEqual((ref.project, ref.id), ("ventas--cuentas", "2026-01-02-2"))
-        self.assertIsNone(parse.decision_ref("#2026-01-02").id)            # no project to resolve it against
-        self.assertEqual(parse.decision_ref("a/b#2026-01-02", "x--y").project, "a--b")
-
-    def test_archives_keep_ids_and_challenges(self):
-        pr = load_root(self.root, year=2026).project("ventas/cuentas")
-        ids = {d.id: d.title for d in pr.decisions}
-        self.assertEqual(ids["2026-01-02"], "El corte por monto")          # counted from the oldest of the day
-        self.assertEqual(ids["2026-01-02-2"], "Segundo del día")
-        self.assertTrue(any(d.archived for d in pr.decisions))
-        self.assertEqual(len(pr.old_responses), 1)
-
-    def test_challenge_index(self):
-        r = load_root(self.root, year=2026, parts=REGISTERS)
-        idx = {c.key: c for c in views.challenge_index(r)}
-        self.assertEqual(set(idx), {"ventas--cuentas#2026-11-01", "ventas--cuentas#2026-01-02-2"})
-        self.assertEqual(idx["ventas--cuentas#2026-01-02-2"].answers, ["ventas--cuentas#2026-11-03"])   # bare form
-        self.assertEqual(idx["ventas--cuentas#2026-11-01"].answers, ["ventas--cuentas (archivo antiguo)"])
-        self.assertEqual(views.open_challenges(r), [])
-
-    def test_loader_by_level(self):
-        st = Counting(self.root)
-        r = load_root(st, year=2026, projects=False)
-        self.assertEqual(st.reads, ["guia.md", "metodo.md", "base/premisas.md", "ventas/area.md"])
-        self.assertFalse(r.project("ventas/cuentas").loaded)
-        st = Counting(self.root)
-        load_root(st, year=2026, projects=["ventas--cuentas"], parts=PUBLIC)
-        self.assertFalse([p for p in st.reads if "/taller/" in p or "restringido" in p])
-        st = Counting(self.root)
-        load_root(st, year=2026, parts=REGISTERS)
-        self.assertFalse([p for p in st.reads if p.endswith(("sesiones.md", "proyecto.md")) or "/entregables/" in p])
-
-    def test_public_reference(self):
-        r = load_root(self.root, year=2026, projects=False)
-        text = parse.decisions(DECISIONES)[1].affects
-        out = views.public_reference(text, r)
-        self.assertEqual(out, "ventas/secreto · ventas/cuentas · personas/ · ventas/cuentas/entregables/a.md")
-        self.assertEqual(views.public_reference("`ventas/secreto#2026-01-02`", r), "ventas/secreto")
-        cases = {   # review of 1.25.6, findings 1 and 2: the whole reference is cut, in any spelling
-            "ventas/cuentas/restringido/plan de sueldos.md": "ventas/cuentas",
-            "personas/nomina/restringido/sueldos.md": "personas/",
-            "Ventas/Secreto/plan.md": "ventas/secreto",
-            "ventas\\secreto\\plan.md": "ventas/secreto",
-            "/Users/ana/Drive/org/ventas/secreto/plan.md": "ventas/secreto",
-            "../secreto/plan.md": "ventas/secreto",
-            "restringido/acta.md": "ventas/cuentas",
-            "ventas/cuentas/Restringido/x.md": "ventas/cuentas",
-            "x · personas/nómina 2026.xlsx, ventas/cuentas/entregables/a b.md": "x · personas/, ventas/cuentas/entregables/a b.md",
-            "entregables/hosted-path.md (rebuilt)": "entregables/hosted-path.md (rebuilt)",
-        }
-        for given, want in cases.items():
-            with self.subTest(given=given):
-                self.assertEqual(views.public_reference(given, r, here="ventas--cuentas"), want)
-
-    def test_an_area_not_loaded_is_cut(self):
-        import shutil
-        shutil.rmtree(self.root / "personas")     # on Drive the server may not list a restricted area's folder
-        r = load_root(self.root, year=2026, projects=False)
-        self.assertEqual(views.public_reference("personas/nomina/sueldos.md", r), "personas/")
-
-    def test_short_or_respelled_rows_load_closed(self):
-        for extra in ("| `personas/` | Otra | Abierta |\n",                                     # short
-                      "| `Personas/` | Otra | Ana | ana@x.mx | Todo el equipo | Abierta |\n"):  # another case
-            make(self.root, extra=extra)
-            g = (self.root / "guia.md").read_text(encoding="utf-8")
-            g = g.replace("| `personas/` | Nómina | Beto | beto@x.mx | Dirección | Restringida |", "")
-            g = g.replace("{x}", "")
-            (self.root / "guia.md").write_text(g.replace("| `ventas/` |", "| `personas/` | Nómina | Restringida |\n| `ventas/` |") if "Otra | Abierta |\n" == extra[-18:] else g + "", encoding="utf-8")
         make(self.root, extra="| `personas/` | Otra | Ana | ana@x.mx | Todo el equipo | Abierta |\n")
         g = (self.root / "guia.md").read_text(encoding="utf-8").replace(
             "| `personas/` | Nómina | Beto | beto@x.mx | Dirección | Restringida |", "| `personas/` | Nómina | Restringida |")
@@ -298,6 +231,35 @@ class Reading(unittest.TestCase):
         (self.root / "diseño" / "area.md").write_text("# D\nSECRET-AREA\n", encoding="utf-8")
         r = load_root(self.root, year=2026)
         self.assertNotIn("SECRET-AREA", repr(r))
+
+    def test_a_project_listed_twice_loads_closed(self):
+        """Second review of consultar, finding 1: the last line used to win, and a restricted project read open."""
+        for second in ("- `secreto/` — el plan, abierto\n", "- `Secreto/` — el plan, abierto\n"):
+            with self.subTest(second=second):
+                (self.root / "ventas/area.md").write_text(AREA + second, encoding="utf-8")
+                (self.root / "ventas/secreto/decisiones.md").write_text("## 2026-01-01 · SECRET-DECISION\n", encoding="utf-8")
+                r = load_root(self.root, year=2026)
+                self.assertTrue(r.project("ventas/secreto").restricted)
+                self.assertNotIn("SECRET-DECISION", repr(r))
+                self.assertTrue(any("dos veces en el índice" in w for w in r.warnings))
+        (self.root / "ventas/area.md").write_text(AREA.replace("- `secreto/` — restringido: dueño Beto.\n", "")
+                                                  + "- `cuentas/` — otra vez\n", encoding="utf-8")
+        self.assertTrue(load_root(self.root, year=2026).project("ventas/cuentas").restricted)   # an open one too
+
+    def test_index_aliases_and_marks_elsewhere_close_a_project(self):
+        """Review of 1.25.7, findings 2 and 3: a path alias of the same folder, or a restricted mark outside the first
+        «Proyectos» block, closes the project."""
+        (self.root / "ventas/secreto/decisiones.md").write_text("## 2026-01-01 · SECRET-DECISION\n", encoding="utf-8")
+        open_area = AREA.replace("- `secreto/` — restringido: dueño Beto.\n", "- `secreto/` — el plan\n")
+        for text in (open_area + "- `secreto\\` — abierto\n",
+                     open_area + "- `secreto.` — abierto\n",
+                     open_area + "\n## Proyectos\n- `secreto/` — restringido: dueño Beto.\n",
+                     open_area + "* `secreto/` — restringido: dueño Beto.\n"):
+            with self.subTest(text=text[-40:]):
+                (self.root / "ventas/area.md").write_text(text, encoding="utf-8")
+                r = load_public(self.root, year=2026)
+                self.assertNotIn("SECRET-DECISION", repr(r))
+                self.assertTrue(all(p.restricted for p in r.area("ventas").projects if p.slug.startswith("secreto")))
 
     def test_headers_keep_the_first_topic_and_no_workshop(self):
         text = "## 2026-11-02\nTema: seguimiento\nAvances:\n- algo\ntrabajamos en: LEAK-BODY\nEscribió: taller/b.md, Restringido/acta.md, entregables/a.md\n"
