@@ -53,13 +53,31 @@ def fingerprint(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def region() -> str:
-    src = {m: (CORE / "context_core" / f"{m}.py").read_text(encoding="utf-8") for m in MODULES}
+def modules_for(script: str) -> list:
+    """What one script needs: the package modules it imports, and what those import. A module only one script uses
+    (`write`, cerrar.py's) goes only into that script."""
+    out = []
+    names = re.findall(r"^\s*from\s+context_core\s*\.\s*(\w+)\s+import", script, re.M)
+    names += re.findall(r"^\s*import\s+context_core\.(\w+)", script, re.M)
+    for group in re.findall(r"^\s*from\s+context_core\s+import\s+\(?([\w\s,]+)\)?", script, re.M):
+        names += [n.strip().split()[0] for n in group.split(",") if n.strip()]
+    for m in names:
+        if not (CORE / "context_core" / f"{m}.py").exists():
+            continue
+        for dep in reachable(m):
+            if dep not in out:
+                out.append(dep)
+    return out or list(MODULES)
+
+
+def region(modules=None) -> str:
+    modules = list(modules or MODULES)
+    src = {m: (CORE / "context_core" / f"{m}.py").read_text(encoding="utf-8") for m in modules}
     # one short ASCII literal per source line: Python 3.9's tokenizer misreads very long lines with non-ASCII characters
     # («Non-UTF-8 code»), which is what each person's Mac runs
     lit = lambda text: "(\n" + "".join(f"        {ascii(l)}\n" for l in text.splitlines(keepends=True)) + "    )"
-    body = ",\n".join(f"    {m!r}: {lit(src[m])}" for m in MODULES)
-    fps = "".join(f"    {m!r}: {fingerprint(src[m])!r},\n" for m in MODULES)
+    body = ",\n".join(f"    {m!r}: {lit(src[m])}" for m in modules)
+    fps = "".join(f"    {m!r}: {fingerprint(src[m])!r},\n" for m in modules)
     return f'''{BEGIN}
 def _context_core():
     import sys as _s, types as _t
@@ -101,7 +119,7 @@ _context_core()
 
 def apply(text: str) -> str:
     a, b = text.index(BEGIN), text.index(END) + len(END)
-    return text[:a] + region() + text[b:]
+    return text[:a] + region(modules_for(text[b:])) + text[b:]
 
 
 def unlisted() -> list:

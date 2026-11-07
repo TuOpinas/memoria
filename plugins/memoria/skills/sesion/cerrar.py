@@ -95,10 +95,11 @@ LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (e
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '864af00a6001d879a83ab431d358a0c78eb5fb9dfe7121c1fef5e4fe215c5281',
-    'records': '08a62214b5e10c0e46494a5904268e5aa8e7595e2547166ba6c60a520530c36d',
+    'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
+    'records': '22bc6fac9dc4a84f9e1f74cb653896ef4db22c56d7692c5e33382943982450fe',
     'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
     'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
+    'write': '0775119f7676e9dc1a9a47c880c6fcea328ef4217e355394b627cd48f5ea2179',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -208,6 +209,11 @@ def _context_core():
         '    key_based_on: str = ""\n'
         '    key_replaced_by: str = ""\n'
         '    key_contribution: tuple = ()\n'
+        '    # how a writer spells what it writes (context_core.write): one canonical form per field, where reading accepts several\n'
+        '    write_session: dict = field(default_factory=dict)     # topic, progress, wrote, published, by\n'
+        '    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects\n'
+        '    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern\n'
+        '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -239,6 +245,11 @@ def _context_core():
         '    session_by=("sesi\xf3n de:", "sesion de:"),\n'
         '    key_state="estado", key_updated="actualizado", key_based_on="basado_en", key_replaced_by="reemplazado_por",\n'
         '    key_contribution=("aportacion", "afirma"),\n'
+        '    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribi\xf3", "published": "Public\xf3", "by": "Sesi\xf3n de"},\n'
+        '    write_decision={"decided_by": "Decidi\xf3", "raised_by": "Plante\xf3", "why": "Por qu\xe9", "discarded": "Descartado",\n'
+        '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
+        '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
+        '    writers={"plugin": "plugin", "server": "servidor"},\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -384,6 +395,7 @@ def _context_core():
         '    pending: str = ""                           # \xabPendiente\xbb (older roots)\n'
         '    by: str = ""                                # \xabSesi\xf3n de\xbb, without the plugin version\n'
         '    plugin_version: str = ""                    # \xab\xb7 plugin 1.25.1\xbb\n'
+        '    server_version: str = ""                    # \xab\xb7 servidor 0.0.2\xbb: the entry was written by the hosted server\n'
         '    wrote: list[str] = field(default_factory=list)       # \xabEscribi\xf3\xbb, paths inside the project (restricted ones dropped)\n'
         '    published: list[str] = field(default_factory=list)   # \xabPublic\xf3\xbb\n'
         '    archived: bool = False\n'
@@ -1008,6 +1020,312 @@ def _context_core():
         '            out += re.findall(r"^Responde a:[ \\t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)\n'
         '    return out\n'
     ),
+    'write': (
+        '"""Writing the method\'s files: the text changes every writer applies, and the entries a writer composes from fields.\n'
+        '\n'
+        "One copy for the plugin's cerrar.py and the hosted server (decision of 2026-11-05: an operation moves onto the package\n"
+        'when its tool is built, and both call the same function). Pure functions, text in and text out: reading the file, the\n'
+        "lock and the write that fails if the file changed are the caller's, through its storage adapter.\n"
+        '\n'
+        'Two parts:\n'
+        "Input texts are what the storage adapter's `Document.text` gives: \xab\\n\xbb line endings and no BOM.\n"
+        '\n'
+        '- The text changes, moved here from cerrar.py 1.25.4 with the same results (tests/test_write.py checks them against\n'
+        "  the 1.25.4 copies frozen in tests/reference/): the header's `actualizado`, a register entry on top, a whole \xab## \xbb\n"
+        '  block rewritten. cerrar.py imports them from here under its Spanish names.\n'
+        '- The entries composed from fields (a session entry, a decision, an Estatus), for a writer that receives fields and\n'
+        '  not text, the server. Each field is checked first: a field that is one line has no line break of any kind, and a text\n'
+        '  field cannot carry a heading, a header line, or a line that a reader would take for another field of the same\n'
+        '  register (a \xabPublic\xf3:\xbb inside \xabAvances\xbb would read as a publication). The writer, not the caller, puts the date and\n'
+        '  the author.\n'
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'import unicodedata\n'
+        'from typing import Iterable, Optional\n'
+        '\n'
+        'from .language import ES, Pack\n'
+        '\n'
+        '__all__ = ["with_header_today", "only_header_changed", "with_entry_on_top", "with_entries_on_top", "without_block",\n'
+        '           "with_block", "DECISION_ID", "is_decision_ref", "FieldError", "one_line", "text_field", "session_entry",\n'
+        '           "decision_entry", "status_block"]\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 text changes (cerrar.py 1.25.4: cabecera_hoy, solo_cabecera, con_entrada_arriba, sin_bloque, con_bloque) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'def with_header_today(text: str, today: str) -> str:\n'
+        '    """The header\'s `actualizado` set to `today`, added if missing. A file without a header is left as it is."""\n'
+        '    m = re.match(r"^---\\n(.*?)\\n---\\n", text, re.S)\n'
+        '    if not m:\n'
+        '        return text\n'
+        '    head = re.sub(r"^actualizado:.*$", f"actualizado: {today}", m.group(1), count=1, flags=re.M)\n'
+        '    if "actualizado:" not in head:\n'
+        '        head += f"\\nactualizado: {today}"\n'
+        '    return f"---\\n{head}\\n---\\n" + text[m.end():]\n'
+        '\n'
+        '\n'
+        'def only_header_changed(before: str, after: str) -> bool:\n'
+        '    """True if the only change between the two texts is inside the header (between the two first \xab---\xbb)."""\n'
+        '    m1, m2 = re.match(r"^---\\n.*?\\n---\\n", before, re.S), re.match(r"^---\\n.*?\\n---\\n", after, re.S)\n'
+        '    return bool(m1 and m2) and before[m1.end():] == after[m2.end():] and before != after\n'
+        '\n'
+        '\n'
+        'def with_entry_on_top(text: str, entry: str) -> tuple:\n'
+        '    """A new register entry under the title and above the rest; if it is already there, nothing. Returns (text, added)."""\n'
+        '    entry = entry.strip() + "\\n"\n'
+        '    if entry.strip() in text:\n'
+        '        return text, False\n'
+        '    m = re.search(r"^# .*\\n", text, re.M)\n'
+        '    if m:\n'
+        '        i = m.end()\n'
+        '        rest = text[i:]\n'
+        '        j = re.search(r"^## ", rest, re.M)\n'
+        '        if j:\n'
+        '            preface, body = rest[:j.start()], rest[j.start():]\n'
+        '            if not preface.strip():\n'
+        '                preface = "\\n"\n'
+        '            elif not preface.endswith("\\n\\n"):\n'
+        '                preface = preface.rstrip("\\n") + "\\n\\n"\n'
+        '            return text[:i] + preface + entry + "\\n" + body, True\n'
+        '        # no entries yet (a register just opened, or just archived with its \xabArchivado:\xbb line): what is under the title\n'
+        '        # stays before the first entry\n'
+        '        return text[:i] + ("\\n" + rest.strip("\\n") + "\\n" if rest.strip() else "") + "\\n" + entry, True\n'
+        '    return text.rstrip("\\n") + "\\n\\n" + entry, True\n'
+        '\n'
+        '\n'
+        'def with_entries_on_top(text: str, entries: Iterable[str]) -> tuple:\n'
+        '    """Several entries given from the oldest to the newest, so the last one given ends on top (cerrar.py\'s order, which\n'
+        '    fixes the identifiers `#AAAA-MM-DD-n` of entries of the same day). Returns (text, any added)."""\n'
+        '    added = False\n'
+        '    for e in entries:\n'
+        '        text, a = with_entry_on_top(text, e)\n'
+        '        added = added or a\n'
+        '    return text, added\n'
+        '\n'
+        '\n'
+        'def without_block(text: str, name: str) -> str:\n'
+        '    """The whole \xab## name\xbb block removed, if it is there."""\n'
+        '    return re.sub(r"^## " + re.escape(name) + r"\\s*\\n.*?(?=^## |\\Z)", "", text, count=1, flags=re.M | re.S)\n'
+        '\n'
+        '\n'
+        'def with_block(text: str, name: str, body: str, before: Optional[str] = None, aliases: Iterable[str] = ()) -> str:\n'
+        '    """The whole \xab## name\xbb block rewritten. If it does not exist, it is created under the title or, with `before`, just\n'
+        '    before that block (at the end if that one is missing too). The blocks named in `aliases` (older names of the same\n'
+        '    block) are removed, wherever they were."""\n'
+        '    body = body.strip() + "\\n"\n'
+        '    for old in aliases:\n'
+        '        text = without_block(text, old)\n'
+        '    m = re.search(r"^## " + re.escape(name) + r"\\s*\\n(.*?)(?=^## |\\Z)", text, re.M | re.S)\n'
+        '    if m:\n'
+        '        return text[:m.start(1)] + body + "\\n" + text[m.end(1):]\n'
+        '    new = f"## {name}\\n{body}\\n"\n'
+        '    if before:\n'
+        '        mb = re.search(r"^## " + re.escape(before) + r"\\s*$", text, re.M)\n'
+        '        if mb:\n'
+        '            return text[:mb.start()] + new + text[mb.start():]\n'
+        '        return text.rstrip("\\n") + "\\n\\n" + new\n'
+        '    mt = re.search(r"^# .*\\n", text, re.M)\n'
+        '    i = mt.end() if mt else 0\n'
+        '    return text[:i] + "\\n" + new + text[i:].lstrip("\\n")\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 fields \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        "# an entry's identifier, as escribir.md \xa74 writes it: `area/proyecto#AAAA-MM-DD`, with -2, -3\u2026 for later entries of the\n"
+        "# same day, and a bare `#AAAA-MM-DD` inside the same project; the slug alphabet is parse.decision_ref's\n"
+        'DECISION_ID = re.compile(r"^`?(?:[a-z0-9][\\w.-]*/[a-z0-9][\\w.-]*)?#20\\d\\d-\\d\\d-\\d\\d(?:-\\d+)?`?(?:\\s*(?:\xb7|\\().*)?$")\n'
+        '# in the title after an identifier: another identifier or a premise, which readers would take as the target instead\n'
+        '_SECOND_TARGET = re.compile(r"#20\\d\\d-\\d\\d-\\d\\d|premisa\\s+P\\d", re.I)\n'
+        '_INVISIBLE = re.compile("[\\u00ad\\u200b-\\u200f\\u2060-\\u2064\\ufeff]")\n'
+        '_VERSION = re.compile(r"^\\d+(?:\\.\\d+)+$")\n'
+        '# what parse.sessions splits \xabSesi\xf3n de\xbb on to find the name: an author cannot contain it\n'
+        '_BY_SEPARATORS = re.compile(r"\\s+[\xb7\\-\u2013\u2014]\\s+|\\(")\n'
+        '\n'
+        '# every character str.splitlines() and Markdown readers treat as a line break, \xab\\n\xbb included\n'
+        '_BREAKS = re.compile("[\\r\\n\\v\\f\\x1c\\x1d\\x1e\\x85\u2028'
+        '\u2029'
+        ']")\n'
+        '_OTHER_BREAKS = re.compile("[\\r\\v\\f\\x1c\\x1d\\x1e\\x85\u2028'
+        '\u2029'
+        ']")\n'
+        '\n'
+        '\n'
+        'class FieldError(ValueError):\n'
+        '    """A field the writer refuses. `field` is the caller\'s name for it; the message names nothing else."""\n'
+        '\n'
+        '    def __init__(self, field: str, message: str):\n'
+        '        super().__init__(f"{field} {message}")\n'
+        '        self.field = field\n'
+        '\n'
+        '\n'
+        'def is_decision_ref(text: str) -> bool:\n'
+        '    """One entry identifier, alone or with its title; never a second identifier or a premise inside the title."""\n'
+        '    t = (text or "").strip()\n'
+        '    m = re.match(r"^`?(?:[a-z0-9][\\w.-]*/[a-z0-9][\\w.-]*)?#20\\d\\d-\\d\\d-\\d\\d(?:-\\d+)?`?", t)\n'
+        '    return bool(DECISION_ID.match(t)) and bool(m) and not _SECOND_TARGET.search(t[m.end():])\n'
+        '\n'
+        '\n'
+        'def _key(line: str) -> str:\n'
+        '    """A line as every reader would see it: compatibility forms folded (NFKC), case folded (\xab\u017f\xbb is \xabs\xbb), invisible\n'
+        '    characters dropped, and the Markdown that only changes how it looks (a quote, a list bullet) removed."""\n'
+        '    k = _INVISIBLE.sub("", unicodedata.normalize("NFKC", line)).casefold().strip()\n'
+        '    while True:\n'
+        '        k2 = re.sub(r"^(?:>|[-*+](?=\\s)|\\d+[.)](?=\\s))\\s*", "", k)\n'
+        '        if k2 == k:\n'
+        '            return k\n'
+        '        k = k2\n'
+        '\n'
+        '\n'
+        'def _labels(pack: Pack, register: str) -> list:\n'
+        '    """The lowercase labels a reader takes as a field of this register, without their colon."""\n'
+        '    if register == "sessions":\n'
+        '        words = pack.session_topic + pack.session_progress + pack.session_pending + pack.session_by\n'
+        '        words += pack.session_wrote + pack.session_published\n'
+        '    elif register == "decisions":\n'
+        '        words = tuple(w for w, _ in pack.decision_fields)\n'
+        '    else:\n'
+        '        raise ValueError(f"no register {register!r}")\n'
+        '    return sorted({_key(w.rstrip(":")) for w in words}, key=len, reverse=True)\n'
+        '\n'
+        '\n'
+        'def one_line(value: str, field: str, required: bool = True, limit: int = 600) -> str:\n'
+        '    v = (value or "").strip()\n'
+        '    if required and not v:\n'
+        '        raise FieldError(field, "is required")\n'
+        '    if _BREAKS.search(v):\n'
+        '        raise FieldError(field, "must be one line")\n'
+        '    if len(v) > limit:\n'
+        '        raise FieldError(field, f"is longer than {limit} characters")\n'
+        '    return v\n'
+        '\n'
+        '\n'
+        'def text_field(value: str, field: str, register: str, pack: Pack = ES, required: bool = True, limit: int = 4000) -> str:\n'
+        '    """A field that may run over several lines, as written in `register` ("sessions" or "decisions"): \xab\\\\r\\\\n\xbb becomes\n'
+        '    \xab\\\\n\xbb; any other line break, a heading, a header line or a line starting with a field label of that register is\n'
+        '    refused. Returned normalised (each line stripped, blank lines dropped, as the readers read it), so what is written\n'
+        '    is exactly what was checked and what is read back."""\n'
+        '    v = (value or "").replace("\\r\\n", "\\n")\n'
+        '    if _OTHER_BREAKS.search(v):\n'
+        '        raise FieldError(field, "cannot contain a line break other than a plain newline")\n'
+        '    # the readers strip every line and skip blank ones: written that way, what is read back is what was given\n'
+        '    v = "\\n".join(l.strip() for l in v.split("\\n") if l.strip())\n'
+        '    if required and not v:\n'
+        '        raise FieldError(field, "is required")\n'
+        '    if len(v) > limit:\n'
+        '        raise FieldError(field, f"is longer than {limit} characters")\n'
+        '    labels = _labels(pack, register)\n'
+        '    for line in v.split("\\n"):\n'
+        '        s = _key(line)\n'
+        '        bare = re.sub(r"\\s", "", _INVISIBLE.sub("", line))\n'
+        '        if s.startswith("#") or re.match(r"^(?:-{3,}|={3,}|_{3,}|\\*{3,})$", bare):\n'
+        '            raise FieldError(field, "cannot contain a heading, a header line or a rule")\n'
+        '        for label in labels:\n'
+        '            if s.startswith(label) and re.match(r"\\s*:", s[len(label):]):\n'
+        '                raise FieldError(field, f"cannot contain a line that starts with a field of the register (\xab{label}:\xbb)")\n'
+        '    return v\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 entries composed from fields \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'def session_entry(date: str, topic: str, progress: str, by: str, writer: str, version: str,\n'
+        '                  wrote: Iterable[str] = (), published: Iterable[str] = (), pack: Pack = ES) -> str:\n'
+        '    """A sesiones.md entry (escribir.md \xa74). `writer` is "plugin" or "server"; the date and the author are the\n'
+        '    writer\'s, never the caller\'s. Each field is checked as `one_line` or `text_field`."""\n'
+        '    w = pack.write_session\n'
+        '    if writer not in pack.writers:\n'
+        '        raise FieldError("writer", f"must be one of {\', \'.join(sorted(pack.writers))}")\n'
+        '    topic = one_line(topic, "topic")\n'
+        '    progress = text_field(progress, "progress", "sessions", pack)\n'
+        '    by = one_line(by, "by", limit=80)\n'
+        '    words = "|".join(re.escape(x) for x in pack.writers.values())\n'
+        '    if _BY_SEPARATORS.search(by) or re.search(r"\\b(?:" + words + r")\\s+\\d", by, re.I):\n'
+        '        raise FieldError("by", "cannot contain \xab \xb7 \xbb, \xab - \xbb, \xab(\xbb or a writer and a version: readers split the line there")\n'
+        '    version = one_line(version, "version", limit=20)\n'
+        '    if not _VERSION.match(version):\n'
+        '        raise FieldError("version", "must be a version like 1.25.5")\n'
+        '    lines = [f"## {one_line(date, \'date\')}", f"{w[\'topic\']}: {topic}", f"{w[\'progress\']}: {progress}"]\n'
+        '    wrote, published = _paths(wrote, "wrote", pack), _paths(published, "published", pack)\n'
+        '    if wrote:\n'
+        '        lines.append(f"{w[\'wrote\']}: {\', \'.join(wrote)}")\n'
+        '    if published:\n'
+        '        lines.append(f"{w[\'published\']}: {\', \'.join(published)}")\n'
+        '    lines.append(f"{w[\'by\']}: {by} \xb7 {pack.writers[writer]} {version}")\n'
+        '    return "\\n".join(lines)\n'
+        '\n'
+        '\n'
+        'def _paths(paths: Iterable[str], field: str, pack: Pack = ES) -> list:\n'
+        '    """Paths inside the project, as cerrar.py accepts them: relative, no \xab..\xbb, nothing restricted, nothing the reader\n'
+        '    would strip or split (\xab`\xbb, \xab,\xbb)."""\n'
+        '    out = []\n'
+        '    for p in paths or ():\n'
+        '        p = one_line(p, field, limit=300)\n'
+        '        parts = p.split("/")\n'
+        '        if "," in p or "`" in p or p.startswith("/") or ".." in parts or pack.restricted in parts:\n'
+        '            raise FieldError(field, f"{p!r} is not a path inside the project that can be named")\n'
+        '        if p not in out:\n'
+        '            out.append(p)\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        'def decision_entry(date: str, title: str, decided_by: str, why: str, discarded: str = "", replaces: str = "",\n'
+        '                   responds_to: str = "", affects: str = "", project: str = "", pack: Pack = ES) -> str:\n'
+        '    """A decisiones.md decision (escribir.md \xa74), its lines in the contract\'s order and only those that say something.\n'
+        '    `replaces` and `responds_to` must be entry identifiers; a bare \xab#AAAA-MM-DD\xbb is qualified with `project`\n'
+        '    (\xabarea/project\xbb), since readers resolve only the full form. A challenge is not composed here: a title that reads as\n'
+        '    one is refused."""\n'
+        '    w = pack.write_decision\n'
+        '    title = one_line(title, "title")\n'
+        '    if re.match(re.escape(pack.challenge_title) + r"\\b", title, re.I):\n'
+        '        raise FieldError("title", f"cannot start with \xab{pack.challenge_title}\xbb: readers take the entry for a challenge")\n'
+        '    lines = [f"## {one_line(date, \'date\')} \xb7 {title}",\n'
+        '             f"{w[\'decided_by\']}: {one_line(decided_by, \'decided_by\', limit=200)}",\n'
+        '             f"{w[\'why\']}: {text_field(why, \'why\', \'decisions\', pack)}"]\n'
+        '    discarded = text_field(discarded, "discarded", "decisions", pack, required=False)\n'
+        '    if discarded:\n'
+        '        lines.append(f"{w[\'discarded\']}: {discarded}")\n'
+        '    for key, value in (("replaces", replaces), ("responds_to", responds_to)):\n'
+        '        v = one_line(value, key, required=False)\n'
+        '        if v and not is_decision_ref(v):\n'
+        '            raise FieldError(key, "must be an entry identifier, \xabarea/project#AAAA-MM-DD \xb7 its title\xbb")\n'
+        '        if v.lstrip("`").startswith("#"):\n'
+        '            if not re.match(r"^[a-z0-9][\\w.-]*/[a-z0-9][\\w.-]*$", project or ""):\n'
+        '                raise FieldError(key, "names an entry of this project: give it as \xabarea/project#AAAA-MM-DD\xbb")\n'
+        '            v = project + v.lstrip("`").replace("`", "", 1) if v.startswith("`") else project + v\n'
+        '        if v:\n'
+        '            lines.append(f"{w[key]}: {v}")\n'
+        '    affects = one_line(affects, "affects", required=False)\n'
+        '    if affects:\n'
+        '        lines.append(f"{w[\'affects\']}: {affects}")\n'
+        '    return "\\n".join(lines)\n'
+        '\n'
+        '\n'
+        'def status_block(date: str, headline: str, completed: str = "", next: str = "", to_decide: str = "",\n'
+        '                 concern: str = "", pack: Pack = ES) -> str:\n'
+        '    """The body of an Estatus block (escribir.md \xa73): the date and the bold sentence, then the lines that say\n'
+        "    something. A project's first Estatus may carry only \xabSiguiente\xbb; a closed project's, only the sentence that starts\n"
+        '    with the pack\'s finished marker."""\n'
+        '    w = pack.write_status\n'
+        '    headline = one_line(headline, "headline")\n'
+        '    if headline.startswith("**") or headline.endswith("**"):\n'
+        '        raise FieldError("headline", "is written without the asterisks: the writer puts them")\n'
+        '    marker = re.compile(re.escape(pack.finished_marker), re.I)\n'
+        '    closes = headline.startswith(pack.finished_marker)\n'
+        '    if closes and not re.match(re.escape(pack.finished_marker) + r"\\s+20\\d\\d-\\d\\d-\\d\\d\\b", headline):\n'
+        '        raise FieldError("headline", f"closes the project only with its date: \xab{pack.finished_marker} AAAA-MM-DD.\xbb")\n'
+        '    if marker.search(headline[len(pack.finished_marker):] if closes else headline):\n'
+        '        raise FieldError("headline", f"can say \xab{pack.finished_marker}\xbb only at its start: readers take it as closing the project")\n'
+        '    lines = [f"{one_line(date, \'date\')} \xb7 **{headline}**"]\n'
+        '    for key, value in (("completed", completed), ("next", next), ("to_decide", to_decide), ("concern", concern)):\n'
+        '        v = one_line(value, key, required=False)\n'
+        '        if marker.search(v):\n'
+        '            raise FieldError(key, f"cannot say \xab{pack.finished_marker}\xbb: readers take it as closing the project")\n'
+        '        if v:\n'
+        '            lines.append(f"- **{w[key]}:** {v}")\n'
+        '    if len(lines) == 1 and not closes:\n'
+        '        raise FieldError("next", "is required, unless the headline closes the project (\xab" + pack.finished_marker + " \u2026\xbb)")\n'
+        '    return "\\n".join(lines)\n'
+    ),
     }
     for _n in _todo:
         _m = _t.ModuleType("context_core." + _n); _m.__package__ = "context_core"; _m.__fingerprint__ = _fp[_n]
@@ -1017,6 +1335,13 @@ def _context_core():
 _context_core()
 # --- end of context_core ---
 from context_core.compat import (registro_personas, fila_cuentas)  # noqa: E402
+# los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
+from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
+                                with_entry_on_top as con_entrada_arriba, without_block as sin_bloque, with_block)
+
+
+def con_bloque(t, nombre, cuerpo, antes_de=None, alias=()):
+    return with_block(t, nombre, cuerpo, before=antes_de, aliases=alias)
 # --- fin de quién escribe ---
 
 
@@ -1121,71 +1446,6 @@ class Cerrojo:
 
 
 # ---------- los cambios sobre el texto ----------
-def cabecera_hoy(t, hoy):
-    m = re.match(r"^---\n(.*?)\n---\n", t, re.S)
-    if not m:
-        return t
-    cab = re.sub(r"^actualizado:.*$", f"actualizado: {hoy}", m.group(1), count=1, flags=re.M)
-    if "actualizado:" not in cab:
-        cab += f"\nactualizado: {hoy}"
-    return f"---\n{cab}\n---\n" + t[m.end():]
-
-
-def solo_cabecera(antes, despues):
-    """Cierto si lo único que cambió entre los dos textos está dentro de la cabecera (entre los dos «---» iniciales)."""
-    m1, m2 = re.match(r"^---\n.*?\n---\n", antes, re.S), re.match(r"^---\n.*?\n---\n", despues, re.S)
-    return bool(m1 and m2) and antes[m1.end():] == despues[m2.end():] and antes != despues
-
-
-def con_entrada_arriba(t, entrada):
-    """Una entrada nueva de registro, debajo del título y encima de las demás; si ya está, nada."""
-    entrada = entrada.strip() + "\n"
-    if entrada.strip() in t:
-        return t, False
-    m = re.search(r"^# .*\n", t, re.M)
-    if m:
-        i = m.end()
-        resto = t[i:]
-        j = re.search(r"^## ", resto, re.M)
-        if j:
-            prefacio, cuerpo = resto[:j.start()], resto[j.start():]
-            if not prefacio.strip():
-                prefacio = "\n"
-            elif not prefacio.endswith("\n\n"):
-                prefacio = prefacio.rstrip("\n") + "\n\n"
-            return t[:i] + prefacio + entrada + "\n" + cuerpo, True
-        # sin entradas todavía (un registro recién abierto, o recién archivado con su línea «Archivado:»): lo que haya
-        # debajo del título se queda delante de la primera entrada
-        return t[:i] + ("\n" + resto.strip("\n") + "\n" if resto.strip() else "") + "\n" + entrada, True
-    return t.rstrip("\n") + "\n\n" + entrada, True
-
-
-def sin_bloque(t, nombre):
-    """Quita entero el bloque «## nombre», si está."""
-    return re.sub(r"^## " + re.escape(nombre) + r"\s*\n.*?(?=^## |\Z)", "", t, count=1, flags=re.M | re.S)
-
-
-def con_bloque(t, nombre, cuerpo, antes_de=None, alias=()):
-    """Reescribe entero el bloque «## nombre». Si no existe, lo crea debajo del título o, con antes_de, justo antes de
-    ese bloque (al final si tampoco está). Los bloques de alias (los nombres de la 1.21) se retiran siempre: desde la
-    1.22 solo queda el nombre nuevo, y en su sitio de la 1.22, no en el que tenía el viejo."""
-    cuerpo = cuerpo.strip() + "\n"
-    for viejo in alias:
-        t = sin_bloque(t, viejo)
-    m = re.search(r"^## " + re.escape(nombre) + r"\s*\n(.*?)(?=^## |\Z)", t, re.M | re.S)
-    if m:
-        return t[:m.start(1)] + cuerpo + "\n" + t[m.end(1):]
-    nuevo = f"## {nombre}\n{cuerpo}\n"
-    if antes_de:
-        ma = re.search(r"^## " + re.escape(antes_de) + r"\s*$", t, re.M)
-        if ma:
-            return t[:ma.start()] + nuevo + t[ma.start():]
-        return t.rstrip("\n") + "\n\n" + nuevo
-    mt = re.search(r"^# .*\n", t, re.M)
-    i = mt.end() if mt else 0
-    return t[:i] + "\n" + nuevo + t[i:].lstrip("\n")
-
-
 def con_reemplazos(t, reemplazos, sin_match, ruta):
     for r in reemplazos or []:
         de, a = r.get("de", ""), r.get("a", "")

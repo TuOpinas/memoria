@@ -33,6 +33,13 @@ class Region(unittest.TestCase):
     def exec_region(self, path=None):
         return f"exec(open({str(path or self.region)!r}, encoding='utf-8').read(), {{'__file__': 'script.py'}})\n"
 
+    def test_each_script_carries_what_it_imports(self):
+        cerrar = (inline.PL / "skills/sesion/cerrar.py").read_text(encoding="utf-8")
+        abrir = (inline.PL / "skills/sesion/abrir.py").read_text(encoding="utf-8")
+        self.assertIn("write", inline.modules_for(cerrar))
+        self.assertNotIn("write", inline.modules_for(abrir))     # only cerrar.py pays for the write module
+        self.assertNotIn("'write': (", abrir)
+
     def test_only_what_compat_reaches(self):
         self.assertEqual(inline.MODULES, ["language", "records", "rules", "compat"])
         r = region_of()

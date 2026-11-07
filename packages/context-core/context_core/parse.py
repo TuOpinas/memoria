@@ -317,8 +317,10 @@ def sessions(text: str, live: Optional[int] = None, lang: Pack = ES) -> list[Ses
                 current = None
                 rest = s.split(":", 1)[1].strip()
                 e.by = re.split(r"\s+[·\-–—]\s+|\s*\(", rest, maxsplit=1)[0].strip()[:80]
-                mv = re.search(r"plugin\s+(\d+(?:\.\d+)+)", rest)
+                mv = re.search(r"\b" + re.escape(lang.writers.get("plugin", "plugin")) + r"\s+(\d+(?:\.\d+)+)", rest)
                 e.plugin_version = mv.group(1) if mv else ""
+                ms = re.search(r"\b" + re.escape(lang.writers.get("server", "servidor")) + r"\s+(\d+(?:\.\d+)+)", rest)
+                e.server_version = ms.group(1) if ms else ""
             elif current and s:
                 setattr(e, current, getattr(e, current) + "\n" + s)
         out.append(e)

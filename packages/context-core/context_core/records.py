@@ -129,6 +129,7 @@ class SessionEntry:
     pending: str = ""                           # «Pendiente» (older roots)
     by: str = ""                                # «Sesión de», without the plugin version
     plugin_version: str = ""                    # «· plugin 1.25.1»
+    server_version: str = ""                    # «· servidor 0.0.2»: the entry was written by the hosted server
     wrote: list[str] = field(default_factory=list)       # «Escribió», paths inside the project (restricted ones dropped)
     published: list[str] = field(default_factory=list)   # «Publicó»
     archived: bool = False
