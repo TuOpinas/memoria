@@ -185,7 +185,7 @@ def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] 
         if restricted:
             area = Area(slug=s, row=row, restricted=True)
         else:
-            area = parse.area_file(s, _text(st, _j(s, lang.area_file)) or "", lang)
+            area = parse.area_file(s, _text(st, _j(s, lang.area_file)) or "", lang, r.warnings)
             area.row = row
         sub = set(_dirs(st, s)) if not restricted else set()
         names = list(area.index)
