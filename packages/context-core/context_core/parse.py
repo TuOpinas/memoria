@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime
 import re
+import unicodedata
 from typing import Optional
 
 from .language import ES, Pack
@@ -114,6 +115,13 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
     if unknown_header and warnings is not None:
         warnings.append("ninguna columna de la tabla de áreas lleva un nombre conocido: todas las áreas se leen restringidas")
     out = []
+    # A slug on two rows, counted over every row (a short one too) and compared as macOS, Drive and Windows compare
+    # names (review of 1.25.6, finding 3): which row wins would decide whether a restricted area reads open.
+    slug_key = lambda c: unicodedata.normalize("NFC", c.strip("`").rstrip("/")).casefold()
+    counts: dict[str, int] = {}
+    for cells in rows:
+        if cells and cells[0].strip("`").rstrip("/"):
+            counts[slug_key(cells[0])] = counts.get(slug_key(cells[0]), 0) + 1
     for cells in rows:
         if not cells or not cells[0].strip("`").rstrip("/"):
             continue
@@ -132,17 +140,16 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
             restricted=(unknown_header or area_is_restricted(cells, header, lang)
                         or (col["access"] is not None and get(col["access"]).strip() != "" and access_word(get(col["access"]), lang) is None)),
             warnings=[warning] if warning else []))
-    # A slug on two rows (review of consultar, finding 2): which row wins would decide whether a restricted area reads
-    # open. The area keeps its first row, loads closed, and the guide is said to need fixing.
+    # The area keeps its first full row, loads closed, and the guide is said to need fixing (review of consultar, finding 2)
     seen: dict[str, AreaRow] = {}
-    twice: set = set()
     for row in out:
-        first = seen.setdefault(row.slug, row)
-        if first is not row and row.slug not in twice:
-            first.restricted = True
-            twice.add(row.slug)
+        seen.setdefault(slug_key(row.slug), row)
+    for k, n in counts.items():
+        if n > 1:
+            if k in seen:
+                seen[k].restricted = True
             if warnings is not None:
-                warnings.append(f"el área «{row.slug}» tiene dos filas en la tabla de áreas: se lee restringida hasta que quede una")
+                warnings.append(f"el área «{k}» tiene {n} filas en la tabla de áreas: se lee restringida hasta que quede una")
     return list(seen.values())
 
 
@@ -253,10 +260,18 @@ def decision_ref(text: str, here: Optional[str] = None) -> Optional[DecisionRef]
     mp = re.search(r"\bpremisa\s+(P\d+)", t, re.I)
     if mp:
         return DecisionRef("premisa", mp.group(1).upper(), t)
-    m = re.search(r"`?([a-z0-9][\w.-]*)/([a-z0-9][\w.-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", t)
+    # «area/project#id», also with the register's file («…/decisiones.md#id», «…/decisiones-2026.md#id») and in any case
+    # (review of 1.25.6, finding 6); slugs are compared lowercased
+    m = re.search(r"(?<![\w.-])([a-z0-9][\w.-]*)/([a-z0-9][\w.-]*?)(?:/[\w.-]+\.md)?#(20\d\d-\d\d-\d\d(?:-\d+)?)", t, re.I)
     if m:
-        return DecisionRef(f"{m.group(1)}--{m.group(2)}", m.group(3), t)
-    mb = re.search(r"(?<![\w/.-])#(20\d\d-\d\d-\d\d(?:-\d+)?)\b", t)
+        return DecisionRef(f"{m.group(1).lower()}--{m.group(2).lower()}", m.group(3), t)
+    h_area = (here or "").replace("/", "--").partition("--")[0]
+    # «project#id», relative to the current area
+    mp2 = re.search(r"(?<![\w./-])([a-z0-9][\w-]*)#(20\d\d-\d\d-\d\d(?:-\d+)?)", t, re.I)
+    if mp2 and h_area and not re.fullmatch(r"[\w-]+\.md", mp2.group(1), re.I):
+        return DecisionRef(f"{h_area}--{mp2.group(1).lower()}", mp2.group(2), t)
+    # the same project: «#id» or «decisiones.md#id»
+    mb = re.search(r"(?:(?<![\w/.-])|(?<=\.md))#(20\d\d-\d\d-\d\d(?:-\d+)?)\b", t)
     if mb and here:
         return DecisionRef(here.replace("/", "--"), mb.group(1), t)
     return DecisionRef(None, None, t)
@@ -310,32 +325,43 @@ def sessions(text: str, live: Optional[int] = None, lang: Pack = ES, headers_onl
     «Publicó», and nothing of its body: no «Avances», no «Pendiente», no line that follows a field."""
     docs = "|".join(re.escape(x) for x in lang.session_wrote + lang.session_published)
     raw = re.split(r"^## ", text or "", flags=re.M)[1:]
+    hidden = {lang.workshop, lang.sources}   # with headers_only, «Escribió» leaves out what an outside reader may not open
     out: list[SessionEntry] = []
     for i, p in enumerate(raw):
         head, _, body = p.partition("\n")
         e = SessionEntry(n=len(raw) - 1 - i, date=(dates_in(head) or [""])[0], title=head.strip(),
                          archived=live is not None and i >= live)
         current = None
+        other_field = False
         for l in body.split("\n"):
             s = l.strip()
             low = s.lower()
             m_doc = re.match(r"^(" + docs + r")\s*:\s*(.*)$", low)
             if m_doc:
                 current = None
+                other_field = True
                 target = e.wrote if m_doc.group(1) in lang.session_wrote else e.published
                 for r in s.split(":", 1)[1].split(","):
                     r = r.strip().strip("`").strip()
-                    if r and lang.restricted not in r.split("/") and r not in target and len(target) < 20:
+                    folders = {unicodedata.normalize("NFC", x).casefold() for x in r.replace("\\", "/").split("/")}
+                    if r and lang.restricted not in folders and not (headers_only and folders & hidden) \
+                            and r not in target and len(target) < 20:
                         target.append(r[:160])
                 continue
             if low.startswith(lang.session_topic):
+                if headers_only and (e.topic or other_field):
+                    current = None   # only the first «Tema» before any other field is the heading's (finding 5)
+                    continue
                 current = "topic"; e.topic = s.split(":", 1)[1].strip()
             elif low.startswith(lang.session_progress):
+                other_field = True
                 current = "progress"; e.progress = s.split(":", 1)[1].strip()
             elif low.startswith(lang.session_pending):
+                other_field = True
                 current = "pending"; e.pending = s.split(":", 1)[1].strip()
             elif low.startswith(lang.session_by):
                 current = None
+                other_field = True
                 rest = s.split(":", 1)[1].strip()
                 e.by = re.split(r"\s+[·\-–—]\s+|\s*\(", rest, maxsplit=1)[0].strip()[:80]
                 mv = re.search(r"\b" + re.escape(lang.writers.get("plugin", "plugin")) + r"\s+(\d+(?:\.\d+)+)", rest)

@@ -118,9 +118,14 @@ class FolderStorage:
         return False
 
     def _served(self, path: str) -> Optional[pathlib.Path]:
-        """The path to read, stat or list, or None when it goes through a link."""
-        p = self._p(path)
-        return None if self._through_link(p) else p
+        """The path to read, stat or list, or None when it goes through a link, wherever the link points: one link
+        written by anyone must not stop the whole root from loading (review of 1.25.6, finding 4). A path that is wrong
+        as written (absolute, «..») still raises."""
+        rel = clean(path)
+        p = self.root / rel if rel else self.root
+        if self._through_link(p) or not self._inside(p):
+            return None
+        return p
 
     @staticmethod
     def _version(b: bytes, st: os.stat_result) -> Version:

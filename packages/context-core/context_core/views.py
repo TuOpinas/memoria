@@ -16,6 +16,7 @@ Pure functions over records: they read nothing.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -69,30 +70,85 @@ def open_challenges(root: Root) -> list[Challenge]:
     return [c for c in challenge_index(root) if c.open]
 
 
-_PATH = re.compile(r"`?(?<![\w.-])([a-z0-9][\w.-]*(?:/[\w.-]+)+/?)(#20\d\d-\d\d-\d\d(?:-\d+)?)?`?")
+def _key(name: str) -> str:
+    """How two spellings of one folder name compare: NFC and casefold, as macOS, Drive and Windows treat them."""
+    return unicodedata.normalize("NFC", name).casefold()
 
 
-def _cut(path: str, root: Root, lang: Pack) -> Optional[str]:
-    """The public form of one path, or None when it stays as written."""
-    parts = path.strip("/").split("/")
-    if lang.restricted in parts:
-        i = parts.index(lang.restricted)
-        return "/".join(parts[:i]) if i else lang.restricted + "/"
-    area = root.area(parts[0])
-    if area is None:
+# A field names several references separated by «·», «,», «;» or line breaks; a reference is cut whole, never only the
+# piece a path pattern finds (review of 1.25.6, finding 1: a file name with spaces).
+_SEP = re.compile(r"(\s+·\s+|\s*[,;]\s*|\n)")
+
+
+def _zones(root: Root):
+    """(restricted area keys, open area keys -> Area, every known area key -> its slug as written)."""
+    names, closed, opened = {}, set(), {}
+    for row in root.area_rows:
+        names.setdefault(_key(row.slug), row.slug)
+        if row.restricted:
+            closed.add(_key(row.slug))
+    for a in root.areas:
+        names.setdefault(_key(a.slug), a.slug)
+        if a.restricted:
+            closed.add(_key(a.slug))
+        else:
+            opened[_key(a.slug)] = a
+    # an area with a row but no loaded folder (on Drive the server may not list it) counts as restricted
+    closed |= {k for k in names if k not in opened}
+    return closed, opened, names
+
+
+def _cut(ref: str, root: Root, lang: Pack, here: Optional[str], zones) -> Optional[str]:
+    """The public form of one reference, or None when it stays as written."""
+    closed, opened, names = zones
+    t = unicodedata.normalize("NFC", ref.strip().strip("`'\"«»").replace("\\", "/"))
+    path = t.split("#", 1)[0]
+    parts = [x for x in path.split("/") if x not in ("", ".", "..")]
+    if not parts:
         return None
-    if area.restricted:
-        return parts[0] + "/"
-    if len(parts) > 1:
-        pr = next((p for p in area.projects if p.slug == parts[1]), None)
-        if pr is not None and pr.restricted:
-            return f"{parts[0]}/{parts[1]}"
+    # prose around a path: the area is the last word before its «/», a project the first word after it
+    last = lambda x: (re.findall(r"[\w.-]+$", x) or [""])[0]
+    lead = lambda x: (re.match(r"[\w.-]*", x.strip()).group(0))
+    keys = [_key(last(parts[0]) if len(parts) > 1 else parts[0])] + [_key(lead(x)) for x in parts[1:]]
+    start = next((i for i, k in enumerate(keys) if k in names and (len(parts) > 1 or "#" in t or k == _key(path.strip()))), None)
+    restricted = _key(lang.restricted)
+    if start is None:
+        # relative to the current project or area: «restringido/x.md», «secreto/plan.md», «secreto#2026-01-02»
+        h_area, _, h_proj = (here or "").replace("--", "/").partition("/")
+        if h_area and _key(h_area) in names:
+            first = keys[0]
+            area = opened.get(_key(h_area))
+            if restricted in keys:
+                return f"{names[_key(h_area)]}/{h_proj}" if h_proj and keys.index(restricted) == 0 else lang.restricted + "/"
+            if area is not None:
+                pr = next((x for x in area.projects if _key(x.slug) == first), None)
+                if pr is not None and pr.restricted:
+                    return f"{area.slug}/{pr.slug}"
+            return None
+        return lang.restricted + "/" if restricted in keys else None
+    akey = keys[start]
+    if akey in closed:
+        return names[akey] + "/"
+    area = opened[akey]
+    rest = keys[start + 1:]
+    if rest:
+        pr = next((x for x in area.projects if _key(x.slug) == rest[0]), None)
+        if pr is not None and (pr.restricted or restricted in rest):
+            return f"{area.slug}/{pr.slug}"
+    if restricted in rest:
+        return area.slug + "/"
     return None
 
 
-def public_reference(text: str, root: Root, lang: Pack = ES) -> str:
-    """`text` with each reference into a restricted zone cut to the zone's name (see the module's docstring)."""
-    def sub(m: re.Match) -> str:
-        cut = _cut(m.group(1), root, lang)
-        return m.group(0) if cut is None else cut
-    return _PATH.sub(sub, text or "")
+def public_reference(text: str, root: Root, lang: Pack = ES, here: Optional[str] = None) -> str:
+    """`text` with each reference into a restricted zone cut to the zone's name (see the module's docstring).
+    `here` ("area--project") resolves references written relative to the current project."""
+    zones = _zones(root)
+    out = []
+    for piece in _SEP.split(text or ""):
+        if not piece or _SEP.fullmatch(piece):
+            out.append(piece)
+            continue
+        cut = _cut(piece, root, lang, here, zones)
+        out.append(piece if cut is None else cut)
+    return "".join(out)
