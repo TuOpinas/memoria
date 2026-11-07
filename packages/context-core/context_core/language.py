@@ -82,6 +82,11 @@ class Pack:
     key_based_on: str = ""
     key_replaced_by: str = ""
     key_contribution: tuple = ()
+    # how a writer spells what it writes (context_core.write): one canonical form per field, where reading accepts several
+    write_session: dict = field(default_factory=dict)     # topic, progress, wrote, published, by
+    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects
+    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern
+    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in «Sesión de»
 
 
 ES = Pack(
@@ -113,6 +118,11 @@ ES = Pack(
     session_by=("sesión de:", "sesion de:"),
     key_state="estado", key_updated="actualizado", key_based_on="basado_en", key_replaced_by="reemplazado_por",
     key_contribution=("aportacion", "afirma"),
+    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribió", "published": "Publicó", "by": "Sesión de"},
+    write_decision={"decided_by": "Decidió", "raised_by": "Planteó", "why": "Por qué", "discarded": "Descartado",
+                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},
+    write_status={"completed": "Se completó", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},
+    writers={"plugin": "plugin", "server": "servidor"},
 )
 
 PACKS = {"es": ES}

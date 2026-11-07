@@ -157,6 +157,7 @@ CREATE TABLE session_entry (
     pending         text NOT NULL DEFAULT '',
     by_name         text NOT NULL DEFAULT '',        -- records.SessionEntry.by
     plugin_version  text NOT NULL DEFAULT '',
+    server_version  text NOT NULL DEFAULT '',
     wrote           text[] NOT NULL DEFAULT '{}',
     published       text[] NOT NULL DEFAULT '{}',
     archived        boolean NOT NULL DEFAULT false,

@@ -44,8 +44,8 @@ import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '864af00a6001d879a83ab431d358a0c78eb5fb9dfe7121c1fef5e4fe215c5281',
-    'records': '08a62214b5e10c0e46494a5904268e5aa8e7595e2547166ba6c60a520530c36d',
+    'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
+    'records': '22bc6fac9dc4a84f9e1f74cb653896ef4db22c56d7692c5e33382943982450fe',
     'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
     'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
     }
@@ -157,6 +157,11 @@ def _context_core():
         '    key_based_on: str = ""\n'
         '    key_replaced_by: str = ""\n'
         '    key_contribution: tuple = ()\n'
+        '    # how a writer spells what it writes (context_core.write): one canonical form per field, where reading accepts several\n'
+        '    write_session: dict = field(default_factory=dict)     # topic, progress, wrote, published, by\n'
+        '    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects\n'
+        '    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern\n'
+        '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -188,6 +193,11 @@ def _context_core():
         '    session_by=("sesi\xf3n de:", "sesion de:"),\n'
         '    key_state="estado", key_updated="actualizado", key_based_on="basado_en", key_replaced_by="reemplazado_por",\n'
         '    key_contribution=("aportacion", "afirma"),\n'
+        '    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribi\xf3", "published": "Public\xf3", "by": "Sesi\xf3n de"},\n'
+        '    write_decision={"decided_by": "Decidi\xf3", "raised_by": "Plante\xf3", "why": "Por qu\xe9", "discarded": "Descartado",\n'
+        '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
+        '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
+        '    writers={"plugin": "plugin", "server": "servidor"},\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -333,6 +343,7 @@ def _context_core():
         '    pending: str = ""                           # \xabPendiente\xbb (older roots)\n'
         '    by: str = ""                                # \xabSesi\xf3n de\xbb, without the plugin version\n'
         '    plugin_version: str = ""                    # \xab\xb7 plugin 1.25.1\xbb\n'
+        '    server_version: str = ""                    # \xab\xb7 servidor 0.0.2\xbb: the entry was written by the hosted server\n'
         '    wrote: list[str] = field(default_factory=list)       # \xabEscribi\xf3\xbb, paths inside the project (restricted ones dropped)\n'
         '    published: list[str] = field(default_factory=list)   # \xabPublic\xf3\xbb\n'
         '    archived: bool = False\n'
