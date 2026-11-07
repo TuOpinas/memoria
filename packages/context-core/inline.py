@@ -57,7 +57,13 @@ def modules_for(script: str) -> list:
     """What one script needs: the package modules it imports, and what those import. A module only one script uses
     (`write`, cerrar.py's) goes only into that script."""
     out = []
-    for m in re.findall(r"^\s*from\s+context_core\.(\w+)\s+import", script, re.M):
+    names = re.findall(r"^\s*from\s+context_core\s*\.\s*(\w+)\s+import", script, re.M)
+    names += re.findall(r"^\s*import\s+context_core\.(\w+)", script, re.M)
+    for group in re.findall(r"^\s*from\s+context_core\s+import\s+\(?([\w\s,]+)\)?", script, re.M):
+        names += [n.strip().split()[0] for n in group.split(",") if n.strip()]
+    for m in names:
+        if not (CORE / "context_core" / f"{m}.py").exists():
+            continue
         for dep in reachable(m):
             if dep not in out:
                 out.append(dep)

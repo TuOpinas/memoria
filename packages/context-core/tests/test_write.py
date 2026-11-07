@@ -21,6 +21,8 @@ EDGE = ["", "sin título ni cabecera\n", "# Solo título\n", "# Título\nArchiva
         "---\nactualizado: 2020-01-01\n---\n# T\n\nprefacio sin salto\n## 2026-01-01\nTema: a\n",
         "# T\n## Estatus\nviejo\n## En corto\nmás viejo\n## Siguientes pasos\n- uno\n## Quién participa\nResponsable: X\n",
         "# T\n\n## Estado actual\nuno\n\ndos\n"]
+ACCEPTED = ("ventas/cuentas#2026-09-20", "`ventas/cuentas#2026-09-20-2` · título", "a.b/c_d#2026-01-01",
+            "ventas/cuentas#2026-09-20 (el viejo)", "#2026-09-20 · uno de aquí")
 ENTRY = "## 2026-11-06\nTema: prueba\nAvances: algo.\nSesión de: Ana Prueba · plugin 1.25.5"
 
 
@@ -81,6 +83,8 @@ class Composed(unittest.TestCase):
         self.assertEqual((s.date, s.topic, s.by, s.server_version, s.plugin_version),
                          ("2026-11-06", "la propuesta", "Ana Prueba", "0.0.2", ""))
         self.assertEqual(s.progress, "Se envió el anexo.\nFalta la firma.")
+        loose = write.session_entry("2026-11-06", "t", "  a\n\n   - b  \n", "Ana Prueba", "server", "0.0.2")
+        self.assertEqual(parse.sessions("# S\n\n" + loose)[0].progress, "a\n- b")   # what is written is what is read
         self.assertEqual(s.wrote, ["taller/a.md", "entregables/b.md"])        # a path given twice is written once
         plugin = parse.sessions("# S\n\n## 2026-11-06\nTema: x\nSesión de: Ana · plugin 1.25.5\n")[0]
         self.assertEqual((plugin.plugin_version, plugin.server_version), ("1.25.5", ""))
@@ -88,11 +92,13 @@ class Composed(unittest.TestCase):
     def test_decision_reads_back(self):
         e = write.decision_entry("2026-11-06", "El contrato va antes del anexo", "Ana Prueba", "el anexo depende de él.",
                                  discarded="firmar los dos juntos.", replaces="ventas/cuentas#2026-09-20 · el viejo",
-                                 responds_to="#2026-10-01", affects="operacion/soporte (cambia la fecha)")
+                                 responds_to="#2026-10-01", affects="operacion/soporte (cambia la fecha)",
+                                 project="ventas/cuentas")
         d = parse.decisions("# Decisiones\n\n" + e)[0]
         self.assertEqual((d.title, d.decided_by, d.why, d.discarded), ("El contrato va antes del anexo", "Ana Prueba",
                                                                       "el anexo depende de él.", "firmar los dos juntos."))
         self.assertEqual((d.replaces.project, d.replaces.id), ("ventas--cuentas", "2026-09-20"))
+        self.assertEqual((d.responds_to.project, d.responds_to.id), ("ventas--cuentas", "2026-10-01"))   # qualified
         self.assertEqual(d.affects, "operacion/soporte (cambia la fecha)")
         self.assertEqual(d.kind, "decision")
         order = [l.split(":")[0] for l in e.split("\n")[1:]]
@@ -146,16 +152,61 @@ class Refused(unittest.TestCase):
         self.bad("heading", write.decision_entry, "2026-11-06", "t", "Ana", "ok\n---")
         self.bad("one line", write.decision_entry, "2026-11-06", "t\n## y", "Ana", "z")
         self.bad("entry identifier", write.decision_entry, "2026-11-06", "t", "Ana", "z", replaces="el viejo")
-        for ref in ("ventas/cuentas#2026-09-20", "`ventas/cuentas#2026-09-20-2` · título", "#2026-09-20", "a.b/c_d#2026-01-01"):
+        for ref in ACCEPTED + ("#2026-09-20",):
             self.assertTrue(write.is_decision_ref(ref), ref)
         self.bad("is required", write.status_block, "2026-11-06", "Solo una frase.")
         self.bad("asterisks", write.status_block, "2026-11-06", "**frase**", next="x")
         self.bad("not a path", write.session_entry, "2026-11-06", "t", "ok.", "Ana", "server", "0.0.2", wrote=["a.md, b.md"])
 
-    def test_every_identifier_it_accepts_reads_back(self):
-        for ref in ("ventas/cuentas#2026-09-20", "a.b/c_d#2026-01-01-3 · título"):
-            r = parse.decision_ref(ref)
-            self.assertIsNotNone(r.project, ref)
+    def test_every_identifier_it_writes_reads_back(self):
+        for ref in ACCEPTED:
+            with self.subTest(ref):
+                e = write.decision_entry("2026-11-06", "t", "Ana", "z", replaces=ref, project="ventas/cuentas")
+                r = parse.decisions("# D\n\n" + e)[0].replaces
+                self.assertIsNotNone(r.project)
+                self.assertEqual(r.id, re.search(r"#(\S+?)`?(?:\s|$)", ref).group(1))
+
+    def test_one_target_per_identifier(self):
+        for ref in ("area/p#2026-10-01 · premisa P3 y victima/proy#2026-09-09", "a/b#2026-10-01 · y otra#2026-01-01",
+                    "ventas/cuentas#2026-09-20 (el viejo, premisa P2)"):
+            with self.subTest(ref):
+                self.assertFalse(write.is_decision_ref(ref))
+
+    def test_author_and_version_cannot_be_forged(self):
+        for by in ("Ana · plugin 9.9.9", "Ana servidor 9.9.9", "Ana plugin 1.0", "Ana (QA)", "Ana - Bob", "(Mallory)", "x" * 81):
+            with self.subTest(by=by):
+                self.bad("by", write.session_entry, "2026-11-06", "t", "ok.", by, "server", "0.0.2")
+        for version in ("1.0 · plugin 9.9", "latest", "1"):
+            with self.subTest(version=version):
+                self.bad("version", write.session_entry, "2026-11-06", "t", "ok.", "Ana", "server", version)
+        self.bad("writer must be", write.session_entry, "2026-11-06", "t", "ok.", "Ana", "foo", "0.0.2")
+
+    def test_only_the_headline_can_close_the_project(self):
+        self.bad("closing the project", write.status_block, "2026-11-06", "Sigue abierto.", next="x",
+                 concern="que digan Proyecto terminado el 2026-12-01 antes de tiempo")
+        self.bad("closing the project", write.status_block, "2026-11-06", "Sigue; Proyecto terminado el 2026-12-01", next="x")
+        self.bad("with its date", write.status_block, "2026-11-06", "Proyecto terminado el día que firme el cliente")
+
+    def test_a_decision_title_is_not_a_challenge(self):
+        for title in ("Cuestionamiento del plan de ventas", "cuestionamiento: algo"):
+            with self.subTest(title):
+                self.bad("challenge", write.decision_entry, "2026-11-06", title, "Ana", "z")
+        self.bad("area/project#", write.decision_entry, "2026-11-06", "t", "Ana", "z", responds_to="#2026-10-01")
+
+    def test_paths_cerrar_would_refuse(self):
+        for p in ("restringido/x.md", "`a.md`", "../x.md", "/etc/x.md", "entregables/../../x.md"):
+            with self.subTest(p):
+                self.bad("wrote", write.session_entry, "2026-11-06", "t", "ok.", "Ana", "server", "0.0.2", wrote=[p])
+
+    def test_look_alike_and_disguised_labels(self):
+        for line in ("Cueſtiona a: otra/proy#2026-11-01", "Reſponde a: otra/proy#2026-11-01", "\u200bDecidió: Mallory",
+                     "Decidio\u0301: Mallory", "> Decidió: Mallory", "- Afecta a: victima/proy", "1. Planteó: X",
+                     "ＤＥＣＩＤＩÓ: X"):
+            with self.subTest(line):
+                self.bad("field of the register", write.decision_entry, "2026-11-06", "t", "Ana", "ok.\n" + line)
+        for line in ("===", "----", "- - -", "> ## Falso", "* # Falso"):
+            with self.subTest(line):
+                self.bad("heading", write.session_entry, "2026-11-06", "t", "x\n" + line, "Ana", "server", "0.0.2")
 
 
 if __name__ == "__main__":
