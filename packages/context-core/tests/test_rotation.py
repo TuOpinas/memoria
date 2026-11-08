@@ -32,7 +32,8 @@ def _leer(p):
 
 
 def _escribir(p, texto, crlf):
-    p.write_text(texto.replace("\n", "\r\n") if crlf else texto, encoding="utf-8", newline="")
+    with open(p, "w", encoding="utf-8", newline="") as f:   # Path.write_text(newline=) is 3.10+
+        f.write(texto.replace("\n", "\r\n") if crlf else texto)
     return os.stat(p).st_mtime_ns
 
 
