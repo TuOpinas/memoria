@@ -1569,8 +1569,8 @@ def area_anterior(slug):
     cuerpo = cabecera(t)[1] if t else ""
     if t and marcas_anteriores(cuerpo, "area"):
         return True
-    if t and re.search(r"^\s*[-*]?\s*\**\s*Responsable\s*\**\s*:", seccion(cuerpo, "Quién participa"), re.M):
-        return False
+    if t and re.search(r"^\s*[-*]?\s*\**\s*Responsable(?: y colaboradores)?\s*\**\s*:", seccion(cuerpo, "Quién participa"), re.M):
+        return False   # «Responsable y colaboradores: en … guia.md» lo deja la migración de las personas (1.26)
     try:
         proyectos = sorted(d for d in (RAIZ / slug).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
     except OSError:
@@ -1608,6 +1608,44 @@ def area_en_uso(slug):
 
 titulo("ESTRUCTURA")
 ESTRUCTURA_ANTERIOR = ""
+PERSONAS_ANTERIOR, ATRASADOS = "", []
+LINEA_PERSONA = re.compile(r"^\s*[-*]?\s*\**\s*(?:colabora[n]?|responsable|due[ñn][oa])\s*\**\s*:", re.I)
+
+
+def personas_en_area(texto_area):
+    """Las líneas «Responsable:», «Dueño:» o «Colabora:» de «Quién participa» de un area.md, que la 1.26 quita: desde
+    entonces quién responde por un área y quién colabora en ella lo dice solo guia.md. La misma función en
+    migrar_estructura.py; probar_migrar.py comprueba que coinciden."""
+    return [l for l in seccion(cabecera(texto_area)[1] if texto_area else "", "Quién participa").split("\n") if LINEA_PERSONA.match(l)]
+
+
+def atrasados(dias):
+    """[(nombre, versión)] de quienes cerraron sesión en algún proyecto legible en los últimos `dias` días con un plugin
+    anterior a la 1.26, por su última «Sesión de: Nombre · plugin X.Y.Z». Se mira solo el principio de cada sesiones.md,
+    que es donde están las entradas recientes. Con la versión mínima 1.26.0 esas personas leen pero no escriben."""
+    desde, ult = (HOY - datetime.timedelta(days=dias)).isoformat(), {}
+    for a in areas:
+        if a["restringida"] and not (CUENTA and CUENTA in (a["cuentas_dueno"] | a["colaboran"])):
+            continue
+        try:
+            ds = [d for d in (RAIZ / a["slug"]).iterdir() if d.is_dir() and not d.name.startswith(".")]
+        except OSError:
+            continue
+        for d in ds:
+            try:
+                with open(d / "sesiones.md", encoding="utf-8-sig", errors="replace") as f_:
+                    txt = f_.read(65536)
+            except OSError:
+                continue
+            for fecha, cuerpo in re.findall(r"^## (20\d\d-\d\d-\d\d)[^\n]*\n(.*?)(?=^## |\Z)", txt, re.M | re.S):
+                if fecha < desde:
+                    break
+                m = re.search(r"^Sesi[oó]n de:\s*(.+?)\s+·\s+(?:plugin|servidor)\s+(\d+(?:\.\d+)+)", cuerpo, re.M)
+                if m and (m.group(1) not in ult or fecha > ult[m.group(1)][0]):
+                    ult[m.group(1)] = (fecha, m.group(2))
+    return sorted((n, v) for n, (f, v) in ult.items() if tuple(int(x) for x in v.split(".")) < (1, 26))
+
+
 if not CUENTA:
     print("Veredicto: SIN CUENTA")
 else:
@@ -1625,6 +1663,21 @@ else:
               + " · se pregunta antes de responder («La estructura» en la skill sesion)")
     else:
         print("Veredicto: AL DIA")
+    # las personas (1.26): la guía sin «Quién es quién» la migra el responsable de contexto, con todas las áreas; con el
+    # registro ya en guia.md, cada responsable migra el «Quién participa» de sus area.md en su apertura
+    _gm = REG["hay"] and not any(re.sub(r"[*_`]", "", x).strip().lower() == "cuenta" for x in (cab_areas or []))
+    if es_resp and not _gm:
+        PERSONAS_ANTERIOR = "guia.md"
+    elif _gm:
+        PERSONAS_ANTERIOR = ", ".join(a["slug"] for a in areas if (CUENTA in a["cuentas_dueno"] or es_resp) and (RAIZ / a["slug"]).is_dir()
+                                      and personas_en_area(leer(RAIZ / a["slug"] / "area.md") or ""))
+    if PERSONAS_ANTERIOR:
+        print("Personas: ANTERIOR en " + PERSONAS_ANTERIOR + " · se pregunta antes de responder (la RESPUESTA)")
+        if PERSONAS_ANTERIOR == "guia.md":
+            _yo_ = {solo_nombre(a["dueno"]) for a in areas if CUENTA in a["cuentas_dueno"]} | {(REG["cuenta"].get(CUENTA) or {}).get("nombre")}
+            ATRASADOS[:] = [x for x in atrasados(60) if x[0] not in _yo_]   # quien migra actualiza al migrar
+            if ATRASADOS:
+                print("Con un plugin anterior a la 1.26 en los últimos 60 días: " + ", ".join(f"{n} ({v})" for n, v in ATRASADOS))
     if ajenas_en_uso:
         print(f"(en uso, no se ofrece ahora: {', '.join(ajenas_en_uso)}; alguien tocó lo que queda por migrar hace menos de {EN_USO_MIN} minutos y puede estar en sesión en otra computadora. Se ofrece en una apertura más tarde; no hace falta decir nada.)")
 
@@ -1841,6 +1894,19 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                      + " Con «Migrar ahora», el anexo migracion.md de la skill sesion; con «Después», no se vuelve a preguntar en esta conversación. "
                      "Los pasos que siguen a este van en la respuesta siguiente, después de la contestación; si ya se había respondido cuando llegó esta apertura, la pregunta va igual, sola tras el recuadro. "
                      "En una tarea programada no se pregunta ni se migra.")
+    if PERSONAS_ANTERIOR and PUEDE_ESCRIBIR and not ESTRUCTURA_ANTERIOR:
+        _atr = ("; y añade que con la versión mínima 1.26.0 no podrán escribir hasta actualizar el plugin quienes cerraron sesión en los últimos 60 días con uno anterior: "
+                + ", ".join(f"{n} ({v})" for n, v in ATRASADOS) + ", y que conviene avisarles antes") if ATRASADOS else ""
+        if PERSONAS_ANTERIOR == "guia.md":
+            pasos.append("Antes de responder: la respuesta es solo el recuadro y esta pregunta, con AskUserQuestion si está (opciones «Migrar ahora» y «Después»; sin ella, en texto, y se espera): "
+                         "«Tu carpeta nombra a las personas como antes de la 1.25: correos en la tabla de áreas y en los proyectos. ¿La paso a «Quién es quién», una línea por persona en guia.md con su cuenta? "
+                         "Nadie gana ni pierde escritura, y la carpeta pasa a pedir el plugin 1.26 para escribir.»" + _atr
+                         + ". Con «Migrar ahora», el anexo migracion.md de la skill sesion («Las personas»); con «Después», no se vuelve a preguntar en esta conversación. "
+                         "Los pasos que siguen a este van en la respuesta siguiente, después de la contestación. En una tarea programada no se pregunta ni se migra.")
+        else:
+            pasos.append("Antes de responder: la respuesta es solo el recuadro y esta pregunta, con AskUserQuestion si está (opciones «Migrar ahora» y «Después»; sin ella, en texto, y se espera): "
+                         f"«En {PERSONAS_ANTERIOR}, el «Quién participa» de area.md todavía repite el responsable y quien colabora, que desde la 1.26 dice solo guia.md. ¿Lo quito? No cambia quién escribe.» "
+                         "Con «Migrar ahora», el anexo migracion.md de la skill sesion («Las personas»); con «Después», no se vuelve a preguntar en esta conversación. En una tarea programada no se pregunta ni se migra.")
     if PERMISOS and PUEDE_ESCRIBIR:
         if completa:
             pasos.append("Permisos de Drive: como en la apertura mínima; si ya se ofreció en esta conversación, nada.")

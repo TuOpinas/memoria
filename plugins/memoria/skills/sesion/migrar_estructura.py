@@ -2,6 +2,13 @@
 """Migra una raíz del método a la estructura de la 1.22, en lo que escribe la cuenta (skill sesion).
 
 Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--nombre "Nombre Apellido"] [--sin-consola]
+                           [--personas [--nombres "correo=Nombre Apellido,correo=Nombre Apellido"]]
+
+Con --personas (1.26) pasa además las personas a «Quién es quién» (sección «las personas», abajo en el código, y migracion.md, «Las
+personas»): el responsable de contexto, guia.md con todas las áreas que lee; cada responsable, sus area.md, cuando guia.md
+ya tiene el registro. Nadie gana ni pierde escritura: si algo cambiaría, no se migra guia.md y «personas.no_se_migra» dice
+qué; una cuenta sin nombre conocido va en «personas.faltan_nombres» y se repite con --nombres. guia.md migrado lleva la
+sección «Versión mínima del plugin» con la 1.26.0.
 
 Lo ofrece la apertura cuando abrir.py dice «ESTRUCTURA: ANTERIOR»; con el sí de la persona se corre una vez, sin --plan.
 Con --plan no escribe nada y dice qué haría. Toca las áreas de las que la cuenta es responsable (la celda Cuenta de
@@ -1081,7 +1088,8 @@ def _context_core():
 _context_core()
 # --- end of context_core ---
 from context_core.compat import (registro_personas, fila_cuentas, cuentas_contexto, nombre_de,  # noqa: E402
-                                 restringida_celda, area_restringida)
+                                 restringida_celda, area_restringida, colaboran_en, cuentas, clave_nombre,
+                                 nombre_contexto, CORREO, PALABRA_COLABORA, nombres_de, persona)
 # --- fin de quién escribe ---
 
 
@@ -1602,6 +1610,283 @@ def raiz_en_consola(ruta):
     return c[0] if len(c) == 1 else p
 
 
+
+# ---------- las personas: «Quién es quién» (1.26) ----------
+# La 1.25 lee las dos formas; la 1.26 pasa una raíz a la nueva (shared-memory/plugin-memoria/entregables/registro-de-personas.md,
+# 3.5 y 3.6). La regla que manda: nadie gana ni pierde escritura. Antes de escribir se calcula quién escribe en cada área, en
+# guia.md y en cada proyecto con la forma vieja y con la nueva, con las mismas funciones que la sesión (context_core), y si algo
+# cambia no se migra guia.md y se dice qué. Una cuenta sin nombre conocido queda «? · correo» y entonces tampoco se migra
+# guia.md: la sesión enseña el registro, pregunta los nombres que faltan y repite con --nombres.
+
+VERSION_MINIMA = "1.26.0"
+SECCION_MINIMA = ("## Versión mínima del plugin\n"
+                  f"{VERSION_MINIMA}. Con un plugin anterior, esta carpeta se lee pero no se escribe: ni sesiones, ni decisiones, ni documentos, ni el tablero. "
+                  "Para actualizar: en la app de Claude, Customize → Plugins, el botón Update del marketplace memoria-marketplace "
+                  "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.\n")
+NOMBRE_CORREO = re.compile(r"([^,;(:|\n`*]+?)\s*\(\s*(" + CORREO.pattern + r")\s*\)")
+LINEA_PERSONA = re.compile(r"^\s*[-*]?\s*\**\s*(?:colabora[n]?|responsable|due[ñn][oa])\s*\**\s*:", re.I)
+
+
+def _tabla_areas(guia):
+    """(cabecera, [(índice de línea en la sección, celdas)], match de la sección) de la primera tabla de «## Áreas»."""
+    m = re.search(r"^##\s+Áreas\s*\n(.*?)(?=^##\s|\Z)", guia, re.M | re.S)
+    cab, filas, empezada = None, [], False
+    for i, l in enumerate((m.group(1) if m else "").split("\n")):
+        if not l.startswith("|"):
+            if empezada:
+                break
+            continue
+        empezada = True
+        if re.match(r"^\|[\s:|-]+\|?\s*$", l):
+            continue
+        c = [x.strip() for x in l.strip().strip("|").split("|")]
+        if cab is None:
+            cab = c
+        else:
+            filas.append((i, c))
+    return cab, filas, m
+
+
+def _quien_responde(guia):
+    m = re.search(r"^##\s+Quién responde por qué\s*\n(.*?)(?=^##\s|\Z)", guia, re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def _quien_participa(texto):
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", texto or "", re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def personas_migradas(guia):
+    """La guía ya tiene «Quién es quién» y su tabla, «Colabora»: las personas están en la forma de la 1.25."""
+    cab = _tabla_areas(guia)[0] or []
+    return registro_personas(guia)["hay"] and not any(re.sub(r"[*_`]", "", x).strip().lower() == "cuenta" for x in cab)
+
+
+def personas_en_area(texto_area):
+    """Las líneas «Responsable:», «Dueño:» o «Colabora:» de «Quién participa» de un area.md, que la 1.26 quita: desde
+    entonces quién responde por un área y quién colabora en ella lo dice solo guia.md. La misma función en abrir.py."""
+    return [l for l in _quien_participa(texto_area).split("\n") if LINEA_PERSONA.match(l)]
+
+
+def escritura(guia, proyectos):
+    """Quién escribe, como lo leen la sesión y el tablero: por área (responsable, colaboran, restringida), el contexto
+    común y cada proyecto ({rel: cuentas de su «Colabora:»})."""
+    reg = registro_personas(guia)
+    cab, filas, _ = _tabla_areas(guia)
+    areas = {}
+    for _, c in filas:
+        r, co, _ = fila_cuentas(cab, c, reg)
+        areas[c[0].strip("`").rstrip("/")] = (frozenset(r), frozenset(co), area_restringida(c, cab))
+    ctx = next((l for l in _quien_responde(guia).split("\n") if l.strip().lower().lstrip("-* ").startswith("contexto común")), "")
+    ctx_c = set(cuentas_contexto(ctx, reg))
+    if not ctx_c and not reg["hay"]:
+        # como abrir.py en la forma vieja: sin cuenta entre paréntesis, la de las áreas cuyo responsable se llama igual
+        n_ = clave_nombre(nombre_contexto(ctx))
+        cc = columnas(cab or [])
+        for _, c in filas:
+            if n_ and cc["resp"] is not None and cc["resp"] < len(c) and clave_nombre(c[cc["resp"]]) == n_:
+                ctx_c |= set(fila_cuentas(cab, c, reg)[0])
+    return {"areas": areas, "contexto": frozenset(ctx_c),
+            "proyectos": {rel: frozenset(colaboran_en(_quien_participa(tp), reg if reg["hay"] else None)) for rel, tp in proyectos.items()}}
+
+
+def registro_desde(guia, proyectos, nombres):
+    """El registro que sale de la forma vieja: [(nombre o «?», [cuentas], cuenta de Drive o "")], en el orden en que
+    aparecen las cuentas, y los avisos. El nombre de una cuenta sale del responsable de su fila (si la fila lleva un solo
+    nombre y una sola cuenta antes de «colabora:»), de «Nombre (correo)» en «Quién responde por qué» y en los «Colabora:»
+    de los proyectos, o de --nombres. Dos nombres distintos para una cuenta, o ninguno, dan «?»."""
+    de, orden, avisos = {}, [], []
+    def ver(c):
+        c = c.lower()
+        if c not in orden:
+            orden.append(c)
+        return c
+    def par(n, c, donde):
+        n = re.sub(r"[*_`]", "", n).strip(" .:-—–")
+        if n and not CORREO.search(n) and not re.search(r"\s(?:y|e)\s|,", n):
+            de.setdefault(ver(c), {}).setdefault(clave_nombre(n), (n, donde))
+    cab, filas, _ = _tabla_areas(guia)
+    cc = columnas(cab or [])
+    for _, c in filas:
+        if cc["cuenta"] is None or cc["cuenta"] >= len(c):
+            continue
+        antes, despues, _ = cuentas(c[cc["cuenta"]])
+        for x in sorted(antes) + sorted(despues):
+            ver(x)
+        if len(antes) == 1 and cc["resp"] is not None and cc["resp"] < len(c):
+            par(re.sub(r"\s*\([^)]*\)", "", c[cc["resp"]]), next(iter(antes)), f"responsable de {c[0]}")
+    drive = {}
+    for l in _quien_responde(guia).split("\n"):
+        s = l.strip().lstrip("-* ")
+        if re.match(r"^(en\s+)?(google\s+)?drive\s*:", s, re.I):
+            for tramo in re.split(r"[,;·]|\s+y\s+", s.split(":", 1)[1].lower()):
+                cs = CORREO.findall(tramo)
+                if len(cs) == 2:
+                    drive[ver(cs[0])] = cs[1]
+                elif tramo.strip():
+                    avisos.append(f"«En Drive:» no se entiende en «{tramo.strip()[:60]}»: esa cuenta de Drive no pasa al registro")
+            continue
+        cs = CORREO.findall(s.lower())
+        if len(cs) == 1 and ":" in s:
+            par(nombre_contexto(s), ver(cs[0]), "Quién responde por qué")
+    for rel, tp in sorted(proyectos.items()):
+        for l in _quien_participa(tp).split("\n"):
+            if LINEA_PERSONA.match(l):
+                for n, c in NOMBRE_CORREO.findall(l.split(":", 1)[1]):
+                    par(n, c, rel)
+    for c, n in (nombres or {}).items():
+        de[ver(c)] = {clave_nombre(n): (n, "--nombres")}
+    personas, por_nombre = [], {}
+    for c in orden:
+        ns = de.get(c, {})
+        if len(ns) > 1 and c not in (nombres or {}):
+            avisos.append(f"{c} sale con dos nombres ({', '.join(f'«{n}» en {d}' for n, d in ns.values())}): queda «?» hasta que digas cuál")
+        n = next(iter(ns.values()))[0] if len(ns) == 1 else "?"
+        k = clave_nombre(n) if n != "?" else None
+        if k and k in por_nombre:
+            por_nombre[k][1].append(c)   # la misma persona con dos cuentas
+        else:
+            p_ = [n, [c], ""]
+            personas.append(p_)
+            if k:
+                por_nombre[k] = p_
+    for p_ in personas:
+        p_[2] = next((drive[c] for c in p_[1] if c in drive and drive[c] not in p_[1]), "")
+    return personas, avisos
+
+
+def lineas_registro(personas):
+    return "".join(f"- {n} · {' · '.join(cs)}" + (f" · en Drive: {d}" if d else "") + "\n" for n, cs, d in personas)
+
+
+def guia_con_personas(guia, personas):
+    """guia.md en la forma de la 1.25: «Quién es quién» antes de «Cómo conectarte», la columna «Cuenta» pasa a «Colabora»
+    con nombres, el matiz del responsable va a «Qué es», «Quién la lee» sin «Restringida:» cuando «Acceso» lo dice, los
+    correos salen de «Quién responde por qué» y desaparece «En Drive:». Al final, «Versión mínima del plugin»."""
+    nombre_de_ = {c: n for n, cs, _ in personas for c in cs if n != "?"}
+    cab, filas, m = _tabla_areas(guia)
+    if m is None or cab is None:
+        return guia
+    cc = columnas(cab)
+    lineas = m.group(1).split("\n")
+    i_que = next((i for i, x in enumerate(cab) if re.sub(r"[*_`]", "", x).strip().lower() in ("qué es", "que es")), None)
+    if cc["cuenta"] is not None:
+        hdr = next(i for i, l in enumerate(lineas) if l.startswith("|"))
+        cab2 = list(cab); cab2[cc["cuenta"]] = "Colabora"
+        lineas[hdr] = "| " + " | ".join(cab2) + " |"
+        for i, c in filas:
+            c = list(c)
+            if cc["cuenta"] < len(c):
+                _, despues, _ = cuentas(c[cc["cuenta"]])
+                partes_ = PALABRA_COLABORA.split(c[cc["cuenta"]], maxsplit=1)
+                orden_ = list(dict.fromkeys(x.lower() for x in CORREO.findall(partes_[1]))) if len(partes_) > 1 else []
+                c[cc["cuenta"]] = ", ".join(nombre_de_.get(x, x) for x in orden_ if x in despues)
+            if cc["resp"] is not None and cc["resp"] < len(c):
+                matiz = re.findall(r"\s*\(((?=[a-záéíóúñ`])[^)]*)\)", c[cc["resp"]])
+                limpio = re.sub(r"\s*\([^)]*\)", "", c[cc["resp"]]).strip()
+                if matiz and i_que is not None and i_que < len(c):
+                    c[i_que] = c[i_que].rstrip(" .") + " (" + "; ".join(matiz) + ")"
+                c[cc["resp"]] = limpio
+            if cc["lee"] is not None and cc["acc"] is not None and cc["lee"] < len(c) and cc["acc"] < len(c):
+                if re.match(r"^\s*(abiert|restringid)", c[cc["acc"]], re.I) and restringida_celda(c[cc["lee"]]):
+                    c[cc["lee"]] = quienes(c[cc["lee"]])
+            lineas[i] = "| " + " | ".join(c) + " |"
+    # el párrafo de debajo de la tabla que explicaba la columna «Cuenta» pasa a decir dónde está ahora la cuenta
+    lineas = [("Responsable y Colabora llevan nombres de «Quién es quién», donde está la cuenta con la que cada persona trabaja con la IA: "
+               "es lo que permite comprobar quién escribe en cada área." if re.match(r"^\s*(?:La cuenta es\b|La columna «?Cuenta»?)", l) else l) for l in lineas]
+    t = guia[:m.start(1)] + "\n".join(lineas) + guia[m.end(1):]
+    # «Quién responde por qué»: sin los correos que ya están en el registro, y sin «En Drive:»
+    mq = re.search(r"^##\s+Quién responde por qué\s*\n(.*?)(?=^##\s|\Z)", t, re.M | re.S)
+    if mq:
+        out = []
+        for l in mq.group(1).split("\n"):
+            s = l.strip().lstrip("-* ")
+            if re.match(r"^(en\s+)?(google\s+)?drive\s*:", s, re.I):
+                continue
+            l = NOMBRE_CORREO.sub(lambda x: x.group(1) if clave_nombre(nombre_de_.get(x.group(2).lower(), "")) == clave_nombre(x.group(1)) else x.group(0), l)
+            out.append(l)
+        t = t[:mq.start(1)] + "\n".join(out) + t[mq.end(1):]
+    if not registro_personas(t)["hay"]:
+        sec_ = "## Quién es quién\n" + lineas_registro(personas) + "\n"
+        mc = re.search(r"^##\s+(Cómo conectarte|Versión del método)\s*$", t, re.M)
+        t = (t[:mc.start()] + sec_ + t[mc.start():]) if mc else (t.rstrip("\n") + "\n\n" + sec_)
+    return con_version_minima(t)
+
+
+def con_version_minima(t):
+    """La sección «Versión mínima del plugin» al final de guia.md, con la versión de esta migración; si ya hay una más
+    nueva, no se toca."""
+    m = re.search(r"^##\s+Versión mínima del plugin\s*\n(.*?)(?=^##\s|\Z)", t, re.M | re.S)
+    if m:
+        v = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", m.group(1))
+        if v and tuple(int(x or 0) for x in v.groups()) >= tuple(int(x) for x in VERSION_MINIMA.split(".")):
+            return t
+        return t[:m.start()] + SECCION_MINIMA + ("\n" if t[m.end():].strip() else "") + t[m.end():]
+    return t.rstrip("\n") + "\n\n" + SECCION_MINIMA
+
+
+def proyecto_con_personas(tp, reg):
+    """En «Quién participa» de un proyecto.md, «Nombre (correo)» queda «Nombre» cuando el registro da ese correo a ese
+    nombre, y un correo suelto pasa a su nombre; un alta provisional (alguien que no está en el registro) se queda."""
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", tp or "", re.M | re.S)
+    if not m or not reg["hay"]:
+        return tp
+    def limpia(l):
+        if not LINEA_PERSONA.match(l):
+            return l
+        et, resto = l.split(":", 1)
+        def nc(x):
+            p_ = reg["cuenta"].get(x.group(2).lower())
+            return x.group(1) if p_ and p_["nombre"] != "?" and clave_nombre(p_["nombre"]) == clave_nombre(x.group(1)) else x.group(0)
+        resto = NOMBRE_CORREO.sub(nc, resto)
+        def suelto(x):
+            p_ = reg["cuenta"].get(x.group(0).lower())
+            return p_["nombre"] if p_ and p_["nombre"] != "?" else x.group(0)
+        resto = re.sub(r"(?<![(\w.+'-])" + CORREO.pattern + r"(?!\s*\))", suelto, resto)
+        return et + ":" + resto
+    cuerpo = "\n".join(limpia(l) for l in m.group(1).split("\n"))
+    return tp[:m.start(1)] + cuerpo + tp[m.end(1):]
+
+
+def area_con_personas(ta):
+    """«Quién participa» de un area.md sin «Responsable:», «Dueño:» ni «Colabora:», con una línea que dice dónde están."""
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", ta or "", re.M | re.S)
+    if not m or not personas_en_area(ta):
+        return ta
+    resto = []
+    for l in m.group(1).split("\n"):
+        if not LINEA_PERSONA.match(l):
+            resto.append(l); continue
+        # «Responsable: Nombre. Consumen esta área…»: sale el nombre, se queda lo que sigue (no se pierde nada)
+        cola = re.split(r"(?<=[^\s.]{2})\.\s+(?=[A-ZÁÉÍÓÚÑ¿«`])", l.split(":", 1)[1].strip(), maxsplit=1)
+        if len(cola) > 1 and cola[1].strip():
+            resto.append(cola[1].strip())
+    cuerpo = "Responsable y colaboradores: en la tabla de áreas de guia.md.\n" + "\n".join(resto).strip("\n")
+    return ta[:m.start(1)] + cuerpo.rstrip("\n") + "\n\n" + ta[m.end(1):].lstrip("\n") if ta[m.end(1):].strip() else ta[:m.start(1)] + cuerpo.rstrip("\n") + "\n"
+
+
+def diferencias(antes, despues):
+    """Lo que cambiaría de quién escribe: [texto]. Una cuenta que gana escritura en un proyecto porque su «Colabora:»
+    la nombraba sin correo y ahora el registro la reconoce va aparte, en «gana»: es lo que la línea quería decir."""
+    pierde, gana = [], []
+    for s, (r, co, rs) in antes["areas"].items():
+        r2, co2, rs2 = despues["areas"].get(s, (frozenset(), frozenset(), True))
+        if r != r2 or co != co2:
+            pierde.append(f"{s}: escribe {', '.join(sorted(r | co)) or 'nadie'} y pasaría a {', '.join(sorted(r2 | co2)) or 'nadie'}")
+        if rs != rs2:
+            pierde.append(f"{s}: pasaría de {'restringida' if rs else 'abierta'} a {'restringida' if rs2 else 'abierta'}")
+    if antes["contexto"] != despues["contexto"]:
+        pierde.append(f"contexto común: {', '.join(sorted(antes['contexto'])) or 'nadie'} pasaría a {', '.join(sorted(despues['contexto'])) or 'nadie'}")
+    for rel, a in antes["proyectos"].items():
+        d = despues["proyectos"].get(rel, frozenset())
+        if a - d:
+            pierde.append(f"{rel}: dejarían de colaborar {', '.join(sorted(a - d))}")
+        if d - a:
+            gana.append(f"{rel}: «Colabora:» nombra a {', '.join(sorted(d - a))} sin su correo; con el registro, colabora")
+    return pierde, gana
+
+
 def main(argv):
     if len(argv) < 2 or "--cuenta" not in argv:
         print(__doc__.strip(), file=sys.stderr)
@@ -1797,6 +2082,93 @@ def main(argv):
                 # quedaron escritos: un proyecto que falló deja el área en la estructura anterior y la pregunta vuelve
                 tareas.append((a["slug"] + "/area.md", (lambda cp, fr: (lambda t: migrar_area(t, cp, [], fr)[0]))(carpeta, frases), ([taller_rel] if taller_rel else []) + proy_area))
 
+    # --- las personas (1.26): «Quién es quién» ---
+    nombres = {}
+    for par_ in (op("--nombres") or "").split(","):
+        if "=" in par_:
+            c_, n_ = par_.split("=", 1)
+            if CORREO.fullmatch(c_.strip().lower()) and n_.strip():
+                nombres[c_.strip().lower()] = n_.strip()
+    todos_proy = {}
+    for a in areas:
+        try:
+            ds = sorted(d for d in (raiz / a["slug"]).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
+        except OSError:
+            continue
+        for d in ds:
+            try:
+                todos_proy[d.relative_to(raiz).as_posix()] = leer(d / "proyecto.md")[0]
+            except (OSError, UnicodeDecodeError):
+                pass
+    mias_slugs = {a["slug"] for a in mias}
+    sp = {"migrada": personas_migradas(guia)}
+    reg_nuevo, personas_ = None, None
+    if "--personas" not in argv:
+        pass   # la estructura de la 1.22 sola: las personas se migran con su propia pregunta (migracion.md, «Las personas»)
+    elif es_resp and not sp["migrada"]:
+        salida["personas"] = sp
+        g1 = migrar_guia(guia, [])
+        personas_, avisos_ = registro_desde(g1, todos_proy, nombres)
+        sp.update({"registro": lineas_registro(personas_), "faltan_nombres": [c for n, cs, _ in personas_ if n == "?" for c in cs], "avisos": avisos_})
+        if sp["faltan_nombres"]:
+            sp["no_se_migra"] = ["faltan los nombres de " + ", ".join(sp["faltan_nombres"]) + ": repite con --nombres correo=Nombre,correo=Nombre"]
+        else:
+            g2 = guia_con_personas(g1, personas_)
+            reg2 = registro_personas(g2)
+            # «Quién la lee» con alguien que no es una persona del registro (un grupo, «Dirección»): se migra igual, porque
+            # lo restringido lo dice «Acceso», pero se dice, porque permisos.py no sabe con quién compartir
+            cab2, filas2, _ = _tabla_areas(g2)
+            il = columnas(cab2 or [])["lee"]
+            for _, c in filas2:
+                if il is not None and il < len(c) and not re.match(r"^\s*todo el equipo", c[il], re.I):
+                    for n_ in nombres_de(c[il], reg2):
+                        if persona(n_, reg2) is None:
+                            sp["avisos"].append(f"«{n_}», en «Quién la lee» de {c[0]}, no es una persona de «Quién es quién»: se queda así, y conviene cambiarlo por los nombres de quienes lo leen")
+            pierde, gana = diferencias(escritura(g1, todos_proy), escritura(g2, {r: proyecto_con_personas(x, reg2) for r, x in todos_proy.items()}))
+            if pierde:
+                sp["no_se_migra"] = ["cambiaría quién escribe: " + "; ".join(pierde)]
+            else:
+                sp["gana"] = gana
+                reg_nuevo = reg2
+                anotar("guia.md", salida["archivos"].get("guia.md", []) + ["guia.md: «Quién es quién», «Colabora» con nombres y la versión mínima del plugin " + VERSION_MINIMA])
+                salida["guia"] = True
+                tareas.append(("guia.md#personas", (lambda ps: (lambda x: guia_con_personas(x, ps)))(personas_)))
+    elif sp["migrada"]:
+        salida["personas"] = sp
+        reg_nuevo = reg_
+    else:
+        salida["personas"] = {**sp, "no_se_migra": ["guia.md la migra el responsable de contexto; hasta entonces, nada de las personas"]}
+    if reg_nuevo is not None:
+        guia_dep = ["guia.md#personas"] if not sp["migrada"] else None
+        for a in areas:
+            if a["slug"] not in mias_slugs:
+                continue
+            for rel_p, tp in sorted(todos_proy.items()):
+                if not rel_p.startswith(a["slug"] + "/"):
+                    continue
+                nuevo = proyecto_con_personas(tp, reg_nuevo)
+                if nuevo == tp:
+                    continue
+                antes_ = colaboran_en(_quien_participa(tp), reg_nuevo if sp["migrada"] else None)
+                if antes_ - colaboran_en(_quien_participa(nuevo), reg_nuevo):
+                    salida["pendientes"].append({"area": a["slug"], "motivo": f"{rel_p}: quitar los correos de «Colabora:» cambiaría quién escribe; se deja como está"})
+                    continue
+                anotar(rel_p + "/proyecto.md", salida["archivos"].get(rel_p + "/proyecto.md", []) + ["Quién participa: nombres de «Quién es quién», sin correos"])
+                tareas.append((rel_p + "/proyecto.md#personas", (lambda rg: (lambda x: proyecto_con_personas(x, rg)))(reg_nuevo), guia_dep))
+                entrada = (f"## {hoy} (migracion)\nTema: las personas pasan a «Quién es quién» de guia.md (1.26).\n"
+                           f"Avances: los nombres de «Quién participa» sin sus correos, que viven en el registro; nadie gana ni pierde escritura.\n"
+                           f"Sesión de: {nombre}" + ("" if cuenta in a["responsables"] else f", responsable de contexto, por {a['nombre'] or 'el responsable del área'}")
+                           + f" · plugin {version}" + (" · sin consola" if "--sin-consola" in argv else ""))
+                tareas.append((rel_p + "/sesiones.md#entrada", entrada, [rel_p + "/proyecto.md#personas"]))
+            pa_ = raiz / a["slug"] / "area.md"
+            try:
+                ta_ = leer(pa_)[0]
+            except (OSError, UnicodeDecodeError):
+                continue
+            if personas_en_area(ta_):
+                anotar(a["slug"] + "/area.md", salida["archivos"].get(a["slug"] + "/area.md", []) + ["Quién participa: responsable y colaboradores solo en guia.md"])
+                tareas.append((a["slug"] + "/area.md#personas", area_con_personas, guia_dep))
+
     resumen = {}
     for cambios in salida["archivos"].values():
         for c in cambios:
@@ -1829,7 +2201,7 @@ def main(argv):
                     escribir(p, que, False)
                     escritos_ok.add(rel)
                 else:
-                    p = raiz / rel
+                    p = raiz / rel.split("#")[0]   # «guia.md#personas»: el mismo archivo, otra tarea con su propia dependencia
                     with Cerrojo(p):
                         t, crlf = leer(p)   # se relee y se vuelve a transformar: lo que otro escribió entre medias se respeta
                         n = que(t)

@@ -120,6 +120,16 @@ def aplicar_paso(e, raiz, paso):
             for d, _, fs in os.walk(raiz):
                 for f in fs:
                     os.utime(os.path.join(d, f), (viejo, viejo))
+        elif orden == "personas":              # personas: «Quién es quién» (1.26) por la cuenta del escenario, con los nombres que la raíz no dice
+            real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip().lower() or e.get("cuenta", "ana@ejemplo.test")
+            r = subprocess.run([sys.executable, str(AQUI.parent.parent / "plugins/memoria/skills/sesion/migrar_estructura.py"), str(raiz), "--cuenta", real,
+                                "--personas", "--plugin", "1.26.0", "--nombres", "carla@ejemplo.test=Carla Prueba,eva@ejemplo.test=Eva Prueba"], capture_output=True, text=True)
+            if r.returncode != 0 or (json.loads(r.stdout or "{}").get("personas") or {}).get("no_se_migra"):
+                raise SystemExit(f"{e['nombre']}: la migración de las personas de preparar falló: {r.stdout[-400:]} {r.stderr[-400:]}")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            for d, _, fs in os.walk(raiz):
+                for f in fs:
+                    os.utime(os.path.join(d, f), (viejo, viejo))
         elif orden == "tocar":                 # tocar <ruta>: fecha de archivo de ahora (trabajo sin sesión)
             os.utime(raiz / arg, None)
         elif orden == "escribir":              # escribir <ruta> <texto>: añade una línea al final
@@ -188,6 +198,10 @@ def preparar_plugin(origen, trabajo):
     shutil.copytree(origen, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     pj = dest / ".claude-plugin" / "plugin.json"
     pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
+    # como release.sh: los scripts que comparan su versión con la mínima de la raíz llevan la de esta copia (1.26)
+    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py"):
+        f = dest / s
+        f.write_text(re.sub(r'^ESTE_PLUGIN = "[0-9.]+"', f'ESTE_PLUGIN = "{version}"', f.read_text(encoding="utf-8"), count=1, flags=re.M), encoding="utf-8")
     subprocess.run(["bash", str(dest / "build-metodo.sh")], check=True, capture_output=True)
     return dest, version
 

@@ -6,6 +6,7 @@ tablero: 14-cola.json
 max_turnos: 25
 preparar:
   - "migrar"
+  - "personas"
 turnos:
   - "Abre sesión en ventas/cuentas."
 comprobar:
