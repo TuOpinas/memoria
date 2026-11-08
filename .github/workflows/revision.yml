@@ -1,0 +1,26 @@
+name: Revisión
+# Every pull request names its quality review (the calidad skill, development methodology section 3): a line
+# «Quality review: …revision-de-calidad-<subject>.md…» (or «Revisión de calidad:») in its description. Dependabot's are
+# exempt: minor and patch merge on green checks, and a major's quick review is named by the session that reviews it.
+# Runs again when the description is edited, so adding the line turns it green without a new commit.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  review-named:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: The description names the review report
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s\n' "$BODY" | grep -Eiq '^[-* ]*\**(quality review|revisi(ó|o)n de calidad)\**:.*revision-de-calidad-[a-z0-9._-]+\.md'; then
+            echo "Review named."
+          else
+            echo "The description has no line «Quality review: … revision-de-calidad-<subject>.md» (or «Revisión de calidad: …»), label and path on the same line. Every pull request goes through the calidad skill first (development methodology, section 3); add the line with the report's path and this check passes."
+            exit 1
+          fi
