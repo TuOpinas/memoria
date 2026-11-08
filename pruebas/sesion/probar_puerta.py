@@ -13,7 +13,7 @@ import json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
 
 AQUI = pathlib.Path(__file__).resolve().parent
 PL = AQUI.parent.parent / "plugins" / "memoria"
-ABRIR, CERRAR = PL / "skills/sesion/abrir.py", PL / "skills/sesion/cerrar.py"
+ABRIR, CERRAR, MIGRAR = PL / "skills/sesion/abrir.py", PL / "skills/sesion/cerrar.py", PL / "skills/sesion/migrar_estructura.py"
 APLICAR, GENERAR = PL / "skills/tablero/aplicar_cambios.py", PL / "skills/tablero/generar_vista.py"
 VERSION = json.loads((PL / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
 fallos = 0
@@ -69,7 +69,7 @@ def aplicar(r):
 
 
 print("La versión de los scripts")
-for s in (ABRIR, CERRAR, APLICAR, GENERAR):
+for s in (ABRIR, CERRAR, MIGRAR, APLICAR, GENERAR):
     m = re.search(r'^ESTE_PLUGIN = "([0-9.]+)"', s.read_text(encoding="utf-8"), re.M)
     ok(m and m.group(1) == VERSION, f"{s.name} lleva ESTE_PLUGIN = {VERSION}, la de plugin.json")
 
@@ -92,6 +92,8 @@ c, o = aplicar(R)
 ok(c == 6 and "SOLO LECTURA:" in o, "aplicar_cambios.py se niega con 6")
 c, o = corre(GENERAR, R, "--veredicto-metodo", (PL / "metodo.md").read_text(encoding="utf-8").splitlines()[0])
 ok(c == 6 and o.startswith("SOLO LECTURA:"), "el veredicto del tablero para con 6: la puesta al día no sigue")
+c, o = corre(MIGRAR, R, "--cuenta", "ana@ejemplo.test", "--personas")
+ok(c == 6 and json.loads(o.strip().splitlines()[-1]).get("solo_lectura") is True, "migrar_estructura.py se niega con 6")
 ok(foto(R) == antes, "nada de la raíz cambió")
 
 print("Una raíz cuya versión mínima es la del plugin")

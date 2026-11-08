@@ -140,6 +140,8 @@ def aplicar_paso(e, raiz, paso):
             r, _, resto = arg.partition(" ")
             viejo, _, nuevo = resto.partition(" => ")
             viejo, nuevo = viejo.replace("\\n", "\n"), nuevo.replace("\\n", "\n")
+            # {HOY-N}: la fecha de hace N días, para que lo que depende de una ventana de días no caduque (revisión de la 1.26)
+            nuevo = re.sub(r"\{HOY-(\d+)\}", lambda m: (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=int(m.group(1)))).isoformat(), nuevo)
             t = (raiz / r).read_text(encoding="utf-8")
             if viejo not in t:
                 raise SystemExit(f"{e['nombre']}: «{viejo}» no está en {r}")
@@ -199,7 +201,7 @@ def preparar_plugin(origen, trabajo):
     pj = dest / ".claude-plugin" / "plugin.json"
     pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
     # como release.sh: los scripts que comparan su versión con la mínima de la raíz llevan la de esta copia (1.26)
-    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py"):
+    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py"):
         f = dest / s
         f.write_text(re.sub(r'^ESTE_PLUGIN = "[0-9.]+"', f'ESTE_PLUGIN = "{version}"', f.read_text(encoding="utf-8"), count=1, flags=re.M), encoding="utf-8")
     subprocess.run(["bash", str(dest / "build-metodo.sh")], check=True, capture_output=True)

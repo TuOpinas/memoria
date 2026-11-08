@@ -125,7 +125,8 @@ class RenderGuard(unittest.TestCase):
                         write.one_line(bad, "topic")
 
     def test_allowed(self):
-        for good in ("a < b y c > d", "1 - 2", "flecha -> derecha", "un `código` corto", "x = y", "--forzar ruta"):
+        for good in ("a < b y c > d", "1 - 2", "flecha -> derecha", "un `código` corto", "x = y", "--forzar ruta",
+                     "se añadió `List<String>`", "usa `<correo>` en la línea"):
             with self.subTest(good):
                 self.assertEqual(write.one_line(good, "topic"), good)
 

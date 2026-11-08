@@ -59,13 +59,19 @@ REL_CONTRATO="plugins/memoria/skills/convenciones"
 MONTAJE="$PLUGIN_DIR/skills/convenciones/montaje.md"
 REL_MONTAJE="plugins/memoria/skills/convenciones/montaje.md"
 # los scripts que comparan su versión con la «Versión mínima del plugin» de guia.md llevan la suya en ESTE_PLUGIN (1.26)
-CON_VERSION=("$PLUGIN_DIR/skills/sesion/abrir.py" "$PLUGIN_DIR/skills/sesion/cerrar.py" "$PLUGIN_DIR/skills/tablero/aplicar_cambios.py" "$PLUGIN_DIR/skills/tablero/generar_vista.py")
+CON_VERSION=("$PLUGIN_DIR/skills/sesion/abrir.py" "$PLUGIN_DIR/skills/sesion/cerrar.py" "$PLUGIN_DIR/skills/sesion/migrar_estructura.py" "$PLUGIN_DIR/skills/tablero/aplicar_cambios.py" "$PLUGIN_DIR/skills/tablero/generar_vista.py")
+# la versión que pide la estructura actual (la que escribe la migración): un plugin anterior a ella se dejaría a sí mismo en
+# solo lectura en cada raíz que migre (revisión de la 1.26)
+MINIMA_ESTRUCTURA="$(sed -n 's/^STRUCTURE_MINIMUM = "\([0-9.]*\)".*/\1/p' "$PLUGIN_DIR/../../packages/context-core/context_core/minimum.py" 2>/dev/null || true)"
 
 for f in "$PLUGIN_JSON" "$MARKETPLACE" "$CONTRATO" "$VISTA" "$README" "${CON_VERSION[@]}"; do
   [ -f "$f" ] || { echo "No encuentro $f" >&2; exit 1; }
 done
 
 # --- comprobaciones, antes de tocar nada ---
+if [ -n "$MINIMA_ESTRUCTURA" ] && [ "$(printf '%s\n%s\n' "$MINIMA_ESTRUCTURA" "$VERSION" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)" != "$MINIMA_ESTRUCTURA" ]; then
+  echo "La versión $VERSION es anterior a la que pide la estructura ($MINIMA_ESTRUCTURA, context_core/minimum.py): las raíces que migre la dejarían en solo lectura." >&2; exit 1
+fi
 ACTUAL="$(sed -n 's/.*"version": *"\([0-9.]*\)".*/\1/p' "$PLUGIN_JSON" | head -n 1)"
 mayor() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "$1" ]; }
 if ! mayor "$VERSION" "$ACTUAL"; then

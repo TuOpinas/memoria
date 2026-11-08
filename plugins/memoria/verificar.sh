@@ -24,8 +24,8 @@ def _context_core():
     _fp = {
     'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': 'f2f559f0c6a875d658946566ea70f1363c07c2f60cc6b5ecd669a68a372034f2',
-    'compat': '257a02f646182e3afcba1c1ba2811bc636decee93d25c9df143b48e377e82f77',
+    'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
+    'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -457,7 +457,7 @@ def _context_core():
     ),
     'rules': (
         '"""The rules the plugin scripts share: who writes (the people registry, the area table\'s accounts, \xabColabora:\xbb), what is\n'
-        "restricted, guia.md's first paragraph, the archived registers and the minimum plugin version that may write. Pure functions: no I/O, no globals, no clock.\n"
+        "restricted, guia.md's first paragraph and the archived registers. Pure functions: no I/O, no globals, no clock.\n"
         '\n'
         'This is what `compat` reaches, and so what `inline.py` puts inside the scripts; the parsers of the other method files are\n'
         'in `parse`, which imports these and re-exports them. The words that decide restricted come from the language pack\n'
@@ -808,41 +808,16 @@ def _context_core():
         '    return "\\n\\n".join(p.strip("\\n") for p in parts if p.strip()) + "\\n", len(re.findall(r"^## ", live or "", re.M))\n'
         '\n'
         '\n'
-        '# \u2500\u2500 the minimum plugin version (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
+        '# \u2500\u2500 the people lines of \xabQui\xe9n participa\xbb (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        '\n'
-        'def version_tuple(text: str) -> Optional[tuple]:\n'
-        '    """\xab1.26\xbb or \xab1.26.0\xbb (the first version in `text`) as (1, 26, 0); None without one."""\n'
-        '    m = _VERSION.search(text or "")\n'
-        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        'PEOPLE_LINE = re.compile(r"^\\s*[-*]?\\s*\\**\\s*(?:colabora[n]?|responsable|due[\xf1n][oa])\\s*\\**\\s*:", re.I)\n'
         '\n'
         '\n'
-        'def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:\n'
-        '    """(declared, version) from the section \xab## Versi\xf3n m\xednima del plugin\xbb of guia.md, written by the migration that needs\n'
-        '    it. (False, None): no section, anyone may write. (True, None): a section with no version in its first paragraph,\n'
-        '    which nobody may write under until it is fixed (fail closed: a typo must not let an old plugin through)."""\n'
-        '    m = re.search(r"^##[ \\t]+" + re.escape(lang.minimum_plugin) + r"[ \\t]*$(.*?)(?=^##[ \\t]|\\Z)", guia or "", re.M | re.S)\n'
-        '    if not m:\n'
-        '        return False, None\n'
-        '    first = next((b for b in re.split(r"\\n\\s*\\n", m.group(1).strip()) if b.strip()), "")\n'
-        '    return True, version_tuple(first)\n'
-        '\n'
-        '\n'
-        'def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:\n'
-        '    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),\n'
-        '    ("unreadable", None) for a section with no version, or ("unknown", minimum) for a plugin version that does not parse.\n'
-        '    Reading is never gated; only writing (decision of 2026-11-08)."""\n'
-        '    declared, minimum = minimum_plugin_version(guia, lang)\n'
-        '    if not declared:\n'
-        '        return "ok", None\n'
-        '    if minimum is None:\n'
-        '        return "unreadable", None\n'
-        '    mine = version_tuple(plugin_version)\n'
-        '    if mine is None:\n'
-        '        return "unknown", minimum\n'
-        '    return ("ok" if mine >= minimum else "below"), minimum\n'
+        'def people_lines(section: str) -> list[str]:\n'
+        '    """The \xabResponsable:\xbb, \xabDue\xf1o:\xbb or \xabColabora:\xbb lines of a \xabQui\xe9n participa\xbb section. From 1.26 an area.md does not\n'
+        '    carry them: who answers for an area and who collaborates in it is said only by guia.md."""\n'
+        '    return [l for l in (section or "").split("\\n") if PEOPLE_LINE.match(l)]\n'
     ),
     'compat': (
         '"""The scripts\' Spanish names over the package, with the shapes they use today (dicts and tuples).\n'
@@ -864,7 +839,7 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "RECETA_ACTUALIZAR", "puerta_de_escritura"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -989,28 +964,11 @@ def _context_core():
         '    return out\n'
         '\n'
         '\n'
-        '# \u2500\u2500 la versi\xf3n m\xednima del plugin (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        'RECETA_ACTUALIZAR = ("Actual\xedzalo en la app de Claude, en Customize \u2192 Plugins, con el bot\xf3n Update del marketplace memoria-marketplace "\n'
-        '                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.")\n'
-        '\n'
-        '\n'
-        'def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:\n'
-        '    """(puede escribir, versi\xf3n m\xednima como texto o None, motivo en llano o ""): la secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb\n'
-        '    de guia.md frente a la versi\xf3n del plugin que corre. El motivo es lo que se le dice a la persona."""\n'
-        '    estado, minima = rules.plugin_may_write(version_plugin, guia)\n'
-        '    txt = ".".join(map(str, minima)) if minima else None\n'
-        '    if estado == "ok":\n'
-        '        return True, txt, ""\n'
-        '    if estado == "unreadable":\n'
-        '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: hasta que el responsable de "\n'
-        '                             "contexto la corrija, no se escribe nada en esta carpeta. Leer y consultar siguen funcionando.")\n'
-        '    if estado == "unknown":\n'
-        '        return False, txt, (f"No s\xe9 qu\xe9 versi\xf3n del plugin corre aqu\xed (\xab{version_plugin}\xbb) y esta carpeta pide la {txt} o una m\xe1s "\n'
-        '                            "nueva para escribir: no se escribe nada. Leer y consultar siguen funcionando.")\n'
-        '    return False, txt, (f"Tu plugin memoria es la {version_plugin} y esta carpeta pide la {txt} o una m\xe1s nueva para escribir: "\n'
-        '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
-        '                        f"hasta que lo actualices. {RECETA_ACTUALIZAR}")\n'
+        'def personas_en_area(texto_area: str) -> list:\n'
+        '    """Las l\xedneas \xabResponsable:\xbb, \xabDue\xf1o:\xbb o \xabColabora:\xbb de \xabQui\xe9n participa\xbb de un area.md, que la 1.26 quita."""\n'
+        '    m = re.search(r"^## Qui\xe9n participa\\s*\\n(.*?)(?=^## |\\Z)", texto_area or "", re.M | re.S)\n'
+        '    return rules.people_lines(m.group(1) if m else "")\n'
     ),
     }
     for _n in _todo:

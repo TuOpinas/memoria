@@ -190,7 +190,8 @@ def one_line(value: str, field: str, required: bool = True, limit: int = 600) ->
 
 
 def _render_safe(v: str, field: str) -> None:
-    if RENDER_BREAKERS.search(v):
+    # inside a code span («`List<String>`», «`<correo>`») nothing renders as HTML (review of 1.26)
+    if RENDER_BREAKERS.search(re.sub(r"(`+)(?!`).+?(?<!`)\1(?!`)", "", v)):
         raise FieldError(field, "cannot contain an HTML comment or tag, a code fence, or a line made only of «=» or «-»: "
                                 "rendered, they would hide or reshape the rest of the file")
 

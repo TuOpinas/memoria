@@ -2,13 +2,16 @@
 """Migra una raíz del método a la estructura de la 1.22, en lo que escribe la cuenta (skill sesion).
 
 Uso: migrar_estructura.py <raiz> --cuenta <correo> [--plan] [--plugin X.Y.Z] [--nombre "Nombre Apellido"] [--sin-consola]
-                           [--personas [--nombres "correo=Nombre Apellido,correo=Nombre Apellido"]]
+                           [--personas [--nombres "correo=Nombre Apellido,correo=?"] [--listado <archivo>]]
 
 Con --personas (1.26) pasa además las personas a «Quién es quién» (sección «las personas», abajo en el código, y migracion.md, «Las
 personas»): el responsable de contexto, guia.md con todas las áreas que lee; cada responsable, sus area.md, cuando guia.md
-ya tiene el registro. Nadie gana ni pierde escritura: si algo cambiaría, no se migra guia.md y «personas.no_se_migra» dice
-qué; una cuenta sin nombre conocido va en «personas.faltan_nombres» y se repite con --nombres. guia.md migrado lleva la
-sección «Versión mínima del plugin» con la 1.26.0.
+ya tiene el registro. Nadie pierde escritura: si alguien la perdería, no se migra guia.md y «personas.no_se_migra» dice qué y
+dónde; una cuenta sin nombre conocido va en «personas.faltan_nombres» y se repite con --nombres («correo=?» la deja «? ·
+correo»). «personas.atrasados» dice quién cerró sesión en 60 días con un plugin anterior. guia.md migrado lleva la sección
+«Versión mínima del plugin» con la 1.26.0, y si guia.md ya tenía el registro sin ella, se añade. Sin consola, --listado es
+el archivo con las rutas de todos los proyecto.md de la raíz (de device_list_dir): sin todos en la copia, no se migra
+guia.md. Como cerrar.py, por debajo de la versión mínima de la raíz no escribe nada y sale con 6.
 
 Lo ofrece la apertura cuando abrir.py dice «ESTRUCTURA: ANTERIOR»; con el sí de la persona se corre una vez, sin --plan.
 Con --plan no escribe nada y dice qué haría. Toca las áreas de las que la cuenta es responsable (la celda Cuenta de
@@ -59,6 +62,7 @@ contexto), «guia», «pendientes» (las áreas de otras cuentas que no migra, c
 """
 import datetime, hashlib, json, os, pathlib, re, sys, tempfile, time
 
+ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 EN_USO_MIN = 120   # un proyecto ajeno tocado hace menos se deja: puede estar en sesión en otra computadora
 
 # --- las marcas de la estructura anterior: la misma función en abrir.py; probar_migrar.py comprueba que coinciden ---
@@ -91,8 +95,9 @@ def _context_core():
     _fp = {
     'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': 'f2f559f0c6a875d658946566ea70f1363c07c2f60cc6b5ecd669a68a372034f2',
-    'compat': '257a02f646182e3afcba1c1ba2811bc636decee93d25c9df143b48e377e82f77',
+    'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
+    'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
+    'minimum': '8dfc9c9463cee3c451d065e5c7f22fe653dd7e90ccfbe19d6ee7d016dc65e8ff',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -524,7 +529,7 @@ def _context_core():
     ),
     'rules': (
         '"""The rules the plugin scripts share: who writes (the people registry, the area table\'s accounts, \xabColabora:\xbb), what is\n'
-        "restricted, guia.md's first paragraph, the archived registers and the minimum plugin version that may write. Pure functions: no I/O, no globals, no clock.\n"
+        "restricted, guia.md's first paragraph and the archived registers. Pure functions: no I/O, no globals, no clock.\n"
         '\n'
         'This is what `compat` reaches, and so what `inline.py` puts inside the scripts; the parsers of the other method files are\n'
         'in `parse`, which imports these and re-exports them. The words that decide restricted come from the language pack\n'
@@ -875,41 +880,16 @@ def _context_core():
         '    return "\\n\\n".join(p.strip("\\n") for p in parts if p.strip()) + "\\n", len(re.findall(r"^## ", live or "", re.M))\n'
         '\n'
         '\n'
-        '# \u2500\u2500 the minimum plugin version (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
+        '# \u2500\u2500 the people lines of \xabQui\xe9n participa\xbb (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        '\n'
-        'def version_tuple(text: str) -> Optional[tuple]:\n'
-        '    """\xab1.26\xbb or \xab1.26.0\xbb (the first version in `text`) as (1, 26, 0); None without one."""\n'
-        '    m = _VERSION.search(text or "")\n'
-        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        'PEOPLE_LINE = re.compile(r"^\\s*[-*]?\\s*\\**\\s*(?:colabora[n]?|responsable|due[\xf1n][oa])\\s*\\**\\s*:", re.I)\n'
         '\n'
         '\n'
-        'def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:\n'
-        '    """(declared, version) from the section \xab## Versi\xf3n m\xednima del plugin\xbb of guia.md, written by the migration that needs\n'
-        '    it. (False, None): no section, anyone may write. (True, None): a section with no version in its first paragraph,\n'
-        '    which nobody may write under until it is fixed (fail closed: a typo must not let an old plugin through)."""\n'
-        '    m = re.search(r"^##[ \\t]+" + re.escape(lang.minimum_plugin) + r"[ \\t]*$(.*?)(?=^##[ \\t]|\\Z)", guia or "", re.M | re.S)\n'
-        '    if not m:\n'
-        '        return False, None\n'
-        '    first = next((b for b in re.split(r"\\n\\s*\\n", m.group(1).strip()) if b.strip()), "")\n'
-        '    return True, version_tuple(first)\n'
-        '\n'
-        '\n'
-        'def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:\n'
-        '    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),\n'
-        '    ("unreadable", None) for a section with no version, or ("unknown", minimum) for a plugin version that does not parse.\n'
-        '    Reading is never gated; only writing (decision of 2026-11-08)."""\n'
-        '    declared, minimum = minimum_plugin_version(guia, lang)\n'
-        '    if not declared:\n'
-        '        return "ok", None\n'
-        '    if minimum is None:\n'
-        '        return "unreadable", None\n'
-        '    mine = version_tuple(plugin_version)\n'
-        '    if mine is None:\n'
-        '        return "unknown", minimum\n'
-        '    return ("ok" if mine >= minimum else "below"), minimum\n'
+        'def people_lines(section: str) -> list[str]:\n'
+        '    """The \xabResponsable:\xbb, \xabDue\xf1o:\xbb or \xabColabora:\xbb lines of a \xabQui\xe9n participa\xbb section. From 1.26 an area.md does not\n'
+        '    carry them: who answers for an area and who collaborates in it is said only by guia.md."""\n'
+        '    return [l for l in (section or "").split("\\n") if PEOPLE_LINE.match(l)]\n'
     ),
     'compat': (
         '"""The scripts\' Spanish names over the package, with the shapes they use today (dicts and tuples).\n'
@@ -931,7 +911,7 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "RECETA_ACTUALIZAR", "puerta_de_escritura"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -1056,28 +1036,132 @@ def _context_core():
         '    return out\n'
         '\n'
         '\n'
-        '# \u2500\u2500 la versi\xf3n m\xednima del plugin (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
-        'RECETA_ACTUALIZAR = ("Actual\xedzalo en la app de Claude, en Customize \u2192 Plugins, con el bot\xf3n Update del marketplace memoria-marketplace "\n'
-        '                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.")\n'
+        'def personas_en_area(texto_area: str) -> list:\n'
+        '    """Las l\xedneas \xabResponsable:\xbb, \xabDue\xf1o:\xbb o \xabColabora:\xbb de \xabQui\xe9n participa\xbb de un area.md, que la 1.26 quita."""\n'
+        '    m = re.search(r"^## Qui\xe9n participa\\s*\\n(.*?)(?=^## |\\Z)", texto_area or "", re.M | re.S)\n'
+        '    return rules.people_lines(m.group(1) if m else "")\n'
+    ),
+    'minimum': (
+        '"""The minimum plugin version a root declares in guia.md (1.26): below it, a plugin reads but does not write.\n'
+        '\n'
+        'Its own module, so only the scripts that gate writing carry it (abrir.py, cerrar.py, migrar_estructura.py,\n'
+        'aplicar_cambios.py, generar_vista.py; review of 1.26, finding on size). The English functions are the rule; the Spanish\n'
+        'names at the end are what the scripts use, as `compat` does.\n'
+        '\n'
+        'The section is found tolerantly and read strictly, so that an error never opens the gate (review of 1.26): any heading\n'
+        'level, case, accents, bold or a colon after the title still declare it; its version is the first thing in the title\n'
+        'after the name or in its first paragraph, and anything else reads as unreadable, which closes writing. Two sections give\n'
+        'the highest version, and an unreadable one closes.\n'
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'import unicodedata\n'
+        'from typing import Optional\n'
+        '\n'
+        'from .language import ES, Pack\n'
+        '\n'
+        '__all__ = ["version_tuple", "minimum_plugin_version", "plugin_may_write", "STRUCTURE_MINIMUM",\n'
+        '           "VERSION_MINIMA_ESTRUCTURA", "RECETA_ACTUALIZAR", "puerta_de_escritura", "seccion_minima"]\n'
+        '\n'
+        '# the minimum the current structure needs: what the migration writes, and what an opening calls \xabbehind\xbb (1.26: \xabQui\xe9n es\n'
+        '# qui\xe9n\xbb). Every structure change raises it with its migration\n'
+        'STRUCTURE_MINIMUM = "1.26.0"\n'
+        '\n'
+        '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
+        '_LEADING = re.compile(r"^[\\s*_`\xab\\"(]*(?:v(?:ersi[o\xf3]n)?\\s*)?(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)", re.I)\n'
+        '\n'
+        '\n'
+        'def version_tuple(text: str) -> Optional[tuple]:\n'
+        '    """\xab1.26\xbb or \xab1.26.0\xbb (the first version in `text`) as (1, 26, 0); None without one."""\n'
+        '    m = _VERSION.search(text or "")\n'
+        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        '\n'
+        '\n'
+        'def _key(t: str) -> str:\n'
+        '    t = "".join(c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn")\n'
+        '    return re.sub(r"\\s+", " ", re.sub(r"[^a-z0-9. ]", " ", t.lower())).strip()\n'
+        '\n'
+        '\n'
+        'def _leading(text: str) -> Optional[tuple]:\n'
+        '    m = _LEADING.match(text or "")\n'
+        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        '\n'
+        '\n'
+        'def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:\n'
+        '    """(declared, version) from the section \xabVersi\xf3n m\xednima del plugin\xbb of guia.md. (False, None): no such section,\n'
+        '    anyone may write. (True, None): a section whose version cannot be read, which nobody may write under until it is\n'
+        '    fixed. A heading counts as the section when it says \xabm\xednima\xbb and \xabplugin\xbb (any case, accents, level or bold)."""\n'
+        '    text = unicodedata.normalize("NFC", (guia or "").replace("\\r\\n", "\\n").replace("\\r", "\\n"))\n'
+        '    name = _key(lang.minimum_plugin)\n'
+        '    words = [w for w in name.split() if len(w) > 3]\n'
+        '    heads = list(re.finditer(r"^[ \\t]*#{1,6}[ \\t]*(.*?)[ \\t#]*$", text, re.M))\n'
+        '    found, versions = False, []\n'
+        '    for i, h in enumerate(heads):\n'
+        '        k = _key(h.group(1))\n'
+        '        if not (k.startswith(name) or all(w in k for w in words[-2:])):\n'
+        '            continue\n'
+        '        found = True\n'
+        '        body = text[h.end():heads[i + 1].start() if i + 1 < len(heads) else len(text)]\n'
+        '        rest = k[len(name):] if k.startswith(name) else ""\n'
+        '        v = _leading(rest) if rest.strip() else None\n'
+        '        if v is None:\n'
+        '            first = next((b for b in re.split(r"\\n\\s*\\n", body.strip()) if b.strip()), "")\n'
+        '            v = _leading(first)\n'
+        '        if v is None:\n'
+        '            return True, None\n'
+        '        versions.append(v)\n'
+        '    return (True, max(versions)) if found else (False, None)\n'
+        '\n'
+        '\n'
+        'def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:\n'
+        '    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),\n'
+        '    ("unreadable", None) for a section with no readable version, or ("unknown", minimum) for a plugin version that does\n'
+        '    not parse. Reading is never gated; only writing (decision of 2026-11-08)."""\n'
+        '    declared, minimum = minimum_plugin_version(guia, lang)\n'
+        '    if not declared:\n'
+        '        return "ok", None\n'
+        '    if minimum is None:\n'
+        '        return "unreadable", None\n'
+        '    mine = version_tuple(plugin_version)\n'
+        '    if mine is None:\n'
+        '        return "unknown", minimum\n'
+        '    return ("ok" if mine >= minimum else "below"), minimum\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 las mismas reglas con los nombres de los scripts \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'VERSION_MINIMA_ESTRUCTURA = STRUCTURE_MINIMUM\n'
+        'RECETA_ACTUALIZAR = ("en la app de Claude, Customize \u2192 Plugins, el bot\xf3n Update del marketplace memoria-marketplace "\n'
+        '                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta")\n'
+        '\n'
+        '\n'
+        'def seccion_minima(version: str = STRUCTURE_MINIMUM) -> str:\n'
+        '    """La secci\xf3n que escribe la migraci\xf3n. Dice qu\xe9 no hacer, porque un plugin anterior a la 1.26 solo la lee como regla."""\n'
+        '    return ("## Versi\xf3n m\xednima del plugin\\n"\n'
+        '            f"{version}. Con un plugin anterior, esta carpeta se lee y se consulta, pero no se escribe nada: no se cierra sesi\xf3n, ni se "\n'
+        '            "registran decisiones, ni se crean o cambian documentos, ni se pone al d\xeda el tablero; primero se actualiza el plugin. "\n'
+        '            f"Para actualizar: {RECETA_ACTUALIZAR}.\\n")\n'
         '\n'
         '\n'
         'def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:\n'
         '    """(puede escribir, versi\xf3n m\xednima como texto o None, motivo en llano o ""): la secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb\n'
         '    de guia.md frente a la versi\xf3n del plugin que corre. El motivo es lo que se le dice a la persona."""\n'
-        '    estado, minima = rules.plugin_may_write(version_plugin, guia)\n'
+        '    estado, minima = plugin_may_write(version_plugin, guia)\n'
         '    txt = ".".join(map(str, minima)) if minima else None\n'
         '    if estado == "ok":\n'
         '        return True, txt, ""\n'
         '    if estado == "unreadable":\n'
-        '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: hasta que el responsable de "\n'
-        '                             "contexto la corrija, no se escribe nada en esta carpeta. Leer y consultar siguen funcionando.")\n'
+        '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: no se escribe nada en esta "\n'
+        '                             "carpeta hasta que su primer p\xe1rrafo empiece por la versi\xf3n (por ejemplo \xab1.26.0.\xbb). La corrige el "\n'
+        '                             "responsable de contexto, en su sesi\xf3n o a mano. Leer y consultar siguen funcionando.")\n'
         '    if estado == "unknown":\n'
         '        return False, txt, (f"No s\xe9 qu\xe9 versi\xf3n del plugin corre aqu\xed (\xab{version_plugin}\xbb) y esta carpeta pide la {txt} o una m\xe1s "\n'
         '                            "nueva para escribir: no se escribe nada. Leer y consultar siguen funcionando.")\n'
         '    return False, txt, (f"Tu plugin memoria es la {version_plugin} y esta carpeta pide la {txt} o una m\xe1s nueva para escribir: "\n'
         '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
-        '                        f"hasta que lo actualices. {RECETA_ACTUALIZAR}")\n'
+        '                        f"hasta que lo actualices: {RECETA_ACTUALIZAR}.")\n'
     ),
     }
     for _n in _todo:
@@ -1089,7 +1173,9 @@ _context_core()
 # --- end of context_core ---
 from context_core.compat import (registro_personas, fila_cuentas, cuentas_contexto, nombre_de,  # noqa: E402
                                  restringida_celda, area_restringida, colaboran_en, cuentas, clave_nombre,
-                                 nombre_contexto, CORREO, PALABRA_COLABORA, nombres_de, persona)
+                                 nombre_contexto, CORREO, PALABRA_COLABORA, nombres_de, persona, personas_en_area)
+from context_core.minimum import (minimum_plugin_version, puerta_de_escritura, seccion_minima,  # noqa: E402
+                                  VERSION_MINIMA_ESTRUCTURA)
 # --- fin de quién escribe ---
 
 
@@ -1613,17 +1699,13 @@ def raiz_en_consola(ruta):
 
 # ---------- las personas: «Quién es quién» (1.26) ----------
 # La 1.25 lee las dos formas; la 1.26 pasa una raíz a la nueva (shared-memory/plugin-memoria/entregables/registro-de-personas.md,
-# 3.5 y 3.6). La regla que manda: nadie gana ni pierde escritura. Antes de escribir se calcula quién escribe en cada área, en
-# guia.md y en cada proyecto con la forma vieja y con la nueva, con las mismas funciones que la sesión (context_core), y si algo
-# cambia no se migra guia.md y se dice qué. Una cuenta sin nombre conocido queda «? · correo» y entonces tampoco se migra
-# guia.md: la sesión enseña el registro, pregunta los nombres que faltan y repite con --nombres.
+# 3.5 y 3.6). La regla que manda: nadie pierde escritura ni lectura. Antes de escribir se calcula quién escribe en cada área, en
+# guia.md y en cada proyecto con la forma vieja y con la nueva, con las mismas funciones que la sesión (context_core), y si
+# alguien la pierde no se migra guia.md y se dice qué y dónde. «Quién la lee» no se toca hasta la 1.27: un plugin 1.19–1.21
+# lee lo restringido ahí (revisión de la 1.26). Una cuenta sin nombre conocido no deja migrar guia.md hasta que se dé con
+# --nombres (o «correo=?» para dejarla «? · correo», que conserva su escritura).
 
-VERSION_MINIMA = "1.26.0"
-SECCION_MINIMA = ("## Versión mínima del plugin\n"
-                  f"{VERSION_MINIMA}. Con un plugin anterior, esta carpeta se lee pero no se escribe: ni sesiones, ni decisiones, ni documentos, ni el tablero. "
-                  "Para actualizar: en la app de Claude, Customize → Plugins, el botón Update del marketplace memoria-marketplace "
-                  "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.\n")
-NOMBRE_CORREO = re.compile(r"([^,;(:|\n`*]+?)\s*\(\s*(" + CORREO.pattern + r")\s*\)")
+NOMBRE_CORREO = re.compile(r"([^,;(:|\n`*—–]+?)\s*\(\s*(" + CORREO.pattern + r")\s*\)")
 LINEA_PERSONA = re.compile(r"^\s*[-*]?\s*\**\s*(?:colabora[n]?|responsable|due[ñn][oa])\s*\**\s*:", re.I)
 
 
@@ -1663,12 +1745,6 @@ def personas_migradas(guia):
     return registro_personas(guia)["hay"] and not any(re.sub(r"[*_`]", "", x).strip().lower() == "cuenta" for x in cab)
 
 
-def personas_en_area(texto_area):
-    """Las líneas «Responsable:», «Dueño:» o «Colabora:» de «Quién participa» de un area.md, que la 1.26 quita: desde
-    entonces quién responde por un área y quién colabora en ella lo dice solo guia.md. La misma función en abrir.py."""
-    return [l for l in _quien_participa(texto_area).split("\n") if LINEA_PERSONA.match(l)]
-
-
 def escritura(guia, proyectos):
     """Quién escribe, como lo leen la sesión y el tablero: por área (responsable, colaboran, restringida), el contexto
     común y cada proyecto ({rel: cuentas de su «Colabora:»})."""
@@ -1691,11 +1767,18 @@ def escritura(guia, proyectos):
             "proyectos": {rel: frozenset(colaboran_en(_quien_participa(tp), reg if reg["hay"] else None)) for rel, tp in proyectos.items()}}
 
 
+def _matiz(celda):
+    """Los paréntesis de una celda Responsable que no son una cuenta: «(de forma interina…)», «(Interino)», «(colabora X)»."""
+    return [x for x in re.findall(r"\(([^)]*)\)", celda or "") if not CORREO.fullmatch(x.strip().lower())]
+
+
 def registro_desde(guia, proyectos, nombres):
-    """El registro que sale de la forma vieja: [(nombre o «?», [cuentas], cuenta de Drive o "")], en el orden en que
-    aparecen las cuentas, y los avisos. El nombre de una cuenta sale del responsable de su fila (si la fila lleva un solo
-    nombre y una sola cuenta antes de «colabora:»), de «Nombre (correo)» en «Quién responde por qué» y en los «Colabora:»
-    de los proyectos, o de --nombres. Dos nombres distintos para una cuenta, o ninguno, dan «?»."""
+    """El registro que sale de la forma vieja: [[nombre o «?», [cuentas], cuenta de Drive o "", [alias], sin cuenta]], en
+    el orden en que aparecen, y los avisos. El nombre de una cuenta sale del responsable de su fila (si la fila lleva un
+    solo nombre y una sola cuenta antes de «colabora:»), del «(colabora Nombre, Nombre)» de esa celda emparejado en orden
+    con las cuentas tras «colabora:», de «Nombre (correo)» en «Quién responde por qué» y en los «Colabora:» de los
+    proyectos, o de --nombres. Un correo suelto en un «Colabora:» entra también, para que se pregunte su nombre. Dos
+    grafías para una cuenta dan «?» y se preguntan; con --nombres, la que no se eligió queda como «también:»."""
     de, orden, avisos = {}, [], []
     def ver(c):
         c = c.lower()
@@ -1703,19 +1786,34 @@ def registro_desde(guia, proyectos, nombres):
             orden.append(c)
         return c
     def par(n, c, donde):
-        n = re.sub(r"[*_`]", "", n).strip(" .:-—–")
+        n = re.sub(r"[*_`]", "", n).strip(" :-—–")
+        n = n if re.search(r"(?:^|\s)[A-ZÁÉÍÓÚÑ]\.$", n) else n.rstrip(" .")   # «Dani P.» conserva su punto
         if n and not CORREO.search(n) and not re.search(r"\s(?:y|e)\s|,", n):
             de.setdefault(ver(c), {}).setdefault(clave_nombre(n), (n, donde))
     cab, filas, _ = _tabla_areas(guia)
     cc = columnas(cab or [])
+    sin_cuenta = []
     for _, c in filas:
         if cc["cuenta"] is None or cc["cuenta"] >= len(c):
             continue
         antes, despues, _ = cuentas(c[cc["cuenta"]])
-        for x in sorted(antes) + sorted(despues):
+        partes_ = PALABRA_COLABORA.split(c[cc["cuenta"]], maxsplit=1)
+        orden_d = list(dict.fromkeys(x.lower() for x in CORREO.findall(partes_[1]))) if len(partes_) > 1 else []
+        for x in sorted(antes) + orden_d:
             ver(x)
-        if len(antes) == 1 and cc["resp"] is not None and cc["resp"] < len(c):
-            par(re.sub(r"\s*\([^)]*\)", "", c[cc["resp"]]), next(iter(antes)), f"responsable de {c[0]}")
+        resp = c[cc["resp"]] if cc["resp"] is not None and cc["resp"] < len(c) else ""
+        limpio = re.sub(r"\s*\([^)]*\)", "", resp).strip()
+        if len(antes) == 1:
+            par(limpio, next(iter(antes)), f"responsable de {c[0]}")
+        elif not antes and limpio and not CORREO.search(limpio) and not re.search(r"\s(?:y|e)\s|,", limpio):
+            sin_cuenta.append(limpio)
+        for mz in _matiz(resp):
+            mm = re.match(r"^\s*colabora[n]?\s*:?\s*(.+)$", mz, re.I)
+            if mm:
+                ns = [x.strip(" .") for x in re.split(r",|\s+y\s+|\s+e\s+", mm.group(1)) if x.strip(" .")]
+                if len(ns) == len(orden_d):
+                    for n_, c_ in zip(ns, orden_d):
+                        par(n_, c_, f"«(colabora …)» de {c[0]}")
     drive = {}
     for l in _quien_responde(guia).split("\n"):
         s = l.strip().lstrip("-* ")
@@ -1733,41 +1831,67 @@ def registro_desde(guia, proyectos, nombres):
     for rel, tp in sorted(proyectos.items()):
         for l in _quien_participa(tp).split("\n"):
             if LINEA_PERSONA.match(l):
-                for n, c in NOMBRE_CORREO.findall(l.split(":", 1)[1]):
+                resto = l.split(":", 1)[1]
+                for n, c in NOMBRE_CORREO.findall(resto):
                     par(n, c, rel)
-    for c, n in (nombres or {}).items():
-        de[ver(c)] = {clave_nombre(n): (n, "--nombres")}
+                for c in CORREO.findall(NOMBRE_CORREO.sub("", resto)):
+                    ver(c)
+    elegidos = {c: n for c, n in (nombres or {}).items()}
     personas, por_nombre = [], {}
     for c in orden:
         ns = de.get(c, {})
-        if len(ns) > 1 and c not in (nombres or {}):
-            avisos.append(f"{c} sale con dos nombres ({', '.join(f'«{n}» en {d}' for n, d in ns.values())}): queda «?» hasta que digas cuál")
-        n = next(iter(ns.values()))[0] if len(ns) == 1 else "?"
+        if c in elegidos:
+            n = elegidos[c]
+            alias = [v[0] for k, v in ns.items() if n != "?" and k != clave_nombre(n)]
+        else:
+            if len(ns) > 1:
+                avisos.append(f"{c} sale con dos nombres ({', '.join(f'«{n}» en {d}' for n, d in ns.values())}): queda «?» hasta que digas cuál; el otro quedará como «también:»")
+            n = next(iter(ns.values()))[0] if len(ns) == 1 else "?"
+            alias = []
         k = clave_nombre(n) if n != "?" else None
         if k and k in por_nombre:
             por_nombre[k][1].append(c)   # la misma persona con dos cuentas
+            por_nombre[k][3] += [a for a in alias if a not in por_nombre[k][3]]
         else:
-            p_ = [n, [c], ""]
+            p_ = [n, [c], "", alias, False]
             personas.append(p_)
             if k:
                 por_nombre[k] = p_
     for p_ in personas:
         p_[2] = next((drive[c] for c in p_[1] if c in drive and drive[c] not in p_[1]), "")
+    for n in sin_cuenta:
+        if clave_nombre(n) not in por_nombre:
+            personas.append([n, [], "", [], True]); por_nombre[clave_nombre(n)] = personas[-1]
+            avisos.append(f"«{n}» es responsable de un área sin cuenta: entra como «sin cuenta» y no escribe, como hasta ahora; si escribe alguien por ella, su línea lleva «registra: Nombre»")
     return personas, avisos
 
 
+def faltan_nombres(personas, nombres):
+    return [c for n, cs, *_ in personas if n == "?" for c in cs if (nombres or {}).get(c) != "?"]
+
+
 def lineas_registro(personas):
-    return "".join(f"- {n} · {' · '.join(cs)}" + (f" · en Drive: {d}" if d else "") + "\n" for n, cs, d in personas)
+    out = []
+    for n, cs, d, alias, sin in personas:
+        campos = [n] + cs + (["sin cuenta"] if sin else []) + ([f"en Drive: {d}"] if d else []) + ([f"también: {', '.join(alias)}"] if alias else [])
+        out.append("- " + " · ".join(campos) + "\n")
+    return "".join(out)
+
+
+PARRAFO_AREAS = ("Responsable y Colabora llevan nombres de «Quién es quién», donde está la cuenta con la que cada persona trabaja con la IA: "
+                 "es lo que permite comprobar quién escribe en cada área.")
 
 
 def guia_con_personas(guia, personas):
-    """guia.md en la forma de la 1.25: «Quién es quién» antes de «Cómo conectarte», la columna «Cuenta» pasa a «Colabora»
-    con nombres, el matiz del responsable va a «Qué es», «Quién la lee» sin «Restringida:» cuando «Acceso» lo dice, los
-    correos salen de «Quién responde por qué» y desaparece «En Drive:». Al final, «Versión mínima del plugin»."""
-    nombre_de_ = {c: n for n, cs, _ in personas for c in cs if n != "?"}
+    """guia.md en la forma de la 1.25, o None si no tiene la tabla de áreas: «Quién es quién» antes de «Cómo conectarte»,
+    la columna «Cuenta» pasa a «Colabora» con nombres, el matiz del responsable va a «Qué es» (y si no hay «Qué es», el
+    responsable se queda como estaba), el párrafo de debajo de la tabla que explicaba «Cuenta» dice dónde está ahora, y
+    salen los correos de «Quién responde por qué» y la línea «En Drive:». «Quién la lee» no se toca. Al final, «Versión
+    mínima del plugin»."""
+    nombre_de_ = {c: n for n, cs, *_ in personas for c in cs if n != "?"}
     cab, filas, m = _tabla_areas(guia)
     if m is None or cab is None:
-        return guia
+        return None
     cc = columnas(cab)
     lineas = m.group(1).split("\n")
     i_que = next((i for i, x in enumerate(cab) if re.sub(r"[*_`]", "", x).strip().lower() in ("qué es", "que es")), None)
@@ -1777,26 +1901,36 @@ def guia_con_personas(guia, personas):
         lineas[hdr] = "| " + " | ".join(cab2) + " |"
         for i, c in filas:
             c = list(c)
+            nuevos = []
             if cc["cuenta"] < len(c):
-                _, despues, _ = cuentas(c[cc["cuenta"]])
                 partes_ = PALABRA_COLABORA.split(c[cc["cuenta"]], maxsplit=1)
                 orden_ = list(dict.fromkeys(x.lower() for x in CORREO.findall(partes_[1]))) if len(partes_) > 1 else []
-                c[cc["cuenta"]] = ", ".join(nombre_de_.get(x, x) for x in orden_ if x in despues)
+                nuevos = [nombre_de_.get(x, x) for x in orden_]
+                c[cc["cuenta"]] = ", ".join(nuevos)
             if cc["resp"] is not None and cc["resp"] < len(c):
-                matiz = re.findall(r"\s*\(((?=[a-záéíóúñ`])[^)]*)\)", c[cc["resp"]])
+                mz = _matiz(c[cc["resp"]])
                 limpio = re.sub(r"\s*\([^)]*\)", "", c[cc["resp"]]).strip()
-                if matiz and i_que is not None and i_que < len(c):
-                    c[i_que] = c[i_que].rstrip(" .") + " (" + "; ".join(matiz) + ")"
-                c[cc["resp"]] = limpio
-            if cc["lee"] is not None and cc["acc"] is not None and cc["lee"] < len(c) and cc["acc"] < len(c):
-                if re.match(r"^\s*(abiert|restringid)", c[cc["acc"]], re.I) and restringida_celda(c[cc["lee"]]):
-                    c[cc["lee"]] = quienes(c[cc["lee"]])
+                # «(colabora X)» ya está en Colabora si sus nombres son los mismos; lo demás va a «Qué es»
+                resto = [x for x in mz if not (re.match(r"^\s*colabora", x, re.I) and all(
+                    any(clave_nombre(y) == clave_nombre(n_) for y in nuevos) for n_ in re.split(r",|\s+y\s+|\s+e\s+", re.sub(r"^\s*colabora[n]?\s*:?", "", x, flags=re.I)) if n_.strip()))]
+                if not resto:
+                    c[cc["resp"]] = limpio
+                elif i_que is not None and i_que < len(c):
+                    c[i_que] = c[i_que].rstrip(" .") + " (" + "; ".join(resto) + ")"
+                    c[cc["resp"]] = limpio
             lineas[i] = "| " + " | ".join(c) + " |"
-    # el párrafo de debajo de la tabla que explicaba la columna «Cuenta» pasa a decir dónde está ahora la cuenta
-    lineas = [("Responsable y Colabora llevan nombres de «Quién es quién», donde está la cuenta con la que cada persona trabaja con la IA: "
-               "es lo que permite comprobar quién escribe en cada área." if re.match(r"^\s*(?:La cuenta es\b|La columna «?Cuenta»?)", l) else l) for l in lineas]
-    t = guia[:m.start(1)] + "\n".join(lineas) + guia[m.end(1):]
-    # «Quién responde por qué»: sin los correos que ya están en el registro, y sin «En Drive:»
+    # el párrafo que explicaba la columna «Cuenta» (en las plantillas 1.22–1.24, partido en varias líneas): entero
+    out, saltar = [], False
+    for l in lineas:
+        if saltar:
+            if not l.strip() or l.startswith(("|", "#")):
+                saltar = False
+                out.append(l)
+            continue
+        if re.match(r"^\s*(?:La cuenta es\b|La columna «?Cuenta»?)", l):
+            out.append(PARRAFO_AREAS); saltar = True; continue
+        out.append(l)
+    t = guia[:m.start(1)] + "\n".join(out) + guia[m.end(1):]
     mq = re.search(r"^##\s+Quién responde por qué\s*\n(.*?)(?=^##\s|\Z)", t, re.M | re.S)
     if mq:
         out = []
@@ -1815,30 +1949,39 @@ def guia_con_personas(guia, personas):
 
 
 def con_version_minima(t):
-    """La sección «Versión mínima del plugin» al final de guia.md, con la versión de esta migración; si ya hay una más
-    nueva, no se toca."""
-    m = re.search(r"^##\s+Versión mínima del plugin\s*\n(.*?)(?=^##\s|\Z)", t, re.M | re.S)
-    if m:
-        v = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", m.group(1))
-        if v and tuple(int(x or 0) for x in v.groups()) >= tuple(int(x) for x in VERSION_MINIMA.split(".")):
-            return t
-        return t[:m.start()] + SECCION_MINIMA + ("\n" if t[m.end():].strip() else "") + t[m.end():]
-    return t.rstrip("\n") + "\n\n" + SECCION_MINIMA
+    """guia.md con «Versión mínima del plugin» de esta estructura: si ya pide esa o una más nueva, tal cual; si pide una
+    anterior o no se deja leer, se reescribe la sección; si no la hay, al final. Lee como la puerta (context_core.minimum)."""
+    declarada, v = minimum_plugin_version(t)
+    if declarada and v is not None and v >= tuple(int(x) for x in VERSION_MINIMA_ESTRUCTURA.split(".")):
+        return t
+    if declarada:
+        heads = list(re.finditer(r"^[ \t]*#{1,6}[ \t]*(.*?)[ \t#]*$", t, re.M))
+        for i, h in enumerate(heads):
+            if minimum_plugin_version(h.group(0) + "\n1.0.0\n")[0]:
+                fin = heads[i + 1].start() if i + 1 < len(heads) else len(t)
+                return t[:h.start()] + seccion_minima() + ("\n" if t[fin:].strip() else "") + t[fin:]
+    return t.rstrip("\n") + "\n\n" + seccion_minima()
 
 
 def proyecto_con_personas(tp, reg):
     """En «Quién participa» de un proyecto.md, «Nombre (correo)» queda «Nombre» cuando el registro da ese correo a ese
-    nombre, y un correo suelto pasa a su nombre; un alta provisional (alguien que no está en el registro) se queda."""
+    nombre o a uno de sus «también:» (entonces con el nombre del registro), y un correo suelto pasa a su nombre; un alta
+    provisional (alguien que no está en el registro) se queda."""
     m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", tp or "", re.M | re.S)
     if not m or not reg["hay"]:
         return tp
+    def es_suyo(p_, n):
+        return p_ and p_["nombre"] != "?" and clave_nombre(n) in {clave_nombre(x) for x in [p_["nombre"]] + list(p_.get("alias") or [])}
     def limpia(l):
         if not LINEA_PERSONA.match(l):
             return l
         et, resto = l.split(":", 1)
         def nc(x):
             p_ = reg["cuenta"].get(x.group(2).lower())
-            return x.group(1) if p_ and p_["nombre"] != "?" and clave_nombre(p_["nombre"]) == clave_nombre(x.group(1)) else x.group(0)
+            if not es_suyo(p_, x.group(1)):
+                return x.group(0)
+            pre = re.match(r"^\s*", x.group(1)).group(0)
+            return pre + p_["nombre"]
         resto = NOMBRE_CORREO.sub(nc, resto)
         def suelto(x):
             p_ = reg["cuenta"].get(x.group(0).lower())
@@ -1849,42 +1992,82 @@ def proyecto_con_personas(tp, reg):
     return tp[:m.start(1)] + cuerpo + tp[m.end(1):]
 
 
-def area_con_personas(ta):
-    """«Quién participa» de un area.md sin «Responsable:», «Dueño:» ni «Colabora:», con una línea que dice dónde están."""
+def area_con_personas(ta, reg):
+    """(area.md, avisos): «Quién participa» sin las líneas «Responsable:», «Dueño:» o «Colabora:» que solo dicen nombres
+    del registro, con una línea que dice dónde están; lo que sigue al nombre tras un punto («Consumen esta área…») se
+    queda como línea propia. Una línea con algo más (un paréntesis, una persona de fuera, una frase pegada) se queda
+    entera y se avisa: no se pierde nada."""
     m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", ta or "", re.M | re.S)
     if not m or not personas_en_area(ta):
-        return ta
-    resto = []
+        return ta, []
+    resto, avisos, quitadas = [], [], 0
     for l in m.group(1).split("\n"):
         if not LINEA_PERSONA.match(l):
             resto.append(l); continue
-        # «Responsable: Nombre. Consumen esta área…»: sale el nombre, se queda lo que sigue (no se pierde nada)
         cola = re.split(r"(?<=[^\s.]{2})\.\s+(?=[A-ZÁÉÍÓÚÑ¿«`])", l.split(":", 1)[1].strip(), maxsplit=1)
-        if len(cola) > 1 and cola[1].strip():
-            resto.append(cola[1].strip())
+        nombres_ = [x.strip(" .*") for x in re.split(r"[,;]", cola[0]) if x.strip(" .*")]
+        if nombres_ and all(persona(n_, reg) is not None for n_ in nombres_) and "(" not in cola[0]:
+            quitadas += 1
+            if len(cola) > 1 and cola[1].strip():
+                resto.append(cola[1].strip())
+        else:
+            resto.append(l)
+            avisos.append(f"«{l.strip()[:80]}» lleva algo más que nombres de «Quién es quién»: se queda como está")
+    if not quitadas:
+        return ta, avisos
     cuerpo = "Responsable y colaboradores: en la tabla de áreas de guia.md.\n" + "\n".join(resto).strip("\n")
-    return ta[:m.start(1)] + cuerpo.rstrip("\n") + "\n\n" + ta[m.end(1):].lstrip("\n") if ta[m.end(1):].strip() else ta[:m.start(1)] + cuerpo.rstrip("\n") + "\n"
+    fin = ta[m.end(1):]
+    return (ta[:m.start(1)] + cuerpo.rstrip("\n") + "\n" + ("\n" + fin.lstrip("\n") if fin.strip() else "")), avisos
 
 
 def diferencias(antes, despues):
-    """Lo que cambiaría de quién escribe: [texto]. Una cuenta que gana escritura en un proyecto porque su «Colabora:»
-    la nombraba sin correo y ahora el registro la reconoce va aparte, en «gana»: es lo que la línea quería decir."""
+    """(pierde, gana): lo que cambiaría de quién escribe. Una cuenta que gana escritura en un proyecto porque su
+    «Colabora:» la nombraba sin correo y ahora el registro la reconoce va en «gana»: es lo que la línea quería decir, y
+    se dice. Perder, nunca."""
     pierde, gana = [], []
     for s, (r, co, rs) in antes["areas"].items():
         r2, co2, rs2 = despues["areas"].get(s, (frozenset(), frozenset(), True))
         if r != r2 or co != co2:
-            pierde.append(f"{s}: escribe {', '.join(sorted(r | co)) or 'nadie'} y pasaría a {', '.join(sorted(r2 | co2)) or 'nadie'}")
+            pierde.append(f"{s}: escribe {', '.join(sorted(r | co)) or 'nadie'} y pasaría a {', '.join(sorted(r2 | co2)) or 'nadie'} (su fila de la tabla de áreas)")
         if rs != rs2:
             pierde.append(f"{s}: pasaría de {'restringida' if rs else 'abierta'} a {'restringida' if rs2 else 'abierta'}")
     if antes["contexto"] != despues["contexto"]:
-        pierde.append(f"contexto común: {', '.join(sorted(antes['contexto'])) or 'nadie'} pasaría a {', '.join(sorted(despues['contexto'])) or 'nadie'}")
+        pierde.append(f"contexto común: {', '.join(sorted(antes['contexto'])) or 'nadie'} pasaría a {', '.join(sorted(despues['contexto'])) or 'nadie'} («Contexto común» de guia.md)")
     for rel, a in antes["proyectos"].items():
         d = despues["proyectos"].get(rel, frozenset())
         if a - d:
-            pierde.append(f"{rel}: dejarían de colaborar {', '.join(sorted(a - d))}")
+            pierde.append(f"{rel}: dejarían de colaborar {', '.join(sorted(a - d))} (su línea «Colabora:» de proyecto.md)")
         if d - a:
-            gana.append(f"{rel}: «Colabora:» nombra a {', '.join(sorted(d - a))} sin su correo; con el registro, colabora")
+            gana.append(f"{rel}: «Colabora:» nombraba sin su correo a quien ahora el registro reconoce ({', '.join(sorted(d - a))}): pasa a colaborar")
     return pierde, gana
+
+
+def atrasados(raiz, hoy, dias, excluir):
+    """[(nombre, versión)] de quienes cerraron sesión en algún proyecto en los últimos `dias` días con un plugin anterior a
+    la estructura actual, por su última «Sesión de: Nombre · plugin X.Y.Z». Las entradas «(migracion)» no cuentan (no son
+    sesiones), ni las del servidor (no tiene plugin), y el nombre se corta en la primera coma. Solo se mira el principio de
+    cada sesiones.md, donde están las entradas recientes. Devuelve también si faltó alguno (sin consola, la copia)."""
+    desde = (datetime.date.fromisoformat(hoy) - datetime.timedelta(days=dias)).isoformat()
+    minima = tuple(int(x) for x in VERSION_MINIMA_ESTRUCTURA.split("."))
+    ult, faltan = {}, 0
+    for pm in sorted(raiz.glob("*/*/proyecto.md")):
+        try:
+            with open(pm.parent / "sesiones.md", encoding="utf-8-sig", errors="replace") as f_:
+                txt = f_.read(16384)
+        except OSError:
+            faltan += 1; continue
+        for m in re.finditer(r"^## (20\d\d-\d\d-\d\d)([^\n]*)\n(.*?)(?=^## |\Z)", txt, re.M | re.S):
+            if m.group(1) < desde:
+                break
+            if "(migracion)" in m.group(2):
+                continue
+            s = re.search(r"^Sesi[oó]n de:\s*(.+?)\s+·\s+plugin\s+(\d+(?:\.\d+)+)", m.group(3), re.M)
+            if s:
+                n = s.group(1).split(",")[0].strip()
+                if n not in ult or m.group(1) > ult[n][0]:
+                    ult[n] = (m.group(1), s.group(2))
+    return sorted((n, v) for n, (f, v) in ult.items() if n not in excluir and tuple(int(x) for x in v.split(".")) < minima), faltan
+
 
 
 def main(argv):
@@ -1905,6 +2088,11 @@ def main(argv):
     hoy = datetime.datetime.now(tz).date().isoformat()
 
     guia, _ = leer(raiz / "guia.md")
+    # la versión mínima del plugin de la raíz (1.26): por debajo, ni la migración escribe (revisión de la 1.26)
+    _puede, _minima, _motivo = puerta_de_escritura(ESTE_PLUGIN, guia)
+    if not _puede:
+        print(json.dumps({"error": _motivo, "solo_lectura": True, "version_minima": _minima, "plugin": ESTE_PLUGIN}, ensure_ascii=False))
+        return 6
     reg_ = registro_personas(guia)
     m = re.search(r"^##\s+Áreas\s*\n(.*?)(?=^##\s|\Z)", guia, re.M | re.S)
     areas, col = [], None
@@ -2089,65 +2277,94 @@ def main(argv):
             c_, n_ = par_.split("=", 1)
             if CORREO.fullmatch(c_.strip().lower()) and n_.strip():
                 nombres[c_.strip().lower()] = n_.strip()
-    todos_proy = {}
-    for a in areas:
-        try:
-            ds = sorted(d for d in (raiz / a["slug"]).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
-        except OSError:
-            continue
-        for d in ds:
-            try:
-                todos_proy[d.relative_to(raiz).as_posix()] = leer(d / "proyecto.md")[0]
-            except (OSError, UnicodeDecodeError):
-                pass
-    mias_slugs = {a["slug"] for a in mias}
     sp = {"migrada": personas_migradas(guia)}
-    reg_nuevo, personas_ = None, None
+    reg_nuevo = None
+    todos_proy = {}
+    mias_slugs = {a["slug"] for a in mias}
+
+    def ajeno_en_uso(rel_p):
+        """Un proyecto de otro responsable tocado hace menos de EN_USO_MIN minutos: puede estar en sesión en otra computadora."""
+        d = raiz / rel_p
+        for n in ("proyecto.md", "sesiones.md"):
+            t_ = fecha_de(d / n)
+            if t_ is not None and (t_ > time.time() + 60 or time.time() - t_ < EN_USO_MIN * 60):
+                return True
+        return False
+
+    if "--personas" in argv:
+        for a in areas:
+            try:
+                ds = sorted(d for d in (raiz / a["slug"]).iterdir() if d.is_dir() and not d.name.startswith(".") and (d / "proyecto.md").is_file())
+            except OSError:
+                continue
+            for d in ds:
+                try:
+                    todos_proy[d.relative_to(raiz).as_posix()] = leer(d / "proyecto.md")[0]
+                except (OSError, UnicodeDecodeError):
+                    pass
     if "--personas" not in argv:
         pass   # la estructura de la 1.22 sola: las personas se migran con su propia pregunta (migracion.md, «Las personas»)
     elif es_resp and not sp["migrada"]:
         salida["personas"] = sp
+        incompleta = []
+        if SIN_CONSOLA:
+            # sin consola, la regla «nadie pierde escritura» solo vale si la copia tiene todos los proyectos (revisión de la 1.26)
+            try:
+                listados = [l.strip().strip("/") for l in pathlib.Path(op("--listado") or "").read_text(encoding="utf-8").split("\n") if l.strip().endswith("proyecto.md")]
+            except OSError:
+                listados = None
+            incompleta = ["falta --listado con los proyecto.md de toda la raíz"] if listados is None else [x for x in listados if x[:-len("/proyecto.md")] not in todos_proy]
         g1 = migrar_guia(guia, [])
         personas_, avisos_ = registro_desde(g1, todos_proy, nombres)
-        sp.update({"registro": lineas_registro(personas_), "faltan_nombres": [c for n, cs, _ in personas_ if n == "?" for c in cs], "avisos": avisos_})
-        if sp["faltan_nombres"]:
-            sp["no_se_migra"] = ["faltan los nombres de " + ", ".join(sp["faltan_nombres"]) + ": repite con --nombres correo=Nombre,correo=Nombre"]
+        _yo = {nombre} | {a["nombre"] for a in areas if cuenta in a["responsables"]}
+        atr, sin_ses = atrasados(raiz, hoy, 60, _yo)
+        sp.update({"registro": lineas_registro(personas_), "faltan_nombres": faltan_nombres(personas_, nombres), "avisos": avisos_,
+                   "atrasados": [f"{n} ({v})" for n, v in atr], **({"atrasados_incompleto": sin_ses} if sin_ses else {})})
+        g2 = guia_con_personas(g1, personas_)
+        if incompleta:
+            sp["no_se_migra"] = ["sin consola, la copia no tiene todos los proyectos que hay que comprobar: " + ", ".join(incompleta[:8]) + ("…" if len(incompleta) > 8 else "")]
+        elif g2 is None:
+            sp["no_se_migra"] = ["guia.md no tiene la tabla de áreas: no hay de dónde sacar quién escribe"]
+        elif sp["faltan_nombres"]:
+            sp["no_se_migra"] = ["faltan los nombres de " + ", ".join(sp["faltan_nombres"]) + ": repite con --nombres correo=Nombre,correo=Nombre (o correo=? para dejarla «? · correo»)"]
         else:
-            g2 = guia_con_personas(g1, personas_)
             reg2 = registro_personas(g2)
-            # «Quién la lee» con alguien que no es una persona del registro (un grupo, «Dirección»): se migra igual, porque
-            # lo restringido lo dice «Acceso», pero se dice, porque permisos.py no sabe con quién compartir
-            cab2, filas2, _ = _tabla_areas(g2)
-            il = columnas(cab2 or [])["lee"]
-            for _, c in filas2:
-                if il is not None and il < len(c) and not re.match(r"^\s*todo el equipo", c[il], re.I):
-                    for n_ in nombres_de(c[il], reg2):
-                        if persona(n_, reg2) is None:
-                            sp["avisos"].append(f"«{n_}», en «Quién la lee» de {c[0]}, no es una persona de «Quién es quién»: se queda así, y conviene cambiarlo por los nombres de quienes lo leen")
             pierde, gana = diferencias(escritura(g1, todos_proy), escritura(g2, {r: proyecto_con_personas(x, reg2) for r, x in todos_proy.items()}))
             if pierde:
                 sp["no_se_migra"] = ["cambiaría quién escribe: " + "; ".join(pierde)]
             else:
                 sp["gana"] = gana
                 reg_nuevo = reg2
-                anotar("guia.md", salida["archivos"].get("guia.md", []) + ["guia.md: «Quién es quién», «Colabora» con nombres y la versión mínima del plugin " + VERSION_MINIMA])
+                anotar("guia.md", salida["archivos"].get("guia.md", []) + ["guia.md: «Quién es quién», «Colabora» con nombres y la versión mínima del plugin " + VERSION_MINIMA_ESTRUCTURA])
                 salida["guia"] = True
-                tareas.append(("guia.md#personas", (lambda ps: (lambda x: guia_con_personas(x, ps)))(personas_)))
+                tareas.append(("guia.md#personas", (lambda ps: (lambda x: guia_con_personas(x, ps) or x))(personas_)))
     elif sp["migrada"]:
         salida["personas"] = sp
         reg_nuevo = reg_
+        if es_resp and con_version_minima(guia) != guia:
+            # montada ya con «Quién es quién», o migrada a mano: falta que pida el plugin que la lee
+            anotar("guia.md", salida["archivos"].get("guia.md", []) + ["guia.md: la versión mínima del plugin " + VERSION_MINIMA_ESTRUCTURA])
+            salida["guia"] = True
+            tareas.append(("guia.md#minima", con_version_minima))
     else:
         salida["personas"] = {**sp, "no_se_migra": ["guia.md la migra el responsable de contexto; hasta entonces, nada de las personas"]}
     if reg_nuevo is not None:
         guia_dep = ["guia.md#personas"] if not sp["migrada"] else None
+        sp.setdefault("avisos", [])
         for a in areas:
             if a["slug"] not in mias_slugs:
                 continue
+            ajena = cuenta not in a["responsables"]
+            en_uso_area = False
             for rel_p, tp in sorted(todos_proy.items()):
                 if not rel_p.startswith(a["slug"] + "/"):
                     continue
                 nuevo = proyecto_con_personas(tp, reg_nuevo)
                 if nuevo == tp:
+                    continue
+                if ajena and ajeno_en_uso(rel_p):
+                    en_uso_area = True
+                    salida["pendientes"].append({"area": a["slug"], "motivo": f"{rel_p}: en uso (cambió hace menos de {EN_USO_MIN} minutos); sus personas se migran en una apertura más tarde"})
                     continue
                 antes_ = colaboran_en(_quien_participa(tp), reg_nuevo if sp["migrada"] else None)
                 if antes_ - colaboran_en(_quien_participa(nuevo), reg_nuevo):
@@ -2156,18 +2373,20 @@ def main(argv):
                 anotar(rel_p + "/proyecto.md", salida["archivos"].get(rel_p + "/proyecto.md", []) + ["Quién participa: nombres de «Quién es quién», sin correos"])
                 tareas.append((rel_p + "/proyecto.md#personas", (lambda rg: (lambda x: proyecto_con_personas(x, rg)))(reg_nuevo), guia_dep))
                 entrada = (f"## {hoy} (migracion)\nTema: las personas pasan a «Quién es quién» de guia.md (1.26).\n"
-                           f"Avances: los nombres de «Quién participa» sin sus correos, que viven en el registro; nadie gana ni pierde escritura.\n"
-                           f"Sesión de: {nombre}" + ("" if cuenta in a["responsables"] else f", responsable de contexto, por {a['nombre'] or 'el responsable del área'}")
-                           + f" · plugin {version}" + (" · sin consola" if "--sin-consola" in argv else ""))
+                           f"Avances: los nombres de «Quién participa» sin sus correos, que viven en el registro; nadie pierde escritura.\n"
+                           f"Sesión de: {nombre}" + ("" if not ajena else f", responsable de contexto, por {a['nombre'] or 'el responsable del área'}")
+                           + f" · plugin {version}" + (" · sin consola" if SIN_CONSOLA else ""))
                 tareas.append((rel_p + "/sesiones.md#entrada", entrada, [rel_p + "/proyecto.md#personas"]))
             pa_ = raiz / a["slug"] / "area.md"
             try:
                 ta_ = leer(pa_)[0]
             except (OSError, UnicodeDecodeError):
                 continue
-            if personas_en_area(ta_):
+            nuevo_a, av_a = area_con_personas(ta_, reg_nuevo)
+            sp["avisos"] += [f"{a['slug']}/area.md: {x}" for x in av_a]
+            if nuevo_a != ta_ and not en_uso_area:
                 anotar(a["slug"] + "/area.md", salida["archivos"].get(a["slug"] + "/area.md", []) + ["Quién participa: responsable y colaboradores solo en guia.md"])
-                tareas.append((a["slug"] + "/area.md#personas", area_con_personas, guia_dep))
+                tareas.append((a["slug"] + "/area.md#personas", (lambda rg: (lambda x: area_con_personas(x, rg)[0]))(reg_nuevo), guia_dep))
 
     resumen = {}
     for cambios in salida["archivos"].values():
