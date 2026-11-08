@@ -87,6 +87,8 @@ class Pack:
     write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects
     write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern
     writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in «Sesión de»
+    # guia.md: the section that declares the oldest plugin that may write in the root (1.26)
+    minimum_plugin: str = ""
 
 
 ES = Pack(
@@ -123,6 +125,7 @@ ES = Pack(
                     "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},
     write_status={"completed": "Se completó", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},
     writers={"plugin": "plugin", "server": "servidor"},
+    minimum_plugin="Versión mínima del plugin",
 )
 
 PACKS = {"es": ES}

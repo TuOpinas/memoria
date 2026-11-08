@@ -284,6 +284,8 @@ Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
 ## Cómo conectarte
 
 ## Versión del método
+
+## Versión mínima del plugin      (solo si una migración la escribió)
 ```
 
 **El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. «Responsable» lleva un solo nombre de «Quién es quién», limpio: un matiz («de forma interina») va en «Qué es». «Colabora» lleva nombres separados por comas, o nada (sección 1, «Quién colabora»). «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»). Las etiquetas de «Quién responde por qué» empiezan como aquí, que es como las leen los scripts.
@@ -355,6 +357,8 @@ Valen para todas las skills, no se repiten en ninguna y están en `escribir.md`,
 El método se actualiza publicando una versión nueva del plugin, y cada raíz recibe su `metodo.md` sola, de la primera cuenta con el plugin más nuevo que abre sesión o pone al día un tablero. Nadie edita `metodo.md` dentro de la carpeta de una organización. La regla completa (cuándo se copia, quién, qué pasa sin permiso), cómo se publica una versión y cómo se verifica una raíz están en `montaje.md`, junto a este archivo.
 
 **Cuando una versión cambia la estructura**, como la 1.22 (`Estatus`, `Responsable`, `aportacion`, `Descartado`, `Tema`, «Acceso», `inventario.md`), cada raíz se migra sola, por partes: la apertura detecta la estructura anterior en las áreas de la cuenta y, antes de responder a lo que se pidió, pregunta si se migra; con el sí, un script (`migrar_estructura.py`, skill `sesion`) renombra secciones, claves y archivos en las áreas donde la cuenta es responsable y deja una entrada `(migracion)` en el `sesiones.md` de cada proyecto migrado. El responsable de contexto, que administra la carpeta y es su dueño en Drive, migra además `guia.md` y las áreas de los demás responsables, restringidas incluidas, para que nada se quede sin migrar; la entrada de esos proyectos dice por quién. Los registros no se editan: sus entradas viejas conservan sus nombres. Lo que nadie ha migrado todavía espera a la apertura de su responsable o del de contexto; mientras, una raíz mezclada funciona, porque durante esa versión los scripts y las skills leen los nombres viejos y los nuevos y escriben solo los nuevos. La skill `migrar` no interviene: es para adoptar estructuras ajenas.
+
+**La versión mínima del plugin** (1.26). Una migración que cambia la estructura escribe en `guia.md` la sección «Versión mínima del plugin»: su primer párrafo empieza por la versión más antigua del plugin que puede escribir en la raíz y sigue con qué pasa con una anterior y cómo actualizar. Con un plugin anterior la carpeta se lee y se consulta, pero no se escribe nada: ni sesiones, ni decisiones, ni documentos, ni el tablero. Desde la 1.26 lo hacen cumplir los scripts (la apertura abre en solo lectura y dice cómo actualizar, el cierre y la puesta al día del tablero se niegan); hasta la 1.25.8, que no conocen la sección, la leen en `guia.md` al abrir y la siguen como regla de la casa. Una sección que no dice qué versión cierra la escritura hasta que se corrija. La escribe solo la migración, en la sesión del responsable de contexto, y cada cambio de estructura posterior sube el número con la suya; una versión que solo añade comportamiento no la toca.
 
 ### Las personas antes de la 1.25
 

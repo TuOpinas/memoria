@@ -17,7 +17,7 @@ __all__ = ["SOBRE_LA_CARPETA", "sin_carpeta", "ARCHIVADO", "archivados_de", "con
            "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",
            "clave_nombre", "registro_personas",
            "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",
-           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]
+           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "RECETA_ACTUALIZAR", "puerta_de_escritura"]
 
 CORREO = rules.EMAIL
 PALABRA_COLABORA = rules._WORD_COLLABORATES
@@ -140,3 +140,27 @@ def respuestas_viejas(carpeta, anio, leer_) -> list:
         if n not in recientes:
             out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
     return out
+
+
+# ── la versión mínima del plugin (1.26) ──────────────────────────────────────────────────────────────────────────
+
+RECETA_ACTUALIZAR = ("Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace "
+                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.")
+
+
+def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:
+    """(puede escribir, versión mínima como texto o None, motivo en llano o ""): la sección «Versión mínima del plugin»
+    de guia.md frente a la versión del plugin que corre. El motivo es lo que se le dice a la persona."""
+    estado, minima = rules.plugin_may_write(version_plugin, guia)
+    txt = ".".join(map(str, minima)) if minima else None
+    if estado == "ok":
+        return True, txt, ""
+    if estado == "unreadable":
+        return False, None, ("La sección «Versión mínima del plugin» de guia.md no dice qué versión: hasta que el responsable de "
+                             "contexto la corrija, no se escribe nada en esta carpeta. Leer y consultar siguen funcionando.")
+    if estado == "unknown":
+        return False, txt, (f"No sé qué versión del plugin corre aquí («{version_plugin}») y esta carpeta pide la {txt} o una más "
+                            "nueva para escribir: no se escribe nada. Leer y consultar siguen funcionando.")
+    return False, txt, (f"Tu plugin memoria es la {version_plugin} y esta carpeta pide la {txt} o una más nueva para escribir: "
+                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "
+                        f"hasta que lo actualices. {RECETA_ACTUALIZAR}")

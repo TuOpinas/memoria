@@ -43,6 +43,8 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
+ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+
 
 def copia_del_metodo(plugin_linea, version):
     """El metodo.md del plugin con el que corre este script, copiado a una carpeta de salidas del contenedor para
@@ -280,10 +282,10 @@ def titulo(n):
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
+    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
-    'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
+    'rules': 'f2f559f0c6a875d658946566ea70f1363c07c2f60cc6b5ecd669a68a372034f2',
+    'compat': '257a02f646182e3afcba1c1ba2811bc636decee93d25c9df143b48e377e82f77',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -398,6 +400,8 @@ def _context_core():
         '    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects\n'
         '    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern\n'
         '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
+        '    # guia.md: the section that declares the oldest plugin that may write in the root (1.26)\n'
+        '    minimum_plugin: str = ""\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -434,6 +438,7 @@ def _context_core():
         '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
         '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
         '    writers={"plugin": "plugin", "server": "servidor"},\n'
+        '    minimum_plugin="Versi\xf3n m\xednima del plugin",\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -712,7 +717,7 @@ def _context_core():
     ),
     'rules': (
         '"""The rules the plugin scripts share: who writes (the people registry, the area table\'s accounts, \xabColabora:\xbb), what is\n'
-        "restricted, guia.md's first paragraph and the archived registers. Pure functions: no I/O, no globals, no clock.\n"
+        "restricted, guia.md's first paragraph, the archived registers and the minimum plugin version that may write. Pure functions: no I/O, no globals, no clock.\n"
         '\n'
         'This is what `compat` reaches, and so what `inline.py` puts inside the scripts; the parsers of the other method files are\n'
         'in `parse`, which imports these and re-exports them. The words that decide restricted come from the language pack\n'
@@ -1061,6 +1066,43 @@ def _context_core():
         '        if m:\n'
         '            parts.append((t or "")[m.start():])\n'
         '    return "\\n\\n".join(p.strip("\\n") for p in parts if p.strip()) + "\\n", len(re.findall(r"^## ", live or "", re.M))\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 the minimum plugin version (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
+        '\n'
+        '\n'
+        'def version_tuple(text: str) -> Optional[tuple]:\n'
+        '    """\xab1.26\xbb or \xab1.26.0\xbb (the first version in `text`) as (1, 26, 0); None without one."""\n'
+        '    m = _VERSION.search(text or "")\n'
+        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        '\n'
+        '\n'
+        'def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:\n'
+        '    """(declared, version) from the section \xab## Versi\xf3n m\xednima del plugin\xbb of guia.md, written by the migration that needs\n'
+        '    it. (False, None): no section, anyone may write. (True, None): a section with no version in its first paragraph,\n'
+        '    which nobody may write under until it is fixed (fail closed: a typo must not let an old plugin through)."""\n'
+        '    m = re.search(r"^##[ \\t]+" + re.escape(lang.minimum_plugin) + r"[ \\t]*$(.*?)(?=^##[ \\t]|\\Z)", guia or "", re.M | re.S)\n'
+        '    if not m:\n'
+        '        return False, None\n'
+        '    first = next((b for b in re.split(r"\\n\\s*\\n", m.group(1).strip()) if b.strip()), "")\n'
+        '    return True, version_tuple(first)\n'
+        '\n'
+        '\n'
+        'def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:\n'
+        '    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),\n'
+        '    ("unreadable", None) for a section with no version, or ("unknown", minimum) for a plugin version that does not parse.\n'
+        '    Reading is never gated; only writing (decision of 2026-11-08)."""\n'
+        '    declared, minimum = minimum_plugin_version(guia, lang)\n'
+        '    if not declared:\n'
+        '        return "ok", None\n'
+        '    if minimum is None:\n'
+        '        return "unreadable", None\n'
+        '    mine = version_tuple(plugin_version)\n'
+        '    if mine is None:\n'
+        '        return "unknown", minimum\n'
+        '    return ("ok" if mine >= minimum else "below"), minimum\n'
     ),
     'compat': (
         '"""The scripts\' Spanish names over the package, with the shapes they use today (dicts and tuples).\n'
@@ -1082,7 +1124,7 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "RECETA_ACTUALIZAR", "puerta_de_escritura"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -1205,6 +1247,30 @@ def _context_core():
         '        if n not in recientes:\n'
         '            out += re.findall(r"^Responde a:[ \\t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)\n'
         '    return out\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 la versi\xf3n m\xednima del plugin (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'RECETA_ACTUALIZAR = ("Actual\xedzalo en la app de Claude, en Customize \u2192 Plugins, con el bot\xf3n Update del marketplace memoria-marketplace "\n'
+        '                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.")\n'
+        '\n'
+        '\n'
+        'def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:\n'
+        '    """(puede escribir, versi\xf3n m\xednima como texto o None, motivo en llano o ""): la secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb\n'
+        '    de guia.md frente a la versi\xf3n del plugin que corre. El motivo es lo que se le dice a la persona."""\n'
+        '    estado, minima = rules.plugin_may_write(version_plugin, guia)\n'
+        '    txt = ".".join(map(str, minima)) if minima else None\n'
+        '    if estado == "ok":\n'
+        '        return True, txt, ""\n'
+        '    if estado == "unreadable":\n'
+        '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: hasta que el responsable de "\n'
+        '                             "contexto la corrija, no se escribe nada en esta carpeta. Leer y consultar siguen funcionando.")\n'
+        '    if estado == "unknown":\n'
+        '        return False, txt, (f"No s\xe9 qu\xe9 versi\xf3n del plugin corre aqu\xed (\xab{version_plugin}\xbb) y esta carpeta pide la {txt} o una m\xe1s "\n'
+        '                            "nueva para escribir: no se escribe nada. Leer y consultar siguen funcionando.")\n'
+        '    return False, txt, (f"Tu plugin memoria es la {version_plugin} y esta carpeta pide la {txt} o una m\xe1s nueva para escribir: "\n'
+        '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
+        '                        f"hasta que lo actualices. {RECETA_ACTUALIZAR}")\n'
     ),
     }
     for _n in _todo:
@@ -1216,7 +1282,7 @@ _context_core()
 # --- end of context_core ---
 from context_core.compat import (CORREO, registro_personas, persona, nombres_de, fila_cuentas,  # noqa: E402
                                  nombre_contexto, cuentas_contexto, colaboran_en, sin_carpeta,
-                                 con_archivados, respuestas_viejas, area_restringida)
+                                 con_archivados, respuestas_viejas, area_restringida, puerta_de_escritura)
 # --- fin de quién escribe ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
@@ -1302,6 +1368,10 @@ if PLUGIN is not None:
     print(f"Veredicto: {ver} (raíz {txt(vr)}, plugin {txt(vp)})")
     VEREDICTO = ver.split(":")[0]
     VERSION_RAIZ, VERSION_PLUGIN = txt(vr), txt(vp)
+# la versión mínima del plugin que puede escribir en la raíz, de su guia.md (1.26): por debajo, la sesión lee pero no escribe
+PUEDE_ESCRIBIR, VERSION_MINIMA, MOTIVO_SOLO_LECTURA = puerta_de_escritura(ESTE_PLUGIN, guia)
+if VERSION_MINIMA or not PUEDE_ESCRIBIR:
+    print(f"ESCRITURA: {'abierta' if PUEDE_ESCRIBIR else 'SOLO LECTURA'} (plugin {ESTE_PLUGIN}, mínima de la raíz {VERSION_MINIMA or 'ilegible'})")
 m_org = re.search(r"^#\s+(.+)$", guia, re.M)
 ORGANIZACION = m_org.group(1).split("·")[0].strip() if m_org else ""
 if MINIMA:
@@ -1311,7 +1381,7 @@ else:
     titulo("GUIA")
     # la receta para conectarse y la nota de la versión son para personas: no hacen falta para trabajar (1.19)
     omitidas, guia_sesion = [], guia
-    for sec in ("Quién es quién", "Cómo conectarte", "Versión del método"):   # «Quién es quién» lo leen los scripts; la cuenta de la sesión sale en CUENTA (1.25)
+    for sec in ("Quién es quién", "Cómo conectarte", "Versión del método", "Versión mínima del plugin"):   # «Quién es quién» lo leen los scripts; la cuenta de la sesión sale en CUENTA (1.25); la versión mínima, en ESCRITURA (1.26)
         m_ = re.search(r"^##\s+" + re.escape(sec) + r"\s*$.*?(?=^##\s|\Z)", guia_sesion, re.M | re.S)
         if m_:
             guia_sesion = guia_sesion[:m_.start()] + guia_sesion[m_.end():]; omitidas.append(sec)
@@ -1405,8 +1475,10 @@ if CUENTA:
         if tp_ and CUENTA in colaboran_en(seccion(cabecera(tp_)[1], "Quién participa"), REG if REG["hay"] else None):
             proy_co = [ACTIVO]
     donde_ = ", ".join([f"{s} (responsable)" for s in mias] + [f"{s} (colabora)" for s in colab] + [f"{s} (colabora en el proyecto)" for s in proy_co])
-    if not donde_:
+    if not donde_ and PUEDE_ESCRIBIR:
         DECIR.append("No escribes en ninguna área: dime en cuál trabajas.")
+    if not PUEDE_ESCRIBIR:   # la versión mínima manda sobre todo lo demás: con un plugin anterior no se escribe en ningún sitio (1.26)
+        donde_ = "nada: SOLO LECTURA por la versión mínima del plugin (ESCRITURA, arriba)" + (f"; con un plugin al día, en {donde_}" if donde_ else "")
     print(f"{CUENTA}: escribe en {donde_ if donde_ else 'ninguna área (preguntar en cuál trabaja antes de escribir)'}"
           + ("; es la del responsable de contexto (también guia.md y base/)" if es_resp else ""))
     # «Quién es quién» (1.25): el nombre de la cuenta sale del registro, y «Sesión de:» lo lleva sin preguntarlo
@@ -1712,10 +1784,12 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
     Nada de aquí remite a una skill: lo que hay que hacer viene escrito."""
     titulo("RESPUESTA (la apertura completa: el recuadro y lo que toca)" if completa else "RESPUESTA (la apertura mínima: haz esto y nada más)")
     vr_ = version_huella(linea_metodo)[0]
-    version = VERSION_PLUGIN if VEREDICTO == "RAIZ ATRASADA" else (".".join(map(str, vr_)) if vr_ else "?")
+    version = VERSION_PLUGIN if VEREDICTO == "RAIZ ATRASADA" and PUEDE_ESCRIBIR else (".".join(map(str, vr_)) if vr_ else "?")
     raiz_ = str(RAIZ)
     filas = []
-    if VEREDICTO == "PLUGIN ATRASADO":
+    if not PUEDE_ESCRIBIR:
+        filas.append(f"**Solo lectura:** {MOTIVO_SOLO_LECTURA}")
+    if VEREDICTO == "PLUGIN ATRASADO" and PUEDE_ESCRIBIR:
         filas.append(f"**Método:** esta carpeta usa una versión del método más nueva que la de tu Claude ({VERSION_RAIZ} frente a {VERSION_PLUGIN}). "
                      "Actualízalo en la app de Claude, en Customize → Plugins, con el botón Update del marketplace memoria-marketplace, o pide ayuda a quien administra la carpeta.")
     filas += [f"**Aviso:** {d}" for d in DECIR]
@@ -1725,7 +1799,7 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
         filas.append(f"**Claude outputs:** {'más de ' if OUTPUTS_CORTADO[0] else ''}{len(sueltos)} archivo{'s' if len(sueltos) != 1 else ''} suelto{'s' if len(sueltos) != 1 else ''}{f_}"
                      + (f"; {'uno parece confidencial' if conf == 1 else f'{conf} parecen confidenciales'}" if conf else "") + ".")
     cab = "La respuesta empieza con este recuadro, tal cual"
-    if PERMISOS:
+    if PERMISOS and PUEDE_ESCRIBIR:
         cab += " (la fila de permisos, si toca, la añade su paso)"
     if completa:
         cab += "; si en esta conversación ya salió, no se repite: solo sus filas nuevas, como filas de «Memoria · avisos», y una pregunta ya hecha no se repite"
@@ -1735,13 +1809,20 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
     for f_ in filas:
         print(f"| {celda(f_)} |")
     pasos = []
-    copia_metodo = metodo_para_subir() if VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS else None
+    if not PUEDE_ESCRIBIR:
+        # la puerta de la 1.26: se lee y se consulta, pero en esta conversación no se escribe nada en la carpeta
+        pasos.append("Esta conversación es de solo lectura en la carpeta (fila «Solo lectura»): se lee, se consulta y se responde, pero no se escribe nada en ella "
+                     "con ninguna herramienta (ni Write, ni Edit, ni device_bash, ni device_commit_files, ni el conector de Drive), no se cierra sesión, no se migra, no se pone al día el tablero "
+                     "y no se pone al día metodo.md. Si piden algo que escribe, se dice en una línea que primero hay que actualizar el plugin, y se puede preparar el texto en la conversación.")
+    copia_metodo = metodo_para_subir() if VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS and PUEDE_ESCRIBIR else None
     if copia_metodo:
         # sin consola, o en la apertura mínima, que no ejecuta nada descargado en la computadora (1.24.9): el metodo.md del
         # plugin instalado ya está en una carpeta de salidas, y basta escribirlo
         pasos.append("Antes de responder y sin decirlo, pon al día el método de la raíz: ToolSearch de mcp__remote-devices__device_commit_files (no viene cargada) y device_commit_files con "
                      f"stagedPath «{copia_metodo}» y devicePath «{ruta_en_la_computadora('metodo.md')}», y después, en el Bash que siga o en uno propio, `rm -rf \"{pathlib.Path(copia_metodo).parent}\"`. Si no sale en «written», no se dice nada y el recuadro lleva "
                      f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
+    elif not PUEDE_ESCRIBIR:
+        pass
     elif VEREDICTO == "RAIZ ATRASADA" and SIN_FECHAS:
         # sin carpeta de salidas device_commit_files no tiene de dónde escribir, y descargar en la computadora es lo que se evita
         pasos.append(f"El método de la raíz no se pone al día en esta conversación: no se dice nada y el recuadro lleva v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
@@ -1753,14 +1834,14 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                      f"(si no imprime nada, no se pone al día y no se dice); ToolSearch de mcp__remote-devices__device_commit_files y device_commit_files con stagedPath esa ruta y devicePath «{ruta_en_la_computadora('metodo.md')}»; "
                      "después, en el Bash que siga o en uno propio, `rm -rf` de la carpeta de esa copia. Si no sale en «written», no se dice nada y el recuadro lleva "
                      f"v{VERSION_RAIZ or '?'}, la versión que tiene la raíz.")
-    if ESTRUCTURA_ANTERIOR:
+    if ESTRUCTURA_ANTERIOR and PUEDE_ESCRIBIR:
         pasos.append("Antes de responder: la respuesta es solo el recuadro y esta pregunta, con AskUserQuestion si está (opciones «Migrar ahora» y «Después»; sin ella, en texto, y se espera): "
                      f"«Tu parte de la carpeta usa la estructura de antes de la 1.22 ({ESTRUCTURA_ANTERIOR}). ¿La paso a la nueva antes de seguir? Renombra secciones y claves sin perder nada y deja una línea en la bitácora de cada proyecto.»"
                      + (" Añade que las áreas «(de …)» son de otros responsables y que su bitácora dirá quién las migró." if "(de " in ESTRUCTURA_ANTERIOR else "")
                      + " Con «Migrar ahora», el anexo migracion.md de la skill sesion; con «Después», no se vuelve a preguntar en esta conversación. "
                      "Los pasos que siguen a este van en la respuesta siguiente, después de la contestación; si ya se había respondido cuando llegó esta apertura, la pregunta va igual, sola tras el recuadro. "
                      "En una tarea programada no se pregunta ni se migra.")
-    if PERMISOS:
+    if PERMISOS and PUEDE_ESCRIBIR:
         if completa:
             pasos.append("Permisos de Drive: como en la apertura mínima; si ya se ofreció en esta conversación, nada.")
         else:
@@ -1770,7 +1851,7 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                          "o si su lista «cambios» no está vacía y es de hace más de 7 días: una fila «**Permisos de Drive:** sin revisar desde el <fecha>» (o «nunca se revisaron», "
                          "o «quedan <n> cambios de la revisión del <fecha>») y, al final, la pregunta «¿Reviso ahora los permisos de Drive?» con «Revisar ahora» y «Después». "
                          "Sin tablero o si una llamada falla, nada. Con «Revisar ahora», el anexo permisos.md de la skill sesion; con «Después», no se vuelve a ofrecer en esta conversación.")
-    if completa and not sin_proyecto:
+    if completa and not sin_proyecto and PUEDE_ESCRIBIR:
         pasos.append("Antes de responder, la cola del tablero: ToolSearch de mcp__claude-artifacts__list_artifacts, db_query y read_file (o Artifact y ArtifactData si la sesión tiene las de antes); "
                      f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
     # con un proyecto que no se pudo leer, la apertura sale igual, con el recuadro, y la respuesta pregunta cuál era (1.24.9)
@@ -1778,7 +1859,7 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                  "no lo crees sin que lo pidan (la skill nuevo)." if sin_proyecto else
                  "Responde con la sesión: dónde quedó todo, los recuadros de la memoria, los avisos y la propuesta de trabajo, como dice «Qué respondo» de la skill sesion."
                  if completa else "Responde a lo que se pidió.")
-    if sueltos:
+    if sueltos and PUEDE_ESCRIBIR:
         pasos.append("La última acción de la respuesta: «¿Coloco ahora lo que hay en Claude outputs?», con AskUserQuestion si está (opciones «Colocar ahora» y «Después», "
                      "en la misma llamada que la de los permisos si la hay; sin la herramienta, esa misma pregunta en texto, una sola vez). Con «Colocar ahora», «Ordenar Claude outputs» "
                      "de la skill donde-va; con «Después», no se vuelve a preguntar en esta conversación, ni al abrir después un proyecto.")

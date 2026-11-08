@@ -1,5 +1,5 @@
 """The rules the plugin scripts share: who writes (the people registry, the area table's accounts, «Colabora:»), what is
-restricted, guia.md's first paragraph and the archived registers. Pure functions: no I/O, no globals, no clock.
+restricted, guia.md's first paragraph, the archived registers and the minimum plugin version that may write. Pure functions: no I/O, no globals, no clock.
 
 This is what `compat` reaches, and so what `inline.py` puts inside the scripts; the parsers of the other method files are
 in `parse`, which imports these and re-exports them. The words that decide restricted come from the language pack
@@ -348,3 +348,40 @@ def with_archives(live: Optional[str], archives: list[Optional[str]]) -> tuple[s
         if m:
             parts.append((t or "")[m.start():])
     return "\n\n".join(p.strip("\n") for p in parts if p.strip()) + "\n", len(re.findall(r"^## ", live or "", re.M))
+
+
+# ── the minimum plugin version (1.26) ────────────────────────────────────────────────────────────────────────────
+
+_VERSION = re.compile(r"(?<![\d.])(\d+)\.(\d+)(?:\.(\d+))?(?!\.?\d)")
+
+
+def version_tuple(text: str) -> Optional[tuple]:
+    """«1.26» or «1.26.0» (the first version in `text`) as (1, 26, 0); None without one."""
+    m = _VERSION.search(text or "")
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None
+
+
+def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:
+    """(declared, version) from the section «## Versión mínima del plugin» of guia.md, written by the migration that needs
+    it. (False, None): no section, anyone may write. (True, None): a section with no version in its first paragraph,
+    which nobody may write under until it is fixed (fail closed: a typo must not let an old plugin through)."""
+    m = re.search(r"^##[ \t]+" + re.escape(lang.minimum_plugin) + r"[ \t]*$(.*?)(?=^##[ \t]|\Z)", guia or "", re.M | re.S)
+    if not m:
+        return False, None
+    first = next((b for b in re.split(r"\n\s*\n", m.group(1).strip()) if b.strip()), "")
+    return True, version_tuple(first)
+
+
+def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:
+    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),
+    ("unreadable", None) for a section with no version, or ("unknown", minimum) for a plugin version that does not parse.
+    Reading is never gated; only writing (decision of 2026-11-08)."""
+    declared, minimum = minimum_plugin_version(guia, lang)
+    if not declared:
+        return "ok", None
+    if minimum is None:
+        return "unreadable", None
+    mine = version_tuple(plugin_version)
+    if mine is None:
+        return "unknown", minimum
+    return ("ok" if mine >= minimum else "below"), minimum

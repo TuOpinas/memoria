@@ -61,6 +61,11 @@ exactamente una vez, cruza un encabezado «## » o pasa de doce líneas no se ap
 encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (salvo cuando lo único que cambia es la cabecera, como añadir `aportacion`) (en la
 zona horaria de guia.md) en cada archivo escrito; los finales de línea se conservan como estaban.
 
+Lo primero, antes que todo lo demás (1.26): si guia.md tiene la sección «Versión mínima del plugin» y este script es de un
+plugin anterior a esa versión (ESTE_PLUGIN, que pone release.sh), o la sección no dice qué versión, no escribe nada, ni con
+--comprobar: imprime el JSON con «error» (el motivo en llano, con cómo actualizar), «solo_lectura», «version_minima» y
+«plugin», y sale con 6.
+
 Imprime siempre un JSON: «escritos», «sin_match», «rechazados», «fallidos» (un archivo que no se pudo leer o escribir, con
 el motivo), «ajenos» (archivos que alguien cambió desde --abierto, con la hora; también los que cambiaron mientras este
 cierre escribía; nunca los que este mismo cierre escribió), «reintentos», «hora» (ahora, ISO 8601 en minutos UTC, para la
@@ -79,6 +84,7 @@ import sys
 import tempfile
 import time
 
+ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (escribir.md, sección 8; por tamaño desde la 1.23)
@@ -95,10 +101,10 @@ LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (e
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
+    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
-    'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
+    'rules': 'f2f559f0c6a875d658946566ea70f1363c07c2f60cc6b5ecd669a68a372034f2',
+    'compat': '257a02f646182e3afcba1c1ba2811bc636decee93d25c9df143b48e377e82f77',
     'write': '0775119f7676e9dc1a9a47c880c6fcea328ef4217e355394b627cd48f5ea2179',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
@@ -214,6 +220,8 @@ def _context_core():
         '    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects\n'
         '    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern\n'
         '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
+        '    # guia.md: the section that declares the oldest plugin that may write in the root (1.26)\n'
+        '    minimum_plugin: str = ""\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -250,6 +258,7 @@ def _context_core():
         '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
         '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
         '    writers={"plugin": "plugin", "server": "servidor"},\n'
+        '    minimum_plugin="Versi\xf3n m\xednima del plugin",\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -528,7 +537,7 @@ def _context_core():
     ),
     'rules': (
         '"""The rules the plugin scripts share: who writes (the people registry, the area table\'s accounts, \xabColabora:\xbb), what is\n'
-        "restricted, guia.md's first paragraph and the archived registers. Pure functions: no I/O, no globals, no clock.\n"
+        "restricted, guia.md's first paragraph, the archived registers and the minimum plugin version that may write. Pure functions: no I/O, no globals, no clock.\n"
         '\n'
         'This is what `compat` reaches, and so what `inline.py` puts inside the scripts; the parsers of the other method files are\n'
         'in `parse`, which imports these and re-exports them. The words that decide restricted come from the language pack\n'
@@ -877,6 +886,43 @@ def _context_core():
         '        if m:\n'
         '            parts.append((t or "")[m.start():])\n'
         '    return "\\n\\n".join(p.strip("\\n") for p in parts if p.strip()) + "\\n", len(re.findall(r"^## ", live or "", re.M))\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 the minimum plugin version (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
+        '\n'
+        '\n'
+        'def version_tuple(text: str) -> Optional[tuple]:\n'
+        '    """\xab1.26\xbb or \xab1.26.0\xbb (the first version in `text`) as (1, 26, 0); None without one."""\n'
+        '    m = _VERSION.search(text or "")\n'
+        '    return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)) if m else None\n'
+        '\n'
+        '\n'
+        'def minimum_plugin_version(guia: str, lang: Pack = ES) -> tuple[bool, Optional[tuple]]:\n'
+        '    """(declared, version) from the section \xab## Versi\xf3n m\xednima del plugin\xbb of guia.md, written by the migration that needs\n'
+        '    it. (False, None): no section, anyone may write. (True, None): a section with no version in its first paragraph,\n'
+        '    which nobody may write under until it is fixed (fail closed: a typo must not let an old plugin through)."""\n'
+        '    m = re.search(r"^##[ \\t]+" + re.escape(lang.minimum_plugin) + r"[ \\t]*$(.*?)(?=^##[ \\t]|\\Z)", guia or "", re.M | re.S)\n'
+        '    if not m:\n'
+        '        return False, None\n'
+        '    first = next((b for b in re.split(r"\\n\\s*\\n", m.group(1).strip()) if b.strip()), "")\n'
+        '    return True, version_tuple(first)\n'
+        '\n'
+        '\n'
+        'def plugin_may_write(plugin_version: str, guia: str, lang: Pack = ES) -> tuple[str, Optional[tuple]]:\n'
+        '    """Whether a plugin may write in the root of this guia.md: ("ok", minimum or None), ("below", minimum),\n'
+        '    ("unreadable", None) for a section with no version, or ("unknown", minimum) for a plugin version that does not parse.\n'
+        '    Reading is never gated; only writing (decision of 2026-11-08)."""\n'
+        '    declared, minimum = minimum_plugin_version(guia, lang)\n'
+        '    if not declared:\n'
+        '        return "ok", None\n'
+        '    if minimum is None:\n'
+        '        return "unreadable", None\n'
+        '    mine = version_tuple(plugin_version)\n'
+        '    if mine is None:\n'
+        '        return "unknown", minimum\n'
+        '    return ("ok" if mine >= minimum else "below"), minimum\n'
     ),
     'compat': (
         '"""The scripts\' Spanish names over the package, with the shapes they use today (dicts and tuples).\n'
@@ -898,7 +944,7 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "RECETA_ACTUALIZAR", "puerta_de_escritura"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -1021,6 +1067,30 @@ def _context_core():
         '        if n not in recientes:\n'
         '            out += re.findall(r"^Responde a:[ \\t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)\n'
         '    return out\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 la versi\xf3n m\xednima del plugin (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'RECETA_ACTUALIZAR = ("Actual\xedzalo en la app de Claude, en Customize \u2192 Plugins, con el bot\xf3n Update del marketplace memoria-marketplace "\n'
+        '                     "(en Claude Code, /plugin marketplace update memoria-marketplace), o pide ayuda a quien administra la carpeta.")\n'
+        '\n'
+        '\n'
+        'def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:\n'
+        '    """(puede escribir, versi\xf3n m\xednima como texto o None, motivo en llano o ""): la secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb\n'
+        '    de guia.md frente a la versi\xf3n del plugin que corre. El motivo es lo que se le dice a la persona."""\n'
+        '    estado, minima = rules.plugin_may_write(version_plugin, guia)\n'
+        '    txt = ".".join(map(str, minima)) if minima else None\n'
+        '    if estado == "ok":\n'
+        '        return True, txt, ""\n'
+        '    if estado == "unreadable":\n'
+        '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: hasta que el responsable de "\n'
+        '                             "contexto la corrija, no se escribe nada en esta carpeta. Leer y consultar siguen funcionando.")\n'
+        '    if estado == "unknown":\n'
+        '        return False, txt, (f"No s\xe9 qu\xe9 versi\xf3n del plugin corre aqu\xed (\xab{version_plugin}\xbb) y esta carpeta pide la {txt} o una m\xe1s "\n'
+        '                            "nueva para escribir: no se escribe nada. Leer y consultar siguen funcionando.")\n'
+        '    return False, txt, (f"Tu plugin memoria es la {version_plugin} y esta carpeta pide la {txt} o una m\xe1s nueva para escribir: "\n'
+        '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
+        '                        f"hasta que lo actualices. {RECETA_ACTUALIZAR}")\n'
     ),
     'write': (
         '"""Writing the method\'s files: the text changes every writer applies, and the entries a writer composes from fields.\n'
@@ -1336,7 +1406,7 @@ def _context_core():
         setattr(_pkg, _n, _m)
 _context_core()
 # --- end of context_core ---
-from context_core.compat import (registro_personas, fila_cuentas)  # noqa: E402
+from context_core.compat import (registro_personas, fila_cuentas, puerta_de_escritura)  # noqa: E402
 # los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
 from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
                                 with_entry_on_top as con_entrada_arriba, without_block as sin_bloque, with_block)
@@ -1880,6 +1950,14 @@ def main(argv):
     s = c.salida
 
     # --- todo se comprueba antes de escribir nada ---
+    # la versión mínima del plugin de la raíz (1.26): con un plugin anterior no se escribe nada, ni con --comprobar se da por bueno
+    try:
+        _guia = (raiz / "guia.md").read_text(encoding="utf-8-sig")
+    except OSError as ex:
+        print(json.dumps({"error": f"guia.md no se deja leer ({ex.strerror or ex}): no se escribe nada", **s}, ensure_ascii=False)); return 1
+    _puede, _minima, _motivo = puerta_de_escritura(ESTE_PLUGIN, _guia)
+    if not _puede:
+        print(json.dumps({"error": _motivo, "solo_lectura": True, "version_minima": _minima, "plugin": ESTE_PLUGIN, **s}, ensure_ascii=False)); return 6
     malos = []
     ses = cambios.get("sesion")
     if ses and not re.match(r"^## \d{4}-\d{2}-\d{2}", ses.strip()):
