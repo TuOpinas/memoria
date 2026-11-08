@@ -5,6 +5,7 @@ consola: no
 max_turnos: 60
 preparar:
   - "migrar"
+  - "personas"
 turnos:
   - "Abre sesión en ventas/cuentas. Hoy llamé a Cliente Uno y confirmaron que firman la semana que viene; quita el paso de llamarlos."
   - "Cierra la sesión."

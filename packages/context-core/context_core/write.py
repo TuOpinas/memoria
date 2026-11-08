@@ -4,7 +4,7 @@ One copy for the plugin's cerrar.py and the hosted server (decision of 2026-11-0
 when its tool is built, and both call the same function). Pure functions, text in and text out: reading the file, the
 lock and the write that fails if the file changed are the caller's, through its storage adapter.
 
-Two parts:
+Three parts:
 Input texts are what the storage adapter's `Document.text` gives: «\n» line endings and no BOM.
 
 - The text changes, moved here from cerrar.py 1.25.4 with the same results (tests/test_write.py checks them against
@@ -14,19 +14,26 @@ Input texts are what the storage adapter's `Document.text` gives: «\n» line en
   not text, the server. Each field is checked first: a field that is one line has no line break of any kind, and a text
   field cannot carry a heading, a header line, or a line that a reader would take for another field of the same
   register (a «Publicó:» inside «Avances» would read as a publication). The writer, not the caller, puts the date and
-  the author.
+  the author. Every field also refuses what changes how the file renders without changing what the readers parse (an
+  HTML comment or tag, a code fence, a line of only «=» or «-»), the server's guard moved here in 1.26.
+- The rotation of the registers (escribir.md §8), moved from cerrar.py 1.25.8 with the same results
+  (tests/test_rotation.py checks it against the copy frozen in tests/reference/): whether a register has to be archived
+  before writing in it, the archive's name and text, and the live register that stays. The caller creates the archive
+  without overwriting, then writes the live one only if it did not change.
 """
 from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Iterable, Optional
+from dataclasses import dataclass
+from typing import Callable, Iterable, Optional
 
 from .language import ES, Pack
 
 __all__ = ["with_header_today", "only_header_changed", "with_entry_on_top", "with_entries_on_top", "without_block",
            "with_block", "DECISION_ID", "is_decision_ref", "FieldError", "one_line", "text_field", "session_entry",
-           "decision_entry", "status_block"]
+           "decision_entry", "status_block", "RENDER_BREAKERS", "ROTATE_LINES", "ROTATE_BYTES", "rotation_reason",
+           "entries_of", "archives_of", "archive_name", "fresh_register", "Rotation", "plan_rotation"]
 
 
 # ── text changes (cerrar.py 1.25.4: cabecera_hoy, solo_cabecera, con_entrada_arriba, sin_bloque, con_bloque) ────────
@@ -124,6 +131,14 @@ _BREAKS = re.compile("[\r\n\v\f\x1c\x1d\x1e\x85  ]")
 _OTHER_BREAKS = re.compile("[\r\v\f\x1c\x1d\x1e\x85  ]")
 
 
+# Markdown that does not change what context_core reads but changes what a person sees in Drive, GitHub or Obsidian: an
+# unclosed comment or a code fence hides everything after it, a line of «=» or «-» turns the line above into a heading,
+# raw HTML runs in some renderers (the server's guard, review of cerrar_sesion; moved here in 1.26)
+# A tag is «<» followed at once by its name, as CommonMark reads raw HTML: «a < b y c > d» is text (the server's
+# expression, with spaces allowed after «<», refused it)
+RENDER_BREAKERS = re.compile(r"<!--|-->|^\s*(?:```|~~~)|^\s*(?:=+|-{2,})\s*$|</?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^<>]*)?/?>", re.M)
+
+
 class FieldError(ValueError):
     """A field the writer refuses. `field` is the caller's name for it; the message names nothing else."""
 
@@ -170,7 +185,15 @@ def one_line(value: str, field: str, required: bool = True, limit: int = 600) ->
         raise FieldError(field, "must be one line")
     if len(v) > limit:
         raise FieldError(field, f"is longer than {limit} characters")
+    _render_safe(v, field)
     return v
+
+
+def _render_safe(v: str, field: str) -> None:
+    # inside a code span («`List<String>`», «`<correo>`») nothing renders as HTML (review of 1.26)
+    if RENDER_BREAKERS.search(re.sub(r"(`+)(?!`).+?(?<!`)\1(?!`)", "", v)):
+        raise FieldError(field, "cannot contain an HTML comment or tag, a code fence, or a line made only of «=» or «-»: "
+                                "rendered, they would hide or reshape the rest of the file")
 
 
 def text_field(value: str, field: str, register: str, pack: Pack = ES, required: bool = True, limit: int = 4000) -> str:
@@ -196,6 +219,7 @@ def text_field(value: str, field: str, register: str, pack: Pack = ES, required:
         for label in labels:
             if s.startswith(label) and re.match(r"\s*:", s[len(label):]):
                 raise FieldError(field, f"cannot contain a line that starts with a field of the register («{label}:»)")
+    _render_safe(v, field)
     return v
 
 
@@ -298,3 +322,106 @@ def status_block(date: str, headline: str, completed: str = "", next: str = "", 
     if len(lines) == 1 and not closes:
         raise FieldError("next", "is required, unless the headline closes the project («" + pack.finished_marker + " …»)")
     return "\n".join(lines)
+
+
+
+# ── rotation (cerrar.py 1.25.8: motivo_rotacion, nombre_archivado, entradas_de, archivados_en, registro_nuevo, rotar) ──
+
+ROTATE_LINES, ROTATE_BYTES = 1500, 100_000
+
+
+def rotation_reason(text: str, today: str, by_year: bool = True) -> Optional[tuple]:
+    """Why a register has to be archived before writing in it, or None: ("lines", year) past 1,500 lines, ("bytes",
+    year) past 100 KB, or ("year", year) when its newest entry is from a year before `today`'s (only with `by_year`: a
+    close that writes no entry in it does not archive it by year). `year` is its newest entry's, the archive's name.
+    A register with no dated entry is never archived."""
+    years = re.findall(r"^## (20\d\d)-\d\d-\d\d", text, re.M)
+    if not years:
+        return None
+    year = max(years)
+    if text.count("\n") + 1 > ROTATE_LINES:
+        return "lines", year
+    if len(text.encode("utf-8")) > ROTATE_BYTES:
+        return "bytes", year
+    if by_year and year < today[:4]:
+        return "year", year
+    return None
+
+
+def entries_of(text: str) -> list:
+    """The «## …» entries of a register, in order, each without its trailing line breaks."""
+    return [x.rstrip("\n") for x in re.split(r"^(?=## )", text, flags=re.M) if x.startswith("## ")]
+
+
+def archives_of(names: Iterable[str], register: str) -> list:
+    """Every archive of `register` among `names` (a folder's file names), oldest first; hand-made ones too."""
+    seen = []
+    for n in names:
+        m = re.match(r"^" + register + r"-(20\d\d)(?:-(\d+))?\.md$", n)
+        if m:
+            seen.append((int(m.group(1)), int(m.group(2) or 1), n))
+    return [n for *_, n in sorted(seen)]
+
+
+def archive_name(names: Iterable[str], register: str, year: str) -> str:
+    """«decisiones-2026.md», or «-2», «-3»… when that name is taken among `names`."""
+    taken, k, n = set(names), 1, f"{register}-{year}.md"
+    while n in taken:
+        k += 1
+        n = f"{register}-{year}-{k}.md"
+    return n
+
+
+def fresh_register(text: str, register: str, archive: str, today: str, names: Iterable[str]) -> str:
+    """The live register just opened: its header, its title and the line «Archivado:» naming every archive, oldest
+    first (the ones the old line named, which a copy may not have, the ones in `names`, and `archive`), for whoever
+    opens it without the plugin. The entries stay in the archive, with their identifiers."""
+    title = (re.search(r"^# .*$", text, re.M) or [f"# {register.capitalize()}"])[0]
+    line = (re.search(r"^Archivado:.*$", text, re.M) or [""])[0]
+    key = lambda n: tuple(int(x) for x in re.findall(r"\d+", n))
+    every = sorted(set(re.findall(r"\b(" + register + r"-20\d\d(?:-\d+)?\.md)", line)) | set(archives_of(names, register))
+                   | {archive}, key=key)
+    return (f"---\nestado: vigente\nactualizado: {today}\n---\n{title}\n\n"
+            f"Archivado: {', '.join(every)}. Las entradas anteriores están ahí y se citan igual, con su identificador.\n")
+
+
+@dataclass(frozen=True)
+class Rotation:
+    reason: str                    # "lines", "bytes" or "year"
+    year: str
+    archive: str                   # the archive's file name, next to the register
+    archive_text: Optional[str]    # what to create there, never over an existing file; None when it is already there
+    live: str                      # what the live register becomes
+    entries: int                   # entries the register had
+
+
+def plan_rotation(text: str, register: str, today: str, names: Iterable[str],
+                  read: Callable[[str], Optional[str]], by_year: bool = True) -> Optional[Rotation]:
+    """What archiving `register` takes, or None if it does not need it (`rotation_reason`). `names` are the file names
+    in its folder and `read(name)` gives an archive's text («\n» endings), or None.
+
+    The archive is the register whole, with a header if it had none (an archive is never edited later). An archive of
+    the same year whose entries are all in the live register is a rotation that did not get to shrink it, or was given
+    back halfway and then written in: it is not duplicated (`archive_text` None), and the live register keeps what that
+    archive does not have."""
+    why = rotation_reason(text, today, by_year)
+    if not why:
+        return None
+    reason, year = why
+    names = list(names)
+    newest = max(re.findall(r"^## (20\d\d-\d\d-\d\d)", text, re.M))
+    entries = entries_of(text)
+    for name in archives_of(names, register):
+        if not name.startswith(f"{register}-{year}"):
+            continue
+        old = entries_of(read(name) or "")
+        if old and all(e in entries for e in old):
+            live = fresh_register(text, register, name, today, names)
+            left = [e for e in entries if e not in old]
+            if left:
+                live = live.rstrip("\n") + "\n\n" + "\n\n".join(left) + "\n"
+            return Rotation(reason, year, name, None, live, len(re.findall(r"^## ", text, re.M)))
+    name = archive_name(names, register, year)
+    archive = text if re.match(r"^---\n", text) else f"---\nestado: vigente\nactualizado: {newest}\n---\n" + text
+    return Rotation(reason, year, name, archive, fresh_register(text, register, name, today, names + [name]),
+                    len(re.findall(r"^## ", text, re.M)))

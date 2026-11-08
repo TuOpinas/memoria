@@ -51,13 +51,13 @@ comprobar:
 ---
 ```
 
-Pasos de `preparar` y `entre`: `migrar` (la raíz pasa a la estructura de la 1.22 por la cuenta del escenario), `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `sustituir <ruta> <viejo> => <nuevo>` (con `\n` para un salto de línea), `otro-cierre <area>/<proyecto>`.
+Pasos de `preparar` y `entre`: `migrar` (la raíz pasa a la estructura de la 1.22 por la cuenta del escenario), `personas` (y después a «Quién es quién» de la 1.26, con la versión mínima 1.26.0, como si la cuenta ya lo hubiera aceptado), `copia-en-conflicto <ruta.md>`, `tocar <ruta>`, `escribir <ruta> <línea>`, `sustituir <ruta> <viejo> => <nuevo>` (con `\n` para un salto de línea y `{HOY-N}` para la fecha de hace N días), `otro-cierre <area>/<proyecto>`.
 
 Comprobaciones: `recuadro` (tabla de una columna, fuera de cita y de código), `recuadro-cierre` (igual, en la última respuesta), `cita-antes-de-escribir [decision]` (la respuesta que pide el sí enseña en cita la entrada, el `Estatus` y, con `decision`, cada decisión), `cambia <ruta>`, `no-existe <ruta>`, `bloque-igual <ruta> <bloque>`, `apertura-minima`, `apertura-completa <a>/<p>`, `pregunta-claude-outputs`, `pregunta-antes N`, `sin-escrituras`, `solo-escribe-en <rutas>`, `nada-hasta-el-turno N [<rutas>]`, `entrada-sesion <a>/<p>`, `decision-registrada <a>/<p>`, `estatus <a>/<p>` (o `en-corto`), `nombres-nuevos <a>/<p>`, `migrada <area>`, `cierre-con-script`, `conserva-entradas <a>/<p>`, `contiene <ruta> <texto>`, `sin-rutas-absolutas`, `menciona <texto>[@N]`, `no-contiene <texto>`, `no-menciona <texto>`, `herramienta <nombre>`, `sin-herramienta <nombre>`, `llamadas-maximo N[@T]`, `palabras-maximo N[@T]`, `sin-ingles`, `skill <nombre> <N>` (la skill se cargó exactamente N veces), `sin-buscar-plugin` (ningún comando busca el plugin en disco) y `no-menciona-re <regex>[@N]`. Se añaden en `correr.py` con `@comprobacion`.
 
 ## Los escenarios
 
-Del 01 al 09, y el 12, corren sobre la raíz ya migrada a la 1.22 (`preparar: migrar`): sin migrar, la pregunta bloqueante de la estructura ocupa el primer turno, y eso lo prueban el 10 y el 11.
+Del 01 al 05, del 07 al 09 y del 12 al 15 corren sobre la raíz ya migrada a la 1.22 y a «Quién es quién» (`preparar: migrar` y `personas`); el 06, sobre la raíz sin migrar, con una cuenta que no es la responsable de contexto: sin migrar, la pregunta bloqueante de la estructura o de las personas ocupa el primer turno, y eso lo prueban el 10, el 11 y el 16. La copia del plugin lleva en `ESTE_PLUGIN` de sus scripts su propia versión, como hace `release.sh`, así que la versión mínima de la raíz no la deja en solo lectura.
 
 | # | Qué | Qué tiene que pasar |
 |---|---|---|
@@ -76,6 +76,7 @@ Del 01 al 09, y el 12, corren sobre la raíz ya migrada a la 1.22 (`preparar: mi
 | 13 | El 01 midiendo la apertura mínima | corre `abrir.py` desde PLUGIN sin buscar el plugin en disco (`sin-buscar-plugin`) ni ejecutar nada en la computadora (`minima-sin-ejecutar`) |
 | 14 | La cola del tablero con respuestas (1.24.8) | «Aceptaste…» para lo que marcó la dueña del tablero, «alguien con acceso a tu tablero» para lo marcado sin cuenta (`por: null`), y quien decidió nunca como quien marcó |
 | 15 | El cierre deja su marca en el tablero (1.25.1) | con un tablero de la cuenta, el cierre escribe la marca en «cierres» como dice `respuesta` de `cerrar.py` (`marca-tablero`) y el recuadro lleva «Tablero: avisado» |
+| 16 | La migración de las personas al abrir (1.26) | sobre la raíz de la 1.22 con correos en la tabla, la apertura de la responsable de contexto pregunta si pasa a «Quién es quién»; con el sí, enseña el registro, nombra a quien cerró hace poco con un plugin anterior y pregunta los nombres que faltan; con ellos, `migrar_estructura.py --personas` escribe el registro, «Colabora» con nombres y la versión mínima, sin cambiar quién escribe |
 
 Lo que encontraron los primeros (2026-10-23, 1.19 → 1.20), y qué pasó con cada cosa: la decisión dictada junto con «cierra la sesión» se escribía sin pedir el sí (corregido en `cerrar.md`); el cierre escribía con un script propio en cada sesión (de ahí `cerrar.py`); «Descartamos: no consta» como relleno (corregido en `cerrar.md`); la apertura probaba primero la ruta absoluta de la carpeta antes de `$HOME/mnt` (dos llamadas de más; sin cambio todavía, pendiente de ver si se repite).
 

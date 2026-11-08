@@ -63,6 +63,7 @@ Después, estos bloques, en este orden y sin encabezados largos.
 - Tocar `proyecto.md`, `sesiones.md`, `decisiones.md` o `area.md` a mano durante la sesión (`sed`, `Write`, un `cat >`): lo que se pide cambiar ahí lo escribe `cerrar.py`, al cerrar o antes si la persona quiere verlo ya (`cerrar.md`)
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Deducir lo que hay en una carpeta que no se deja leer: se dice qué es y de quién, y ahí se para
+- Escribir nada en una raíz cuya «Versión mínima del plugin» es más nueva que este plugin (fila «Solo lectura» del recuadro, 1.26): se lee y se consulta, y lo que habría que escribir se prepara en la conversación hasta que la persona actualice
 
 ## Ejemplo de apertura
 

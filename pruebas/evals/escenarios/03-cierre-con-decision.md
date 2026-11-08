@@ -5,6 +5,7 @@ consola: si
 max_turnos: 40
 preparar:
   - "migrar"
+  - "personas"
 turnos:
   - "Abre sesión en ventas/cuentas. Hoy hablé con Cliente Uno: aceptan la propuesta si el soporte responde en menos de 24 horas. Decidimos que sí, que el soporte de Cliente Uno responde en menos de 24 horas, porque es la condición para firmar y soporte ya lo atiende en copia. Cierra la sesión."
   - "Sí, regístrala así."

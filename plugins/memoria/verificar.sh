@@ -22,10 +22,10 @@ import os, re, sys, unicodedata
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': 'd0b48a181bc95a37dcc74b80724e1501839640381299b3869bd2dbfa24b10a97',
+    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': '5f126e6a2ed5169a437307399e7b3245f9e8e09b8629884f01b1b35d7421a468',
-    'compat': '01bb747726884ae0cb2ac7075bc432e61ca4f8cd20cf3baf9c8a6d5fde9b772e',
+    'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
+    'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -140,6 +140,8 @@ def _context_core():
         '    write_decision: dict = field(default_factory=dict)    # decided_by, raised_by, why, discarded, challenges, responds_to, replaces, affects\n'
         '    write_status: dict = field(default_factory=dict)      # completed, next, to_decide, concern\n'
         '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
+        '    # guia.md: the section that declares the oldest plugin that may write in the root (1.26)\n'
+        '    minimum_plugin: str = ""\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -176,6 +178,7 @@ def _context_core():
         '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
         '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
         '    writers={"plugin": "plugin", "server": "servidor"},\n'
+        '    minimum_plugin="Versi\xf3n m\xednima del plugin",\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -803,6 +806,18 @@ def _context_core():
         '        if m:\n'
         '            parts.append((t or "")[m.start():])\n'
         '    return "\\n\\n".join(p.strip("\\n") for p in parts if p.strip()) + "\\n", len(re.findall(r"^## ", live or "", re.M))\n'
+        '\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 the people lines of \xabQui\xe9n participa\xbb (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'PEOPLE_LINE = re.compile(r"^\\s*[-*]?\\s*\\**\\s*(?:colabora[n]?|responsable|due[\xf1n][oa])\\s*\\**\\s*:", re.I)\n'
+        '\n'
+        '\n'
+        'def people_lines(section: str) -> list[str]:\n'
+        '    """The \xabResponsable:\xbb, \xabDue\xf1o:\xbb or \xabColabora:\xbb lines of a \xabQui\xe9n participa\xbb section. From 1.26 an area.md does not\n'
+        '    carry them: who answers for an area and who collaborates in it is said only by guia.md."""\n'
+        '    return [l for l in (section or "").split("\\n") if PEOPLE_LINE.match(l)]\n'
     ),
     'compat': (
         '"""The scripts\' Spanish names over the package, with the shapes they use today (dicts and tuples).\n'
@@ -824,7 +839,7 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -947,6 +962,13 @@ def _context_core():
         '        if n not in recientes:\n'
         '            out += re.findall(r"^Responde a:[ \\t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)\n'
         '    return out\n'
+        '\n'
+        '\n'
+        '\n'
+        'def personas_en_area(texto_area: str) -> list:\n'
+        '    """Las l\xedneas \xabResponsable:\xbb, \xabDue\xf1o:\xbb o \xabColabora:\xbb de \xabQui\xe9n participa\xbb de un area.md, que la 1.26 quita."""\n'
+        '    m = re.search(r"^## Qui\xe9n participa\\s*\\n(.*?)(?=^## |\\Z)", texto_area or "", re.M | re.S)\n'
+        '    return rules.people_lines(m.group(1) if m else "")\n'
     ),
     }
     for _n in _todo:

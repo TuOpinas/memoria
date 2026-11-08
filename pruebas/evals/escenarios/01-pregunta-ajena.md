@@ -5,6 +5,7 @@ consola: si
 max_turnos: 20
 preparar:
   - "migrar"
+  - "personas"
 turnos:
   - "¿Cuántos días tiene octubre?"
   - "Después."

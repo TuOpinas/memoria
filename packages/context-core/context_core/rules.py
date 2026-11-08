@@ -348,3 +348,15 @@ def with_archives(live: Optional[str], archives: list[Optional[str]]) -> tuple[s
         if m:
             parts.append((t or "")[m.start():])
     return "\n\n".join(p.strip("\n") for p in parts if p.strip()) + "\n", len(re.findall(r"^## ", live or "", re.M))
+
+
+
+# ── the people lines of «Quién participa» (1.26) ──────────────────────────────────────────────────────────────────
+
+PEOPLE_LINE = re.compile(r"^\s*[-*]?\s*\**\s*(?:colabora[n]?|responsable|due[ñn][oa])\s*\**\s*:", re.I)
+
+
+def people_lines(section: str) -> list[str]:
+    """The «Responsable:», «Dueño:» or «Colabora:» lines of a «Quién participa» section. From 1.26 an area.md does not
+    carry them: who answers for an area and who collaborates in it is said only by guia.md."""
+    return [l for l in (section or "").split("\n") if PEOPLE_LINE.match(l)]

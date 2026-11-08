@@ -6,6 +6,7 @@ tablero: 15-tablero-vacio.json
 max_turnos: 40
 preparar:
   - "migrar"
+  - "personas"
 turnos:
   - "Abre sesión en ventas/cuentas. Hoy revisé con Cliente Uno la propuesta y quedó en que la responden el viernes. Cierra la sesión."
   - "Sí."

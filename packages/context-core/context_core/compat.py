@@ -17,7 +17,7 @@ __all__ = ["SOBRE_LA_CARPETA", "sin_carpeta", "ARCHIVADO", "archivados_de", "con
            "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",
            "clave_nombre", "registro_personas",
            "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",
-           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en"]
+           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]
 
 CORREO = rules.EMAIL
 PALABRA_COLABORA = rules._WORD_COLLABORATES
@@ -140,3 +140,10 @@ def respuestas_viejas(carpeta, anio, leer_) -> list:
         if n not in recientes:
             out += re.findall(r"^Responde a:[ \t]*(.+)$", leer_(pathlib.Path(carpeta) / n) or "", re.M)
     return out
+
+
+
+def personas_en_area(texto_area: str) -> list:
+    """Las líneas «Responsable:», «Dueño:» o «Colabora:» de «Quién participa» de un area.md, que la 1.26 quita."""
+    m = re.search(r"^## Quién participa\s*\n(.*?)(?=^## |\Z)", texto_area or "", re.M | re.S)
+    return rules.people_lines(m.group(1) if m else "")

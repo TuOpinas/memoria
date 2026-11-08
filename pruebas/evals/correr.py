@@ -120,6 +120,16 @@ def aplicar_paso(e, raiz, paso):
             for d, _, fs in os.walk(raiz):
                 for f in fs:
                     os.utime(os.path.join(d, f), (viejo, viejo))
+        elif orden == "personas":              # personas: «Quién es quién» (1.26) por la cuenta del escenario, con los nombres que la raíz no dice
+            real = os.environ.get("CLAUDE_CODE_USER_EMAIL", "").strip().lower() or e.get("cuenta", "ana@ejemplo.test")
+            r = subprocess.run([sys.executable, str(AQUI.parent.parent / "plugins/memoria/skills/sesion/migrar_estructura.py"), str(raiz), "--cuenta", real,
+                                "--personas", "--plugin", "1.26.0", "--nombres", "carla@ejemplo.test=Carla Prueba,eva@ejemplo.test=Eva Prueba"], capture_output=True, text=True)
+            if r.returncode != 0 or (json.loads(r.stdout or "{}").get("personas") or {}).get("no_se_migra"):
+                raise SystemExit(f"{e['nombre']}: la migración de las personas de preparar falló: {r.stdout[-400:]} {r.stderr[-400:]}")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            for d, _, fs in os.walk(raiz):
+                for f in fs:
+                    os.utime(os.path.join(d, f), (viejo, viejo))
         elif orden == "tocar":                 # tocar <ruta>: fecha de archivo de ahora (trabajo sin sesión)
             os.utime(raiz / arg, None)
         elif orden == "escribir":              # escribir <ruta> <texto>: añade una línea al final
@@ -130,6 +140,8 @@ def aplicar_paso(e, raiz, paso):
             r, _, resto = arg.partition(" ")
             viejo, _, nuevo = resto.partition(" => ")
             viejo, nuevo = viejo.replace("\\n", "\n"), nuevo.replace("\\n", "\n")
+            # {HOY-N}: la fecha de hace N días, para que lo que depende de una ventana de días no caduque (revisión de la 1.26)
+            nuevo = re.sub(r"\{HOY-(\d+)\}", lambda m: (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=int(m.group(1)))).isoformat(), nuevo)
             t = (raiz / r).read_text(encoding="utf-8")
             if viejo not in t:
                 raise SystemExit(f"{e['nombre']}: «{viejo}» no está en {r}")
@@ -188,6 +200,10 @@ def preparar_plugin(origen, trabajo):
     shutil.copytree(origen, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     pj = dest / ".claude-plugin" / "plugin.json"
     pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
+    # como release.sh: los scripts que comparan su versión con la mínima de la raíz llevan la de esta copia (1.26)
+    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py"):
+        f = dest / s
+        f.write_text(re.sub(r'^ESTE_PLUGIN = "[0-9.]+"', f'ESTE_PLUGIN = "{version}"', f.read_text(encoding="utf-8"), count=1, flags=re.M), encoding="utf-8")
     subprocess.run(["bash", str(dest / "build-metodo.sh")], check=True, capture_output=True)
     return dest, version
 
@@ -548,11 +564,13 @@ def _(ctx, arg):
 
 @comprobacion("pregunta-antes")
 def _(ctx, arg):
-    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22») y la respuesta a lo
-    pedido espera: no propone focos de trabajo en ese turno (1.22.1, la pregunta bloqueante)."""
+    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22», o con «Quién es quién»
+    para la de las personas, 1.26) y la respuesta a lo pedido espera: no propone focos de trabajo en ese turno (1.22.1, la
+    pregunta bloqueante)."""
     t = ctx["turnos"][int(arg or 1) - 1]
-    preg = any(h["nombre"] == "AskUserQuestion" and "1.22" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
-    preg = preg or ("1.22" in texto_de(t) and "?" in texto_de(t))
+    marca = lambda s: "1.22" in s or "Quién es quién" in s
+    preg = any(h["nombre"] == "AskUserQuestion" and marca(json.dumps(h["entrada"], ensure_ascii=False)) for h in t["herramientas"])
+    preg = preg or (marca(texto_de(t)) and "?" in texto_de(t))
     espera = not re.search(r"por cu[aá]l empezamos", texto_de(t), re.I)      # los focos, que cierran la apertura completa
     return preg and espera, ("pregunta y espera" if preg and espera else "no pregunta por la migración" if not preg else "pregunta, pero ya propone focos en el mismo turno")
 
@@ -654,9 +672,10 @@ def _(ctx, arg):
 
 @comprobacion("sin-herramienta")
 def _(ctx, arg):
-    """sin-herramienta <nombre>: no se llamó. El listado de «Claude outputs» que la apertura mínima escribe con Write en
-    /tmp (1.25.1) no cuenta: no toca la raíz (1.25.3)."""
-    fuera = lambda h: str((h.get("entrada") or {}).get("file_path", "")).startswith("/tmp/claude-outputs-")
+    """sin-herramienta <nombre>: no se llamó. Lo que se escribe con Write en el contenedor (/tmp, /mnt/user-data) no cuenta:
+    el listado de «Claude outputs» de la apertura mínima (1.25.1) o el listado de una migración sin consola (1.26) no tocan
+    la raíz."""
+    fuera = lambda h: str((h.get("entrada") or {}).get("file_path", "")).startswith(("/tmp/", "/mnt/user-data/"))
     n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg) and not fuera(h))
     return n == 0, f"{arg}: {n} llamadas"
 
