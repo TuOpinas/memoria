@@ -44,7 +44,7 @@ con saltos de línea no se aplica. Lo que no cumple va a "rechazados" y se borra
 """
 import sys, os, re, json, pathlib, datetime
 
-ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 RAIZ = pathlib.Path(sys.argv[1])
 # 1.25.3: la carpeta cuelga de $HOME/mnt con el último tramo de su ruta como nombre, o con «<padre>--<tramo>» si otra

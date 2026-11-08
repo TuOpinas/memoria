@@ -62,7 +62,7 @@ contexto), «guia», «pendientes» (las áreas de otras cuentas que no migra, c
 """
 import datetime, hashlib, json, os, pathlib, re, sys, tempfile, time
 
-ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 EN_USO_MIN = 120   # un proyecto ajeno tocado hace menos se deja: puede estar en sesión en otra computadora
 
 # --- las marcas de la estructura anterior: la misma función en abrir.py; probar_migrar.py comprueba que coinciden ---
