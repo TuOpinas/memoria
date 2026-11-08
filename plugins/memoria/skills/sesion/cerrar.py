@@ -87,7 +87,6 @@ import time
 ESTE_PLUGIN = "1.25.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
-LIMITE_LINEAS, LIMITE_BYTES = 1500, 100_000   # la rotación de los registros (escribir.md, sección 8; por tamaño desde la 1.23)
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -105,7 +104,7 @@ def _context_core():
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': 'f2f559f0c6a875d658946566ea70f1363c07c2f60cc6b5ecd669a68a372034f2',
     'compat': '257a02f646182e3afcba1c1ba2811bc636decee93d25c9df143b48e377e82f77',
-    'write': '0775119f7676e9dc1a9a47c880c6fcea328ef4217e355394b627cd48f5ea2179',
+    'write': '70ffa08ebe3327cf678890520143db08515256ae2dfb0a6a2bbb22cc31cc3524',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1099,7 +1098,7 @@ def _context_core():
         'when its tool is built, and both call the same function). Pure functions, text in and text out: reading the file, the\n'
         "lock and the write that fails if the file changed are the caller's, through its storage adapter.\n"
         '\n'
-        'Two parts:\n'
+        'Three parts:\n'
         "Input texts are what the storage adapter's `Document.text` gives: \xab\\n\xbb line endings and no BOM.\n"
         '\n'
         '- The text changes, moved here from cerrar.py 1.25.4 with the same results (tests/test_write.py checks them against\n'
@@ -1109,19 +1108,26 @@ def _context_core():
         '  not text, the server. Each field is checked first: a field that is one line has no line break of any kind, and a text\n'
         '  field cannot carry a heading, a header line, or a line that a reader would take for another field of the same\n'
         '  register (a \xabPublic\xf3:\xbb inside \xabAvances\xbb would read as a publication). The writer, not the caller, puts the date and\n'
-        '  the author.\n'
+        '  the author. Every field also refuses what changes how the file renders without changing what the readers parse (an\n'
+        "  HTML comment or tag, a code fence, a line of only \xab=\xbb or \xab-\xbb), the server's guard moved here in 1.26.\n"
+        '- The rotation of the registers (escribir.md \xa78), moved from cerrar.py 1.25.8 with the same results\n'
+        '  (tests/test_rotation.py checks it against the copy frozen in tests/reference/): whether a register has to be archived\n'
+        "  before writing in it, the archive's name and text, and the live register that stays. The caller creates the archive\n"
+        '  without overwriting, then writes the live one only if it did not change.\n'
         '"""\n'
         'from __future__ import annotations\n'
         '\n'
         'import re\n'
         'import unicodedata\n'
-        'from typing import Iterable, Optional\n'
+        'from dataclasses import dataclass\n'
+        'from typing import Callable, Iterable, Optional\n'
         '\n'
         'from .language import ES, Pack\n'
         '\n'
         '__all__ = ["with_header_today", "only_header_changed", "with_entry_on_top", "with_entries_on_top", "without_block",\n'
         '           "with_block", "DECISION_ID", "is_decision_ref", "FieldError", "one_line", "text_field", "session_entry",\n'
-        '           "decision_entry", "status_block"]\n'
+        '           "decision_entry", "status_block", "RENDER_BREAKERS", "ROTATE_LINES", "ROTATE_BYTES", "rotation_reason",\n'
+        '           "entries_of", "archives_of", "archive_name", "fresh_register", "Rotation", "plan_rotation"]\n'
         '\n'
         '\n'
         '# \u2500\u2500 text changes (cerrar.py 1.25.4: cabecera_hoy, solo_cabecera, con_entrada_arriba, sin_bloque, con_bloque) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
@@ -1223,6 +1229,14 @@ def _context_core():
         ']")\n'
         '\n'
         '\n'
+        '# Markdown that does not change what context_core reads but changes what a person sees in Drive, GitHub or Obsidian: an\n'
+        '# unclosed comment or a code fence hides everything after it, a line of \xab=\xbb or \xab-\xbb turns the line above into a heading,\n'
+        "# raw HTML runs in some renderers (the server's guard, review of cerrar_sesion; moved here in 1.26)\n"
+        "# A tag is \xab<\xbb followed at once by its name, as CommonMark reads raw HTML: \xaba < b y c > d\xbb is text (the server's\n"
+        '# expression, with spaces allowed after \xab<\xbb, refused it)\n'
+        'RENDER_BREAKERS = re.compile(r"<!--|-->|^\\s*(?:```|~~~)|^\\s*(?:=+|-{2,})\\s*$|</?[a-zA-Z][a-zA-Z0-9-]*(?:\\s[^<>]*)?/?>", re.M)\n'
+        '\n'
+        '\n'
         'class FieldError(ValueError):\n'
         '    """A field the writer refuses. `field` is the caller\'s name for it; the message names nothing else."""\n'
         '\n'
@@ -1269,7 +1283,14 @@ def _context_core():
         '        raise FieldError(field, "must be one line")\n'
         '    if len(v) > limit:\n'
         '        raise FieldError(field, f"is longer than {limit} characters")\n'
+        '    _render_safe(v, field)\n'
         '    return v\n'
+        '\n'
+        '\n'
+        'def _render_safe(v: str, field: str) -> None:\n'
+        '    if RENDER_BREAKERS.search(v):\n'
+        '        raise FieldError(field, "cannot contain an HTML comment or tag, a code fence, or a line made only of \xab=\xbb or \xab-\xbb: "\n'
+        '                                "rendered, they would hide or reshape the rest of the file")\n'
         '\n'
         '\n'
         'def text_field(value: str, field: str, register: str, pack: Pack = ES, required: bool = True, limit: int = 4000) -> str:\n'
@@ -1295,6 +1316,7 @@ def _context_core():
         '        for label in labels:\n'
         '            if s.startswith(label) and re.match(r"\\s*:", s[len(label):]):\n'
         '                raise FieldError(field, f"cannot contain a line that starts with a field of the register (\xab{label}:\xbb)")\n'
+        '    _render_safe(v, field)\n'
         '    return v\n'
         '\n'
         '\n'
@@ -1397,6 +1419,109 @@ def _context_core():
         '    if len(lines) == 1 and not closes:\n'
         '        raise FieldError("next", "is required, unless the headline closes the project (\xab" + pack.finished_marker + " \u2026\xbb)")\n'
         '    return "\\n".join(lines)\n'
+        '\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 rotation (cerrar.py 1.25.8: motivo_rotacion, nombre_archivado, entradas_de, archivados_en, registro_nuevo, rotar) \u2500\u2500\n'
+        '\n'
+        'ROTATE_LINES, ROTATE_BYTES = 1500, 100_000\n'
+        '\n'
+        '\n'
+        'def rotation_reason(text: str, today: str, by_year: bool = True) -> Optional[tuple]:\n'
+        '    """Why a register has to be archived before writing in it, or None: ("lines", year) past 1,500 lines, ("bytes",\n'
+        '    year) past 100 KB, or ("year", year) when its newest entry is from a year before `today`\'s (only with `by_year`: a\n'
+        "    close that writes no entry in it does not archive it by year). `year` is its newest entry's, the archive's name.\n"
+        '    A register with no dated entry is never archived."""\n'
+        '    years = re.findall(r"^## (20\\d\\d)-\\d\\d-\\d\\d", text, re.M)\n'
+        '    if not years:\n'
+        '        return None\n'
+        '    year = max(years)\n'
+        '    if text.count("\\n") + 1 > ROTATE_LINES:\n'
+        '        return "lines", year\n'
+        '    if len(text.encode("utf-8")) > ROTATE_BYTES:\n'
+        '        return "bytes", year\n'
+        '    if by_year and year < today[:4]:\n'
+        '        return "year", year\n'
+        '    return None\n'
+        '\n'
+        '\n'
+        'def entries_of(text: str) -> list:\n'
+        '    """The \xab## \u2026\xbb entries of a register, in order, each without its trailing line breaks."""\n'
+        '    return [x.rstrip("\\n") for x in re.split(r"^(?=## )", text, flags=re.M) if x.startswith("## ")]\n'
+        '\n'
+        '\n'
+        'def archives_of(names: Iterable[str], register: str) -> list:\n'
+        '    """Every archive of `register` among `names` (a folder\'s file names), oldest first; hand-made ones too."""\n'
+        '    seen = []\n'
+        '    for n in names:\n'
+        '        m = re.match(r"^" + register + r"-(20\\d\\d)(?:-(\\d+))?\\.md$", n)\n'
+        '        if m:\n'
+        '            seen.append((int(m.group(1)), int(m.group(2) or 1), n))\n'
+        '    return [n for *_, n in sorted(seen)]\n'
+        '\n'
+        '\n'
+        'def archive_name(names: Iterable[str], register: str, year: str) -> str:\n'
+        '    """\xabdecisiones-2026.md\xbb, or \xab-2\xbb, \xab-3\xbb\u2026 when that name is taken among `names`."""\n'
+        '    taken, k, n = set(names), 1, f"{register}-{year}.md"\n'
+        '    while n in taken:\n'
+        '        k += 1\n'
+        '        n = f"{register}-{year}-{k}.md"\n'
+        '    return n\n'
+        '\n'
+        '\n'
+        'def fresh_register(text: str, register: str, archive: str, today: str, names: Iterable[str]) -> str:\n'
+        '    """The live register just opened: its header, its title and the line \xabArchivado:\xbb naming every archive, oldest\n'
+        '    first (the ones the old line named, which a copy may not have, the ones in `names`, and `archive`), for whoever\n'
+        '    opens it without the plugin. The entries stay in the archive, with their identifiers."""\n'
+        '    title = (re.search(r"^# .*$", text, re.M) or [f"# {register.capitalize()}"])[0]\n'
+        '    line = (re.search(r"^Archivado:.*$", text, re.M) or [""])[0]\n'
+        '    key = lambda n: tuple(int(x) for x in re.findall(r"\\d+", n))\n'
+        '    every = sorted(set(re.findall(r"\\b(" + register + r"-20\\d\\d(?:-\\d+)?\\.md)", line)) | set(archives_of(names, register))\n'
+        '                   | {archive}, key=key)\n'
+        '    return (f"---\\nestado: vigente\\nactualizado: {today}\\n---\\n{title}\\n\\n"\n'
+        '            f"Archivado: {\', \'.join(every)}. Las entradas anteriores est\xe1n ah\xed y se citan igual, con su identificador.\\n")\n'
+        '\n'
+        '\n'
+        '@dataclass(frozen=True)\n'
+        'class Rotation:\n'
+        '    reason: str                    # "lines", "bytes" or "year"\n'
+        '    year: str\n'
+        "    archive: str                   # the archive's file name, next to the register\n"
+        '    archive_text: Optional[str]    # what to create there, never over an existing file; None when it is already there\n'
+        '    live: str                      # what the live register becomes\n'
+        '    entries: int                   # entries the register had\n'
+        '\n'
+        '\n'
+        'def plan_rotation(text: str, register: str, today: str, names: Iterable[str],\n'
+        '                  read: Callable[[str], Optional[str]], by_year: bool = True) -> Optional[Rotation]:\n'
+        '    """What archiving `register` takes, or None if it does not need it (`rotation_reason`). `names` are the file names\n'
+        "    in its folder and `read(name)` gives an archive's text (\xab\\n\xbb endings), or None.\n"
+        '\n'
+        '    The archive is the register whole, with a header if it had none (an archive is never edited later). An archive of\n'
+        '    the same year whose entries are all in the live register is a rotation that did not get to shrink it, or was given\n'
+        '    back halfway and then written in: it is not duplicated (`archive_text` None), and the live register keeps what that\n'
+        '    archive does not have."""\n'
+        '    why = rotation_reason(text, today, by_year)\n'
+        '    if not why:\n'
+        '        return None\n'
+        '    reason, year = why\n'
+        '    names = list(names)\n'
+        '    newest = max(re.findall(r"^## (20\\d\\d-\\d\\d-\\d\\d)", text, re.M))\n'
+        '    entries = entries_of(text)\n'
+        '    for name in archives_of(names, register):\n'
+        '        if not name.startswith(f"{register}-{year}"):\n'
+        '            continue\n'
+        '        old = entries_of(read(name) or "")\n'
+        '        if old and all(e in entries for e in old):\n'
+        '            live = fresh_register(text, register, name, today, names)\n'
+        '            left = [e for e in entries if e not in old]\n'
+        '            if left:\n'
+        '                live = live.rstrip("\\n") + "\\n\\n" + "\\n\\n".join(left) + "\\n"\n'
+        '            return Rotation(reason, year, name, None, live, len(re.findall(r"^## ", text, re.M)))\n'
+        '    name = archive_name(names, register, year)\n'
+        '    archive = text if re.match(r"^---\\n", text) else f"---\\nestado: vigente\\nactualizado: {newest}\\n---\\n" + text\n'
+        '    return Rotation(reason, year, name, archive, fresh_register(text, register, name, today, names + [name]),\n'
+        '                    len(re.findall(r"^## ", text, re.M)))\n'
     ),
     }
     for _n in _todo:
@@ -1409,7 +1534,12 @@ _context_core()
 from context_core.compat import (registro_personas, fila_cuentas, puerta_de_escritura)  # noqa: E402
 # los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
 from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
-                                with_entry_on_top as con_entrada_arriba, without_block as sin_bloque, with_block)
+                                with_entry_on_top as con_entrada_arriba, without_block as sin_bloque, with_block,
+                                ROTATE_LINES as LIMITE_LINEAS, ROTATE_BYTES as LIMITE_BYTES, rotation_reason,
+                                plan_rotation)
+# la rotación de los registros (escribir.md, sección 8) vive en context_core.write desde la 1.26, como en el servidor;
+# aquí quedan el cerrojo, la creación del archivado sin pisar nada y la escritura del vivo
+MOTIVOS_ROTACION = {"lines": f"pasa de {LIMITE_LINEAS} líneas", "bytes": f"pasa de {LIMITE_BYTES // 1000} KB", "year": "cambió el año"}
 
 
 def con_bloque(t, nombre, cuerpo, antes_de=None, alias=()):
@@ -1704,55 +1834,12 @@ def sin_nombrar(pd, abierto, nombrados):
     return out
 
 
-def motivo_rotacion(t, hoy, por_anio=True):
-    """Por qué hay que archivar un registro antes de escribir en él, o None: pasa de 1.500 líneas o de 100 KB, o su entrada
-    más nueva es de un año anterior al de hoy. Devuelve (motivo, año del archivado)."""
-    anios = re.findall(r"^## (20\d\d)-\d\d-\d\d", t, re.M)
-    if not anios:
-        return None
-    anio = max(anios)
-    if t.count("\n") + 1 > LIMITE_LINEAS:
-        return f"pasa de {LIMITE_LINEAS} líneas", anio
-    if len(t.encode("utf-8")) > LIMITE_BYTES:
-        return f"pasa de {LIMITE_BYTES // 1000} KB", anio
-    if por_anio and anio < hoy[:4]:
-        return "cambió el año", anio
-    return None
-
-
-def nombre_archivado(carpeta, nombre, anio):
-    """«decisiones-2026.md»; si ya existe, «decisiones-2026-2.md», «-3»…"""
-    k, n = 1, f"{nombre}-{anio}.md"
-    while (carpeta / n).exists():
-        k += 1; n = f"{nombre}-{anio}-{k}.md"
-    return n
-
-
-def entradas_de(t):
-    """Las entradas «## …» de un registro, en orden, cada una con su texto sin los saltos del final."""
-    return [x.rstrip("\n") for x in re.split(r"^(?=## )", t, flags=re.M) if x.startswith("## ")]
-
-
-def archivados_en(carpeta, nombre):
-    """Todos los archivados de un registro que hay en la carpeta, de más viejo a más nuevo (también los hechos a mano)."""
-    vistos = []
-    for x in carpeta.iterdir():
-        m = re.match(r"^" + nombre + r"-(20\d\d)(?:-(\d+))?\.md$", x.name)
-        if m:
-            vistos.append((int(m.group(1)), int(m.group(2) or 1), x.name))
-    return [n for *_, n in sorted(vistos)]
-
-
-def registro_nuevo(t, nombre, archivado, hoy, carpeta):
-    """El registro vivo recién abierto: su cabecera, su título y la línea «Archivado:» con todos sus archivados, de más
-    viejo a más nuevo, para quien lo abra sin el plugin. Las entradas siguen en el archivado, con su identificador."""
-    titulo_ = (re.search(r"^# .*$", t, re.M) or [f"# {nombre.capitalize()}"])[0]
-    # los que nombraba la línea anterior (sin consola, la copia puede no tenerlos todos) y los que hay en la carpeta
-    linea = (re.search(r"^Archivado:.*$", t, re.M) or [""])[0]
-    clave = lambda n: tuple(int(x) for x in re.findall(r"\d+", n))
-    todos = sorted(set(re.findall(r"\b(" + nombre + r"-20\d\d(?:-\d+)?\.md)", linea)) | set(archivados_en(carpeta, nombre)) | {archivado}, key=clave)
-    return (f"---\nestado: vigente\nactualizado: {hoy}\n---\n{titulo_}\n\n"
-            f"Archivado: {', '.join(todos)}. Las entradas anteriores están ahí y se citan igual, con su identificador.\n")
+def nombres_en(carpeta):
+    """Los nombres de los archivos de una carpeta, para las funciones de rotación del paquete, que no leen el disco."""
+    try:
+        return [x.name for x in carpeta.iterdir()]
+    except OSError:
+        return []
 
 
 # ---------- un archivo ----------
@@ -1822,57 +1909,36 @@ class Cierre:
         return False
 
     def rotar(self, p, nombre, por_anio=True):
-        """Archiva el registro antes de escribir en él si toca (escribir.md, sección 8): lo copia entero a «<nombre>-<año>.md»
-        y deja el vivo con su cabecera, su título y la línea «Archivado:». Bajo el mismo cerrojo que las escrituras. Si ya
-        hay un archivado idéntico (una rotación que no llegó a encoger el vivo), no lo duplica: solo encoge el vivo. Si el
-        vivo cambia entre medias o no se puede escribir, el archivado recién creado se borra y no queda nada a medias."""
+        """Archiva el registro antes de escribir en él si toca (escribir.md, sección 8): lo que se archiva y cómo queda el
+        vivo lo dice context_core.write.plan_rotation (1.26, el mismo que el servidor); aquí, bajo el mismo cerrojo que las
+        escrituras, se crea el archivado sin pisar ninguno y se encoge el vivo solo si no cambió. Si ya hay un archivado
+        idéntico (una rotación que no llegó a encoger el vivo), no se duplica. Si el vivo cambia entre medias o no se puede
+        escribir, el archivado recién creado se borra y no queda nada a medias."""
         rel = self.rel(p)
         try:
             # una mirada rápida, sin cerrojo: por el tamaño, y si es pequeño, su texto (que entonces cabe en 100 KB)
             if os.stat(p).st_size <= LIMITE_BYTES:
                 with open(p, "rb") as f_:
-                    if not motivo_rotacion(f_.read().decode("utf-8-sig", errors="replace"), self.hoy, por_anio):
+                    if not rotation_reason(f_.read().decode("utf-8-sig", errors="replace"), self.hoy, por_anio):
                         return
             with Cerrojo(p):
                 t, firma, crlf = leer(p)
-                m = motivo_rotacion(t, self.hoy, por_anio)
-                if not m:
+                leer_archivado = lambda n: (p.parent / n).read_text(encoding="utf-8-sig", errors="replace").replace("\r\n", "\n")
+                plan = plan_rotation(t, nombre, self.hoy, nombres_en(p.parent), leer_archivado, por_anio)
+                if not plan:
                     return
                 if rel not in self.vistos:
                     self.ajeno(rel, firma); self.vistos.add(rel)
-                n_ent = len(re.findall(r"^## ", t, re.M))
-                # el archivado lleva cabecera aunque el vivo no la tuviera: un archivado no se edita después
-                # sin barras dentro de las llaves de un f-string: Python anterior a 3.12 no lo admite (1.23.1)
-                mas_nueva = max(re.findall(r"^## (20\d\d-\d\d-\d\d)", t, re.M))
-                arch_txt = t if re.match(r"^---\n", t) else f"---\nestado: vigente\nactualizado: {mas_nueva}\n---\n" + t
-                # un archivado del mismo año cuyas entradas están todas en el vivo es una rotación que no llegó a encoger el
-                # vivo (o se devolvió a medias y después alguien escribió): no se duplica, y el vivo se queda con lo que el
-                # archivado no tiene (revisión de la 1.23, segunda vuelta)
-                ents_vivo = entradas_de(t)
-                igual_a = None
-                for x in archivados_en(p.parent, nombre):
-                    if not x.startswith(f"{nombre}-{m[1]}"):
-                        continue
-                    ea = entradas_de((p.parent / x).read_text(encoding="utf-8-sig", errors="replace").replace("\r\n", "\n"))
-                    if ea and all(e in ents_vivo for e in ea):
-                        igual_a, quedan = x, [e for e in ents_vivo if e not in ea]
-                        break
                 creado = None
-                if igual_a:
-                    arch = igual_a
-                else:
-                    arch = nombre_archivado(p.parent, nombre, m[1])
-                    creado = p.parent / arch
+                if plan.archive_text is not None:
+                    creado = p.parent / plan.archive
                     fd = os.open(creado, os.O_WRONLY | os.O_CREAT | os.O_EXCL)   # nunca encima de un archivado que ya existe
                     with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
-                        f.write(arch_txt.replace("\n", "\r\n") if crlf else arch_txt)
+                        f.write(plan.archive_text.replace("\n", "\r\n") if crlf else plan.archive_text)
                 try:
                     if not igual(p, firma):
                         raise OSError("el registro cambió mientras se archivaba; se archiva en el próximo cierre")
-                    nuevo_vivo = registro_nuevo(t, nombre, arch, self.hoy, p.parent)
-                    if igual_a and quedan:
-                        nuevo_vivo = nuevo_vivo.rstrip("\n") + "\n\n" + "\n\n".join(quedan) + "\n"
-                    self.propios[rel] = escribir(p, nuevo_vivo, crlf)
+                    self.propios[rel] = escribir(p, plan.live, crlf)
                 except OSError:
                     if creado:
                         creado.unlink(missing_ok=True)
@@ -1881,8 +1947,8 @@ class Cierre:
                     self.propios[self.rel(creado)] = os.stat(creado).st_mtime_ns
                     self.salida["escritos"].append(self.rel(creado))
                 self.salida["escritos"].append(rel)
-                self.salida.setdefault("rotados", []).append({"de": rel, "a": self.rel(p.parent / arch), "motivo": m[0], "entradas": n_ent,
-                                                             **({"ya_estaba": True} if igual_a else {})})
+                self.salida.setdefault("rotados", []).append({"de": rel, "a": self.rel(p.parent / plan.archive), "motivo": MOTIVOS_ROTACION[plan.reason],
+                                                             "entradas": plan.entries, **({"ya_estaba": True} if plan.archive_text is None else {})})
         except (OSError, UnicodeDecodeError) as ex:
             self.salida["fallidos"].append({"ruta": rel, "motivo": f"al archivar: {ex}"})
 
