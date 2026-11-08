@@ -564,11 +564,13 @@ def _(ctx, arg):
 
 @comprobacion("pregunta-antes")
 def _(ctx, arg):
-    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22») y la respuesta a lo
-    pedido espera: no propone focos de trabajo en ese turno (1.22.1, la pregunta bloqueante)."""
+    """pregunta-antes N: en el turno N se pregunta si se migra (AskUserQuestion o texto, con «1.22», o con «Quién es quién»
+    para la de las personas, 1.26) y la respuesta a lo pedido espera: no propone focos de trabajo en ese turno (1.22.1, la
+    pregunta bloqueante)."""
     t = ctx["turnos"][int(arg or 1) - 1]
-    preg = any(h["nombre"] == "AskUserQuestion" and "1.22" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
-    preg = preg or ("1.22" in texto_de(t) and "?" in texto_de(t))
+    marca = lambda s: "1.22" in s or "Quién es quién" in s
+    preg = any(h["nombre"] == "AskUserQuestion" and marca(json.dumps(h["entrada"], ensure_ascii=False)) for h in t["herramientas"])
+    preg = preg or (marca(texto_de(t)) and "?" in texto_de(t))
     espera = not re.search(r"por cu[aá]l empezamos", texto_de(t), re.I)      # los focos, que cierran la apertura completa
     return preg and espera, ("pregunta y espera" if preg and espera else "no pregunta por la migración" if not preg else "pregunta, pero ya propone focos en el mismo turno")
 
@@ -670,9 +672,10 @@ def _(ctx, arg):
 
 @comprobacion("sin-herramienta")
 def _(ctx, arg):
-    """sin-herramienta <nombre>: no se llamó. El listado de «Claude outputs» que la apertura mínima escribe con Write en
-    /tmp (1.25.1) no cuenta: no toca la raíz (1.25.3)."""
-    fuera = lambda h: str((h.get("entrada") or {}).get("file_path", "")).startswith("/tmp/claude-outputs-")
+    """sin-herramienta <nombre>: no se llamó. Lo que se escribe con Write en el contenedor (/tmp, /mnt/user-data) no cuenta:
+    el listado de «Claude outputs» de la apertura mínima (1.25.1) o el listado de una migración sin consola (1.26) no tocan
+    la raíz."""
+    fuera = lambda h: str((h.get("entrada") or {}).get("file_path", "")).startswith(("/tmp/", "/mnt/user-data/"))
     n = sum(1 for t in ctx["turnos"] for h in t["herramientas"] if h["nombre"].endswith(arg) and not fuera(h))
     return n == 0, f"{arg}: {n} llamadas"
 
