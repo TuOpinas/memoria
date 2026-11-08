@@ -6,7 +6,7 @@
 #   ./release.sh 1.8.0 --revisada taller/revisiones-de-calidad/revision-de-calidad-1-8-0.md [--formato-igual]
 #
 # Ninguna versión se publica sin su revisión de calidad (skill `calidad`), con el informe guardado en `taller/revisiones-de-calidad/` del
-# proyecto que mantiene el plugin (decisiones del 2026-10-23 y del 2026-10-24): a fondo, con las seis lentes, una versión
+# proyecto que mantiene el plugin (decisiones del 2026-10-23 y del 2026-10-24): a fondo, con las cinco lentes, una versión
 # menor o mayor, o un parche grande; un parche pequeño, errores y riesgos con dos revisores sobre su diff.
 set -euo pipefail
 VERSION="${1:?Falta la versión, con el formato mayor.menor.parche}"
@@ -18,9 +18,18 @@ if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VE
   [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
   echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
   echo "guarda el informe como taller/revisiones-de-calidad/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada <esa ruta, leída desde aquí>" >&2
-  echo "Toca a fondo (seis lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2
+  echo "Toca a fondo (cinco lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2
   exit 1
 fi
+# el informe lleva su medición (skill calidad, paso 7; 1.25.8): sin ella no se puede medir qué rinde cada lente y cada
+# modelo. Se piden las líneas que se suman, con número donde va un número
+MEDICION="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{m=0} m' "$REVISADA")"
+for LINEA in '^Fecha: [0-9]{4}-[0-9]{2}-[0-9]{2}' '^Tipo: .*Tamaño: [0-9]+ líneas' '^Modelo: .' '^Profundidad: .*Lentes: .' '^Hallazgos: [0-9]+ · impiden [0-9]+ · riesgo [0-9]+ · mejoran [0-9]+' '^Arreglados: [0-9]+'; do
+  if ! printf '%s\n' "$MEDICION" | grep -Eq "$LINEA"; then
+    echo "El informe de la revisión de la $VERSION no tiene su medición completa (skill calidad, paso 7): falta una línea como «${LINEA#^}» en su sección «## Medición», con los arreglados puestos al día." >&2
+    exit 1
+  fi
+done
 # los scripts corren en la computadora de cada persona, con su Python (3.10 en la consola de la app, 3.9 en un Mac): sin
 # comprobarlo con uno viejo, la 1.23.0 salió con un cierre que no arrancaba (1.23.1)
 COMPILA="$(cd "$(dirname "$0")" && pwd)/../../pruebas/probar_compila.py"
