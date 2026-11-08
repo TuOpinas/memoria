@@ -31,23 +31,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      CLAUDE_CODE_USER_EMAIL: ${{ secrets.EVALS_CORREO }}
       MEMORIA_EVALS_PLUGINS: ${{ github.workspace }}/../plugins-evals
       CUERPO: ${{ github.event.pull_request.body }}
       ENTRADA: ${{ inputs.escenarios }}
       MODELO: ${{ inputs.modelo || 'opus' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false   # ningún paso empuja: lo que se instala no ve el token de GitHub
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.x'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: '22'
+      # los dos secretos van solo al paso que corre los evals: lo que se instala aquí (sin versión fija) no los ve
       - name: Claude Code y su SDK
         run: |
-          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -n "$CLAUDE_CODE_USER_EMAIL" ] || { echo "Faltan los secretos CLAUDE_CODE_OAUTH_TOKEN y EVALS_CORREO (ver la cabecera de este archivo)"; exit 1; }
           npm install -g @anthropic-ai/claude-code
           pip install claude-agent-sdk
           mkdir -p "$MEMORIA_EVALS_PLUGINS"
@@ -57,12 +57,19 @@ jobs:
         id: cuales
         run: |
           e="$ENTRADA"
-          [ -z "$e" ] && e="$(printf '%s\n' "$CUERPO" | sed -n 's/^\**Evals:\**[[:space:]]*//p' | head -n 1)"
+          [ -z "$e" ] && e="$(printf '%s\n' "$CUERPO" | sed 's/<!--.*-->//g' | sed -n 's/^\**Evals:\**[[:space:]]*//p' | head -n 1)"
+          # «ninguno (…)» o «none (…)»: el cambio no toca ningún escenario
+          case "$e" in [Nn]inguno*|[Nn]one*) e="ninguno" ;; esac
           e="$(printf '%s' "$e" | tr -cd 'A-Za-z0-9 _-')"
           [ -z "$e" ] && e="01-pregunta-ajena 02-abre-sin-nombrar 03-cierre-con-decision"
           echo "lista=$e" >> "$GITHUB_OUTPUT"
       - name: Correr
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_CODE_USER_EMAIL: ${{ secrets.EVALS_CORREO }}
         run: |
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -n "$CLAUDE_CODE_USER_EMAIL" ] || { echo "Faltan los secretos CLAUDE_CODE_OAUTH_TOKEN y EVALS_CORREO (ver la cabecera de este archivo)"; exit 1; }
+          if [ "${{ steps.cuales.outputs.lista }}" = "ninguno" ]; then echo "La descripción dice «Evals: ninguno»: no corre ningún escenario."; exit 0; fi
           python3 pruebas/evals/correr.py ${{ steps.cuales.outputs.lista }} --modelo "$MODELO" --salida "$RUNNER_TEMP/evals" 2>&1 | tee "$RUNNER_TEMP/evals.log"
           exit "${PIPESTATUS[0]}"
       - name: Resultados

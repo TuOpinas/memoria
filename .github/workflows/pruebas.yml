@@ -6,13 +6,36 @@
 # El tablero (probar.sh) corre una vez, con el Python actual, Node 22 y Playwright con Chromium.
 # Las acciones van fijadas por commit, con su etiqueta al lado: una etiqueta que se mueve no cambia lo que corre (paso 0).
 name: Pruebas
+# Además corre cada lunes sobre main, sin pull request: un cambio del entorno de GitHub (el 2026-11-03, ubuntu-latest sin
+# Python 3.9) se ve antes del siguiente pull request, como un issue y no como una sorpresa (metodología, sección 5).
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "41 13 * * 1"   # lunes, 07:41 en Ciudad de México
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  secretos:
+    # cada archivo del repositorio, que es público: un secreto que entre aquí queda expuesto. Un falso positivo va en
+    # .secrets.baseline (detect-secrets scan --disable-plugin HexHighEntropyString --baseline .secrets.baseline, y
+    # luego audit; regenerarla sin --disable-plugin devuelve el detector hexadecimal), nunca apagando la comprobación. Si
+    # falla con «git add .secrets.baseline», un secreto ya aceptado cambió de línea: se sube la baseline que reescribió. Las huellas hexadecimales del paquete metido en los scripts cambian
+    # con cada versión: por eso ese detector va apagado, y los demás (claves, tokens, contraseñas) no.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Secretos
+        run: |  # pragma: allowlist secret (la línea de abajo instala detect-secrets, no es un secreto)
+          pip install detect-secrets==1.5.0
+          git ls-files -z | xargs -0 detect-secrets-hook --disable-plugin HexHighEntropyString --baseline .secrets.baseline
   sesion:
     runs-on: ubuntu-24.04   # ubuntu-latest pasó a 26.04 el 2026-11-03 y setup-python no tiene ahí el 3.9
     strategy:
@@ -21,6 +44,8 @@ jobs:
         python: ['3.9', '3.10', '3.x']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false   # ningún paso empuja: lo que se instala no ve el token
       # el último de la lista queda como python3
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
@@ -62,6 +87,8 @@ jobs:
     runs-on: ubuntu-24.04   # ubuntu-latest pasó a 26.04 el 2026-11-03 y setup-python no tiene ahí el 3.9
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false   # ningún paso empuja: lo que se instala no ve el token
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: |
@@ -90,3 +117,26 @@ jobs:
           name: capturas-tablero
           path: /tmp/salida/capturas
           if-no-files-found: ignore
+  aviso:
+    # la corrida de los lunes que falla abre un issue (o comenta el que ya está abierto con el mismo título)
+    needs: [secretos, sesion, tablero]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Abrir o comentar el issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITULO: "Las pruebas de los lunes fallan en main"
+        run: |
+          cuerpo="La corrida semanal sobre main falló: $RUN_URL. Si nadie cambió el código, cambió el entorno (runner, Python, Node, Playwright)."
+          numero="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .title == env.TITULO) | .number' | head -n 1)"
+          if [ -n "$numero" ]; then
+            gh api "repos/$REPO/issues/$numero/comments" -f body="$cuerpo" --silent
+          else
+            gh api "repos/$REPO/issues" -f title="$TITULO" -f body="$cuerpo" --silent
+          fi

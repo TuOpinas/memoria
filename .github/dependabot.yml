@@ -1,8 +1,17 @@
-# Pinned actions (by SHA): a weekly pull request when a new version exists. Playwright is pinned inline in
-# pruebas.yml (playwright@1.64.1), which Dependabot does not read: raise it by hand after checking a publish works.
+# Pinned actions (by SHA): one grouped pull request a week for minor and patch versions, a major on its own, each version
+# at least 7 days old (most hijacked or broken releases are pulled within days). Security fixes are not delayed. The same
+# as decisionbits/work-memory (development methodology, section 5). Playwright is pinned inline in pruebas.yml
+# (playwright@1.64.1), which Dependabot does not read: raise it by hand after checking a publish works.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        patterns: ["*"]
