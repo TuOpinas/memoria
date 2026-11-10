@@ -62,7 +62,7 @@ contexto), «guia», «pendientes» (las áreas de otras cuentas que no migra, c
 """
 import datetime, hashlib, json, os, pathlib, re, sys, tempfile, time
 
-ESTE_PLUGIN = "1.26.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 EN_USO_MIN = 120   # un proyecto ajeno tocado hace menos se deja: puede estar en sesión en otra computadora
 
 # --- las marcas de la estructura anterior: la misma función en abrir.py; probar_migrar.py comprueba que coinciden ---
@@ -93,7 +93,7 @@ ARCHIVOS_ANTERIORES = ("fuentes/enlaces.md", "restringido/enlaces.md")
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
+    'language': '4c689d7965c2de5182ee0fb8eac61570042af0051cdf4eaf51c828ec06b5d4fb',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
     'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
@@ -225,7 +225,7 @@ def _context_core():
         '    priorities_legacy="Prioridades ahora", steps="Siguientes pasos", who="Qui\xe9n participa", objective="Objetivo",\n'
         '    done_means="Terminado significa", scope="Alcance", what="Qu\xe9 es", projects="Proyectos", areas="\xc1reas",\n'
         '    responsible_labels=("responsable", "due\xf1o", "dueno", "due\xf1a"), consumers_label="consumen esto",\n'
-        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",\n'
+        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: compartida)?(?: y pone o quita los accesos)?",\n'
         '    area_columns={"responsible": ("responsable", "due\xf1o", "dueno"), "account": ("cuenta", "colabora"),\n'
         '                  "readers": ("qui\xe9n la lee", "quien la lee"), "access": ("acceso",), "what": ("qu\xe9 es", "que es")},\n'
         '    people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),\n'
@@ -1825,6 +1825,8 @@ def registro_desde(guia, proyectos, nombres):
                 elif tramo.strip():
                     avisos.append(f"«En Drive:» no se entiende en «{tramo.strip()[:60]}»: esa cuenta de Drive no pasa al registro")
             continue
+        if re.match(r"^\**\s*servidor\s*\**\s*:", s, re.I):
+            continue   # la cuenta del servidor (1.26.1) no es una persona: no va a «Quién es quién»
         cs = CORREO.findall(s.lower())
         if len(cs) == 1 and ":" in s:
             par(nombre_contexto(s), ver(cs[0]), "Quién responde por qué")

@@ -43,7 +43,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.26.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):
@@ -282,7 +282,7 @@ def titulo(n):
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
+    'language': '4c689d7965c2de5182ee0fb8eac61570042af0051cdf4eaf51c828ec06b5d4fb',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
     'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
@@ -414,7 +414,7 @@ def _context_core():
         '    priorities_legacy="Prioridades ahora", steps="Siguientes pasos", who="Qui\xe9n participa", objective="Objetivo",\n'
         '    done_means="Terminado significa", scope="Alcance", what="Qu\xe9 es", projects="Proyectos", areas="\xc1reas",\n'
         '    responsible_labels=("responsable", "due\xf1o", "dueno", "due\xf1a"), consumers_label="consumen esto",\n'
-        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",\n'
+        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: compartida)?(?: y pone o quita los accesos)?",\n'
         '    area_columns={"responsible": ("responsable", "due\xf1o", "dueno"), "account": ("cuenta", "colabora"),\n'
         '                  "readers": ("qui\xe9n la lee", "quien la lee"), "access": ("acceso",), "what": ("qu\xe9 es", "que es")},\n'
         '    people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),\n'
@@ -1403,10 +1403,14 @@ def administrador_unico(quien, por_nombre):
     ca, na = personas(adm); cc, nc = personas(ctx)
     if not adm or not ctx:
         return "no se sabe", adm, ctx
-    if len(ca) > 1 or len(na) > 1:
+    # una persona con dos cuentas («cuentas: a@, b@» en «Quién es quién») sigue siendo una (1.26.1): se cuentan
+    # personas, no correos; un correo que la tabla no da a nadie cuenta como una persona más
+    quien = {c: n for n, cs in por_nombre.items() for c in cs}
+    pa, pc = {quien.get(c, c) for c in ca}, {quien.get(c, c) for c in cc}
+    if len(pa) > 1 or len(na) > 1:
         return "dos", adm, ctx
     if ca and cc:
-        return ("una" if ca & cc else "dos"), adm, ctx
+        return ("una" if pa & pc else "dos"), adm, ctx
     if na and nc:
         return ("una" if na == nc else "dos"), adm, ctx
     return "no se sabe", adm, ctx
@@ -1590,7 +1594,7 @@ if CUENTA:
                 DECIR.append(f"En «Quién es quién», «sin confirmar»: {', '.join(_pend)}. Cuando esa persona haya abierto sesión con esa cuenta (su «Sesión de:» en un proyecto, o que te lo confirme), quitas la marca de su línea.")
     # el administrador principal es una sola persona (1.22.2): se le dice al responsable de contexto si guia.md nombra a dos
     _ver, _adm, _ctx = administrador_unico(seccion(guia, "Quién responde por qué"), {**{re.sub(r"\s*\([^)]*\)", "", a["dueno"]).split(",")[0].strip().lower(): a["cuentas_dueno"] for a in areas if a["cuentas_dueno"]},
-                                         **{k: {sorted(p_["cuentas"])[0]} for k, p_ in REG["nombre"].items() if p_["cuentas"] and not p_["baja"]}})
+                                         **{k: set(p_["cuentas"]) for k, p_ in REG["nombre"].items() if p_["cuentas"] and not p_["baja"]}})
     if es_resp and _ver == "dos":
         DECIR.append(f"guia.md nombra a dos personas: «{_adm}» administra la carpeta y «{_ctx}» responde por el contexto. Son una sola, la dueña de la carpeta en Drive, que lo lee todo y migra todas las áreas. Se corrige en «Quién responde por qué».")
     # el primer párrafo de guia.md es lo que el tablero enseña arriba de Inicio: si sigue con la plantilla o vacío, se le dice a

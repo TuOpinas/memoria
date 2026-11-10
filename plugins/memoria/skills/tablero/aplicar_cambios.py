@@ -44,7 +44,7 @@ con saltos de línea no se aplica. Lo que no cumple va a "rechazados" y se borra
 """
 import sys, os, re, json, pathlib, datetime
 
-ESTE_PLUGIN = "1.26.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 RAIZ = pathlib.Path(sys.argv[1])
 # 1.25.3: la carpeta cuelga de $HOME/mnt con el último tramo de su ruta como nombre, o con «<padre>--<tramo>» si otra
@@ -80,7 +80,7 @@ CUENTA = (sys.argv[sys.argv.index("--cuenta") + 1] if "--cuenta" in sys.argv and
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
+    'language': '4c689d7965c2de5182ee0fb8eac61570042af0051cdf4eaf51c828ec06b5d4fb',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
     'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
@@ -212,7 +212,7 @@ def _context_core():
         '    priorities_legacy="Prioridades ahora", steps="Siguientes pasos", who="Qui\xe9n participa", objective="Objetivo",\n'
         '    done_means="Terminado significa", scope="Alcance", what="Qu\xe9 es", projects="Proyectos", areas="\xc1reas",\n'
         '    responsible_labels=("responsable", "due\xf1o", "dueno", "due\xf1a"), consumers_label="consumen esto",\n'
-        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",\n'
+        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: compartida)?(?: y pone o quita los accesos)?",\n'
         '    area_columns={"responsible": ("responsable", "due\xf1o", "dueno"), "account": ("cuenta", "colabora"),\n'
         '                  "readers": ("qui\xe9n la lee", "quien la lee"), "access": ("acceso",), "what": ("qu\xe9 es", "que es")},\n'
         '    people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),\n'

@@ -156,13 +156,16 @@ def load_root(source: Union[Storage, str, os.PathLike], language: Optional[str] 
     first = ((_text(st, lang.method) or "").split("\n", 1) or [""])[0].strip()
     version, fingerprint = parse.method_line(first)
     reg = parse.people_registry(guia)
+    # «Contexto común» and «Administra la carpeta» are read only in «Quién responde por qué» when the section exists, so a
+    # sentence in the first paragraph cannot stand in for them (1.26.1)
+    who = parse.section(guia, "Quién responde por qué") or guia
     row_warnings: list = []
     title = parse.h1(guia)
     r = Root(name=st.name, organization=title.split("·", 1)[0].strip() if "·" in title else title,
              method_line=first, method_version=version, method_fingerprint=fingerprint,
              language=lang.code, timezone=parse.timezone_of(guia),
-             context_owner=parse.guia_line(guia, lang.context_owner_label),
-             administrator=parse.guia_line(guia, lang.administrator_label),
+             context_owner=parse.guia_line(who, lang.context_owner_label),
+             administrator=parse.guia_line(who, lang.administrator_label),
              people=reg, area_rows=parse.area_rows(guia, reg, lang, warnings=row_warnings),
              premises=parse.premises(_text(st, _j(lang.base, lang.premises_file)) or ""))
     r.warnings += reg.warnings + row_warnings

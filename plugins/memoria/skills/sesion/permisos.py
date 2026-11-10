@@ -33,7 +33,7 @@ import json, os, pathlib, re, sys
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '24b071b179cb457779fa0f747e95755a960bbb1f93ebee8e54117271b19de191',
+    'language': '4c689d7965c2de5182ee0fb8eac61570042af0051cdf4eaf51c828ec06b5d4fb',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
     'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
     'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
@@ -164,7 +164,7 @@ def _context_core():
         '    priorities_legacy="Prioridades ahora", steps="Siguientes pasos", who="Qui\xe9n participa", objective="Objetivo",\n'
         '    done_means="Terminado significa", scope="Alcance", what="Qu\xe9 es", projects="Proyectos", areas="\xc1reas",\n'
         '    responsible_labels=("responsable", "due\xf1o", "dueno", "due\xf1a"), consumers_label="consumen esto",\n'
-        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",\n'
+        '    context_owner_label="Contexto com\xfan", administrator_label=r"Administra la carpeta(?: compartida)?(?: y pone o quita los accesos)?",\n'
         '    area_columns={"responsible": ("responsable", "due\xf1o", "dueno"), "account": ("cuenta", "colabora"),\n'
         '                  "readers": ("qui\xe9n la lee", "quien la lee"), "access": ("acceso",), "what": ("qu\xe9 es", "que es")},\n'
         '    people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),\n'
@@ -1031,10 +1031,14 @@ def administrador_unico(quien, por_nombre):
     ca, na = personas(adm); cc, nc = personas(ctx)
     if not adm or not ctx:
         return "no se sabe", adm, ctx
-    if len(ca) > 1 or len(na) > 1:
+    # una persona con dos cuentas («cuentas: a@, b@» en «Quién es quién») sigue siendo una (1.26.1): se cuentan
+    # personas, no correos; un correo que la tabla no da a nadie cuenta como una persona más
+    quien = {c: n for n, cs in por_nombre.items() for c in cs}
+    pa, pc = {quien.get(c, c) for c in ca}, {quien.get(c, c) for c in cc}
+    if len(pa) > 1 or len(na) > 1:
         return "dos", adm, ctx
     if ca and cc:
-        return ("una" if ca & cc else "dos"), adm, ctx
+        return ("una" if pa & pc else "dos"), adm, ctx
     if na and nc:
         return ("una" if na == nc else "dos"), adm, ctx
     return "no se sabe", adm, ctx
@@ -1283,6 +1287,42 @@ def comparar(raiz, drive):
         return e in admins or (not admins and rol in ("organizer", "owner"))
     hall, notas, acciones, a_decidir = [], [], [], 0
     rr, rg, ra = roles(raizp)
+    # la cuenta del servidor («Servidor: org-…@….iam.gserviceaccount.com» en «Quién responde por qué», 1.26.1): escribe
+    # en nombre de quien entra, y quién escribe dónde lo decide el servidor con guia.md; en Drive, «Gestor de contenido»
+    # en la unidad entera y nada más. Cuenta solo una cuenta de servicio que no sea de nadie de la carpeta, la primera de
+    # la primera línea; cualquier otro correo de esas líneas se revisa como el de cualquiera, y se dice
+    servidores, lineas_srv, otros_srv = set(), [], []
+    for l in (quien_responde or "").split("\n"):
+        if re.match(r"^\s*[-*]?\s*\**\s*servidor\s*\**\s*:", l, re.I):
+            lineas_srv.append(CORREO.findall(l.lower()))
+    personas_srv = set().union(*por_nombre.values()) | set(drive_de) | set(drive_de.values()) | {c for a in areas for c in a["en_celda"]}
+    for n_, cs in enumerate(lineas_srv):
+        for k_, c in enumerate(cs):
+            if n_ == 0 and k_ == 0 and c.endswith(".gserviceaccount.com") and c not in personas_srv and not mi_unidad:
+                servidores.add(c)
+            else:
+                otros_srv.append(c)
+    if len(lineas_srv) > 1 or otros_srv:
+        hall.append("«Servidor:» en «Quién responde por qué» lleva una sola cuenta, de servicio y de nadie de la carpeta, en una sola línea"
+                    + (f": {', '.join(otros_srv)} no cuenta como la del servidor y se revisa como cualquier otra" if otros_srv else "")
+                    + ". Corrige guia.md.")
+    if mi_unidad and lineas_srv:
+        notas.append("guia.md declara la cuenta del servidor, y el servidor solo trabaja sobre una unidad compartida: esta carpeta está en «Mi unidad», así que esa cuenta se revisa como cualquier otra.")
+    for e in sorted(servidores):
+        rol = rr.get(e)
+        notas.append(f"La cuenta del servidor es {e}: escribe en nombre de quien entra al servidor, y quién escribe dónde lo decide guia.md.")
+        if not rr:
+            continue   # sin los permisos de la raíz no se dice nada de ella (ya sale que no llegaron)
+        if rol == "fileOrganizer":
+            continue
+        if rol in ("organizer", "owner"):
+            hall.append(f"{e} es la cuenta del servidor y tiene el rol de Drive «{NOM.get(rol, rol)}» en la unidad: le basta «Gestor de contenido», que no deja cambiar permisos. Bájaselo desde la web.")
+        elif rol == "writer":
+            hall.append(f"{e} es la cuenta del servidor y tiene el rol de Drive «Colaborador» en la unidad, que no deja mover ni mandar a la papelera, y el servidor lo necesita al guardar. Dale «Gestor de contenido» en la unidad entera.")
+        elif rol:
+            hall.append(f"{e} es la cuenta del servidor y tiene el rol de Drive «{NOM.get(rol, rol)}» en la unidad: así el servidor no puede guardar ni cerrar sesiones. Dale «Gestor de contenido» en la unidad entera.")
+        else:
+            hall.append(f"{e} es la cuenta del servidor según guia.md, pero no está en la unidad" + (" con su correo (puede entrar por un grupo: compruébalo)" if rg else "") + ": invítala como «Gestor de contenido» en la unidad entera.")
     # si Drive conoce también a la persona por su cuenta de Claude, es la misma persona: se mira como la de Drive
     def alias(r):
         for c in list(r):
@@ -1325,7 +1365,9 @@ def comparar(raiz, drive):
     # 1. la raíz: quien no administra, solo lectura; quien administra, como dice guia.md
     escriben_en_raiz = set()
     for e, rol in sorted(rr.items()):
-        if rol in ESCRIBE and not admin(e, rol):
+        if rol in ESCRIBE and not admin(e, rol) and e in servidores:
+            escriben_en_raiz.add(e)   # ya se miró arriba
+        elif rol in ESCRIBE and not admin(e, rol):
             escriben_en_raiz.add(e)
             suyas = [a["slug"] for a in areas if e in a["duenos"] | a["colaboran"]]
             if suyas:
@@ -1334,15 +1376,24 @@ def comparar(raiz, drive):
                 notas.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta y aparece en una fila de la tabla de áreas que no se deja leer: corrige la fila antes de tocar su rol.")
             else:
                 a_decidir += 1
-                hall.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol de Drive a «Lector» en la raíz.")
+                hall.append(f"{e} tiene el rol de Drive «{NOM.get(rol, rol)}» en toda la carpeta, así que puede escribir en todas las áreas, y guia.md no lo declara responsable ni colaborador de ninguna. ¿Debe escribir? Si sí, que el responsable de contexto lo declare en guia.md y dale {BIEN} solo en esa carpeta; si no, cámbiale el rol de Drive a «Lector» en la raíz."
+                            + (" Si es la cuenta con la que escribe el servidor, se declara en «Quién responde por qué» con «Servidor: " + e + "» y conserva «Gestor de contenido» en la unidad." if e.endswith(".gserviceaccount.com") and not mi_unidad else ""))
     # el administrador principal (1.22.2): quien administra la carpeta, responde por el contexto y es su dueño en Drive es
     # una sola persona, y lee todo, también lo restringido
     _ver, _, _ = administrador_unico(quien_responde, por_nombre)
     if _ver == "dos":
         hall.append(f"Quien administra la carpeta («{adm.strip() or 'no consta'}») y quien responde por el contexto («{ctx.strip() or 'no consta'}») son personas distintas en guia.md: "
                     "son una sola persona, que además es la dueña de la carpeta en Drive y lee todo. Corrige «Quién responde por qué».")
-    if len(admins) > 1:
+    quien_admin = {c: n for n, cs in por_nombre.items() for c in map(d, cs)}
+    if len({quien_admin.get(c, c) for c in admins}) > 1:
         admins = set()     # con dos administradores declarados no se dice a quién darle qué: antes se corrige guia.md
+    elif len(admins) > 1:
+        # una persona con varias cuentas (1.26.1): en Drive se mira la que tenga; sin «· en Drive:» no se sabe cuál es
+        if rr and len([c for c in admins if c in rr]) == 1:
+            admins = {c for c in admins if c in rr}
+        else:
+            notas.append(f"Quien administra la carpeta tiene varias cuentas ({', '.join(sorted(admins))}): di en su línea de «Quién es quién» con cuál entra a Drive («· en Drive: correo»), para revisar esa.")
+            admins = set()
     for e in sorted(admins):
         if rr and e not in rr:
             hall.append(f"{e} figura en guia.md como quien administra la carpeta, pero no tiene acceso a ella.")

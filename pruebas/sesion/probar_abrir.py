@@ -305,6 +305,12 @@ for adm_, ctx_, espera in (("Ana Prueba (lleva también ventas, personas)", "Con
     (RX / "guia.md").write_text((AQUI.parent / "tablero" / "raiz" / "guia.md").read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: " + adm_).replace("Contexto común: Ana Prueba", ctx_), encoding="utf-8")
     o = subprocess.run([sys.executable, str(ABRIR), str(RX), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
     ok(("nombra a dos personas" in o) == espera, f"«{adm_}» frente a «{ctx_.split(chr(10))[0]}»: {'dos' if espera else 'una'}")
+# una persona con dos cuentas en «Quién es quién» sigue siendo una, con cualquiera de las dos en la línea (1.26.1)
+sys.path.insert(0, str(AQUI.parent)); from comun import raiz_125 as _r125
+R2C, _ = _r125(); _g = R2C / "guia.md"
+_g.write_text(_g.read_text(encoding="utf-8").replace("- Ana Prueba · ana@ejemplo.test\n", "- Ana Prueba · cuentas: ana@ejemplo.test, ana@otra.test · en Drive: ana@otra.test\n").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Ana Prueba (ana@otra.test)"), encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(R2C), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("nombra a dos personas" not in o, "la segunda cuenta de una persona en «Administra la carpeta»: una sola persona")
 print("Los registros archivados (1.23)")
 RA = tmp / "raiz-archivada"
 shutil.copytree(AQUI.parent / "tablero" / "raiz", RA)
