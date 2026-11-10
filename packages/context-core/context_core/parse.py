@@ -154,7 +154,9 @@ def area_rows(guia: str, reg: PeopleRegistry, lang: Pack = ES, warnings: Optiona
 
 
 def guia_line(guia: str, label: str) -> str:
-    m = re.search(r"^\s*[-*]?\s*\**\s*" + label + r"\s*\**\s*:\s*(.+)$", guia or "", re.M | re.I)
+    """The value of «Label: value» in guia.md. The label may carry a parenthesis before its colon, as `nuevo`'s template
+    writes it («Contexto común (`guia.md` y `base/`): Ana Prueba.»), and the bold may close after the colon. Everything stays on the label's line: an empty value is no value."""
+    m = re.search(r"^[ \t]*[-*]?[ \t]*\**[ \t]*" + label + r"(?:[ \t]*\([^)\n]*\))?[ \t]*\**[ \t]*:[ \t]*\**[ \t]*(\S.*)$", guia or "", re.M | re.I)
     return m.group(1).strip() if m else ""
 
 

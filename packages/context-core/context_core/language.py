@@ -100,7 +100,7 @@ ES = Pack(
     priorities_legacy="Prioridades ahora", steps="Siguientes pasos", who="Quién participa", objective="Objetivo",
     done_means="Terminado significa", scope="Alcance", what="Qué es", projects="Proyectos", areas="Áreas",
     responsible_labels=("responsable", "dueño", "dueno", "dueña"), consumers_label="consumen esto",
-    context_owner_label="Contexto común", administrator_label=r"Administra la carpeta(?: y pone o quita los accesos)?",
+    context_owner_label="Contexto común", administrator_label=r"Administra la carpeta(?: compartida)?(?: y pone o quita los accesos)?",
     area_columns={"responsible": ("responsable", "dueño", "dueno"), "account": ("cuenta", "colabora"),
                   "readers": ("quién la lee", "quien la lee"), "access": ("acceso",), "what": ("qué es", "que es")},
     people_columns={"responsible": ("responsable", "dueno", "duena"), "account": ("cuenta", "cuentas"),

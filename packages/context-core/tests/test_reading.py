@@ -302,6 +302,36 @@ class Reading(unittest.TestCase):
         self.assertIsInstance(current_year("No/Such_Zone"), int)
 
 
+class GuideLines(unittest.TestCase):
+    """«Quién responde por qué» as `nuevo`'s template writes it: a parenthesis before the colon (1.26.1)."""
+
+    def test_label_with_a_parenthesis(self):
+        guia = ("## Quién responde por qué\n\nContexto común (`guia.md` y `base/`): Ana Prueba.\n"
+                "Administra la carpeta compartida y pone o quita los accesos: Beto Prueba.\n")
+        from context_core.language import ES
+        self.assertEqual(parse.guia_line(guia, ES.context_owner_label), "Ana Prueba.")
+        self.assertEqual(parse.guia_line(guia, ES.administrator_label), "Beto Prueba.")
+        self.assertEqual(parse.guia_line("Administra la carpeta: Beto", ES.administrator_label), "Beto")
+
+    def test_plain_and_bold_labels_still_read(self):
+        self.assertEqual(parse.guia_line("Contexto común: Ana (ana@x.mx).", "Contexto común"), "Ana (ana@x.mx).")
+        self.assertEqual(parse.guia_line("- **Contexto común:** Ana", "Contexto común"), "Ana")
+        self.assertEqual(parse.guia_line("Contexto común de la casa: Ana", "Contexto común"), "")
+        self.assertEqual(parse.guia_line("Contexto común:\nAdministra la carpeta: Beto", "Contexto común"), "")
+        self.assertEqual(parse.guia_line("Contexto común\n(nota): Zoe", "Contexto común"), "")
+
+    def test_the_context_owner_of_a_template_root(self):
+        from context_core import rules
+        with tempfile.TemporaryDirectory() as d:
+            pathlib.Path(d, "guia.md").write_text(
+                "# Prueba · esta carpeta\n\n## Áreas\n\n| Área | Qué es | Responsable | Colabora | Quién la lee | Acceso |\n"
+                "|---|---|---|---|---|---|\n| `ventas/` | Ventas | Ana Prueba |  | Todo el equipo | Abierta |\n\n"
+                "## Quién es quién\n- Ana Prueba · cuentas: ana@x.mx, ana@y.mx\n\n## Quién responde por qué\n\n"
+                "Contexto común (`guia.md` y `base/`): Ana Prueba.\n", encoding="utf-8")
+            root = load_root(d)
+            self.assertEqual(rules.context_owner_accounts(root.context_owner, root.people), {"ana@x.mx", "ana@y.mx"})
+
+
 @unittest.skipIf(os.name == "nt", "symbolic links need privileges on Windows")
 class Links(unittest.TestCase):
     def setUp(self):

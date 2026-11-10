@@ -199,5 +199,59 @@ ok("son personas distintas" in o2 and "dale «Administrador»" not in o2, "dos a
 d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "writer"), u("zoe@ejemplo.test", "owner")] + BASE[1:]
 ok("en Drive no es su propietario" in corre(d)[1], "en «Mi unidad», quien administra tiene que ser el propietario")
 
+print("Una persona con dos cuentas, y la cuenta del servidor (1.26.1)")
+BASE[0] = u("ana@ejemplo.test", "organizer")   # una prueba de arriba lo cambió en la lista compartida
+from comun import raiz_125
+R125, _ = raiz_125()
+g125 = R125 / "guia.md"
+g125.write_text(g125.read_text(encoding="utf-8").replace("- Ana Prueba · ana@ejemplo.test\n", "- Ana Prueba · cuentas: ana@ejemplo.test, ana@otra.test · en Drive: ana@ejemplo.test\n"), encoding="utf-8")
+ok("cuentas: ana@ejemplo.test, ana@otra.test" in g125.read_text(encoding="utf-8"), "(la raíz de prueba lleva a Ana con dos cuentas)")
+o = corre_en(R125, bien())
+ok("son personas distintas" not in o and "ana@otra.test" not in o, "dos cuentas de la misma persona en «Quién es quién»: una sola persona, y la de Drive es la que se compara")
+SA = "org-prueba@proyecto.iam.gserviceaccount.com"
+d = bien(); d["raiz"]["permisos"] = BASE + [u(SA, "fileOrganizer")]
+o = corre_en(R125, d)
+ok(SA + " tiene el rol de Drive «Gestor de contenido» en toda la carpeta" in o and "«Servidor: " + SA + "»" in o, "una cuenta de servicio sin declarar: se pregunta, con la pista de declararla como el servidor")
+g125.write_text(g125.read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Ana Prueba\nServidor: " + SA + " · escribe en nombre de quien entra"), encoding="utf-8")
+o = corre_en(R125, d)
+ok("Para cambiar" not in o and "La cuenta del servidor es " + SA in o, "declarada como el servidor y con «Gestor de contenido» en la unidad: nada que cambiar, ni en la raíz ni en las áreas, y se nombra")
+d["raiz"]["permisos"][-1] = u(SA, "organizer")
+ok("le basta «Gestor de contenido»" in corre_en(R125, d), "con «Administrador», que se le baje")
+d["raiz"]["permisos"][-1] = u(SA, "reader")
+ok("el servidor no puede guardar ni cerrar sesiones" in corre_en(R125, d), "con «Lector», que se le suba")
+d["raiz"]["permisos"] = BASE
+ok("invítala como «Gestor de contenido»" in corre_en(R125, d), "declarada y sin estar en la unidad, que se la invite")
+
+d["raiz"]["permisos"] = []
+o = corre_en(R125, d)
+ok("invítala" not in o, "sin los permisos de la raíz no se pide invitar a la cuenta del servidor")
+# lo que no es la cuenta del servidor no se silencia (revisión de la 1.26.1)
+def con_servidor(linea):
+    g = g125.read_text(encoding="utf-8"); i = g.index("Servidor: ")
+    g125.write_text(g[:i] + linea + g[g.index("\n", i):], encoding="utf-8")
+d = bien(); d["raiz"]["permisos"] = BASE + [u(SA, "fileOrganizer"), u("externo@gmail.com", "fileOrganizer")]
+con_servidor("Servidor: " + SA + " · lo lleva externo@gmail.com")
+o = corre_en(R125, d)
+ok("externo@gmail.com tiene el rol de Drive «Gestor de contenido» en toda la carpeta" in o and "no cuenta como la del servidor" in o, "otro correo en la línea «Servidor:» se revisa como cualquiera, y se dice")
+con_servidor("Servidor: beto@ejemplo.test")
+d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "organizer"), u("beto@ejemplo.test", "fileOrganizer")] + BASE[2:]
+o = corre_en(R125, d)
+ok("beto@ejemplo.test tiene el rol de Drive «Gestor de contenido» en toda la carpeta" in o and "no cuenta como la del servidor" in o, "una persona de la carpeta declarada como servidor no deja de revisarse")
+con_servidor("Servidor: " + SA)
+g125.write_text(g125.read_text(encoding="utf-8").replace("Servidor: " + SA, "Servidor: " + SA + "\nServidor: externo@gmail.com"), encoding="utf-8")
+d = bien(); d["raiz"]["permisos"] = BASE + [u(SA, "fileOrganizer"), u("externo@gmail.com", "fileOrganizer")]
+ok("externo@gmail.com tiene el rol de Drive" in corre_en(R125, d), "dos líneas «Servidor:»: la segunda no cuenta")
+g125.write_text(g125.read_text(encoding="utf-8").replace("\nServidor: externo@gmail.com", ""), encoding="utf-8")
+d = {"raiz": {"permisos": [u("ana@ejemplo.test", "owner"), u(SA, "writer")]}, "areas": {}, "proyectos": {}, "restringidos": {}}
+o = corre_en(R125, d)
+ok("«Mi unidad»" in o and SA + " tiene el rol de Drive «Editor» en toda la carpeta" in o and "conserva «Gestor de contenido»" not in o, "en «Mi unidad» la cuenta declarada se revisa como cualquier otra, sin la pista de la unidad compartida")
+# quien administra con dos cuentas sin «· en Drive:» no se queda sin revisar
+g125.write_text(g125.read_text(encoding="utf-8").replace(" · en Drive: ana@ejemplo.test", ""), encoding="utf-8")
+d = bien(); d["raiz"]["permisos"] = [u("ana@ejemplo.test", "fileOrganizer")] + BASE[1:]
+o = corre_en(R125, d)
+ok("dale el rol de Drive «Administrador»" in o, "quien administra con dos cuentas y solo una en Drive: se mira esa")
+d["raiz"]["permisos"] = [u("ana@ejemplo.test", "fileOrganizer"), u("ana@otra.test", "reader")] + BASE[1:]
+ok("tiene varias cuentas" in corre_en(R125, d), "con las dos en Drive y sin «· en Drive:», se pide decir con cuál entra")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

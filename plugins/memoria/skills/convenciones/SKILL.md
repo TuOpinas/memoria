@@ -273,6 +273,7 @@ Las secciones de `guia.md` van en este orden y con estos nombres, que leen `abri
 ## Quién responde por qué
 Contexto común (`guia.md` y `base/`): Nombre Apellido
 Administra la carpeta compartida y pone o quita los accesos: Nombre Apellido
+Servidor: org-<id>@<proyecto>.iam.gserviceaccount.com   (solo si la organización usa el servidor de la memoria)
 Cada área, su responsable de la tabla de arriba.
 Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
 
@@ -288,7 +289,7 @@ Zona horaria: America/Mexico_City   (solo si no es la de Ciudad de México)
 ## Versión mínima del plugin      (solo si una migración la escribió)
 ```
 
-**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. «Responsable» lleva un solo nombre de «Quién es quién», limpio: un matiz («de forma interina») va en «Qué es». «Colabora» lleva nombres separados por comas, o nada (sección 1, «Quién colabora»). «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»). Las etiquetas de «Quién responde por qué» empiezan como aquí, que es como las leen los scripts.
+**El primer párrafo dice qué es la organización y no habla de la carpeta**: es lo que el tablero enseña arriba de Inicio, y mientras siga con el hueco de la plantilla o hable del método, el tablero no lo enseña y Mantenimiento lo pide al responsable de contexto. «Responsable» lleva un solo nombre de «Quién es quién», limpio: un matiz («de forma interina») va en «Qué es». «Colabora» lleva nombres separados por comas, o nada (sección 1, «Quién colabora»). «Acceso» es «Abierta» o «Restringida» (sección 1, «Lo restringido»). Las etiquetas de «Quién responde por qué» empiezan como aquí, que es como las leen los scripts. «Servidor:» lleva la cuenta de servicio con la que el servidor de la memoria escribe en la unidad compartida de la organización, en nombre de quien entra a él: una por organización, y no da permisos a nadie, porque quién escribe dónde lo decide el servidor con esta misma `guia.md`. En Drive tiene «Gestor de contenido» en la unidad entera y nada más, y `permisos.py` lo comprueba (1.26.1). No va en «Quién es quién», que es de personas. Quien entra al servidor con otra cuenta que la de Claude la lleva también en «cuentas:» de su línea, porque con esa cuenta trabaja con la IA (`· cuentas: a@claude, b@drive · en Drive: b@drive`).
 
 ## 5. Cabecera
 

@@ -184,6 +184,13 @@ antes4 = foto(R4)
 c, s = migrar(R4, "--cuenta", "ana@ejemplo.test", "--personas", "--plugin", "1.26.0", "--nombres", NOMBRES)
 ok(c == 6 and s.get("solo_lectura") and foto(R4) == antes4, "por debajo de la versión mínima de la raíz no migra nada y sale con 6")
 
+# la cuenta del servidor («Servidor:», 1.26.1) no es una persona: no va al registro
+R5, _ = raiz_migrada()
+g5 = R5 / "guia.md"; g5.write_text(g5.read_text(encoding="utf-8").replace("Administra la carpeta: Ana Prueba", "Administra la carpeta: Ana Prueba\nServidor: org-prueba@proyecto.iam.gserviceaccount.com"), encoding="utf-8")
+c, s5 = migrar(R5, "--cuenta", "ana@ejemplo.test", "--personas")
+ok("org-prueba@proyecto.iam.gserviceaccount.com" not in json.dumps(s5), "la cuenta del servidor no entra en «Quién es quién» ni se pregunta su nombre")
+shutil.rmtree(R5.parent, ignore_errors=True)
+
 for d in (R, R2, R3, R4):
     shutil.rmtree(d.parent, ignore_errors=True)
 shutil.rmtree(COPIA, ignore_errors=True)
