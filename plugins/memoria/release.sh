@@ -6,8 +6,9 @@
 #   ./release.sh 1.8.0 --revisada taller/revisiones-de-calidad/revision-de-calidad-1-8-0.md [--formato-igual]
 #
 # Ninguna versión se publica sin su revisión de calidad (skill `calidad`), con el informe guardado en `taller/revisiones-de-calidad/` del
-# proyecto que mantiene el plugin (decisiones del 2026-10-23 y del 2026-10-24): a fondo, con las cinco lentes, una versión
-# menor o mayor, o un parche grande; un parche pequeño, errores y riesgos con dos revisores sobre su diff.
+# proyecto que mantiene el plugin (decisiones del 2026-10-23, del 2026-10-24 y del 2026-11-10): una versión menor o mayor, o
+# un diff de 300 líneas o más, las cinco lentes con contraste; por debajo, errores, riesgos y objetivo con tres revisores, sin
+# contraste salvo que toque bloqueos, concurrencia, autenticación o una migración de datos.
 set -euo pipefail
 VERSION="${1:?Falta la versión, con el formato mayor.menor.parche}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Versión mal formada: $VERSION" >&2; exit 1; }
@@ -18,7 +19,7 @@ if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VE
   [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
   echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
   echo "guarda el informe como taller/revisiones-de-calidad/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada <esa ruta, leída desde aquí>" >&2
-  echo "Toca a fondo (cinco lentes) si es una versión menor o mayor o un parche grande; si es un parche pequeño, errores y riesgos con dos revisores." >&2
+  echo "Toca las cinco lentes con contraste si es una versión menor o mayor o un diff de 300 líneas o más; por debajo, errores, riesgos y objetivo con tres revisores, sin contraste salvo bloqueos, concurrencia, autenticación o migración de datos." >&2
   exit 1
 fi
 # el informe lleva su medición (skill calidad, paso 7; 1.25.8): sin ella no se puede medir qué rinde cada lente y cada
@@ -30,6 +31,13 @@ for LINEA in '^Fecha: [0-9]{4}-[0-9]{2}-[0-9]{2}' '^Tipo: .*Tamaño: [0-9]+ lín
     exit 1
   fi
 done
+# cada hallazgo, también las mejoras, es una entrada «### n.» con su línea «Lens:», y la medición lleva razonamiento y tokens
+# (skill calidad, pasos 6 y 7; 1.26.2): lo que la lectura de la efectividad no puede contar deja sin crédito a su lente
+if ! INFORME="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$REVISADA")"; then
+  printf '%s\n' "$INFORME" >&2
+  echo "El informe de la revisión de la $VERSION no se puede medir (skill calidad, pasos 6 y 7): arréglalo y repite." >&2
+  exit 1
+fi
 # los scripts corren en la computadora de cada persona, con su Python (3.10 en la consola de la app, 3.9 en un Mac): sin
 # comprobarlo con uno viejo, la 1.23.0 salió con un cierre que no arrancaba (1.23.1)
 COMPILA="$(cd "$(dirname "$0")" && pwd)/../../pruebas/probar_compila.py"
