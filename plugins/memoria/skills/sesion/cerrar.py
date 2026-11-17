@@ -98,7 +98,7 @@ import sys
 import tempfile
 import time
 
-ESTE_PLUGIN = "1.26.4"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.5"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 
@@ -2531,7 +2531,11 @@ def main(argv):
         if c.cambiar(pd / "decisiones.md", f_dec):
             norm_ = lambda x: re.sub(r"\s+", " ", x or "").strip()
             puestas = {norm_(d) for d in hecho.get("pend") or [] if isinstance(d, str)}
-            s["registradas"] = [{"id": f"{activo}#{e['id']}", "titulo": e["titulo"]} for e in entradas_con_id(with_archives(hecho["texto"], _arch)[0])
+            s["registradas"] = [{"id": f"{activo}#{e['id']}", "titulo": e["titulo"],
+                                 **{k_: m_.group(1).strip() for k_, m_ in (("afecta", re.search(r"^Afecta a\s*:\s*(.+)$", e["texto"], re.M)),
+                                                                            ("responde", re.search(r"^Responde a\s*:\s*(.+)$", e["texto"], re.M)),
+                                                                            ("cuestiona", re.search(r"^Cuestiona a\s*:\s*(.+)$", e["texto"], re.M))) if m_}}
+                                for e in entradas_con_id(with_archives(hecho["texto"], _arch)[0])
                                 if e["id"] and norm_(e["texto"]) in puestas]
             if estado_sesion:
                 c.propios["#decisiones"] = sorted(propias | {r["id"] for r in s["registradas"]})
@@ -2633,6 +2637,8 @@ def respuesta(s, raiz, pd, area, slug, cuenta, cierre, sin_fechas):
             pasos.append("Esta llamada no escribió nada nuevo y no cierra la sesión: dilo en media línea si hace falta, y la sesión sigue abierta.")
         if s.get("registradas"):
             pasos.append("Quedaron registradas " + ", ".join(r["id"] for r in s["registradas"]) + ": al cerrar no se vuelven a mandar (el cierre las ve en «registradas_hoy» de --comprobar, aunque la conversación ya no las recuerde). Las siguientes llamadas de esta sesión llevan el mismo --abierto de la apertura, no «escrito_en».")
+            if any(r.get("afecta") or r.get("responde") or r.get("cuestiona") for r in s["registradas"]):
+                pasos.append("En la misma respuesta, a quién avisar (cerrar.md, paso 3): por cada «afecta» que nombra un proyecto de otra área, su responsable según guia.md; por «responde» o «cuestiona», quien planteó el cuestionamiento o el responsable del proyecto cuestionado. Una vez, ahora; el cierre no lo repite. Si el responsable es quien decide, no se dice.")
         for k, txt in pendientes:
             pasos.append(f"Hay «{k}» ({txt}): se resuelve como dice cerrar.md.")
         if llano:

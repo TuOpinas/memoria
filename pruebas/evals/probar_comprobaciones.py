@@ -117,5 +117,23 @@ ok(not cita(_c.replace(f"> {H} · **Todo bien.**", f"{H} · Todo bien."), True, 
 ok(not cita(_c.replace(f"> ## {H} · Una decisión\n> Decidió: Ana Pérez\n> Por qué: x.", "La decisión: una decisión."), True, H)[0], "la decisión sigue yendo entera en cita")
 ok(not cita(_c.replace("> Decidió: Ana Pérez\n> Por qué: x.", "Decidió Ana; por x."), True, H)[0], "solo el título en cita no basta: Decidió y Por qué también")
 
+print("La decisión de hoy con su «Afecta a» (1.26.5)")
+import tempfile, datetime as _dt
+from zoneinfo import ZoneInfo as _Z
+g3 = {"re": re, "pathlib": pathlib, "HOY": _dt.datetime.now(_Z("America/Mexico_City")).date().isoformat()}
+exec("COMPROBACIONES = {}\ndef comprobacion(n):\n    def d(f):\n        COMPROBACIONES[n] = f\n        return f\n    return d\n", g3)
+exec(src[src.index('@comprobacion("decision-afecta")'):src.index('@comprobacion("apertura-minima")')], g3)
+da = g3["COMPROBACIONES"]["decision-afecta"]
+_r = pathlib.Path(tempfile.mkdtemp()); (_r / "v/c").mkdir(parents=True)
+_vieja = "## 2026-09-26 · Vieja\nDecidió: A\nAfecta a: personas\n"
+_hoy = g3["HOY"]
+def _con(texto):
+    (_r / "v/c/decisiones.md").write_text("# Decisiones\n\n" + texto + _vieja, encoding="utf-8")
+    return {"raiz": _r, "antes_textos": {"v/c/decisiones.md": "# Decisiones\n\n" + _vieja}}
+ok(da(_con(f"## {_hoy} · Nueva\nDecidió: A\nAfecta a: personas (la nómina)\n\n"), "v/c personas")[0], "la nueva de hoy con el área pasa")
+ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\n\n"), "v/c personas")[0], "sin «Afecta a» no pasa, aunque la vieja lo lleve")
+ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\nAfecta a: personas-x\n\n"), "v/c personas")[0], "otro nombre que empieza igual no pasa")
+ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\nAfecta a: personas\n\n"), "v/c")[0], "sin texto no pasa")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
