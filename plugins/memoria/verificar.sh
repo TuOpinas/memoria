@@ -5,7 +5,8 @@
 #
 #   ./verificar.sh <ruta-a-la-raiz>
 #
-# Sale con 1 si hay hallazgos, 0 si la raíz está limpia.
+# Sale con 1 si hay hallazgos, 0 si la raíz está limpia, y 2 si la ruta no es una raíz (ni guia.md
+# ni metodo.md en su primer nivel). Una raíz con metodo.md y sin guia.md es un hallazgo, no un 2.
 set -euo pipefail
 RAIZ="${1:?Falta la ruta de la raíz}"
 python3 - "$RAIZ" <<'PY'
@@ -980,10 +981,18 @@ _context_core()
 # --- end of context_core ---
 from context_core.compat import (CORREO, PALABRA_COLABORA, LINEA_COLABORA, registro_personas, persona,  # noqa: E402
                                  nombres_de, altas_provisionales, columnas_personas, fila_cuentas,
-                                 nombre_contexto, acceso_de)
+                                 nombre_contexto, acceso_de, area_restringida)
 # --- fin de quién escribe ---
 
 raiz = sys.argv[1]
+if not os.path.isfile(os.path.join(raiz, "guia.md")):
+    # una ruta equivocada no es una raíz con cinco hallazgos (1.26.6): sale con 2 y lo dice. Con metodo.md al lado, sí es
+    # una raíz que perdió su guía (renombrada, «guia (1).md»): eso es un hallazgo, no una ruta equivocada
+    if os.path.isfile(os.path.join(raiz, "metodo.md")):
+        print("- falta guia.md: %s tiene metodo.md y no guia.md en su primer nivel; sin ella nadie sabe dónde está cada cosa ni quién escribe dónde (¿se renombró o hay una copia en conflicto?)" % raiz)
+        sys.exit(1)
+    print("No es una raíz: %s no tiene guia.md ni metodo.md en su primer nivel (¿la ruta es la de la carpeta en esta consola?)." % raiz)
+    sys.exit(2)
 ESTADOS = {"borrador", "vigente", "reemplazado"}
 PROHIBIDAS = {"varios", "otros", "temp", "borrador", "metodo", "plantillas"}
 hallazgos = set()
@@ -1027,6 +1036,42 @@ def nombre_ok(n):
 def nombre_con_orden_version_o_fecha(n):
     base = n[:-3] if n.endswith(".md") else n
     return bool(re.match(r"^\d+-", base) or re.search(r"(^|-)v\d+($|-)", base) or re.search(r"\d{4}-\d{2}-\d{2}", base))
+
+def nombres_en_participa(linea):
+    """Los nombres de una línea de «Quién participa». En «Responsable:» hay una sola persona, y lo que sigue a su nombre
+    («, de forma provisional», «, dueña del concepto», «. Provisional hasta enero») es prosa sobre ella, no otra persona
+    (1.26.6): se toma el principio más largo del primer trozo que el registro reconoce, siempre que lo que sigue sea prosa
+    (nada, o una coma, un punto o una raya seguidos de minúscula). Si lo que sigue es otro nombre («y Mayra Ruiz»,
+    «/ Mayra Ruiz», «, Mayra Ruiz»), ese nombre se comprueba también. Sin principio reconocido, el trozo hasta un punto o
+    una raya. En «Colabora:» o «Lo leen:», todos, como siempre: un nombre que falta, en minúscula o un correo, también."""
+    nombres = nombres_de(linea)
+    if not nombres or not re.match(r"^\s*[-*]?\s*\**\s*responsable\s*\**\s*:", linea, re.I):
+        return nombres
+    cuerpo = re.sub(r"^\s*[-*]?\s*\**\s*responsable\s*\**\s*:\s*\**\s*", "", linea, flags=re.I).strip()
+    out = []
+    for _ in range(4):   # «A y B y C»: como mucho unas pocas personas
+        palabras_ = cuerpo.replace(",", " , ").split()
+        hallado = None
+        for k in range(len(palabras_), 0, -1):
+            cand = " ".join(palabras_[:k]).strip(" .,;*")
+            resto = " ".join(palabras_[k:])
+            otro = re.match(r"^(?:y|e|&|/)\s+(?=\S)|^,\s*(?=[A-ZÁÉÍÓÚÑ])", resto)
+            prosa = not resto or (not otro and re.match(r"^[,.;—–(-]|^\s*$", resto))
+            if persona(cand, REG) and (prosa or otro):
+                hallado = (cand, resto[otro.end():] if otro else "")
+                break
+        if not hallado:
+            trozo = re.split(r"\s*(?:\.\s|—|–|\s-\s|,)", cuerpo + " ", maxsplit=1)[0].strip(" .*")
+            trozo = re.split(r"\s+(?:y|e|&|/)\s+", trozo, maxsplit=1)[0]
+            if trozo:
+                out.append(trozo)
+            break
+        out.append(hallado[0])
+        if not hallado[1]:
+            break
+        cuerpo = hallado[1]
+    return out or nombres[:1]
+
 
 def seccion_proyectos(txt):
     m = re.search(r"^## Proyectos\s*\n(.*?)(?=^## |\Z)", txt, re.S | re.M)
@@ -1125,7 +1170,11 @@ if guia_txt:
         if not NUEVA and PALABRA_COLABORA.search(celdas[col["cuenta"]]) and not _co:
             h("«colabora:» sin cuentas en guia.md", slug, "detrás de «colabora:» van los correos de quienes colaboran, separados por comas")
         if not os.path.isdir(os.path.join(raiz, slug)):
-            h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
+            if area_restringida(celdas, cab_guia):
+                # restringida: en Drive, a quien no la lee ni le llega la carpeta; no se propone crearla ni quitarla (1.26.6)
+                notas_personas.append("el área restringida %s no está en esta copia de la carpeta: si existe, la verifica su responsable" % slug)
+            else:
+                h("área del mapa sin carpeta", slug, "está en la tabla de guia.md y no hay carpeta con ese nombre")
     if m and not guia_areas:
         h("tabla de áreas vacía", "guia.md")
     if REG["hay"]:
@@ -1257,7 +1306,7 @@ for area, aruta in areas:
                 continue
             for _n, _c in altas_provisionales(_l, REG):
                 notas_personas.append("%s (%s) colabora en %s y no está en «Quién es quién»: el responsable de contexto añade su línea y en el proyecto queda solo el nombre" % (_n, _c, rel(pruta)))
-            for _n in nombres_de(_l):
+            for _n in nombres_en_participa(_l):
                 _pp = persona(_n, REG)
                 if _pp is None and not (LINEA_COLABORA.match(_l) and re.search(re.escape(_n) + r"\s*\([^)]*@", _l)):
                     h("nombre que no está en «Quién es quién»", rel(pruta), "«%s», en «Quién participa»" % _n)

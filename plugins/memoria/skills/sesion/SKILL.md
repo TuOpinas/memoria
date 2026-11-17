@@ -1,6 +1,6 @@
 ---
 name: sesion
-description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto', y cuando el responsable de un proyecto pregunte por el suyo: '¿como va X?', '¿en que estatus esta X?', '¿que falta en X?'. Tambien los permisos de la carpeta compartida: 'revisa los permisos', 'aplica los permisos', '¿quien puede escribir donde?'.
+description: Abre y cierra sesiones de trabajo sobre un proyecto. Usala cuando digan 'abre sesion', 'retomamos X', 'en que quedamos con...', 'cierra la sesion', 'guarda lo de hoy', 'terminamos' o 'cierra el proyecto', y cuando el responsable de un proyecto pregunte por el suyo: '¿como va X?', '¿en que estatus esta X?', '¿que falta en X?'. Tambien los permisos de la carpeta compartida: 'revisa los permisos', 'aplica los permisos', '¿quien puede escribir donde?'; y el mantenimiento de la carpeta: 'haz el mantenimiento de la carpeta', 'programa el mantenimiento'.
 ---
 
 # Sesión
@@ -15,6 +15,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Este archivo es lo que 
 - `premisas.md`: registrar, cambiar o retirar una premisa, en la sesión del responsable de contexto.
 - `sin-carpeta.md`: abrir, consultar o preguntar al director sin ninguna carpeta conectada, leyendo la raíz en Drive.
 - `permisos.md`: revisar y aplicar los permisos de Drive («revisa los permisos», «aplica los permisos»).
+- `mantenimiento.md`: el mantenimiento de la carpeta en siete temas (seis de uso y la estructura), arreglar con el sí lo propio y programarlo como tarea («haz el mantenimiento de la carpeta», «haz el mantenimiento de lo mío», «verifica la carpeta», «programa el mantenimiento», 1.26.6).
 
 Abrir solo lee. Antes de escribir cualquier cosa en la carpeta se carga el anexo `escribir.md` de `convenciones`, aunque sea una línea; para guardar un documento, mover algo o crear, `convenciones` entera.
 
