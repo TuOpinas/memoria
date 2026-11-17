@@ -98,10 +98,14 @@ def sin_lo_de_fechas(t):
     t = re.sub(r"=== REGISTROS.*?(?====)", "", t, flags=re.S)
     # «Claude outputs» sin consola no está en la copia: se mira con device_list_dir (sale al final, en todos los modos)
     t = re.sub(r"=== CLAUDE OUTPUTS.*", "", t, flags=re.S)
-    return [l for l in t.split("\n") if "Trabajo sin sesión" not in l and "fecha de archivo" not in l]
+    # taller/ y fuentes/ no vienen en la copia (1.26.3): sin consola el inventario no los cuenta ni avisa de notas sueltas
+    t = re.sub(r"^(taller/|fuentes/|- taller/).*\n?", "", t, flags=re.M)
+    t = re.sub(r"^- (\S+\.md) · (\S+) · actualizado (\S+) · [^·\n]+", r"- \1 · \2 · actualizado \3", t, flags=re.M)   # el tamaño de la copia puede diferir
+    return [l for l in t.split("\n") if "Trabajo sin sesión" not in l and "fecha de archivo" not in l and "Notas de taller que nada cita" not in l]
 
 
 ok(sin_lo_de_fechas(a_raiz) == sin_lo_de_fechas(a_copia), "dice lo mismo que en la computadora, salvo las fechas de archivo")
+ok("taller/ y fuentes/: no vienen enteros en la copia" in a_copia and "Notas de taller que nada cita" not in a_copia, "sin consola dice que el taller no se cuenta y no da el aviso de notas sueltas (1.26.3)")
 ok("mtimeMs mayor o igual que" in a_copia, "da el instante desde el que mirar el trabajo sin sesión en el listado")
 ok("bytes (sin consola" in a_copia and not re.search(r"proyecto\.md: 20\d\d-", a_copia), "REGISTROS sin la hora de la copia")
 # --listado: el listado de device_list_dir de la carpeta del proyecto, tal cual; abrir.py calcula el trabajo sin sesión

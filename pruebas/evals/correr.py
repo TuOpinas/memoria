@@ -417,6 +417,45 @@ def _(ctx, arg):
     return (not n), ("sin device_bash en el primer turno" if not n else f"{len(n)} device_bash en el primer turno")
 
 
+@comprobacion("orden")
+def _(ctx, arg):
+    """orden <ruta> <texto> | <texto> | …: el archivo de la raíz tiene los textos en ese orden, sin distinguir mayúsculas (1.26.3)."""
+    r, _, resto = arg.partition(" ")
+    p = ctx["raiz"] / r
+    t = p.read_text(encoding="utf-8", errors="replace").lower() if p.exists() else ""
+    pos, donde = -1, []
+    for x in (s.strip().lower() for s in resto.split("|")):
+        i = t.find(x, pos + 1)
+        if i < 0:
+            return False, f"«{x}» no está en {r} después de lo anterior ({donde})"
+        donde.append(i); pos = i
+    return True, f"en orden en {r}"
+
+
+@comprobacion("basado-en")
+def _(ctx, arg):
+    """basado-en <ruta> <texto>: la cabecera del archivo tiene el texto en su basado_en (1.26.3)."""
+    r, _, texto = arg.partition(" ")
+    p = ctx["raiz"] / r
+    t = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
+    m = re.match(r"^---\n(.*?)\n---", t, re.S)
+    b = re.search(r"^basado_en\s*:(.*(?:\n[ \t]*-.*)*)", m.group(1), re.M) if m else None
+    bien = bool(b) and texto in b.group(1)
+    return bien, f"«{texto}» {'está' if bien else 'no está'} en el basado_en de {r}"
+
+
+@comprobacion("decision-reemplaza")
+def _(ctx, arg):
+    """decision-reemplaza <area>/<proyecto> <texto>: la decisión de hoy de arriba lleva «Reemplaza:» con el texto (1.26.3)."""
+    a, _, texto = arg.partition(" ")
+    p = ctx["raiz"] / a / "decisiones.md"
+    t = p.read_text(encoding="utf-8") if p.exists() else ""
+    m = re.search(r"^## " + re.escape(HOY) + r" · .*?(?=^## |\Z)", t, re.M | re.S)
+    linea = re.search(r"^Reemplaza\s*:.*$", m.group(0), re.M) if m else None
+    bien = bool(linea) and texto.lower() in linea.group(0).lower()
+    return bien, (linea.group(0)[:120] if linea else ("la decisión de hoy no lleva «Reemplaza:»" if m else "sin decisión de hoy"))
+
+
 @comprobacion("apertura-minima")
 def _(ctx, arg):
     for t in ctx["turnos"]:

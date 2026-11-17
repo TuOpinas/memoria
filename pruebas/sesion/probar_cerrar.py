@@ -351,5 +351,50 @@ ok("cierre A" in ses7 and "cierre B" in ses7 and "## 2026-10-01 (propuesta envia
 ok("- Firmar con Cliente Uno." in pro7 and "(B)." in pro7, "los pasos que cambió cada cierre quedan los dos")
 ok(any(a["ruta"] == "ventas/cuentas/sesiones.md" for a in salidas["B"]["ajenos"]) and not any(a["ruta"] == "ventas/cuentas/sesiones.md" for a in salidas["A"]["ajenos"]), f"cada cierre dice lo que escribió el otro y nunca lo suyo (A: {[a['ruta'] for a in salidas['A']['ajenos']]}; B: {[a['ruta'] for a in salidas['B']['ajenos']]})")
 
+print("--comprobar: decisiones parecidas y notas sin atar (1.26.3)")
+RC = raiz_nueva()
+dec_c = f"## {HOY} · Cliente Uno se sigue atendiendo desde operación, no desde ventas\nDecidió: Ana Prueba\nPor qué: soporte la lleva entera."
+antes_c = {q: q.read_bytes() for q in RC.rglob("*") if q.is_file()}
+def ids_de(s):
+    return [x["id"] for p_ in (s.get("parecidas") or []) for x in p_["parecidas"]]
+c, s = corre(RC, {"decisiones": [dec_c]}, "--comprobar")
+ok(c == 0 and ids_de(s) == ["ventas/cuentas#2026-09-26"], f"enseña la decisión vigente con un título parecido, con su identificador ({ids_de(s) if c == 0 else s})")
+ok("ventas/cuentas#2026-09-20" not in ids_de(s), "no la que otra decisión ya reemplazó (la 2026-09-26 reemplaza a la 2026-09-20)")
+ok(all(q.read_bytes() == b for q, b in antes_c.items()), "no escribe nada")
+c, s = corre(RC, {"decisiones": [dec_c + "\nReemplaza: ventas/cuentas#2026-09-26 · Cliente Uno se sigue atendiendo desde ventas"]}, "--comprobar")
+ok(c == 0 and ids_de(s) == [], f"la que su «Reemplaza:» ya nombra no sale ({ids_de(s)})")
+c, s = corre(RC, {"decisiones": [dec_c + "\nReemplaza: operacion/soporte#2026-09-26 · otra cosa"]}, "--comprobar")
+ok(c == 0 and ids_de(s) == ["ventas/cuentas#2026-09-26"], f"un «Reemplaza:» a otro proyecto con la misma fecha no la esconde ({ids_de(s)})")
+c, s = corre(RC, {"decisiones": [f"## {HOY} · El soporte de Cliente Uno responde en menos de 24 horas\nDecidió: Ana Prueba\nPor qué: x."]}, "--comprobar")
+ok(c == 0 and ids_de(s) == [], f"en un registro pequeño, compartir «Cliente» y «soporte» no basta: la decisión del eval 03 no trae ninguna ({ids_de(s)})")
+# un registro de 24 decisiones donde «plugin» está en casi todas: sola no cuenta, y la reversión de verdad sí sale
+RG = raiz_nueva(); pg = RG / "ventas/cuentas/decisiones.md"
+filas = "".join(f"## 2026-10-{i:02d} · El plugin {x} tema {i}\nDecidió: Ana Prueba\nPor qué: x.\n\n" for i, x in enumerate(["cambia"] * 22, 1))
+pg.write_text("---\nestado: vigente\n---\n# Decisiones\n\n" + filas + "## 2026-10-30 · El modo local del plugin queda congelado: solo arreglos\nDecidió: Ana Prueba\nPor qué: x.\n\n"
+              "## 2026-10-31 · Los informes de revisión se miden por tamaño\nDecidió: Ana Prueba\nPor qué: x.\n", encoding="utf-8")
+c, s = corre(RG, {"decisiones": [f"## {HOY} · El plugin congelado admite arreglos de mantenimiento en su modo local\nDecidió: Ana Prueba\nPor qué: x."]}, "--comprobar")
+ok(c == 0 and ids_de(s) == ["ventas/cuentas#2026-10-30"], f"en un registro grande, la palabra de casi todos los títulos no cuenta y la reversión sí sale ({ids_de(s) if c == 0 else s})")
+(RC / "ventas/cuentas/taller/nota-nueva.md").write_text("---\nestado: borrador\nactualizado: 2026-11-01\n---\n# Nota\n", encoding="utf-8")
+(RC / "ventas/cuentas/taller/nota-de-base.md").write_text("---\nestado: borrador\nactualizado: 2026-11-01\n---\n# Nota\n", encoding="utf-8")
+base_ = {"sesion": SESION, "escribio": ["taller/nota-nueva.md", "taller/nota-de-base.md"]}
+c, s = corre(RC, base_, "--comprobar")
+ok(c == 0 and sorted(s.get("sin_citar", [])) == ["taller/nota-de-base.md", "taller/nota-nueva.md"], f"las notas que la sesión escribió y nada cita ({s.get('sin_citar') if c == 0 else s})")
+c, s = corre(RC, base_, "--comprobar", "--sin-fechas")
+ok(c == 0 and "sin_citar" not in s, "sin consola no hay «sin_citar»: la copia no trae el taller")
+c, s = corre(RC, dict(base_, proyecto={"reemplazos": "x"}), "--comprobar")
+ok(c == 0 and isinstance(s, dict) and "sin_citar" in s, f"unos «reemplazos» que no son lista no tumban --comprobar ({str(s)[:120]})")
+c, s = corre(RC, dict(base_, proyecto={"reemplazos": [{"de": "- Sostener la llamada semanal con cada cliente.", "a": "- Sostener la llamada semanal («taller/nota-nueva.md»)."}]},
+                       otros=[{"ruta": "ventas/cuentas/entregables/kit-cuentas.md", "reemplazos": [{"de": "basado_en:", "a": "basado_en:\n  - ventas/cuentas/taller/nota-de-base.md"}]}]), "--comprobar")
+ok(c == 0 and s.get("sin_citar") == [], f"cuenta lo que este cierre va a escribir: un paso nuevo con «» y un basado_en en «otros» ({s.get('sin_citar') if c == 0 else s})")
+c, s = corre(RC, dict(base_, proyecto={"reemplazos": [{"de": "- ESTE TEXTO NO EXISTE.", "a": "- Con `taller/nota-nueva.md`."}]}), "--comprobar")
+ok(c == 0 and "taller/nota-nueva.md" in s.get("sin_citar", []), "un reemplazo que no cuadra no cuenta como cita")
+# atar con el cierre y abrir después: la apertura ya no la avisa (las dos usan la misma regla)
+c, s = corre(RC, dict(base_, otros=[{"ruta": "ventas/cuentas/entregables/kit-cuentas.md", "reemplazos": [{"de": "basado_en:", "a": "basado_en:\n  - ventas/cuentas/taller/nota-de-base.md\n  - taller/nota-nueva.md"}]}]),
+             "--cuenta", "ana@ejemplo.test")
+ABRIR_ = CERRAR.parent / "abrir.py"
+o_ = subprocess.run([sys.executable, str(ABRIR_), str(RC), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+av_ = next((l for l in o_.split("=== AVISOS")[1].split("\n") if "Notas de taller que nada cita" in l), "")
+ok(c == 0 and "nota-nueva" not in av_ and "nota-de-base" not in av_, f"lo que el cierre ata, la apertura siguiente no lo avisa ({av_[:160]})")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

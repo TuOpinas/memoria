@@ -13,17 +13,20 @@ sin guia.md entero, sin premisas y sin proyecto activo aunque se pase uno. Lo su
 modos, al final, también al abrir un proyecto, porque la primera respuesta de la conversación lo dice siempre.
 
 Sin proyecto imprime el nivel 0 (primera línea de metodo.md, guia.md, premisas vigentes) y la lista de proyectos de
-cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md,
-las cinco decisiones y las tres sesiones más recientes, las cabeceras de entregables/) y los avisos de apertura:
-cuestionamientos abiertos, decisiones de otros proyectos que lo nombran en «Afecta a:», entregables desfasados o en
-borrador viejo, trabajo sin sesión y la fecha de base/contexto.md. Con --cuenta dice qué áreas son de esa cuenta y,
+cada área legible, para saber cuál se abre. Con proyecto añade el nivel 1 (el bloque Proyectos de su área, proyecto.md
+con sus diez primeros siguientes pasos y la cuenta del resto, las cinco decisiones y las tres sesiones más recientes, las
+cabeceras de entregables/), el INVENTARIO de lo que no imprimió (cuántas entradas tienen los registros y cuánto pesan con
+sus archivados, las notas de taller/ y los informes de revisión con su tamaño y las cinco notas más recientes por su
+cabecera, las filas de fuentes/inventario.md: 1.26.3) y los avisos de apertura: cuestionamientos abiertos, decisiones de
+otros proyectos que lo nombran en «Afecta a:», entregables desfasados o en borrador viejo, trabajo sin sesión, notas de
+taller que nada del proyecto cita (1.26.3) y la fecha de base/contexto.md. Con --cuenta dice qué áreas son de esa cuenta y,
 si es la del responsable de contexto, también los cuestionamientos a premisas. Con --plugin compara la versión y la
 huella del metodo.md de la raíz con las del plugin, en numérico («1.14.10» es mayor que «1.14.9»), y dice el veredicto:
 RAIZ ATRASADA (se copia el del plugin), AL DIA, PLUGIN ATRASADO (no se copia nada y se avisa) o MISMA VERSION, HUELLA
 DISTINTA (no se toca). La comparación la hace el script, no quien lo lee.
 
-Nunca abre taller/, fuentes/, restringido/ ni base/ (salvo premisas.md y la cabecera de contexto.md; de taller/ y fuentes/
-del proyecto activo solo mira fechas), ni las sesiones de otros proyectos, ni los proyectos que no están en el índice de su
+Nunca abre taller/, fuentes/, restringido/ ni base/ (salvo premisas.md y la cabecera de contexto.md; de taller/ del
+proyecto activo solo mira fechas, tamaños y cabeceras, y de fuentes/ fechas y las filas de su inventario), ni las sesiones de otros proyectos, ni los proyectos que no están en el índice de su
 área (salvo el activo). De las demás decisiones solo mira las líneas «Afecta a:», «Cuestiona a:» y «Responde a:»
 y la cabecera de su entrada. Lo restringido no sale salvo que el proyecto activo esté dentro, y lo que no se deja leer
 se cuenta, sin suponer qué hay.
@@ -43,7 +46,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.26.2"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.3"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):
@@ -268,6 +271,51 @@ def mtime(p):
 
 def titulo(n):
     print(f"\n=== {n}")
+
+
+def tam(p):
+    try:
+        return pathlib.Path(p).stat().st_size
+    except OSError:
+        return 0
+
+
+def kb(b):
+    return f"{b / 1000:.0f} KB" if b >= 1000 else f"{b} bytes"
+
+
+def cabeza_de(p):
+    """El principio de un .md, sin leer su cuerpo: los primeros 16 KB bastan para cualquier cabecera. Lo que no se deja leer
+    se cuenta, como en leer()."""
+    try:
+        with open(p, "rb") as f:
+            return f.read(16384).decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+    except OSError:
+        no_legibles.append(rel(p))
+        return ""
+
+
+PASOS_IMPRESOS = 10   # «Siguientes pasos» que imprime la apertura; el resto se cuenta (1.26.3)
+
+
+def con_pasos_recortados(texto, n=PASOS_IMPRESOS):
+    """proyecto.md para imprimir, con «Siguientes pasos» en sus n primeros pasos y una línea que cuenta el resto. Solo
+    cambia lo que se imprime: el archivo no se toca. Un paso es una viñeta o un número al principio de la línea; lo
+    sangrado debajo va con su paso."""
+    m = re.search(r"^## Siguientes pasos[ \t]*\n(.*?)(?=^## |\Z)", texto, re.S | re.M)
+    if not m:
+        return texto
+    lineas = m.group(1).split("\n")
+    pasos = [i for i, l in enumerate(lineas) if re.match(r"^(?:[-*+]|\d+[.)])\s", l)]
+    if len(pasos) <= n:
+        return texto
+    cuerpo = "\n".join(lineas[:pasos[n]]).rstrip("\n")
+    k = len(pasos) - n
+    # texto que no es un paso ni va sangrado debajo de uno (un párrafo al final de la sección): se dice que queda
+    suelto = any(l.strip() and not l[:1].isspace() and not re.match(r"^(?:[-*+]|\d+[.)])\s", l) for l in lineas[pasos[n]:])
+    cuerpo += (f"\n- … y {k} {'paso' if k == 1 else 'pasos'} más en proyecto.md{', con texto debajo' if suelto else ''}, sin imprimir: "
+               "se leen cuando la pregunta los pide, y enteros antes de revisar los pasos al cerrar.\n")
+    return texto[:m.start(1)] + cuerpo + ("\n" if m.end(1) < len(texto) else "") + texto[m.end(1):]
 
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
@@ -2034,7 +2082,7 @@ if tp is None:
     respuesta(claude_outputs(), completa=True, sin_proyecto=True)
     sys.exit(0)
 titulo(f"PROYECTO {ACTIVO}/proyecto.md")
-print(tp.strip())
+print(con_pasos_recortados(tp.strip()))
 if CUENTA:
     # colaborar en un solo proyecto: una línea «Colabora:» en «Quién participa» con la cuenta entre paréntesis
     a_act = next((a for a in areas if a["slug"] == area_activa), None)
@@ -2104,7 +2152,7 @@ for n in nombres:
     fm, _ = cabecera(t)
     est, act = fm.get("estado", "?"), fm.get("actualizado", "?")
     base = fm.get("basado_en") if isinstance(fm.get("basado_en"), list) else []
-    print(f"- {n} · {est} · actualizado {act}" + (f" · basado_en: {', '.join(base)}" if base else ""))
+    print(f"- {n} · {est} · actualizado {act} · {kb(tam(p))}" + (f" · basado_en: {', '.join(base)}" if base else ""))
     ents.append((n, est, act))
     if est == "borrador" and fecha_ok(act) and (HOY - datetime.date.fromisoformat(act)).days > 30:
         avisos.append(f"Borrador viejo: entregables/{n} lleva {(HOY - datetime.date.fromisoformat(act)).days} días en borrador (actualizado {act}).")
@@ -2191,6 +2239,99 @@ if not SIN_FECHAS and ultima_ses and not cerrado:
                       + ", ".join(f"{k} {v}" for k, v in donde.items()) + ". Qué y cuándo: "
                       + "; ".join(f"{a} ({f} {h})".replace(" )", ")") for f, h, a in lista[:12]) + (" …" if len(lista) > 12 else "")
                       + ". Quién lo cambió no consta: se pregunta qué pasó y se propone registrarlo.")
+
+# ---------- el inventario: lo que esta apertura no imprimió, con cuánto pesa (1.26.3) ----------
+# Cuentas, tamaños y líneas de cabecera, nunca cuerpos: con él la sesión decide cuánto más lee (SKILL.md, «Cuánto se
+# lee»). Del taller del proyecto activo solo mira cabeceras, que son su parte pública (convenciones, sección 7).
+def notas_del_taller(pc_):
+    """(notas .md, otros archivos, informes) de taller/ del proyecto, como rutas dentro de él: sin lo que empieza por punto
+    ni restringido/; los informes de taller/revisiones-de-calidad/ aparte, porque se atan por su nombre (1.26.3). La misma
+    regla que sin_citar() de cerrar.py: si cambia aquí, cambia allí."""
+    notas_, otros_, informes_ = [], [], []
+    if not (pc_ / "taller").is_dir():
+        return notas_, otros_, informes_
+    for r_, ds, fs in os.walk(pc_ / "taller"):
+        ds[:] = sorted(x for x in ds if not x.startswith(".") and x != "restringido")
+        for f in sorted(fs):
+            if f.startswith("."):
+                continue
+            rr = pathlib.Path(r_, f).relative_to(pc_).as_posix()
+            (informes_ if rr.startswith("taller/revisiones-de-calidad/") else notas_ if f.endswith(".md") else otros_).append(rr)
+    return notas_, otros_, informes_
+
+
+def basado_en_de(texto):
+    """Las líneas de basado_en de una cabecera como texto donde buscar citas: en lista (sangrada o no) o en una línea."""
+    m = re.match(r"^---\n(.*?)\n---", texto or "", re.S)
+    b = re.search(r"^basado_en\s*:(.*(?:\n[ \t]*-.*)*)", m.group(1), re.M) if m else None
+    return b.group(1) if b else ""
+
+
+def citada(rr, activo, textos):
+    """Si alguno de los textos nombra la ruta rr del proyecto: sola, con «./», «../» o la ruta del proyecto delante, y
+    entre comillas, negritas o ángulos; nombres comparados en NFC. La misma función que en cerrar.py."""
+    import unicodedata
+    nfc = lambda s: unicodedata.normalize("NFC", s or "")
+    patron = re.compile(r"(?:^|(?<=[\s`'\"(\[,:·«*_<>]))(?:\./|(?:\.\./)+|" + re.escape(nfc(activo)) + r"/)?" + re.escape(nfc(rr)) + r"(?![\w/-])", re.M)
+    return any(patron.search(nfc(t)) for t in textos)
+
+
+titulo("INVENTARIO (lo que esta apertura no imprimió)")
+for nombre_r, txt_r, impresas in (("decisiones", dec_txt, 5), ("sesiones", ses_txt, len(ses))):
+    todos_r = sorted((n for n in os.listdir(pc) if re.match(rf"^{nombre_r}-\d{{4}}(-\d+)?\.md$", n)), reverse=True) if pc.is_dir() else []
+    recientes_r = [n for n in todos_r if int(n[len(nombre_r) + 1:len(nombre_r) + 5]) >= HOY.year - 1]
+    viejos_r = [n for n in todos_r if n not in recientes_r]
+    partes_r = [f"{len(entradas(leer(pc / (nombre_r + '.md')) or ''))} en {nombre_r}.md ({kb(tam(pc / (nombre_r + '.md')))})"]
+    partes_r += [f"{len(entradas(leer(pc / n) or ''))} en {n} ({kb(tam(pc / n))})" for n in recientes_r]
+    linea_r = f"{nombre_r}: {len(entradas(txt_r))} entradas, " + ", ".join(partes_r) + f"; se imprimieron {min(impresas, len(entradas(txt_r)))}."
+    if viejos_r:
+        linea_r += " Archivados anteriores, sin leer: " + ", ".join(f"{n} ({kb(tam(pc / n))})" for n in viejos_r) + "."
+    print(linea_r)
+# sin consola, la copia de espejo.py no trae taller/ ni fuentes/ (o solo lo que la sesión creó o la migración trajo): no se
+# cuentan nunca, para no dar por total lo que es una parte
+if SIN_FECHAS:
+    print("taller/ y fuentes/: no vienen enteros en la copia de una sesión sin consola; no se cuentan.")
+    notas, otros_taller, informes, cabezas, cab_notas = [], [], [], {}, {}
+else:
+    notas, otros_taller, informes = notas_del_taller(pc)
+    cabezas = {rr: cabeza_de(pc / rr) for rr in notas}   # solo la cabecera: los primeros 16 KB
+    cab_notas = {rr: cabecera(cabezas[rr])[0] for rr in notas}
+    if notas or otros_taller or informes:
+        print(f"taller/: {len(notas)} notas ({kb(sum(tam(pc / r) for r in notas))})"
+              + (f", {len(otros_taller)} {'archivo que no es nota' if len(otros_taller) == 1 else 'archivos que no son notas'} ({kb(sum(tam(pc / r) for r in otros_taller))})" if otros_taller else "")
+              + (f" y {len(informes)} informes de revisión en taller/revisiones-de-calidad/ ({kb(sum(tam(pc / r) for r in informes))})" if informes else "") + ".")
+    for rr in sorted(notas, key=lambda r: cab_notas[r].get("actualizado", "") if fecha_ok(cab_notas[r].get("actualizado", "")) else "", reverse=True)[:5]:
+        fm = cab_notas[rr]
+        print(f"- {rr} · {fm.get('estado', 'sin cabecera')} · actualizado {fm.get('actualizado', '?')} · {kb(tam(pc / rr))}"
+              + (f" · {str(fm.get('aportacion') or fm.get('afirma'))[:200]}" if fm.get("aportacion") or fm.get("afirma") else ""))
+    inv_f = next((pc / "fuentes" / n for n in ("inventario.md", "enlaces.md") if (pc / "fuentes" / n).is_file()), None)
+    if inv_f is not None:
+        lineas_f = (leer(inv_f) or "").split("\n")
+        sep_ = re.compile(r"^\|[\s:|-]+\|?\s*$")
+        # una fila de tabla que no es su encabezado (la línea antes del separador) ni el separador, o una viñeta
+        filas_f = sum(1 for i, l in enumerate(lineas_f) if (l.startswith("|") and not sep_.match(l) and not (i + 1 < len(lineas_f) and sep_.match(lineas_f[i + 1])))
+                      or re.match(r"^[-*] ", l))
+        print(f"fuentes/{inv_f.name}: {filas_f} {'fila' if filas_f == 1 else 'filas'} ({kb(tam(inv_f))}).")
+    elif (pc / "fuentes").is_dir():
+        print("fuentes/: sin inventario.")
+
+# una nota del taller está atada cuando algo del proyecto la nombra: proyecto.md, decisiones.md con sus archivados
+# recientes, o el basado_en de un entregable (con sus subcarpetas) o de otra nota. Los informes de revisión no cuentan ni
+# como notas ni como citas, y las notas reemplazadas no se avisan. La misma regla que sin_citar() de cerrar.py
+if notas and not cerrado:
+    bases = {rr: basado_en_de(cabezas[rr]) for rr in notas}
+    if d.is_dir():
+        for r_, ds, fs in os.walk(d):
+            ds[:] = [x for x in ds if not x.startswith(".") and x != "restringido"]
+            for f in fs:
+                if f.endswith(".md") and not f.startswith("."):
+                    bases[pathlib.Path(r_, f).relative_to(pc).as_posix()] = basado_en_de(leer(pathlib.Path(r_, f)))
+    sueltas = [rr for rr in notas if cab_notas[rr].get("estado") != "reemplazado"
+               and not citada(rr, ACTIVO, [tp, dec_txt] + [t for k, t in bases.items() if k != rr])]
+    if sueltas:
+        sueltas.sort(key=lambda r: cab_notas[r].get("actualizado", "") if fecha_ok(cab_notas[r].get("actualizado", "")) else "", reverse=True)
+        avisos.append(f"Notas de taller que nada cita: {len(sueltas)} de {len(notas)} (ni un basado_en del proyecto, ni proyecto.md, ni decisiones.md). "
+                      "Las más recientes: " + ", ".join(rr + (f" ({cab_notas[rr]['actualizado']})" if cab_notas[rr].get("actualizado") else "") for rr in sueltas[:5]) + ".")
 
 # ---------- el barrido: Afecta a / Cuestiona a / Responde a en toda la raíz ----------
 def proyectos_legibles():

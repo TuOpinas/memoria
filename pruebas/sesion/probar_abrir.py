@@ -365,6 +365,47 @@ for p1_, pide in (("Acme fabrica muebles para oficinas en Monterrey, como explic
     o = subprocess.run([sys.executable, str(ABRIR), str(RP), "--minima", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
     ok(("no dice qué es la organización" in o) == pide, f"«{p1_[:40]}…»: {'se pide escribirlo' if pide else 'no se pide'}")
 
+print("El inventario, el tope de los siguientes pasos y las notas sin citar (1.26.3)")
+RI = tmp / "raiz-inventario"; shutil.copytree(AQUI.parent / "tablero" / "raiz", RI)
+pi_ = RI / "ventas/cuentas"
+pro_ = (pi_ / "proyecto.md").read_text(encoding="utf-8")
+pasos_ = "".join(f"- PASO-{i:02d} del plan.\n  detalle sangrado del paso {i:02d}\n" for i in range(1, 15))
+(pi_ / "proyecto.md").write_text(re.sub(r"(## Siguientes pasos\n)(.*?)(?=\n## |\Z)", lambda m_: m_.group(1) + pasos_, pro_, flags=re.S), encoding="utf-8")
+(pi_ / "decisiones-2019.md").write_text("---\nestado: vigente\n---\n# Decisiones\n\n## 2019-01-01 · VIEJA\nDecidió: Ana Prueba\n", encoding="utf-8")
+(pi_ / "taller" / "revisiones-de-calidad").mkdir()
+(pi_ / "taller" / "revisiones-de-calidad" / "revision-de-calidad-1-0-0.md").write_text("---\nestado: vigente\n---\n# Informe\n", encoding="utf-8")
+(pi_ / "taller" / "nota-citada.md").write_text("---\nestado: borrador\nactualizado: 2026-09-30\naportacion: CITADA-EN-PROYECTO\n---\n# x\n", encoding="utf-8")
+(pi_ / "proyecto.md").write_text((pi_ / "proyecto.md").read_text(encoding="utf-8").replace("## Siguientes pasos\n", "## Siguientes pasos\n- Leer `taller/nota-citada.md` antes de seguir.\n"), encoding="utf-8")
+(pi_ / "fuentes").mkdir()
+(pi_ / "fuentes" / "inventario.md").write_text("# Inventario\n\n| Archivo | Qué es |\n|---|---|\n| a.pdf | uno |\n| b.pdf | dos |\n", encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(RI), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+pr_ = o.split("=== PROYECTO")[1].split("=== CUENTA EN EL PROYECTO")[0]
+ok("PASO-09" in pr_ and "PASO-10" not in pr_ and "detalle sangrado del paso 09" in pr_, "la apertura imprime diez pasos (con lo sangrado de cada uno) y no el undécimo")
+ok("y 5 pasos más en proyecto.md" in pr_ and "## Quién participa" in pr_, "cuenta los pasos que no imprimió y sigue con la sección siguiente")
+ok("PASO-14" in (pi_ / "proyecto.md").read_text(encoding="utf-8"), "el archivo no se toca")
+inv_ = o.split("=== INVENTARIO")[1].split("=== AVISOS")[0]
+ok("decisiones: 5 entradas" in inv_ and "decisiones-2019.md" in inv_ and "VIEJA" not in o, "cuenta las decisiones y nombra el archivado viejo sin leerlo")
+ok("taller/: 4 notas" in inv_ and "1 archivo que no es nota" in inv_ and "1 informes de revisión" in inv_, f"cuenta las notas y aparte los informes de revisión ({inv_.strip()[:200]})")
+ok("CITADA-EN-PROYECTO" in inv_ and "fuentes/inventario.md: 2 filas" in inv_ and "decisiones: 5 entradas, 5 en decisiones.md" in inv_, "da la aportación de las notas recientes y las filas del inventario de fuentes")
+av_ = o.split("=== AVISOS")[1]
+suelta_ = next((l for l in av_.split("\n") if "Notas de taller que nada cita" in l), "")
+ok(suelta_ and "nota-citada" not in suelta_ and "revision-de-calidad" not in suelta_ and "nota-anterior" not in suelta_,
+   f"una nota citada en proyecto.md, los informes de revisión y las reemplazadas no son notas sueltas ({suelta_[:160]})")
+ok("taller/borradores/nota-sub.md" in suelta_, "una nota en una subcarpeta que nada cita, sí")
+ok("boceto.xlsx" not in suelta_, "un archivo que no es nota no se avisa como suelto")
+# las formas de citar que la apertura y el cierre tienen que leer igual (revisión de la 1.26.3, hallazgos 3 y 4)
+(pi_ / "entregables" / "anexos" / "con-base.md").write_text("---\nestado: borrador\nactualizado: 2026-10-01\nbasado_en:\n- ventas/cuentas/taller/n-sub.md\n---\n# x\n", encoding="utf-8")
+(pi_ / "taller" / "revisiones-de-calidad" / "revision-de-calidad-1-0-0.md").write_text("---\nestado: vigente\nbasado_en:\n  - taller/n-informe.md\n---\n# Informe\n", encoding="utf-8")
+for n_ in ("n-sub", "n-informe", "n-comillas", "n-negrita", "n-relativa"):
+    (pi_ / "taller" / f"{n_}.md").write_text("---\nestado: borrador\nactualizado: 2026-10-01\n---\n# x\n", encoding="utf-8")
+(pi_ / "proyecto.md").write_text((pi_ / "proyecto.md").read_text(encoding="utf-8").replace("## Siguientes pasos\n", "## Siguientes pasos\n- Leer «taller/n-comillas.md» y **taller/n-negrita.md**, como dice ../taller/n-relativa.md.\n"), encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(RI), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+suelta_ = next((l for l in o.split("=== AVISOS")[1].split("\n") if "Notas de taller que nada cita" in l), "")
+ok(all(x not in suelta_ for x in ("n-sub", "n-comillas", "n-negrita", "n-relativa")), f"cuentan como cita un entregable en subcarpeta, «», ** y ../ ({suelta_[:200]})")
+ok("n-informe" in suelta_, "un informe de revisión no cita: la nota que solo él nombra sigue suelta")
+o_ = subprocess.run([sys.executable, str(ABRIR), str(RI), "ventas/margenes", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("Notas de taller que nada cita" not in o_ and "=== INVENTARIO" in o_, "un proyecto sin taller no da el aviso y tiene su inventario")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)
