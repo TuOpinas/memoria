@@ -764,7 +764,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.26.5"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.26.6"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -2880,6 +2880,7 @@ function ayudaArts(){
         <tr><td>${F("abre sesión en X")}<br>${F("¿en qué quedamos con X?")}<br>${F("¿cómo va X?")}</td><td>Te pone al día y propone por dónde seguir. Solo lee. Si X es un proyecto tuyo, preguntar cómo va ya abre la sesión.</td></tr>
         <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó y deja apuntado el cierre para que tu tablero te avise de que tiene algo nuevo que traer. Solo te pide el sí si queda una decisión por registrar o una pregunta.</td></tr>
         <tr><td>${F("¿qué sabemos de X?")}</td><td>Busca en toda la carpeta y te dice qué hay y dónde. No escribe nada.</td></tr>
+        <tr><td>${F("haz el mantenimiento de la carpeta")}<br>${F("haz el mantenimiento de lo mío")}<br>${F("verifica la carpeta")}<br>${F("programa el mantenimiento")}</td><td>Para quien administra la carpeta: revisa el uso de cada persona y la estructura, en siete temas, y te dice qué hacer y quién (<button type="button" class="lnk" data-help="mantener">Mantener la carpeta</button>). Cualquier responsable puede pedir lo suyo; la tercera es solo la estructura; la cuarta lo deja como tarea cada semana o cada mes.</td></tr>
         <tr><td>${F("¿dónde guardo esto?")} y pegas o adjuntas</td><td>Lo coloca en su sitio y te dice dónde quedó.</td></tr>
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
         <tr><td>${F("revisa X")}<br>${F("¿esto está listo?")}</td><td>Busca lo desfasado o sin fuente y te lo enseña.</td></tr>
@@ -2935,7 +2936,7 @@ function ayudaArts(){
       <dt>Por persona</dt><dd>Todos los que escriben en la carpeta, responsables y colaboradores de cada área y proyecto, también quien no hizo nada en el periodo, para darle seguimiento: abajo, en gris, quien no tuvo sesión, decisión ni documento, con la fecha de su última sesión. De cada uno, sesiones, decisiones, documentos escritos y publicados y tareas abiertas; lo que vale cero no se escribe. Al pasar por el nombre dice su papel. Un documento cuenta como escrito para quien lo escribió y como publicado para quien lo publicó: lo dicen las líneas «Escribió:» y «Publicó:» de cada sesión. Una sesión que no dice quién la cerró no se le cuenta a nadie. Las tareas abiertas son las de «Siguientes pasos» que nombran a la persona.</dd>
       <dt>Qué hay</dt><dd>En el área y el proyecto, lo que el trabajo ha producido. Primero, <b>Por poner al día</b>, si la memoria tiene algo flojo (un Estatus viejo, borradores viejos, tareas vencidas hace más de dos semanas, sugerencias), y su número es el de la pestaña. Después, un resumen de <b>Lo publicado</b> y de lo que hay <b>En el taller</b>, con cuántos documentos están vigentes y en borrador y cuáles se quedaron viejos frente a una decisión posterior. Debajo, plegados para consultar, los entregables, el taller y todas las tareas del proyecto. Cada pieza lleva su estado, su fecha y la línea de su cabecera que dice qué aporta; la reemplazada dice por cuál. Una frase de resumen que sugirió la memoria sale como «provisional» hasta que el próximo cierre del proyecto la escribe.</dd>
       <dt>Consulta</dt><dd>En el índice: <b>Agenda</b> (lo que tiene fecha, los próximos catorce días y lo vencido), <b>Decisiones</b> (por área o por persona, primero las de dentro y después las de fuera) y <b>Entregables</b> (lo publicado, con lo que aporta y cuántos proyectos lo citan).</dd>
-      <dt>Mantenimiento</dt><dd>Solo en Inicio: <b>Arreglar ya</b>, lo que estorba hoy, que es el único número y, cuando trae algo, saca una línea amarilla encima de las pestañas; <b>Proyectos por poner al día</b>; y, plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». Lo explica <button type="button" class="lnk" data-help="por-donde-empezar">Lo que te propone Inicio</button>.</dd>
+      <dt>Mantenimiento</dt><dd>Solo en Inicio: <b>Arreglar ya</b>, lo que estorba hoy, que es el único número y, cuando trae algo, saca una línea amarilla encima de las pestañas; <b>Proyectos por poner al día</b>; y, plegado al final, lo marcado aquí que la carpeta aún no refleja, con «Deshacer». Lo explica <button type="button" class="lnk" data-help="por-donde-empezar">Lo que te propone Inicio</button>. La revisión de fondo, cada semana o cada mes, es otra: <button type="button" class="lnk" data-help="mantener">Mantener la carpeta</button>.</dd>
       <dt>Actuar desde él</dt><dd>Lo que marcas aquí queda pendiente (⟳) hasta que está escrito en la carpeta: <button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>.</dd>
       <dt>Personas de fuera y frases provisionales</dt><dd>Alguien de fuera de la organización sale en «Esperas a» y en «Por persona» cuando la tarea o el Estatus lo nombra como «Nombre Apellido (Organización)». Una frase de resumen que sugirió la memoria sale como provisional, y solo la acepta el dueño del tablero en los proyectos donde su cuenta escribe.</dd>
     </dl>`},
@@ -3036,6 +3037,43 @@ function ayudaArts(){
       <dt>Quién lo arregla</dt><dd>Quien administra la carpeta. «Aplicar con Claude» copia ${F("aplica los permisos")} para su sesión: Claude aplica lo que el conector de Drive permite, con su sí a la lista exacta, y el resto se hace desde Drive en la web. «Copiar para quien administra» copia la lista entera.</dd>
       <dt>Los roles</dt><dd>Los que tiene que dar Drive a cada quien están en <button type="button" class="lnk" data-help="carpeta-drive">Montar la carpeta en Drive</button>.</dd>
     </dl>`},
+  {g:"Mantenimiento de la carpeta", id:"mantener", t:"Mantener la carpeta", h:`
+    <p>Una memoria se ensucia sola: alguien deja de abrir sesión, un estatus se queda viejo, un archivo se guarda sin sesión, Drive duplica una versión. Quien administra la carpeta (quien responde por el contexto en tu guía) la revisa con una frase, ${F("haz el mantenimiento de la carpeta")}. Claude mira siete temas, seis de uso y la estructura, solo lee, y te dice en llano qué está bien, qué no y quién lo arregla. Como administras la carpeta, mira también las áreas restringidas, y la respuesta es solo para ti.</p>
+    <div class="hc-tbl"><table>
+      <thead><tr><th>Tema</th><th>Qué se mira</th><th>Si aparece</th></tr></thead>
+      <tbody>
+        <tr><td>Adopción</td><td>Quién cerró sesión esta semana o este mes, y quién no</td><td>Diez minutos con quien no abrió: casi siempre le falta un primer proyecto propio, con final y fecha.</td></tr>
+        <tr><td>Estatus al día</td><td>Proyectos y áreas con el estatus más viejo que su última sesión</td><td>Su responsable lo pone al día al cerrar la siguiente.</td></tr>
+        <tr><td>Decisiones en espera</td><td>Lo que te espera a ti y lo que espera a otros en proyectos que no llevan, y los cuestionamientos sin respuesta</td><td>Lo tuyo, decides tú, o dices quién puede decidir sin ti; un cuestionamiento lo responde el responsable de lo cuestionado.</td></tr>
+        <tr><td>Sincronización</td><td>Dos versiones de un mismo archivo, como «notas (1).md» junto a «notas.md»</td><td>No se borra nada: se abre sesión en ese proyecto y Claude junta las dos.</td></tr>
+        <tr><td>Trabajo fuera de la memoria</td><td>Lo que cambió después del último cierre de su proyecto, y proyectos con archivos y ninguna sesión</td><td>Se registra en la siguiente sesión de ese proyecto.</td></tr>
+        <tr><td>Versión y permisos</td><td>Quién trabaja con el plugin sin actualizar</td><td>La persona lo actualiza. Los permisos de Drive se revisan aparte, con ${F("revisa los permisos")}.</td></tr>
+        <tr><td>Estructura</td><td>Que cada área y cada proyecto tengan lo que el método pide</td><td>Claude te enseña la lista de lo que te toca y lo arregla con tu sí.</td></tr>
+      </tbody>
+    </table></div>
+    <dl class="hc-def">
+      <dt>Lo que arregla Claude</dt><dd>Al final te enseña la lista exacta de lo mecánico en las áreas donde eres responsable o colaboras (las carpetas que faltan, la línea de un entregable en su área) y pregunta «¿Arreglo esto?»; tu sí vale solo para esa lista. Lo que cambia nombres, borra, da de alta un proyecto o toca tu guía lo pregunta uno a uno.</dd>
+      <dt>Lo de los demás</dt><dd>A cada persona le deja la frase para su sesión. Cualquier responsable puede pedir ${F("haz el mantenimiento de lo mío")}: lo mismo, solo con sus áreas, y sin nada restringido que no lleve.</dd>
+      <dt>Solo la estructura</dt><dd>${F("verifica la carpeta")} hace solo el último tema.</dd>
+      <dt>Y la pestaña Mantenimiento</dt><dd>La de Inicio, en <button type="button" class="lnk" data-help="tablero">Tu tablero</button>, enseña cada día lo que estorba hoy en la carpeta. Este mantenimiento es la revisión de fondo, cada semana o cada mes.</dd>
+    </dl>`},
+  {g:"Mantenimiento de la carpeta", id:"mantenimiento-programado", t:"El mantenimiento cada semana o cada mes", h:`
+    <p>Para no tener que acordarte, ${F("programa el mantenimiento")} crea una tarea que lo hace sola y te avisa. Te pregunta cada cuánto: cada semana mientras el equipo arranca (los viernes a mediodía) y cada mes cuando ya trabaja solo (el primer viernes del mes). Cuando las semanas salgan limpias, pásalo a mensual con ${F("pasa el mantenimiento a mensual")}; el cambio lo apruebas en la app de esa computadora.</p>
+    <ul class="hc-l">
+      <li><b>No arregla nada sola.</b> Deja el resumen y la lista en su conversación y pregunta «¿Arreglo esto?». La abres cuando puedas y contestas.</li>
+      <li><b>Necesita tu computadora encendida</b>, con la app de Claude abierta y la carpeta montada en ella. Si a esa hora no lo está, te avisa y lo reintenta hasta las seis de la tarde; si sigue apagada, ese día no corre y te lo dice.</li>
+      <li><b>Aprobación automática.</b> Corre scripts en tu computadora sin nadie delante: en los ajustes de la tarea, «Automatically approve». Claude te dice al crearla qué quedó. Es para mirar: arreglar siempre espera tu respuesta.</li>
+      <li><b>Si cambias de computadora</b>, desde la nueva vuelves a decir ${F("programa el mantenimiento")}: Claude crea la tarea ahí y apaga la de la computadora vieja.</li>
+    </ul>`},
+  {g:"Mantenimiento de la carpeta", id:"acompanar", t:"Acompañar al equipo", h:`
+    <p>La memoria funciona cuando cada persona la usa en su propio trabajo. Lo que más ayuda en las primeras semanas:</p>
+    <ul class="hc-l">
+      <li><b>Cada quien entra con su primer proyecto ya nombrado</b>, con final y fecha: el que su área propone en su estatus. Quien trabaja en un proyecto que no creó, o sin frente propio, deja de abrir sesión.</li>
+      <li><b>Entran por tandas</b>, con <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button> y ${F("revisa los permisos")} antes de mandar el correo de conexión. Quien recibe encargos de otros es buena primera tanda: al entrar, encuentra lo que se espera de él.</li>
+      <li><b>Tu lista de decisiones crece con el equipo.</b> Mírala al abrir sesión y di qué puede decidir cada responsable sin ti.</li>
+      <li><b>Lo que no pasa por una sesión no existe para los demás.</b> Un plan en un documento suelto o un archivo guardado sin sesión se registra en la siguiente sesión de su proyecto.</li>
+    </ul>
+    <p class="hc-nota"><b>Tres hábitos para todo el equipo</b>, que evitan casi todos los problemas de sincronización: Google Drive abierto y al día antes de abrir sesión; una sola persona cierra un proyecto a la vez; y la computadora encendida unos minutos después de cerrar, para que suba lo escrito.</p>`},
   {g:"Anclar y cuestionar", id:"premisas", t:"Premisas y cuestionamientos", h:`
     <h3 class="hc-h">Las premisas</h3>
     <p>Una premisa es algo que la dirección confirmó y sobre lo que todos construyen: «este año vendemos solo en México», «el producto se construye en inglés». Salen en el Estatus de Inicio, después de las áreas, y Claude las tiene presentes en cada sesión.</p>

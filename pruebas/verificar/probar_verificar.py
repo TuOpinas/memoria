@@ -91,5 +91,34 @@ ok(cuenta(r0.stdout) == cuenta(r.stdout) and "sin-charset.html" in r.stdout and 
 ok(r.returncode == rc0, "no cambia el código de salida")
 h2.unlink()
 shutil.rmtree(tmp, ignore_errors=True)
+print("verificar.sh: la prosa detrás de un nombre en «Quién participa» no es otra persona (1.26.6)")
+from comun import raiz_migrada
+RQ, _ = raiz_migrada()
+MIG_ = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "sesion" / "migrar_estructura.py"
+subprocess.run([sys.executable, str(MIG_), str(RQ), "--cuenta", "ana@ejemplo.test", "--personas", "--plugin", "1.26.0",
+                "--nombres", "carla@ejemplo.test=Carla Prueba,eva@ejemplo.test=Eva Prueba"], capture_output=True, text=True)
+pq = RQ / "ventas" / "cuentas" / "proyecto.md"
+tq = pq.read_text(encoding="utf-8")
+tq = re.sub(r"(## Quién participa\n)(.*?)(?=\n## |\Z)", lambda m_: m_.group(1) + "Responsable: Ana Prueba (ventas), de forma provisional, dueña del plan y de los precios.\nColabora: Persona Desconocida\n", tq, flags=re.S)
+pq.write_text(tq, encoding="utf-8")
+outq = subprocess.run(["bash", str(VER), str(RQ)], capture_output=True, text=True).stdout
+lq = [l for l in outq.split("\n") if "Quién es quién" in l and "ventas/cuentas" in l]
+ok(not any("provisional" in l or "dueña" in l or "precios" in l for l in lq), f"«, de forma provisional» y «, dueña del plan…» no salen como nombres ({lq})")
+ok(any("Persona Desconocida" in l for l in lq), "un nombre de verdad que no está en el registro sí sale")
+
+for linea_, falta_ in (("Responsable: Ana Prueba y Mayra Ruiz", "Mayra Ruiz"), ("Responsable: Ana Prueba, Mayra Ruiz", "Mayra Ruiz"),
+                       ("Responsable: Ana Lopes, provisional", "Ana Lopes")):
+    tq2 = re.sub(r"(## Quién participa\n)(.*?)(?=\n## |\Z)", lambda m_: m_.group(1) + linea_ + "\n", tq, flags=re.S)
+    pq.write_text(tq2, encoding="utf-8")
+    outq2 = subprocess.run(["bash", str(VER), str(RQ)], capture_output=True, text=True).stdout
+    ok(any(falta_ in l and "ventas/cuentas" in l for l in outq2.split("\n")), f"«{linea_}»: {falta_} sale como nombre que falta")
+pq.write_text(tq, encoding="utf-8")
+(RQ / "guia.md").rename(RQ / "guia (1).md")
+rq_ = subprocess.run(["bash", str(VER), str(RQ)], capture_output=True, text=True)
+ok(rq_.returncode == 1 and "falta guia.md" in rq_.stdout, f"una raíz con metodo.md y sin guia.md es un hallazgo, no un 2 ({rq_.returncode})")
+(RQ / "guia (1).md").rename(RQ / "guia.md")
+rq_ = subprocess.run(["bash", str(VER), str(RQ / "ventas")], capture_output=True, text=True)
+ok(rq_.returncode == 2, f"una ruta que no es raíz sale con 2 ({rq_.returncode})")
+
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

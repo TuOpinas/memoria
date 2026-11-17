@@ -161,7 +161,10 @@ def aplicar_paso(e, raiz, paso):
 
 def huellas(raiz):
     out = {}
-    for d, _, fs in os.walk(raiz):
+    for d, ds, fs in os.walk(raiz):
+        # una carpeta nueva y vacía también es una escritura (1.26.6: el mantenimiento crea las que faltan)
+        for x in ds:
+            out[pathlib.Path(d, x).relative_to(raiz).as_posix() + "/"] = "carpeta"
         for f in fs:
             p = pathlib.Path(d, f)
             out[p.relative_to(raiz).as_posix()] = hashlib.sha1(p.read_bytes()).hexdigest()
@@ -211,7 +214,7 @@ def preparar_plugin(origen, trabajo):
 def sembrar_scripts(plugin, hogar):
     """Lo que las skills traen a la computadora con DESCARGA, ya puesto: así no hace falta red y se prueba la rama."""
     # metodo.md también (1.24.8; desde la 1.24.9 la mínima lo escribe con device_commit_files y no lo necesita aquí)
-    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "metodo.md"]),
+    for destino, rutas in (("memoria", ["skills/sesion/abrir.py", "skills/sesion/permisos.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "metodo.md", "verificar.sh", "skills/sesion/mantenimiento.py"]),
                            ("tablero", ["skills/tablero/generar_vista.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/plan_subida.py"])):
         d = hogar / destino
         d.mkdir(parents=True, exist_ok=True)
@@ -331,6 +334,17 @@ def _(ctx, arg):
     t = texto_de(ctx["turnos"][0])
     hay = en_tabla(t, r"Memoria de trabajo ·")
     return hay, "en la primera respuesta" if hay else ("no es una tabla de una columna fuera de cita y de código" if "Memoria de trabajo ·" in t else "no está en la primera respuesta")
+
+
+@comprobacion("tabla")
+def _(ctx, arg):
+    """tabla <texto>[@N]: alguna respuesta (o la del turno N) lleva un recuadro cuya cabecera empieza por el texto, como
+    tabla de una columna fuera de cita y de código (1.26.6: «Memoria · mantenimiento»)."""
+    texto, _, n = arg.partition("@")
+    turnos = [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
+    pat = re.escape(texto.strip()).replace("·", "(?:·|·)")
+    hay = any(en_tabla(texto_de(t), pat) for t in turnos)
+    return hay, "es una tabla" if hay else f"«{texto.strip()}» no es la cabecera de una tabla de una columna"
 
 
 @comprobacion("recuadro-cierre")
@@ -696,6 +710,12 @@ def _(ctx, arg):
     """cambia <ruta>: el archivo cambió."""
     c = cambiados(ctx["antes"], ctx["turnos"][-1]["huellas"])
     return arg in c, f"{arg} {'cambió' if arg in c else 'no cambió'}"
+
+
+@comprobacion("existe")
+def _(ctx, arg):
+    """existe <ruta>: el archivo o la carpeta existe en la raíz al final (1.26.6)."""
+    return (ctx["raiz"] / arg).exists(), f"{arg} {'existe' if (ctx['raiz'] / arg).exists() else 'no existe'}"
 
 
 @comprobacion("no-existe")
