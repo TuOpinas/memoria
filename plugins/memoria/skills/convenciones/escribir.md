@@ -103,6 +103,8 @@ A una persona de fuera de la organización (de un cliente, un proveedor, un soci
 
 ### Qué guarda el cierre y qué no
 
+Vale también para una decisión que se registra a mitad de sesión (1.26.5): pasa por este filtro antes de enseñarse.
+
 **Siempre**: la entrada de la sesión; las decisiones confirmadas, con su porqué y lo que se descartó; `Estatus` y `Siguientes pasos` al día; el estado de cada entregable que se tocó (su cabecera y su fila en `area.md`).
 
 **Nunca**:
@@ -182,7 +184,7 @@ Las entradas escritas antes de adoptar este formato se dejan tal cual; el format
 
 ### Aviso entre áreas
 
-La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo o su área entera (`area/`) (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado y avisan a quien lo planteó, en su proyecto, de que le respondieron. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al cerrar sesión, si una decisión afecta a otra área, se recuerda al usuario que avise a su responsable.
+La carpeta no notifica a nadie. Por eso `Afecta a` puede nombrar proyectos de otras áreas: al abrir sesión se buscan, en los `decisiones.md` de la raíz, las líneas `Afecta a:` y `Cuestiona a:` que nombren el proyecto activo o su área entera (`area/`) (y, en la sesión del responsable de contexto, las que nombren una premisa), y las `Responde a:`, que dicen qué cuestionamiento ya está cerrado y avisan a quien lo planteó, en su proyecto, de que le respondieron. Es una búsqueda de un patrón de línea, no una lectura de archivos, y es la única operación que recorre la raíz entera al abrir. Al registrar una decisión que afecta a otra área, a mitad de sesión o al cerrar, se recuerda al usuario que avise a su responsable.
 
 ## 5. Cabecera
 

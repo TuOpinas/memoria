@@ -503,5 +503,13 @@ c, s = corre(RQ, dict(CAMBIOS, decisiones=[DEC.replace("es la condición para fi
 i_d = next((i for i, x in enumerate(s["respuesta"]) if "«distintas»" in x), 99); i_m = next((i for i, x in enumerate(s["respuesta"]) if "db_write" in x), -1)
 ok(c == 0 and i_d < i_m, f"en el cierre, «distintas» es un pendiente que va antes de la marca del tablero ({i_d}, {i_m})")
 
+print("cerrar.py: a quién avisar a mitad de sesión (1.26.5)")
+RA = raiz_nueva()
+c, s = corre(RA, {"decisiones": [DEC + "\nAfecta a: operacion/soporte (abre las incidencias)"]}, "--abierto", ABIERTO_)
+ok(c == 0 and s.get("registradas") and s["registradas"][0].get("afecta", "").startswith("operacion/soporte") and any("a quién avisar" in x for x in s["respuesta"]),
+   f"la decisión registrada lleva su «Afecta a» y la respuesta pide el aviso ({s.get('registradas') if c == 0 else s})")
+c, s = corre(raiz_nueva(), {"decisiones": [DEC2]}, "--abierto", ABIERTO_)
+ok(c == 0 and not any("a quién avisar" in x for x in s["respuesta"]), "sin «Afecta a» ni cuestionamiento, no pide aviso")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

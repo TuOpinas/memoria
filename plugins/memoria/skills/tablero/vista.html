@@ -764,7 +764,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.26.4"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.26.5"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -2785,14 +2785,14 @@ function ayudaArts(){
     <p>La memoria de ${ORG} es una carpeta compartida, ordenada por áreas y, dentro de cada área, por proyectos. Claude la lee antes de ayudarte y escribe en ella lo que importa mientras trabajas.</p>
     <ul class="hc-l">
       <li><b>Te conectas una vez</b>, en unos quince minutos: la app de escritorio, tu proyecto en Claude, la carpeta y el plugin <code>memoria</code> (<button type="button" class="lnk" data-help="conectarte">Conéctate una vez</button>).</li>
-      <li><b>Trabajas por sesiones.</b> Empiezas con ${F("abre sesión en…")} y terminas con ${F("cierra la sesión")}. Claude te pone al día al abrir y deja escrito lo que pasó al cerrar.</li>
+      <li><b>Trabajas por sesiones.</b> Empiezas con ${F("abre sesión en…")} y terminas con ${F("cierra la sesión")}. Claude te pone al día al abrir, registra cada decisión con tu sí cuando la tomas y deja escrito lo que pasó al cerrar.</li>
       <li><b>Hablas normal.</b> Unas pocas frases activan cada cosa (<button type="button" class="lnk" data-help="frases">Qué decirle a Claude</button>).</li>
       <li><b>Claude escribe solo en tu área</b> y nunca da nada por aprobado. Si algo toca a otra área, te dice a quién avisar.</li>
       <li><b>La historia no se borra.</b> Las decisiones y la bitácora de cada proyecto solo crecen: nadie edita lo que ya está registrado.</li>
       <li><b>Este tablero</b> es una ventana a la carpeta: se pone al día cuando se lo pides, avisa cuando hay sesiones que todavía no muestra, y te dice por dónde empezar.</li>
     </ul>`},
   {g:"Para empezar", id:"para-que", t:"Para qué sirve la memoria", h:`
-    <p>Cada conversación con Claude empieza de cero: lo que se le explicó ayer, en otra conversación o en la de un compañero, no lo sabe. La memoria hace que la siguiente conversación, la tuya o la de cualquiera de ${ORG}, empiece sabiendo lo que pasó. Cuesta dos frases por sesión, abrir y cerrar, y confirmar las decisiones al cerrar; a cambio, nadie vuelve a explicarle el contexto a nadie.</p>
+    <p>Cada conversación con Claude empieza de cero: lo que se le explicó ayer, en otra conversación o en la de un compañero, no lo sabe. La memoria hace que la siguiente conversación, la tuya o la de cualquiera de ${ORG}, empiece sabiendo lo que pasó. Cuesta dos frases por sesión, abrir y cerrar, y un sí a cada decisión cuando se toma; a cambio, nadie vuelve a explicarle el contexto a nadie.</p>
     <dl class="hc-def">
       <dt>Claude es muchos agentes</dt><dd>En cada conversación Claude hace de un especialista distinto, según lo que le pidas: el abogado que revisa un contrato, el comercial que prepara una propuesta, el desarrollador que programa un cambio, el analista que compara opciones. Sin memoria, son desconocidos entre sí. Con ella, todos leen la misma carpeta: el contrato que revisó uno es el que cita el otro en la propuesta, y la decisión de producto de la semana pasada es la que el desarrollador respeta hoy. Trabajan como empleados de ${ORG} que comparten el mismo archivo.</dd>
       <dt>Personas y agentes, coordinados</dt><dd>Cada persona trabaja con su propio Claude, en su área. Lo que una decide queda escrito donde la siguiente lo lee: al abrir sesión, Claude avisa de las decisiones de otras áreas que afectan al proyecto, y lo que no cuadra se cuestiona por escrito. El punto de encuentro es la carpeta, no el chat: lo que no está escrito en ella no existe para la siguiente conversación.</dd>
@@ -2845,22 +2845,25 @@ function ayudaArts(){
     </dl>
     <p class="hc-nota">Para sumar a alguien después: <button type="button" class="lnk" data-help="sumar">Sumar a un compañero</button>.</p>`},
   {g:"Para empezar", id:"primera-sesion", t:"Tu primera sesión", h:`
-    <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Al cerrarla, escribe lo que pasó.</p>
+    <p>Una sesión es un rato de trabajo sobre un proyecto. Al abrirla, Claude solo lee. Mientras trabajas, guarda lo que produce y registra cada decisión cuando le das el sí. Al cerrarla, escribe lo que pasó.</p>
     <figure class="hc-chat">
       <div class="yo"><span>Tú</span><p>abre sesión en nuevo catálogo</p></div>
       <div class="ia"><span>Claude</span><p><b>Dónde quedó todo.</b> El catálogo 2027, para tener precios nuevos antes de enero. La última sesión dejó el borrador de la tabla de precios; falta que Finanzas confirme los márgenes.</p><p><b>Avisos.</b> Logística decidió el lunes cambiar el plazo de entrega, y su decisión nombra este proyecto.</p><p><b>Por dónde seguir.</b> Ajustar la tabla al plazo nuevo, o preparar la consulta a Finanzas. ¿Por cuál empezamos?</p></div>
       <div class="sep">trabajas con Claude: lo que produce se guarda en el proyecto en cuanto existe, como borrador</div>
-      <div class="yo"><span>Tú</span><p>cierra la sesión</p></div>
-      <div class="ia"><span>Claude</span><p>Antes de registrar, confírmame esta decisión: <b>«El catálogo 2027 usa el plazo de entrega nuevo de Logística»</b>. Lo registrado en decisiones ya no se corrige.</p></div>
+      <div class="yo"><span>Tú</span><p>vamos con el plazo nuevo de Logística, ya está decidido</p></div>
+      <div class="ia"><span>Claude</span><p>Así quedaría la decisión: <b>«El catálogo 2027 usa el plazo de entrega nuevo de Logística»</b>. Lo registrado en decisiones ya no se corrige. ¿La registro así?</p></div>
       <div class="yo"><span>Tú</span><p>sí</p></div>
-      <div class="ia"><span>Claude</span><p>Escritas la bitácora, la decisión y el estado del proyecto. Para la próxima: la respuesta de Finanzas.</p></div>
-      <figcaption>Un ejemplo inventado. El proyecto y los datos cambian; la forma de la conversación es siempre esta.</figcaption>
+      <div class="ia"><span>Claude</span><p>Registrada. Seguimos con la tabla.</p></div>
+      <div class="sep">sigues trabajando</div>
+      <div class="yo"><span>Tú</span><p>cierra la sesión</p></div>
+      <div class="ia"><span>Claude</span><p>Escritas la bitácora y el estado del proyecto. Para la próxima: la respuesta de Finanzas.</p></div>
+      <figcaption>Un ejemplo inventado. El proyecto y los datos cambian. Si al cerrar queda una decisión por registrar o una pregunta, Claude te la enseña antes y espera tu sí.</figcaption>
     </figure>
     <ul class="hc-l">
       <li><b>Al abrir</b>, Claude te dice dónde quedó todo, lo que llegó del tablero para ese proyecto, los avisos de otras áreas y dos o tres opciones para seguir. Espera a que elijas.</li>
-      <li><b>Mientras trabajas</b>, todo lo que produce (un documento, un análisis, un PDF) se guarda en la carpeta del proyecto en ese momento, como borrador.</li>
-      <li><b>Al cerrar</b>, escribe la bitácora y el estado, no registra ninguna decisión sin tu sí y deja apuntado el cierre para tu tablero.</li>
-      <li><b>Si te vas sin cerrar</b>, la siguiente sesión lo nota, te pregunta qué pasó y lo registra entonces.</li>
+      <li><b>Mientras trabajas</b>, todo lo que produce (un documento, un análisis, un PDF) se guarda en la carpeta del proyecto en ese momento, como borrador. Cuando decides algo, Claude te enseña la decisión tal como quedará escrita y, con tu sí, la registra en ese momento, sin esperar al cierre.</li>
+      <li><b>Al cerrar</b>, escribe la bitácora y el estado y deja apuntado el cierre para tu tablero. Solo te pide el sí si queda una decisión por registrar o una pregunta que contestar; si no, escribe y te enseña lo que quedó.</li>
+      <li><b>Si te vas sin cerrar</b>, las decisiones a las que diste el sí ya están registradas; la siguiente sesión nota lo que quedó sin bitácora, te pregunta qué pasó y lo registra entonces.</li>
     </ul>`},
   {g:"Para empezar", id:"varias-memorias", t:"Más de una memoria", h:`
     <p>Una memoria es una carpeta por organización o por mundo, y conviene tener varias si trabajas en varios: una para el trabajo, que puede ser compartida con tu equipo; otra para tus temas personales; otra para la casa. Cada una tiene su propia <code>guia.md</code>, sus áreas y su tablero, y no se mezclan.</p>
@@ -2875,7 +2878,7 @@ function ayudaArts(){
       <thead><tr><th>Dices</th><th>Pasa</th></tr></thead>
       <tbody>
         <tr><td>${F("abre sesión en X")}<br>${F("¿en qué quedamos con X?")}<br>${F("¿cómo va X?")}</td><td>Te pone al día y propone por dónde seguir. Solo lee. Si X es un proyecto tuyo, preguntar cómo va ya abre la sesión.</td></tr>
-        <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó (las decisiones, con tu confirmación) y deja apuntado el cierre para que tu tablero te avise de que tiene algo nuevo que traer.</td></tr>
+        <tr><td>${F("cierra la sesión")}<br>${F("guarda lo de hoy")}</td><td>Registra lo que pasó y deja apuntado el cierre para que tu tablero te avise de que tiene algo nuevo que traer. Solo te pide el sí si queda una decisión por registrar o una pregunta.</td></tr>
         <tr><td>${F("¿qué sabemos de X?")}</td><td>Busca en toda la carpeta y te dice qué hay y dónde. No escribe nada.</td></tr>
         <tr><td>${F("¿dónde guardo esto?")} y pegas o adjuntas</td><td>Lo coloca en su sitio y te dice dónde quedó.</td></tr>
         <tr><td>${F("prepara un documento con…")}</td><td>Crea el documento en el proyecto, en borrador.</td></tr>
@@ -2888,7 +2891,7 @@ function ayudaArts(){
         <tr><td>${F("¿cómo va el área X?")}<br>${F("cuestiona el área")}</td><td>El director del área: su estatus, lo que pide atención y lo que no cuadra.</td></tr>
         <tr><td>${F("revisión de calidad de X")}<br>${F("audita la carpeta")}</td><td>Revisa a fondo un proyecto, un documento, un desarrollo o la carpeta entera contra su objetivo, y entrega lo que no cuadra, comprobado.</td></tr>
         <tr><td>${F("quiero cuestionar…")}</td><td>Deja escrito qué no cuadra de una decisión o una premisa, para que su responsable responda.</td></tr>
-        <tr><td>${F("lo mantengo, porque…")}<br>${F("lo cambio: …")}</td><td>Responde a un cuestionamiento abierto a tu proyecto. Queda como decisión al cerrar y el cuestionamiento se cierra.</td></tr>
+        <tr><td>${F("lo mantengo, porque…")}<br>${F("lo cambio: …")}</td><td>Responde a un cuestionamiento abierto a tu proyecto. Queda como decisión en ese momento, con tu sí, y el cuestionamiento se cierra.</td></tr>
         <tr><td>${F("registra como premisa que…")}<br>${F("la premisa P2 cambia a…")}</td><td>Escribe la premisa que la dirección confirmó, o la que reemplaza a otra.</td></tr>
         <tr><td>${F("sincroniza el tablero")}</td><td>Pone el tablero al día ahora, con lo que otras personas hayan escrito.</td></tr>
         <tr><td>${F("ordena Claude outputs")}</td><td>Lleva a su proyecto lo que la app dejó en la carpeta «Claude outputs».</td></tr>

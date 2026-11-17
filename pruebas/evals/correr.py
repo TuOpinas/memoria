@@ -485,6 +485,33 @@ def _(ctx, arg):
     return bien, (linea.group(0)[:120] if linea else ("la decisión de hoy no lleva «Reemplaza:»" if m else "sin decisión de hoy"))
 
 
+@comprobacion("decision-afecta")
+def _(ctx, arg):
+    """decision-afecta <area>/<proyecto> <texto>: la decisión de hoy de arriba lleva «Afecta a:» con el texto (1.26.5)."""
+    a, _, texto = arg.partition(" ")
+    if not texto.strip():
+        return False, "decision-afecta pide el texto que tiene que estar en «Afecta a»"
+    p = ctx["raiz"] / a / "decisiones.md"
+    t = p.read_text(encoding="utf-8") if p.exists() else ""
+    m = re.search(r"^## " + re.escape(HOY) + r" · .*?(?=^## |\Z)", t, re.M | re.S)
+    if m and m.group(0).strip() in (ctx.get("antes_textos") or {}).get(f"{a}/decisiones.md", ""):
+        m = None   # la de hoy tiene que ser nueva, no una que la raíz ya traía
+    linea = re.search(r"^Afecta a\s*:.*$", m.group(0), re.M) if m else None
+    bien = bool(linea) and re.search(r"(?<![\w/-])" + re.escape(texto.lower()) + r"(?![\w-])", linea.group(0).lower()) is not None
+    return bien, (linea.group(0)[:120] if linea else ("la decisión de hoy no lleva «Afecta a:»" if m else "sin decisión de hoy"))
+
+
+@comprobacion("cita-contiene")
+def _(ctx, arg):
+    """cita-contiene N <texto>: una línea en cita («> …») de la respuesta del turno N contiene el texto (1.26.5)."""
+    n, _, texto = arg.partition(" ")
+    if len(ctx["turnos"]) < int(n):
+        return False, f"no hubo turno {n}"
+    t = sin_codigo(texto_de(ctx["turnos"][int(n) - 1]))
+    lineas = [l for l in t.split("\n") if l.lstrip().startswith(">") and texto.lower() in l.lower()]
+    return bool(lineas), (lineas[0].strip()[:120] if lineas else f"ninguna línea en cita del turno {n} dice «{texto}»")
+
+
 @comprobacion("apertura-minima")
 def _(ctx, arg):
     for t in ctx["turnos"]:
