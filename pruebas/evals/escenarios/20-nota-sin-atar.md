@@ -12,7 +12,7 @@ turnos:
   - "Sí."
 comprobar:
   - apertura-completa ventas/cuentas
-  - menciona para qué sirve|para qué es|qué papel|a qué se ata|para qué la@1
+  - nada-hasta-el-turno 2 metodo.md,ventas/cuentas/taller/condiciones-cliente-uno.md
   - entrada-sesion ventas/cuentas
   - contiene ventas/cuentas/sesiones.md Escribió: taller/condiciones-cliente-uno.md
   - basado-en ventas/cuentas/entregables/propuesta-base.md taller/condiciones-cliente-uno.md
@@ -20,5 +20,6 @@ comprobar:
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
 ---
 Una nota de taller que nada cita (1.26.3). La sesión escribe la nota y, al cerrar, `cerrar.py --comprobar` la devuelve en
-`sin_citar`: la respuesta que pide el sí pregunta para qué sirve. La persona dice que es la base de la propuesta, y el
+`sin_citar`: la respuesta que pide el sí pregunta para qué sirve, y nada más que la nota se escribe antes del segundo
+turno (el entregable no se ata solo). La persona dice que es la base de la propuesta, y el
 cierre la ata con un campo que ya existe, el `basado_en` de `entregables/propuesta-base.md`, por «otros».
