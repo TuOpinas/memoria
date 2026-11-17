@@ -18,7 +18,8 @@ con sus diez primeros siguientes pasos y la cuenta del resto, las cinco decision
 cabeceras de entregables/), el INVENTARIO de lo que no imprimió (cuántas entradas tienen los registros y cuánto pesan con
 sus archivados, las notas de taller/ y los informes de revisión con su tamaño y las cinco notas más recientes por su
 cabecera, las filas de fuentes/inventario.md: 1.26.3) y los avisos de apertura: cuestionamientos abiertos, decisiones de
-otros proyectos que lo nombran en «Afecta a:», entregables desfasados o en borrador viejo, trabajo sin sesión, notas de
+otros proyectos que lo nombran en «Afecta a:», entregables desfasados o en borrador viejo, trabajo sin sesión, decisiones
+escritas después de la última entrada de la bitácora (1.26.4: una sesión que no se cerró), notas de
 taller que nada del proyecto cita (1.26.3) y la fecha de base/contexto.md. Con --cuenta dice qué áreas son de esa cuenta y,
 si es la del responsable de contexto, también los cuestionamientos a premisas. Con --plugin compara la versión y la
 huella del metodo.md de la raíz con las del plugin, en numérico («1.14.10» es mayor que «1.14.9»), y dice el veredicto:
@@ -46,7 +47,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.26.3"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.4"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):
@@ -2180,11 +2181,8 @@ def listado_sin_sesion(ruta, desde):
     decisiones.md y los archivos de entregables/, taller/ y fuentes/, fuera de restringido/ y de lo que empieza por punto.
     None si el listado no sirve: no se lee, viene truncado o no es el de la carpeta del proyecto (no trae proyecto.md en su
     primer nivel); entonces se mira a mano, porque un listado que no sirve no puede decir «no hay trabajo sin sesión»."""
-    try:
-        d = json.loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if isinstance(d, dict) and d.get("truncated"):
+    d = listado_de(ruta)
+    if d is None:
         return None
     ents = (d.get("entries") if isinstance(d, dict) else d) or []
     nombre = lambda e: str(e.get("name") or "").replace("\\", "/")
@@ -2204,11 +2202,80 @@ def listado_sin_sesion(ruta, desde):
     return sorted(out, reverse=True)
 
 
+# decisiones escritas después de la última entrada de la bitácora (1.26.4): desde que una decisión se escribe en cuanto se
+# confirma, el cierre escribe decisiones.md antes que sesiones.md, así que tras un cierre la bitácora es la más reciente de
+# las dos. Si decisiones.md es más nuevo por más de un minuto (lo que tarda una llamada de cerrar.py, también la de un
+# plugin anterior, que escribía en el otro orden), hay decisiones que ninguna entrada cuenta todavía: de una sesión que no
+# se cerró o de una que sigue abierta. Mira la hora, no solo el día: el aviso por día no ve una decisión del mismo día que
+# la última sesión. Límite conocido: cualquier escritura posterior en sesiones.md (el cierre de otra persona, una entrada
+# «(tarea)» o «(tablero)») lo apaga; entonces lo ve el cierre, que trae en «registradas_hoy» las de hoy que no son suyas.
+_LISTADOS = {}
+
+
+def listado_de(ruta):
+    """El listado de device_list_dir, leído una vez; None si no sirve (no se lee, viene truncado o no es el de la carpeta
+    del proyecto), con la misma regla que listado_sin_sesion."""
+    if ruta not in _LISTADOS:
+        try:
+            d = json.loads(pathlib.Path(ruta).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            d = None
+        if isinstance(d, dict) and d.get("truncated"):
+            d = None
+        ents = ((d.get("entries") if isinstance(d, dict) else d) or []) if d is not None else []
+        nombre = lambda e: str(e.get("name") or "").replace("\\", "/")
+        if d is not None and not any(isinstance(e, dict) and nombre(e) in ("proyecto.md", "sesiones.md") for e in ents):
+            d = None
+        _LISTADOS[ruta] = d
+    return _LISTADOS[ruta]
+
+
+def segundos_del_listado(ruta, nombre):
+    """Los segundos de modificación de un archivo del primer nivel de la carpeta del proyecto en el listado de la computadora."""
+    d = listado_de(ruta)
+    for e in ((d.get("entries") if isinstance(d, dict) else d) or []):
+        if isinstance(e, dict) and str(e.get("name") or "").replace("\\", "/") == nombre and isinstance(e.get("mtimeMs"), (int, float)):
+            return e["mtimeMs"] / 1000
+    return None
+
+
+def aviso_decisiones_sin_sesion(s_dec, s_ses):
+    if s_dec is None or s_ses is None or s_dec - s_ses <= 60:
+        return None
+    dd, ds = datetime.datetime.fromtimestamp(s_dec, TZ), datetime.datetime.fromtimestamp(s_ses, TZ)
+    desde = max(ds.date().isoformat(), ultima_ses or "")   # las del día de la última sesión o posteriores
+    # las que la última entrada ya cuenta por su título no son candidatas
+    ultima_txt = next((e["texto"].lower() for e in recientes(ses_txt, 6) if not re.search(r"\((tarea|tablero|migracion)\)", e["cab"], re.I)), "")
+    cands = [e["cab"].split("·", 1)[-1].strip() for e in recientes(dec_txt, 40) if e["fecha"] and e["fecha"] >= desde]
+    cands = [x for x in cands if x.lower() not in ultima_txt]
+    if not cands:
+        return None   # nada que ninguna entrada cuente: fechas de archivo movidas (una copia, un juntado), no una decisión suelta
+    return (f"Decisiones sin sesión: decisiones.md cambió el {dd.date().isoformat()} a las {dd.strftime('%H:%M')}, después que sesiones.md "
+            f"({ds.date().isoformat()} {ds.strftime('%H:%M')}). Entre estas hay alguna que ninguna entrada de la bitácora cuenta: "
+            + "; ".join(f"«{x}»" for x in cands[:5]) + (f" y {len(cands) - 5} más" if len(cands) > 5 else "")
+            + ". Puede ser de una sesión que no se cerró o de una que sigue abierta: se pregunta de quién es y qué pasó, y solo si es de "
+            "quien cierra hoy la cuenta la entrada de hoy, sin volver a escribirla.")
+
+
+_dec_sin_sesion = None
+if not cerrado:
+    if not SIN_FECHAS:
+        try:
+            _dec_sin_sesion = aviso_decisiones_sin_sesion(os.stat(pc / "decisiones.md").st_mtime, os.stat(pc / "sesiones.md").st_mtime)
+        except OSError:
+            pass
+    elif LISTADO and listado_de(LISTADO) is not None:
+        _dec_sin_sesion = aviso_decisiones_sin_sesion(segundos_del_listado(LISTADO, "decisiones.md"), segundos_del_listado(LISTADO, "sesiones.md"))
+if _dec_sin_sesion:
+    avisos.append(_dec_sin_sesion)
+
 if SIN_FECHAS and ultima_ses and not cerrado:
     # sin consola las fechas de verdad solo están en el listado de la computadora (device_list_dir, en milisegundos):
     # con --listado se calculan aquí; sin él, o si no sirve, se da el instante desde el que mirarlo a mano
     _desde = datetime.datetime.combine(datetime.date.fromisoformat(ultima_ses) + datetime.timedelta(days=1), datetime.time(0), TZ)
     _lista = listado_sin_sesion(LISTADO, _desde) if LISTADO else None
+    if _lista and _dec_sin_sesion:   # decisiones.md ya va en su propio aviso
+        _lista = [x for x in _lista if x[2] != "decisiones.md"] or []
     if _lista:
         avisos.append("Trabajo sin sesión por fecha de archivo, después del " + ultima_ses + ": "
                       + "; ".join(f"{a} ({f} {h})" for f, h, a in _lista[:12]) + (" …" if len(_lista) > 12 else "")
@@ -2217,12 +2284,13 @@ if SIN_FECHAS and ultima_ses and not cerrado:
         avisos.append(("El listado no sirve (no se lee, viene truncado o no es el de la carpeta del proyecto). " if LISTADO else "")
                       + f"Trabajo sin sesión: con device_list_dir (recursivo) de la carpeta del proyecto, "
                       f"cuenta los archivos de entregables/, taller/ y fuentes/ (fuera de restringido/), y decisiones.md, con mtimeMs mayor o igual que "
-                      f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo.")
+                      f"{int(_desde.timestamp() * 1000)} (después del {ultima_ses}); si hay alguno, se pregunta qué pasó y se propone registrarlo. "
+                      f"Además, si el mtimeMs de decisiones.md pasa en más de 60000 al de sesiones.md, hay decisiones que ninguna entrada cuenta (1.26.4): se pregunta de quién son.")
 if not SIN_FECHAS and ultima_ses and not cerrado:
     lim = datetime.date.fromisoformat(ultima_ses)
     donde, lista = {}, []
     md = mtime(pc / "decisiones.md")
-    if md and md > lim:
+    if md and md > lim and not _dec_sin_sesion:   # si va en su propio aviso, no se repite aquí
         donde["decisiones"] = 1; lista.append((md.isoformat(), hora_de(pc / "decisiones.md"), "decisiones.md"))
     for sub in ("entregables", "taller", "fuentes"):
         for r_, ds, fs in os.walk(pc / sub):

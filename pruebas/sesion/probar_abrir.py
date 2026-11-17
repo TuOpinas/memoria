@@ -406,6 +406,47 @@ ok("n-informe" in suelta_, "un informe de revisión no cita: la nota que solo é
 o_ = subprocess.run([sys.executable, str(ABRIR), str(RI), "ventas/margenes", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
 ok("Notas de taller que nada cita" not in o_ and "=== INVENTARIO" in o_, "un proyecto sin taller no da el aviso y tiene su inventario")
 
+print("Decisiones escritas después de la última entrada de la bitácora (1.26.4)")
+import json as _json
+RS = tmp / "raiz-sin-cierre"; shutil.copytree(AQUI.parent / "tablero" / "raiz", RS)
+ps_ = RS / "ventas/cuentas"
+ahora_ = time.time()
+for d, _, fs in os.walk(RS):
+    for f in fs:
+        os.utime(os.path.join(d, f), (ahora_ - 7200, ahora_ - 7200))
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión" not in o, "con la bitácora y las decisiones a la misma hora no hay aviso")
+os.utime(ps_ / "decisiones.md", (ahora_ - 7200 + 30, ahora_ - 7200 + 30))
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión" not in o, "medio minuto después tampoco: es lo que tarda un cierre de un plugin anterior, que escribía las decisiones al final")
+dp_ = ps_ / "decisiones.md"
+dp_.write_text(dp_.read_text(encoding="utf-8").replace("# Decisiones\n", "# Decisiones\n\n## 2099-01-01 · DECISION-SUELTA de la sesión sin cerrar\nDecidió: Ana Prueba\nPor qué: x.\n", 1), encoding="utf-8")
+os.utime(dp_, (ahora_ - 600, ahora_ - 600))
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+av_ = o.split("=== AVISOS")[1]
+lin_ = next((l for l in av_.split("\n") if "Decisiones sin sesión" in l), "")
+ok(lin_ and "DECISION-SUELTA" in lin_ and "Cliente Uno se atiende desde ventas" not in lin_, f"una decisión escrita después de la bitácora se avisa, con su título y sin las de antes ({lin_[:200]})")
+ok(not re.search(r"Trabajo sin sesión por fecha de archivo[^\n]*decisiones", av_), "no se repite en el aviso de trabajo sin sesión por día")
+# sin consola, con el listado de la computadora
+lst_ = tmp / "listado.json"
+lst_.write_text(_json.dumps({"entries": [{"name": "proyecto.md", "type": "file", "mtimeMs": (ahora_ - 7200) * 1000},
+                                          {"name": "sesiones.md", "type": "file", "mtimeMs": (ahora_ - 7200) * 1000},
+                                          {"name": "decisiones.md", "type": "file", "mtimeMs": (ahora_ - 600) * 1000}]}), encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test", "--sin-fechas", "--listado", str(lst_)], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión" in o.split("=== AVISOS")[1] and "DECISION-SUELTA" in o, "sin consola, con el listado, el mismo aviso")
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test", "--sin-fechas"], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión" not in o, "sin consola y sin listado no se adivina")
+lst2_ = tmp / "listado-truncado.json"
+lst2_.write_text(_json.dumps({"truncated": True, "entries": _json.loads(lst_.read_text(encoding="utf-8"))["entries"]}), encoding="utf-8")
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test", "--sin-fechas", "--listado", str(lst2_)], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión:" not in o and "60000" in o, "con un listado truncado no se usa, y el texto manual dice comparar las dos fechas")
+# la que la última entrada ya cuenta no es candidata; si no queda ninguna, no hay aviso
+sp_ = ps_ / "sesiones.md"
+sp_.write_text(sp_.read_text(encoding="utf-8").replace("# Sesiones\n", "# Sesiones\n\n## 2099-01-01\nTema: x.\nAvances: se decidió «DECISION-SUELTA de la sesión sin cerrar».\n", 1), encoding="utf-8")
+os.utime(sp_, (ahora_ - 7200, ahora_ - 7200))
+o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
+ok("Decisiones sin sesión" not in o, "una decisión que la última entrada ya cuenta no se avisa (fechas de archivo movidas)")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

@@ -344,39 +344,68 @@ def _(ctx, arg):
 
 
 def cita_antes_de_escribir(t, con_decision=False, hoy=None):
-    """Lo que se enseña antes de escribir, fuera de los bloques de código (1.23.2): las palabras «Bitácora» y «Estatus»
-    solas en su línea; la entrada de la bitácora en cita con su «## AAAA-MM-DD»; el Estatus en cita con «AAAA-MM-DD ·
-    **…»; las dos con la misma fecha; y con decisión, «Decisiones» y cada decisión en cita con «## <esa fecha> · título».
-    Devuelve (bien, qué falta)."""
+    """Lo que se enseña antes de escribir, fuera de los bloques de código. Desde el cierre corto (1.26.4): las palabras
+    «Bitácora» y «Estatus» solas en su línea y la frase del Estatus en cita, «> AAAA-MM-DD · **…»; la entrada de la bitácora
+    ya no va en cita (basta su tema en una línea). Con decisión, «Decisiones» y cada decisión entera en cita con
+    «## <fecha> · título»; la fecha es la de hoy, o la del Estatus. Devuelve (bien, qué falta)."""
     t = sin_codigo(t)
     sola = lambda w: re.search(r"(?m)^ {0,3}(?:\*\*)?" + w + r"(?:\*\*)?:?[ \t]*$", t)
-    # «## AAAA-MM-DD (algo)» también vale: el segundo cierre del día lo distingue así, y el tablero solo deja de contar como
-    # sesión «(tarea)», «(tablero)» y «(migracion)» (1.25.1: el 07 escribió «(Cliente Uno confirma la firma)» tras otro cierre)
-    bit = re.findall(r"(?m)^> ?## (\d{4}-\d{2}-\d{2})(?:[ \t]+\((?!tarea\)|tablero\)|migracion\))[^)\n]+\))?[ \t]*$", t)
     est = re.findall(r"(?m)^> ?(\d{4}-\d{2}-\d{2}) · \*\*", t)
-    falta = [n for n, c in (("«Bitácora»", sola("Bitácora")), ("«Estatus»", sola("Estatus")), ("la entrada en cita", bit), ("el Estatus en cita", est)) if not c]
-    if hoy and bit and hoy not in bit:
-        falta.append(f"la entrada de hoy ({hoy})")
-    hoy = hoy if hoy in bit else (max(bit) if bit else None)
-    if bit and est and hoy not in est:
-        falta.append("la misma fecha en la entrada y en el Estatus")
+    falta = [n for n, c in (("«Bitácora»", sola("Bitácora")), ("«Estatus»", sola("Estatus")), ("la frase del Estatus en cita", est)) if not c]
+    if hoy and est and hoy not in est:
+        falta.append(f"el Estatus de hoy ({hoy})")
+    fecha = hoy if (hoy in est or not est) else max(est)
     if con_decision:
         if not sola("Decisiones"):
             falta.append("«Decisiones»")
-        if not (hoy and re.search(r"(?m)^> ?## " + hoy + r" · \S", t)):
+        if not (fecha and re.search(r"(?m)^> ?## " + fecha + r" · \S", t)):
             falta.append("cada decisión en cita con su título")
+        elif not re.search(r"(?m)^> ?Decidi[oó]\s*:", t) or not re.search(r"(?m)^> ?Por qu[eé]\s*:", t):
+            falta.append("la decisión entera en cita (Decidió y Por qué)")
     return not falta, ", ".join(falta)
 
 
 @comprobacion("cita-antes-de-escribir")
 def _(ctx, arg):
     """cita-antes-de-escribir [decision]: la respuesta que pide el sí (la penúltima) enseña lo que se va a registrar en
-    cita, tal como quedará escrito, bajo «Decisiones», «Bitácora» y «Estatus» (1.23.2); con «decision», también cada
-    decisión."""
+    cita, tal como quedará escrito, bajo «Decisiones», «Bitácora» y «Estatus» (1.23.2; desde la 1.26.4, del Estatus solo su
+    frase); con «decision», también cada decisión entera."""
+    arg, _, n = (arg or "").strip().partition("@")
+    if n:   # cita-antes-de-escribir solo-decision@N: la respuesta del turno N enseña la decisión en cita, sin cierre (1.26.4)
+        if len(ctx["turnos"]) < int(n):
+            return False, f"no hubo turno {n}"
+        t = sin_codigo(texto_de(ctx["turnos"][int(n) - 1]))
+        if arg.strip() == "solo-decision":
+            bien = bool(re.search(r"(?m)^> ?## " + HOY + r" · \S", t)) and bool(re.search(r"(?m)^> ?Decidi[oó]\s*:", t))
+            return bien, f"la decisión {'está' if bien else 'no está'} en cita en el turno {n}"
+        bien, falta = cita_antes_de_escribir(t, arg.strip() == "decision", HOY)
+        return bien, f"en el turno {n}" if bien else "falta " + falta
     if len(ctx["turnos"]) < 2:
         return False, "el escenario no tiene un turno de sí"
-    bien, falta = cita_antes_de_escribir(texto_de(ctx["turnos"][-2]), (arg or "").strip() == "decision", HOY)
+    bien, falta = cita_antes_de_escribir(texto_de(ctx["turnos"][-2]), arg.strip() == "decision", HOY)
     return bien, "en la respuesta que pide el sí" if bien else "falta " + falta
+
+
+@comprobacion("escrito-en-el-turno")
+def _(ctx, arg):
+    """escrito-en-el-turno N <ruta>: al terminar el turno N el archivo ya había cambiado (1.26.4: una decisión se escribe en
+    cuanto se confirma, antes del cierre)."""
+    n, _, r = arg.partition(" ")
+    n = int(n)
+    if len(ctx["turnos"]) < n:
+        return False, f"no hubo turno {n}"
+    c = cambiados(ctx["antes"], ctx["turnos"][n - 1]["huellas"])
+    return r.strip() in c, f"{r.strip()} {'cambió' if r.strip() in c else 'no había cambiado'} al terminar el turno {n}"
+
+
+@comprobacion("una-vez")
+def _(ctx, arg):
+    """una-vez <ruta> <texto>: el archivo de la raíz contiene el texto exactamente una vez (1.26.4: una decisión registrada a
+    mitad de sesión no se duplica al cerrar)."""
+    r, _, texto = arg.partition(" ")
+    p = ctx["raiz"] / r
+    n = p.read_text(encoding="utf-8").count(texto) if p.exists() else 0
+    return n == 1, f"«{texto}» está {n} veces en {r}"
 
 
 @comprobacion("sin-escrituras")

@@ -445,7 +445,7 @@ Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 **2. `proyecto.md`**, con la estructura fija de `escribir.md`, sección 3. Se rellena con las respuestas: `Objetivo` lleva las dos frases (para qué y cuándo termina o cada cuánto se revisa), `Alcance` lo que entra y lo que no, `Quién participa` al responsable, `Estatus` la fecha de hoy, su frase («Arrancamos <proyecto>; lo primero es …») y la línea «Siguiente», sin «Se completó»; y `Siguientes pasos` recoge lo que salga de la conversación de arranque. Las secciones sin respuesta se dejan con el hueco marcado, nunca se borran ni se rellenan con supuestos.
 
-**3. `decisiones.md`**, con cabecera y solo el título. Vacío de entradas: las que haya se registran al cerrar la primera sesión.
+**3. `decisiones.md`**, con cabecera y solo el título. Vacío de entradas: cada una se registra en cuanto se confirma (`sesion`, `cerrar.md`).
 
 **4. `sesiones.md`**, con la entrada de arranque:
 

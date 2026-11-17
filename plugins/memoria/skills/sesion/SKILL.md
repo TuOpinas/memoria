@@ -9,7 +9,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Este archivo es lo que 
 
 - `minima.md`: la apertura mínima. El aviso de arranque la inyecta en cada conversación y no hace falta cargar esta skill para ella.
 - `cola.md`: la cola del tablero (lo marcado desde la página y las sugerencias), al abrir un proyecto cuando la cuenta tiene tablero y al cerrar si la cola trajo algo.
-- `cerrar.md`: cerrar la sesión y el proyecto, y responder («lo mantengo», «lo cambio») o plantear un cuestionamiento.
+- `cerrar.md`: registrar una decisión en cuanto se confirma (1.26.4), cerrar la sesión y el proyecto, y responder («lo mantengo», «lo cambio») o plantear un cuestionamiento.
 - `sin-consola-sesion.md`: abrir y cerrar cuando la raíz está conectada pero el shell de la computadora no la ve.
 - `migracion.md`: pasar la carpeta a la estructura de la 1.22, con «Migrar ahora».
 - `premisas.md`: registrar, cambiar o retirar una premisa, en la sesión del responsable de contexto.
@@ -21,6 +21,8 @@ Abrir solo lee. Antes de escribir cualquier cosa en la carpeta se carga el anexo
 ## Cuándo
 
 **Abrir**: «abre sesión en compras», «retomamos X», «¿en qué quedamos con X?», o cualquier trabajo sobre un proyecto existente aunque no lo nombre («guíame en el paso 4», «cambia el plugin para que…», «a un usuario le sale este error…», algo para un cliente que tiene su proyecto). Se abre antes de responder, sin preguntar y sin pedir que digan «abre sesión»; la respuesta empieza por lo que pidió, y lo de la apertura va en pocas líneas, solo lo que cambia lo que se va a hacer. También cuando el responsable de un proyecto pregunta por el suyo («¿cómo va X?», «¿qué falta en X?»): responsable es quien figura como Responsable del área en la tabla de `guia.md` (su cuenta, en «Quién es quién») o como `Responsable` en su `proyecto.md`. Si quien pregunta no es el responsable, es `consulta`. Si solo preguntó, no hay nada que cerrar.
+
+**Durante la sesión, una decisión** (1.26.4): cuando la persona da algo por decidido («decidimos que…», «va así»), no espera al cierre: se carga `cerrar.md` («Una decisión, en cuanto se confirma») y `escribir.md`, se enseña en cita tal como quedará, y con su sí `cerrar.py` la escribe sin cerrar la sesión. Varias juntas, un solo sí.
 
 **La raíz** es la carpeta conectada con `guia.md` y `metodo.md` en su primer nivel. A `abrir.py` se le pasa la ruta que da `get_device_info`: si en la consola la carpeta cuelga de `$HOME/mnt/…`, el script la resuelve y la imprime en su línea RAIZ, que es la que se usa después, sin `ls` ni `find`. Nunca se dice que no hay carpeta sin haberlas listado; si no hay ninguna, `sin-carpeta.md`. Con más de una raíz, se pregunta en cuál se trabaja y la sesión se queda en esa (lo de otra entra solo por un traspaso, `raices.md` junto al contrato). Si no queda claro el proyecto, se pregunta; nunca se asume el último usado.
 
@@ -52,7 +54,7 @@ Después, estos bloques, en este orden y sin encabezados largos.
 
 **Lo que viene de la memoria va en recuadros**, para que se distinga de lo que escribe Claude: una tabla por bloque con la cabecera «Memoria · <qué es> · <cuántos>», una fila por cosa con lo que dice y de dónde sale. Lo que dice Claude va debajo, en texto normal. Solo salen los que traen algo, en este orden: lo marcado en el tablero y las sugerencias (`cola.md`) y los avisos.
 
-**Avisos**: recuadro «Memoria · avisos · <cuántos>», una fila por cada línea de la sección AVISOS de `abrir.py`, en el orden en que las da (lo que espera a alguien va primero) y en llano. Una copia en conflicto se junta antes de seguir (`cerrar.md`); un trabajo sin sesión se pregunta qué pasó y se propone registrarlo hoy, con quien lo hizo en «Sesión de:». Además, y esto no lo calcula el script, una decisión reciente de este proyecto que choca con una premisa vigente, sin darlo por resuelto. Sin avisos, no se menciona que no los hay.
+**Avisos**: recuadro «Memoria · avisos · <cuántos>», una fila por cada línea de la sección AVISOS de `abrir.py`, en el orden en que las da (lo que espera a alguien va primero) y en llano. Una copia en conflicto se junta antes de seguir (`cerrar.md`); un trabajo sin sesión se pregunta qué pasó y se propone registrarlo hoy, con quien lo hizo en «Sesión de:»; unas «Decisiones sin sesión» (1.26.4) ya están registradas: no se vuelven a escribir, y la entrada de hoy dice que se tomaron en una sesión que no se cerró. Además, y esto no lo calcula el script, una decisión reciente de este proyecto que choca con una premisa vigente, sin darlo por resuelto. Sin avisos, no se menciona que no los hay.
 
 **El método y la estructura** los resuelve la RESPUESTA, sin comparar a mano. Con «RAIZ ATRASADA», lo abra quien lo abra, se escribe el `metodo.md` del plugin sin preguntar ni decirlo y sin cargar `escribir.md`, como dice la RESPUESTA: sin descargar nada en la computadora, con `device_commit_files` desde una copia hecha en el contenedor (`abrir.py --metodo-para-subir`); si esa copia no sale, no se pone al día en esta conversación y no se dice: lo hará la siguiente apertura o la puesta al día del tablero. Nunca se descarga en la computadora ni se pega. Con «ANTERIOR en …», su pregunta bloquea, y con «Migrar ahora», `migracion.md`.
 
@@ -70,7 +72,7 @@ En el básico no se dice nada. Por encima, una línea antes de leer: «Lectura: 
 
 ## Lo que nunca hago al abrir
 
-- Tocar `proyecto.md`, `sesiones.md`, `decisiones.md` o `area.md` a mano durante la sesión (`sed`, `Write`, un `cat >`): lo que se pide cambiar ahí lo escribe `cerrar.py`, al cerrar o antes si la persona quiere verlo ya (`cerrar.md`)
+- Tocar `proyecto.md`, `sesiones.md`, `decisiones.md` o `area.md` a mano durante la sesión (`sed`, `Write`, un `cat >`): lo que se pide cambiar ahí lo escribe `cerrar.py`; una decisión, en cuanto la persona la confirma (1.26.4), y lo demás al cerrar o antes si la persona quiere verlo ya (`cerrar.md`)
 - Dar como aviso a alguien una decisión que leí en una carpeta restringida a la que su proyecto no pertenece
 - Deducir lo que hay en una carpeta que no se deja leer: se dice qué es y de quién, y ahí se para
 - Escribir nada en una raíz cuya «Versión mínima del plugin» es más nueva que este plugin (fila «Solo lectura» del recuadro, 1.26): se lee y se consulta, y lo que habría que escribir se prepara en la conversación hasta que la persona actualice
