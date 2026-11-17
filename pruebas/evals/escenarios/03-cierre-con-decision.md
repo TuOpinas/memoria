@@ -21,9 +21,11 @@ comprobar:
   - cambia ventas/area.md
   - solo-escribe-en ventas/cuentas,ventas/area.md,metodo.md
   - cita-antes-de-escribir decision
+  - no-menciona-re (?m)^> ?(Tema|Avances)\s*:@1
+  - no-menciona-re (?m)^> ?- \*\*Se completó@1
   - recuadro-cierre
   - sin-rutas-absolutas
 ---
-Abrir, registrar una decisión y cerrar. La decisión se enseña antes de escribirla y se escribe solo con el sí (turno 2), aunque la persona la dicte en el mismo mensaje en que pide cerrar. El cierre escribe con `cerrar.py`.
+Abrir, registrar una decisión y cerrar. La decisión se enseña antes de escribirla y se escribe solo con el sí (turno 2), aunque la persona la dicte en el mismo mensaje en que pide cerrar: decisión y cierre son un lote, con un solo sí, y el cierre corto (1.26.4) enseña la decisión entera y del `Estatus` solo su frase. El cierre escribe con `cerrar.py`.
 Al cerrar: entrada de hoy arriba en `sesiones.md`, decisión de hoy arriba en `decisiones.md`, `En corto` reescrito con la
 fecha de hoy, y nada fuera del proyecto salvo su línea en `ventas/area.md`. Sin rutas absolutas en lo escrito.

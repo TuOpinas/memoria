@@ -331,7 +331,8 @@ def leer_lento(p):
     """El cierre A lee y se entretiene antes de escribir; B llega mientras: el cerrojo lo hace esperar y después B
     escribe encima de lo de A, y lo de A le sale como ajeno «durante»."""
     t = leer_original(p)
-    if threading.current_thread().name == "A" and not cruce.is_set():
+    # en sesiones.md, que es donde los dos escriben (desde la 1.26.4 A escribe antes sus decisiones, que B no toca)
+    if threading.current_thread().name == "A" and pathlib.Path(p).name == "sesiones.md" and not cruce.is_set():
         cruce.set(); time.sleep(0.5)
     return t
 m.leer = leer_lento
@@ -395,6 +396,112 @@ ABRIR_ = CERRAR.parent / "abrir.py"
 o_ = subprocess.run([sys.executable, str(ABRIR_), str(RC), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
 av_ = next((l for l in o_.split("=== AVISOS")[1].split("\n") if "Notas de taller que nada cita" in l), "")
 ok(c == 0 and "nota-nueva" not in av_ and "nota-de-base" not in av_, f"lo que el cierre ata, la apertura siguiente no lo avisa ({av_[:160]})")
+
+print("cerrar.py: una decisión se escribe en cuanto se confirma (1.26.4)")
+RD = raiz_nueva()
+ab_ = datetime.datetime.now(ZoneInfo("America/Mexico_City")).replace(microsecond=0) - datetime.timedelta(minutes=5)
+ABIERTO_ = ab_.isoformat()
+DEC2 = f"## {HOY} · El piloto de Cliente Uno se factura cada mes\nDecidió: Ana Prueba\nPor qué: lo pidió compras."
+c, s = corre(RD, {"decisiones": [DEC]}, "--cuenta", "ana@ejemplo.test", "--abierto", ABIERTO_)
+ok(c == 0 and s["escritos"] == ["ventas/cuentas/decisiones.md"] and s.get("registradas") == [{"id": f"ventas/cuentas#{HOY}", "titulo": "El soporte de Cliente Uno responde en menos de 24 horas"}],
+   f"a mitad de sesión escribe solo decisiones.md y devuelve su identificador ({s if c else (s['escritos'], s.get('registradas'))})")
+ok(c == 0 and any("no cierra la sesión" in x for x in s["respuesta"]) and not any("db_write" in x for x in s["respuesta"]) and any("registradas_hoy" in x for x in s["respuesta"]),
+   "no es un cierre: ni marca del tablero ni recuadro, y dice que el cierre no la vuelve a mandar")
+c, s = corre(RD, {"sesion": SESION, "decisiones": [DEC, DEC2]}, "--comprobar", "--abierto", ABIERTO_)
+hoy_ = {d["id"]: d for d in s.get("registradas_hoy", [])} if c == 0 else {}
+ok(c == 0 and [(d["id"], d["titulo"], d.get("esta_sesion")) for d in s.get("ya_estaban", [])] == [(f"ventas/cuentas#{HOY}", "El soporte de Cliente Uno responde en menos de 24 horas", True)]
+   and [p_["decision"] for p_ in s.get("parecidas", [])] in ([], ["El piloto de Cliente Uno se factura cada mes"]),
+   f"--comprobar dice cuál ya estaba y solo mira parecidas para la que falta ({s})")
+ok(hoy_.get(f"ventas/cuentas#{HOY}", {}).get("esta_sesion") is True, f"«registradas_hoy» la marca como de esta sesión ({s.get('registradas_hoy') if c == 0 else s})")
+c, s = corre(RD, {"sesion": SESION, "decisiones": [DEC]}, "--comprobar", "--abierto", (ab_ - datetime.timedelta(minutes=1)).isoformat())
+ok(c == 0 and [d.get("esta_sesion") for d in s.get("registradas_hoy", [])] == [None], "con otra hora de apertura (otra sesión, o una conversación perdida) la ve, sin marcarla como suya")
+dec_antes = (RD / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8")
+c, s = corre(RD, dict(CAMBIOS, decisiones=[DEC, DEC2]), "--cuenta", "ana@ejemplo.test", "--abierto", ABIERTO_)
+dec_d = (RD / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8")
+ok(c == 0 and dec_d.count("El soporte de Cliente Uno responde en menos") == 1 and dec_d.index("El piloto") < dec_d.index("El soporte de Cliente Uno responde"),
+   "el cierre que la vuelve a mandar no la duplica, y escribe la que faltaba encima")
+ok(c == 0 and not any(a_["ruta"] == "ventas/cuentas/decisiones.md" for a_ in s["ajenos"]), f"lo que escribió la misma sesión a mitad no le sale como ajeno ({s['ajenos'] if c == 0 else s})")
+ses_d, dec_p = RD / "ventas/cuentas/sesiones.md", RD / "ventas/cuentas/decisiones.md"
+ok(os.stat(ses_d).st_mtime_ns >= os.stat(dec_p).st_mtime_ns, "en un cierre, la bitácora se escribe después de las decisiones")
+c, s = corre(RD, {"decisiones": [DEC.replace("es la condición para firmar", "otra razón")]}, "--abierto", ABIERTO_)
+ok(c == 0 and s.get("distintas") and not s.get("registradas") and (RD / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8") == dec_d
+   and any("«distintas»" in x for x in s["respuesta"]), f"la misma cabecera con otro texto no se escribe y queda como pendiente que se pregunta ({s if c else s.get('distintas')})")
+# la rotación a mitad de sesión: solo decisiones.md
+RR = raiz_nueva()
+sp = RR / "ventas/cuentas/sesiones.md"
+sp.write_text(sp.read_text(encoding="utf-8") + "".join(f"## 2026-10-{(i % 28) + 1:02d}\nTema: relleno {i}.\nAvances: {'x' * 60}\n\n" for i in range(600)), encoding="utf-8")
+c, s = corre(RR, {"decisiones": [DEC]}, "--abierto", ABIERTO_)
+ok(c == 0 and not s.get("rotados") and not any(e.startswith("ventas/cuentas/sesiones") for e in s["escritos"]), f"a mitad de sesión no archiva sesiones.md, aunque pase del límite ({s.get('rotados') if c == 0 else s})")
+c, s = corre(RR, {"sesion": SESION}, "--abierto", ABIERTO_)
+ok(c == 0 and any(r["de"] == "ventas/cuentas/sesiones.md" for r in s.get("rotados", [])), "el cierre sí lo archiva")
+dp = RR / "ventas/cuentas/decisiones.md"
+dp.write_text(dp.read_text(encoding="utf-8") + "".join(f"## 2026-10-{(i % 28) + 1:02d} · Relleno número {i}\nDecidió: Ana Prueba\nPor qué: {'x' * 60}\n\n" for i in range(600)), encoding="utf-8")
+c, s = corre(RR, {"decisiones": [DEC2]}, "--abierto", ABIERTO_)
+ok(c == 0 and any(r["de"] == "ventas/cuentas/decisiones.md" for r in s.get("rotados", [])) and s.get("registradas"), "a mitad de sesión archiva decisiones.md si pasa del límite y escribe en el nuevo")
+c, s = corre(RR, {"sesion": SESION, "decisiones": [DEC2]}, "--comprobar", "--abierto", ABIERTO_)
+ok(c == 0 and s.get("ya_estaban") and any(d.get("esta_sesion") for d in s.get("registradas_hoy", [])), "tras archivar, el cierre la sigue viendo como ya escrita")
+
+print("cerrar.py: lo que encontró la revisión de la 1.26.4")
+# dos llamadas a la vez con la misma cabecera: la comprobación va bajo el cerrojo
+RX = raiz_nueva()
+spec2 = importlib.util.spec_from_file_location("cerrar2", CERRAR); m2 = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(m2)
+orig_ya = m2.ya_registradas
+primera = threading.Event()
+def ya_lenta(*a, **k):
+    r = orig_ya(*a, **k)
+    if threading.current_thread().name in ("X", "Y") and not primera.is_set():
+        primera.set(); time.sleep(0.6)   # las dos leen el registro antes de que ninguna escriba
+    return r
+m2.ya_registradas = ya_lenta
+salidas2 = {}
+m2.print = lambda *a, **k: salidas2.__setitem__(threading.current_thread().name, json.loads(a[0]))
+DX = f"## {HOY} · Tope de gasto del piloto\nDecidió: Ana Prueba\nPor qué: X."
+DY = f"## {HOY} · Tope de gasto del piloto\nDecidió: Beto Prueba\nPor qué: Y."
+fx, fy = RX.parent / "x.json", RX.parent / "y.json"
+fx.write_text(json.dumps({"decisiones": [DX]}, ensure_ascii=False)); fy.write_text(json.dumps({"decisiones": [DY]}, ensure_ascii=False))
+tx = threading.Thread(target=lambda: m2.main(["cerrar.py", str(RX), "ventas/cuentas", str(fx), "--abierto", ABIERTO_]), name="X")
+ty = threading.Thread(target=lambda: m2.main(["cerrar.py", str(RX), "ventas/cuentas", str(fy), "--abierto", (ab_ - datetime.timedelta(minutes=3)).isoformat()]), name="Y")
+tx.start(); ty.start(); tx.join(); ty.join()
+dx = (RX / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8")
+ok(dx.count("Tope de gasto del piloto") == 1 and len(salidas2["X"].get("registradas", []) + salidas2["Y"].get("registradas", [])) == 1
+   and (salidas2["X"].get("distintas") or salidas2["Y"].get("distintas")), f"dos llamadas a la vez no escriben dos veces la misma cabecera, y la segunda la da como «distintas» ({dx.count('Tope de gasto del piloto')})")
+# una sesión abierta varios días: lo suyo se ve aunque sea de hace tres días, y refechado no se duplica
+RM = raiz_nueva()
+viejo_ = (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=3)).isoformat()
+DM = f"## {viejo_} · El anexo va firmado por dirección\nDecidió: Ana Prueba\nPor qué: lo pide el cliente."
+c, s = corre(RM, {"decisiones": [DM]}, "--abierto", ABIERTO_, "--cualquier-fecha")
+c, s = corre(RM, {"sesion": SESION, "decisiones": [DM.replace(viejo_, HOY)]}, "--comprobar", "--abierto", ABIERTO_)
+ok(c == 0 and any(d.get("esta_sesion") and viejo_ in d["id"] for d in s.get("registradas_hoy", [])), f"«registradas_hoy» trae lo de esta sesión aunque sea de hace tres días ({s.get('registradas_hoy') if c == 0 else s})")
+ok(c == 0 and s.get("ya_estaban") and s["ya_estaban"][0].get("misma_sesion"), "la misma decisión refechada a hoy se reconoce como ya escrita por esta sesión")
+c, s = corre(RM, {"sesion": SESION, "decisiones": [DM]}, "--comprobar", "--abierto", ABIERTO_)
+ok(c == 0 and s.get("ya_estaban"), f"reenviada con su fecha original no tumba el cierre por la fecha ({s if c else s.get('ya_estaban')})")
+# esta_sesion no se cruza entre proyectos, y sin --abierto no se marca nada
+RP = raiz_nueva()
+shutil.copytree(RP / "ventas/cuentas", RP / "ventas/otro")
+c, s = corre(RP, {"decisiones": [DEC]}, "--abierto", ABIERTO_, proyecto="ventas/otro")
+(RP / "ventas/cuentas/decisiones.md").write_text((RP / "ventas/cuentas/decisiones.md").read_text(encoding="utf-8").replace("# Decisiones\n", "# Decisiones\n\n" + DEC2 + "\n", 1), encoding="utf-8")
+c, s = corre(RP, {"sesion": SESION}, "--comprobar", "--abierto", ABIERTO_)
+ok(c == 0 and not any(d.get("esta_sesion") for d in s.get("registradas_hoy", [])), f"lo escrito en otro proyecto no se marca como de esta sesión ({s.get('registradas_hoy') if c == 0 else s})")
+c, s = corre(RP, {"decisiones": [f"## {HOY} · Sin hora de apertura\nDecidió: Ana Prueba\nPor qué: x."]}, "--sin-fechas")
+c, s = corre(RP, {"sesion": SESION}, "--comprobar", "--sin-fechas")
+ok(c == 0 and not any(d.get("esta_sesion") for d in s.get("registradas_hoy", [])), "sin --abierto no se marca nada como de esta sesión")
+# sin consola, la llamada a mitad de sesión manda devolver antes de dar nada por registrado
+c, s = corre(raiz_nueva(), {"decisiones": [DEC]}, "--sin-fechas", "--abierto", ABIERTO_)
+ok(c == 0 and "devolver" in s["respuesta"][0] and s.get("registradas"), f"sin consola, devolver va primero ({s['respuesta'][:1] if c == 0 else s})")
+# a mitad de sesión, --comprobar no trae lo del cierre
+c, s = corre(raiz_nueva(), {"decisiones": [DEC2]}, "--comprobar", "--abierto", ABIERTO_)
+ok(c == 0 and "registradas_hoy" not in s and "sin_citar" not in s and "sin_nombrar" not in s, f"--comprobar sin «sesion» no trae lo del cierre ({sorted(s) if c == 0 else s})")
+# el lote: dos cabeceras iguales, o un «## » en el cuerpo, se rechazan
+c, s = corre(raiz_nueva(), {"decisiones": [DEC, DEC + "\nDescartado: otra cosa."]})
+ok(c == 1 and "misma cabecera" in s.get("error", ""), "dos decisiones del lote con la misma cabecera se rechazan")
+c, s = corre(raiz_nueva(), {"decisiones": [DEC + "\n## Otra cosa"]})
+ok(c == 1 and "en su cuerpo" in s.get("error", ""), "una decisión con otra línea «## » en el cuerpo se rechaza")
+# un cierre con una decisión en «distintas» la deja como pendiente, antes de la marca
+RQ = raiz_nueva()
+c, s = corre(RQ, {"decisiones": [DEC]}, "--abierto", ABIERTO_)
+c, s = corre(RQ, dict(CAMBIOS, decisiones=[DEC.replace("es la condición para firmar", "otra razón")]), "--cuenta", "ana@ejemplo.test", "--abierto", ABIERTO_)
+i_d = next((i for i, x in enumerate(s["respuesta"]) if "«distintas»" in x), 99); i_m = next((i for i, x in enumerate(s["respuesta"]) if "db_write" in x), -1)
+ok(c == 0 and i_d < i_m, f"en el cierre, «distintas» es un pendiente que va antes de la marca del tablero ({i_d}, {i_m})")
 
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

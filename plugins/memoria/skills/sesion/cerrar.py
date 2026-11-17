@@ -41,7 +41,7 @@ escribió y a quien lo publicó (escribir.md, formato de sesiones.md). Cada ruta
 proyecto y existir; lo que se publica, en entregables/ y vigente. Con --abierto, la salida trae en «sin_nombrar» los
 documentos de entregables/ y taller/ que cambiaron desde que se abrió y no van en ninguna de las dos listas, para que la
 sesión diga si son suyos: no se atribuyen solos, porque pudo escribirlos otra persona. Con --comprobar no se escribe nada:
-se validan la forma y la autoría (no los reemplazos ni los permisos) y se devuelven «entrada» (la entrada tal como quedaría, con sus líneas) y «sin_nombrar», para enseñarla
+se validan la forma y la autoría (no los reemplazos ni los permisos) y se devuelven «entrada» (la entrada tal como quedaría, con sus líneas) y «sin_nombrar», para enseñar lo que toque
 completa antes de pedir el sí. Desde la 1.26.3 devuelve además, sin escribir nada: «parecidas», por cada decisión nueva
 que tiene alguna, hasta cinco decisiones del proyecto (con sus archivados de este año y del anterior) cuyo título comparte
 dos palabras con significado o más con el suyo, con su identificador, para preguntar si la nueva reemplaza a alguna (no
@@ -50,10 +50,19 @@ lo que este cierre escribe, para preguntar para qué sirven y atarlas (cerrar.md
 «sin_citar»: la copia no trae el taller. Una «Escribió:» o «Publicó:» tecleada en «sesion» se rechaza, y con «escribio» o «publico»
 la entrada tiene que llevar «Sesión de: Nombre».
 
+Una decisión se escribe en cuanto se confirma (1.26.4): una llamada con «decisiones» y sin «sesion» las escribe a mitad de
+sesión, sin marca del tablero, y devuelve en «registradas» sus identificadores (que se apuntan también en el estado de /tmp
+de esta sesión, por raíz y --abierto). Una decisión cuya cabecera «## fecha · título» ya está en el registro o en sus
+archivados de este año y del anterior no se escribe otra vez: va en «ya_estaban» o, si su texto es otro, en «distintas»
+(tampoco se escribe; el registro no se edita). --comprobar devuelve además «registradas_hoy»: las decisiones de hoy y de
+ayer que ya están, con «esta_sesion» si las escribió esta sesión, para que el cierre no dependa de lo que la conversación
+recuerda. Las decisiones se escriben antes que la entrada de la bitácora: tras un cierre, sesiones.md es el más reciente de
+los dos, y abrir.py avisa cuando decisiones.md es más nuevo (una decisión escrita en una sesión que no se cerró).
+
 Antes de escribir una entrada en sesiones.md o en decisiones.md, si el registro pasa de 1.500 líneas o de 100 KB, o su
 entrada más nueva es de un año anterior, se archiva entero como «<registro>-<año>.md» (si ya existe, «-2», «-3»…) y el vivo
 queda con su cabecera, su título y la línea «Archivado:»; la entrada de hoy va en el nuevo. Vuelve en «rotados» (de, a,
-motivo, entradas). --sin-rotar lo evita. abrir.py y el tablero leen los archivados de este año y del anterior junto al vivo.
+motivo, entradas). Una llamada sin «sesion» solo mira decisiones.md (1.26.4). --sin-rotar lo evita. abrir.py y el tablero leen los archivados de este año y del anterior junto al vivo.
 
 Antes de escribir nada se comprueba todo: «sesion» empieza por «## AAAA-MM-DD» y cada decisión por «## AAAA-MM-DD · », y esa
 fecha es hoy o ayer en la zona horaria de guia.md (la línea HOY de abrir.py), nunca la del reloj de la consola o del
@@ -89,7 +98,7 @@ import sys
 import tempfile
 import time
 
-ESTE_PLUGIN = "1.26.3"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.4"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 
@@ -1617,8 +1626,9 @@ def _context_core():
         setattr(_pkg, _n, _m)
 _context_core()
 # --- end of context_core ---
-from context_core.compat import (registro_personas, fila_cuentas, con_archivados)  # noqa: E402
+from context_core.compat import (registro_personas, fila_cuentas, con_archivados, archivados_de)  # noqa: E402
 from context_core.minimum import puerta_de_escritura  # noqa: E402
+from context_core.rules import with_archives  # noqa: E402
 # los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
 from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
                                 with_entry_on_top as con_entrada_arriba, without_block as sin_bloque, with_block,
@@ -1981,6 +1991,65 @@ def entradas_con_id(texto):
     return es
 
 
+def cabeza(entrada):
+    """«## AAAA-MM-DD · Título» de una entrada, con los espacios juntos: lo que dice si dos entradas son la misma decisión."""
+    return re.sub(r"\s+", " ", (entrada or "").strip().split("\n", 1)[0]).strip()
+
+
+def titulo_de(entrada):
+    """El título de una decisión sin su fecha, en minúsculas y con los espacios juntos."""
+    return re.sub(r"\s+", " ", re.sub(r"^##\s*20\d\d-\d\d-\d\d\s*·\s*", "", cabeza(entrada))).strip().lower()
+
+
+def ya_registradas(entradas, nuevas, activo, propias):
+    """(pendientes, ya_estaban, distintas) de las decisiones nuevas frente a las entradas del registro con sus archivados
+    (1.26.4). Desde que una decisión se escribe en cuanto se confirma, el cierre puede volver a mandarla (tras una
+    compactación, o porque la conversación no recuerda que ya salió):
+    - una con la misma cabecera «## fecha · título» y el mismo texto que una del registro va en «ya_estaban»;
+    - con la misma cabecera y otro texto, en «distintas»: no se escribe (el registro no se edita) y el cierre lo pregunta;
+    - con el mismo título que una que escribió esta misma sesión (en «propias», con su proyecto), aunque lleve otra fecha
+      (una sesión abierta varios días que la refecha), en «ya_estaban» con «misma_sesion».
+    Se compara con todas las entradas de esa cabecera, no solo la primera."""
+    por_cabeza, por_titulo = {}, {}
+    for e in entradas:
+        por_cabeza.setdefault(cabeza(e["texto"]), []).append(e)
+        if e["id"] and f"{activo}#{e['id']}" in propias:
+            por_titulo.setdefault(titulo_de(e["texto"]), e)
+    norm = lambda x: re.sub(r"\s+", " ", x or "").strip()
+    pend, ya, dist = [], [], []
+    for d in nuevas or []:
+        if not isinstance(d, str):
+            pend.append(d); continue
+        mismas = por_cabeza.get(cabeza(d)) or []
+        igual_ = next((e for e in mismas if norm(e["texto"]) == norm(d)), None)
+        if igual_:
+            ya.append({"id": f"{activo}#{igual_['id']}", "titulo": igual_["titulo"],
+                       **({"esta_sesion": True} if f"{activo}#{igual_['id']}" in propias else {})})
+        elif mismas:
+            dist.append({"id": f"{activo}#{mismas[0]['id']}", "titulo": mismas[0]["titulo"]})
+        elif titulo_de(d) in por_titulo:
+            e = por_titulo[titulo_de(d)]
+            ya.append({"id": f"{activo}#{e['id']}", "titulo": e["titulo"], "esta_sesion": True, "misma_sesion": True})
+        else:
+            pend.append(d)
+    return pend, ya, dist
+
+
+def de_hoy(activo, entradas, fechas, propias):
+    """Las decisiones del registro (con sus archivados) de hoy y de ayer en la zona de la organización, y las que escribió
+    esta misma sesión sea cual sea su fecha (una sesión abierta varios días), con su identificador; «esta_sesion» en las de
+    esta sesión (el estado de /tmp, por raíz y hora de apertura, con el proyecto en el identificador). Es lo que el cierre
+    sabe de lo ya escrito sin depender de lo que la conversación recuerda (1.26.4)."""
+    out = []
+    for e in entradas:
+        if not e["id"]:
+            continue
+        ide = f"{activo}#{e['id']}"
+        if e["fecha"] in fechas or ide in propias:
+            out.append({"id": ide, "titulo": e["titulo"], **({"esta_sesion": True} if ide in propias else {})})
+    return out
+
+
 def referencias(linea):
     """(proyecto o None, identificador) de lo que nombra una línea «Reemplaza:» en su primer tramo: «area/proyecto#AAAA-MM-DD»,
     «#AAAA-MM-DD» o, en registros viejos, «AAAA-MM-DD»; sin proyecto es este mismo."""
@@ -2218,8 +2287,19 @@ class Cierre:
             self.salida["fallidos"].append({"ruta": rel, "motivo": f"al archivar: {ex}"})
 
     def guardar_estado(self):
+        """Funde con lo que otra llamada de la misma sesión guardó mientras tanto, bajo el cerrojo del propio estado: dos
+        llamadas a la vez no se borran lo suyo (revisión de la 1.26.4)."""
         try:
-            self.estado.write_text(json.dumps(self.propios), encoding="utf-8")
+            with Cerrojo(self.estado):
+                try:
+                    actual = json.loads(self.estado.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    actual = {}
+                dec = sorted(set(actual.get("#decisiones") or []) | set(self.propios.get("#decisiones") or []))
+                actual.update(self.propios)
+                if dec:
+                    actual["#decisiones"] = dec
+                self.estado.write_text(json.dumps(actual), encoding="utf-8")
         except OSError:
             pass
 
@@ -2294,13 +2374,32 @@ def main(argv):
     if ses and not re.match(r"^## \d{4}-\d{2}-\d{2}", ses.strip()):
         malos.append("«sesion» tiene que empezar por «## AAAA-MM-DD»")
     for d in cambios.get("decisiones") or []:
-        if not re.match(r"^## \d{4}-\d{2}-\d{2} · \S", d.strip()):
+        if not isinstance(d, str) or not re.match(r"^## \d{4}-\d{2}-\d{2} · \S", d.strip()):
             malos.append("cada decisión tiene que empezar por «## AAAA-MM-DD · Título»")
+        elif re.search(r"^## ", d.strip().split("\n", 1)[1] if "\n" in d.strip() else "", re.M):
+            malos.append("una decisión no lleva otra línea «## » en su cuerpo: el registro la partiría en dos entradas")
+    _cabezas = [cabeza(d) for d in cambios.get("decisiones") or [] if isinstance(d, str)]
+    if len(_cabezas) != len(set(_cabezas)):
+        malos.append("dos decisiones del lote llevan la misma cabecera «## fecha · título»: si son dos decisiones, cada una con su título")
+    # las que ya están en el registro salen antes de mirar fechas (1.26.4): una decisión de esta sesión registrada hace días
+    # no tumba el cierre por su fecha. El registro con sus archivados se lee una vez, solo si hace falta: hay decisiones o
+    # es --comprobar
+    _hoy = datetime.datetime.now(tz).date()
+    estado_sesion = abierto is not None   # sin hora de apertura no se sabe qué es de esta sesión: no se marca nada como suyo
+    propias = {x for x in (c.propios.get("#decisiones") or []) if "#" in x} if estado_sesion else set()
+    _arch = []
+    dec_, dec_entradas = "", []
+    decisiones, ya_estaban, distintas = [], [], []
+    if not malos and (cambios.get("decisiones") or comprobar):
+        _arch = [texto_de(pd / n) or None for n in archivados_de(pd, "decisiones", _hoy.year)]
+        dec_ = with_archives(texto_de(pd / "decisiones.md"), _arch)[0]
+        dec_entradas = entradas_con_id(dec_)
+        decisiones, ya_estaban, distintas = ya_registradas(dec_entradas, cambios.get("decisiones") or [], activo, propias)
     # la fecha de cada entrada es la del día en la zona de la organización: hoy, o ayer si la sesión cruzó la medianoche
     if not malos and not cualquier_fecha:
         hoy = datetime.datetime.now(tz).date()
         validas = {hoy.isoformat(), (hoy - datetime.timedelta(days=1)).isoformat()}
-        for que, e in [("«sesion»", ses)] + [("una decisión", d) for d in cambios.get("decisiones") or []]:
+        for que, e in [("«sesion»", ses)] + [("una decisión", d) for d in decisiones]:
             if not e:
                 continue
             f = e.strip()[3:13]
@@ -2346,17 +2445,24 @@ def main(argv):
             otros.append((r, o))
     if malos:
         print(json.dumps({"error": "; ".join(malos), **s}, ensure_ascii=False)); return 1
+    if ya_estaban:
+        s["ya_estaban"] = ya_estaban
+    if distintas:
+        s["distintas"] = distintas
     if comprobar:
         # antes de enseñar la entrada: lo que se escribiría y lo que cambió desde la apertura sin nombrarse, sin escribir nada
         out = {"comprobado": True, **({"entrada": con_autoria(ses, escribio, publico)} if ses else {})}
-        # el registro con sus archivados recientes se lee una vez para las dos cosas (1.26.3)
-        dec_, _ = con_archivados(pd, "decisiones", texto_de(pd / "decisiones.md"), datetime.datetime.now(tz).year, lambda q: texto_de(q) or None)
-        if isinstance(cambios.get("decisiones"), list) and cambios["decisiones"]:
-            out["parecidas"] = parecidas(activo, dec_, cambios["decisiones"])
-        if not sin_fechas:   # sin consola la copia no trae el taller: no se puede saber qué lo cita (cerrar.md, paso 7)
-            out["sin_citar"] = sin_citar(pd, activo, escribio, cambios, dec_)
-        if abierto and not sin_fechas:
-            out["sin_nombrar"] = sin_nombrar(pd, abierto, set(escribio) | set(publico))
+        if decisiones:
+            out["parecidas"] = parecidas(activo, dec_, decisiones)
+        out.update({k: s[k] for k in ("ya_estaban", "distintas") if s.get(k)})
+        # lo de abajo es del cierre: una comprobación a mitad de sesión (sin «sesion») no lo trae (1.26.4)
+        if ses:
+            # lo ya registrado hoy o ayer, y lo de esta sesión de cualquier fecha: el cierre no lo vuelve a mandar (1.26.4)
+            out["registradas_hoy"] = de_hoy(activo, dec_entradas, {_hoy.isoformat(), (_hoy - datetime.timedelta(days=1)).isoformat()}, propias)
+            if not sin_fechas:   # sin consola la copia no trae el taller: no se puede saber qué lo cita (cerrar.md, paso 7)
+                out["sin_citar"] = sin_citar(pd, activo, escribio, cambios, dec_)
+            if abierto and not sin_fechas:
+                out["sin_nombrar"] = sin_nombrar(pd, abierto, set(escribio) | set(publico))
         print(json.dumps(out, ensure_ascii=False)); return 0
     cuenta = (opciones["--cuenta"] or "").strip().lower()
     duenos, colaboran = celda_cuenta(raiz, area) if cuenta else (set(), set())
@@ -2370,8 +2476,11 @@ def main(argv):
     # haya decisión (revisión de la 1.23, hallazgo 4)
     # Por el año, solo el registro en el que se escribe: archivar por año las únicas decisiones de un proyecto quieto en un
     # cierre sin decisión las sacaría de lo que se lee al año siguiente (revisión de la 1.23, segunda vuelta)
-    if not sin_rotar and (ses or cambios.get("decisiones")):
-        for nombre_, escribe in (("sesiones", bool(ses)), ("decisiones", bool(cambios.get("decisiones")))):
+    # Una llamada a mitad de sesión, que solo trae decisiones (1.26.4), no archiva sesiones.md: no escribe en él
+    if not sin_rotar and (ses or decisiones):
+        for nombre_, escribe in (("sesiones", bool(ses)), ("decisiones", bool(decisiones))):
+            if nombre_ == "sesiones" and not ses:
+                continue
             if (pd / f"{nombre_}.md").is_file():
                 c.rotar(pd / f"{nombre_}.md", nombre_, por_anio=escribe)
     # otros archivos del área, por reemplazos exactos. Van antes de la entrada de sesiones.md (1.24.2): al publicar y cerrar
@@ -2401,18 +2510,40 @@ def main(argv):
                           "arregla el reemplazo de «otros» (mira «sin_match» y «rechazados») y repite la llamada sin los reemplazos de «otros» "
                           "que ya se escribieron (los archivos de «escritos»)", **s}, ensure_ascii=False))
         return 1
+    # 3. decisiones.md, antes que la entrada (1.26.4): así, tras un cierre, sesiones.md es el más reciente de los dos, y una
+    # decisión escrita a mitad de sesión en una sesión que nunca se cerró deja decisiones.md más nuevo, que es lo que
+    # abrir.py avisa. De la más antigua a la más nueva, para que la última quede arriba
+    if decisiones:
+        # la comprobación de lo ya registrado se repite aquí, bajo el cerrojo y sobre lo que está en el disco: dos llamadas a
+        # la vez (dos personas, o dos conversaciones) no escriben dos veces la misma decisión. Si esta llamada archivó el
+        # registro, los archivados se vuelven a leer
+        if any(r["de"].endswith("/decisiones.md") for r in s.get("rotados") or []):
+            _arch = [texto_de(pd / n) or None for n in archivados_de(pd, "decisiones", _hoy.year)]
+        hecho = {}
+        def f_dec(t, sm):
+            pend, ya2, dist2 = ya_registradas(entradas_con_id(with_archives(t, _arch)[0]), decisiones, activo, propias)
+            hecho.update(ya=ya2, dist=dist2, pend=pend)
+            hubo = False
+            for d in pend:
+                t, h = con_entrada_arriba(t, d); hubo = hubo or h
+            hecho["texto"] = t
+            return t, hubo
+        if c.cambiar(pd / "decisiones.md", f_dec):
+            norm_ = lambda x: re.sub(r"\s+", " ", x or "").strip()
+            puestas = {norm_(d) for d in hecho.get("pend") or [] if isinstance(d, str)}
+            s["registradas"] = [{"id": f"{activo}#{e['id']}", "titulo": e["titulo"]} for e in entradas_con_id(with_archives(hecho["texto"], _arch)[0])
+                                if e["id"] and norm_(e["texto"]) in puestas]
+            if estado_sesion:
+                c.propios["#decisiones"] = sorted(propias | {r["id"] for r in s["registradas"]})
+        # lo que otra llamada escribió mientras tanto se dice como lo de antes
+        for k_, v_ in (("ya_estaban", hecho.get("ya")), ("distintas", hecho.get("dist"))):
+            nuevos_ = [x for x in v_ or [] if x["id"] not in {y["id"] for y in s.get(k_) or []}]
+            if nuevos_:
+                s[k_] = (s.get(k_) or []) + nuevos_
     # 2. sesiones.md
     if ses:
         entrada = con_autoria(ses, escribio, publico)
         c.cambiar(pd / "sesiones.md", lambda t, sm: con_entrada_arriba(t, entrada))
-    # 3. decisiones.md: de la más antigua a la más nueva, para que la última quede arriba
-    if cambios.get("decisiones"):
-        def f_dec(t, sm):
-            hubo = False
-            for d in cambios["decisiones"]:
-                t, h = con_entrada_arriba(t, d); hubo = hubo or h
-            return t, hubo
-        c.cambiar(pd / "decisiones.md", f_dec)
     # 4. proyecto.md: Estatus entero (sustituye a «En corto» si la raíz no se migró) y reemplazos exactos en lo demás
     pr = cambios.get("proyecto") or {}
     estatus = pr.get("estatus")
@@ -2453,7 +2584,7 @@ def main(argv):
         c.cambiar(pa, f_area)
     c.guardar_estado()
     s["escritos"] = list(dict.fromkeys(s["escritos"]))   # un archivo, una vez, aunque lo escriban la rotación y la entrada
-    if abierto and not sin_fechas:
+    if abierto and not sin_fechas and ses:   # a mitad de sesión no: lo que la sesión escribió solo se nombra al cerrar (1.26.4)
         propios = {e[len(activo) + 1:] for e in s["escritos"] if e.startswith(activo + "/")}
         s["sin_nombrar"] = sin_nombrar(pd, abierto, set(escribio) | set(publico) | propios)
     ahora = datetime.datetime.now(datetime.timezone.utc)
@@ -2470,7 +2601,8 @@ def respuesta(s, raiz, pd, area, slug, cuenta, cierre, sin_fechas):
     """Qué hace la conversación con esta salida, en orden. Es un cierre solo si esta llamada escribió la entrada de la
     bitácora: entonces van la devolución (sin consola), lo pendiente (sin_match, rechazados, fallidos), la marca del tablero
     y el recuadro de cierre con su fila del tablero. Una llamada a mitad de sesión (solo reemplazos) no es un cierre: no deja
-    marca ni dice «sesión cerrada». Los avisos de «ajenos» y «sin_nombrar» van en llano en los dos casos. Los textos de la
+    marca ni dice «sesión cerrada»: una llamada a mitad de sesión con solo reemplazos o con solo decisiones (1.26.4). Los avisos
+    de «ajenos» y «sin_nombrar» van en llano en los dos casos, y «distintas» es un pendiente que se pregunta. Los textos de la
     carpeta no mandan aquí: solo se cita el título del proyecto, para la marca."""
     def titulo(p, defecto):
         try:
@@ -2486,9 +2618,21 @@ def respuesta(s, raiz, pd, area, slug, cuenta, cierre, sin_fechas):
         llano.append(f"alguien más escribió {a['ruta']} {'mientras cerrábamos' if a.get('durante') else 'a las ' + h}; sumé lo de hoy encima")
     for r in s.get("sin_nombrar") or []:
         llano.append(f"{r} cambió desde que abrimos y no lo escribió esta sesión")
-    pendientes = [(k, txt) for k, txt in (("sin_match", "un reemplazo que no cuadró"), ("rechazados", "lo que esta cuenta no puede escribir"), ("fallidos", "un archivo que no se pudo escribir")) if s.get(k)]
+    for d in s.get("ya_estaban") or []:
+        if not d.get("esta_sesion"):   # lo que escribió esta misma sesión es lo normal: no se dice
+            llano.append(f"la decisión «{d['titulo']}» ya estaba registrada ({d['id']}); no la escribí otra vez")
+    pendientes = [(k, txt) for k, txt in (("distintas", "una decisión con la misma cabecera que una ya registrada y otro texto, que no se escribió: se pregunta si es la misma (y entonces no se hace nada), otra decisión (va con otro título) o una corrección (va con su «Reemplaza:»)"),
+                                          ("sin_match", "un reemplazo que no cuadró"), ("rechazados", "lo que esta cuenta no puede escribir"), ("fallidos", "un archivo que no se pudo escribir")) if s.get(k)]
     if not cierre:
-        pasos.append("Esta llamada no cierra la sesión (no escribió la entrada de la bitácora): di en una línea qué quedó escrito, con el enlace computer:// de cada archivo de «escritos», y la sesión sigue abierta. Sin marca del tablero y sin recuadro de cierre.")
+        if sin_fechas and s.get("escritos"):
+            # sin consola lo escrito está solo en la copia: hasta devolverlo no está registrado (revisión de la 1.26.4)
+            pasos.append("Primero devuelve los archivos a la computadora, como dice sin-consola-sesion.md: `espejo.py devolver` y device_commit_files (con la rotación, si hubo «rotados»). Hasta que todos salgan en «written» no está escrito: no se dice que quedó registrado.")
+        if s.get("escritos"):
+            pasos.append("Esta llamada no cierra la sesión (no escribió la entrada de la bitácora): di en una línea qué quedó escrito, con el enlace computer:// de cada archivo de «escritos», y la sesión sigue abierta. Sin marca del tablero y sin recuadro de cierre.")
+        else:
+            pasos.append("Esta llamada no escribió nada nuevo y no cierra la sesión: dilo en media línea si hace falta, y la sesión sigue abierta.")
+        if s.get("registradas"):
+            pasos.append("Quedaron registradas " + ", ".join(r["id"] for r in s["registradas"]) + ": al cerrar no se vuelven a mandar (el cierre las ve en «registradas_hoy» de --comprobar, aunque la conversación ya no las recuerde). Las siguientes llamadas de esta sesión llevan el mismo --abierto de la apertura, no «escrito_en».")
         for k, txt in pendientes:
             pasos.append(f"Hay «{k}» ({txt}): se resuelve como dice cerrar.md.")
         if llano:
