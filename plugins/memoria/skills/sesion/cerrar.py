@@ -42,7 +42,12 @@ proyecto y existir; lo que se publica, en entregables/ y vigente. Con --abierto,
 documentos de entregables/ y taller/ que cambiaron desde que se abrió y no van en ninguna de las dos listas, para que la
 sesión diga si son suyos: no se atribuyen solos, porque pudo escribirlos otra persona. Con --comprobar no se escribe nada:
 se validan la forma y la autoría (no los reemplazos ni los permisos) y se devuelven «entrada» (la entrada tal como quedaría, con sus líneas) y «sin_nombrar», para enseñarla
-completa antes de pedir el sí. Una «Escribió:» o «Publicó:» tecleada en «sesion» se rechaza, y con «escribio» o «publico»
+completa antes de pedir el sí. Desde la 1.26.3 devuelve además, sin escribir nada: «parecidas», por cada decisión nueva
+que tiene alguna, hasta cinco decisiones del proyecto (con sus archivados de este año y del anterior) cuyo título comparte
+dos palabras con significado o más con el suyo, con su identificador, para preguntar si la nueva reemplaza a alguna (no
+salen las que ya reemplazó otra); y «sin_citar», las notas de taller/ de «escribio» que nada del proyecto cita, ni contando
+lo que este cierre escribe, para preguntar para qué sirven y atarlas (cerrar.md, paso 7). Con --sin-fechas no hay
+«sin_citar»: la copia no trae el taller. Una «Escribió:» o «Publicó:» tecleada en «sesion» se rechaza, y con «escribio» o «publico»
 la entrada tiene que llevar «Sesión de: Nombre».
 
 Antes de escribir una entrada en sesiones.md o en decisiones.md, si el registro pasa de 1.500 líneas o de 100 KB, o su
@@ -84,7 +89,7 @@ import sys
 import tempfile
 import time
 
-ESTE_PLUGIN = "1.26.2"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.3"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 
@@ -1612,7 +1617,7 @@ def _context_core():
         setattr(_pkg, _n, _m)
 _context_core()
 # --- end of context_core ---
-from context_core.compat import (registro_personas, fila_cuentas)  # noqa: E402
+from context_core.compat import (registro_personas, fila_cuentas, con_archivados)  # noqa: E402
 from context_core.minimum import puerta_de_escritura  # noqa: E402
 # los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
 from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
@@ -1916,6 +1921,184 @@ def sin_nombrar(pd, abierto, nombrados):
     return out
 
 
+# ---------- lo que --comprobar enseña además (1.26.3): decisiones parecidas y notas del taller sin atar ----------
+# Solo lee: la sesión lo enseña y la persona decide. Nada de esto cambia lo que se escribe.
+VACIAS = set("""
+para como pero cada sino desde hasta entre sobre tras solo toda todo todas todos este esta estos estas otro otra otros
+otras mismo misma cuando donde porque sigue siguen queda quedan puede pueden debe deben hace hacen tiene tienen sera
+estan antes despues ahora nunca siempre tambien menos mucho cual cuales quien nada algo segun aunque mientras dentro
+fuera bajo luego cuyo cuya sean esta eso esos esas aqui alli ellos ellas nuestro nuestra unos unas desde
+with from that this these those into only when where which what have does each every stays goes before after until
+than then there their them they will would also more less over under about once still both like same just must""".split())
+
+
+def palabras(texto):
+    """Las palabras con significado de un título: en minúsculas, sin acentos, de cuatro letras o más, sin las vacías, sin
+    la «s» final y en sus seis primeras letras, para que «decisión» y «decisiones» o «change» y «changes» se encuentren.
+    Basta para proponer candidatas: quien decide es la persona."""
+    import unicodedata
+    t = "".join(c for c in unicodedata.normalize("NFKD", (texto or "").lower()) if not unicodedata.combining(c))
+    out = set()
+    for w in re.findall(r"[a-z0-9]+", t):
+        if len(w) < 4 or w.isdigit() or w in VACIAS:
+            continue
+        if w.endswith("s") and len(w) > 4:
+            w = w[:-1]
+        out.add(w[:6])   # «decisión» y «decisiones», «change» y «changes»: la raíz basta para encontrar candidatas
+    return out
+
+
+def texto_de(p):
+    try:
+        return p.read_bytes().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+    except OSError:
+        return ""
+
+
+def entradas_con_id(texto):
+    """Las entradas de un registro con su identificador, como abrir.py: la fecha y -2, -3… contando desde la más antigua
+    del mismo día; sin fecha válida, sin identificador."""
+    es = []
+    for parte in re.split(r"^(?=## )", texto or "", flags=re.M):
+        if not parte.startswith("## "):
+            continue
+        cab = parte.split("\n", 1)[0][3:].strip()
+        f = re.search(r"\b(20\d\d-\d\d-\d\d)\b", cab)
+        fecha = ""
+        if f:
+            try:
+                datetime.date.fromisoformat(f.group(1)); fecha = f.group(1)
+            except ValueError:
+                pass
+        es.append({"fecha": fecha, "titulo": re.sub(r"^20\d\d-\d\d-\d\d\s*·\s*", "", cab), "texto": parte.strip()})
+    cuenta = {}
+    for e in reversed(es):
+        if not e["fecha"]:
+            e["id"] = ""
+            continue
+        n = cuenta[e["fecha"]] = cuenta.get(e["fecha"], 0) + 1
+        e["id"] = e["fecha"] + ("" if n == 1 else f"-{n}")
+    return es
+
+
+def referencias(linea):
+    """(proyecto o None, identificador) de lo que nombra una línea «Reemplaza:» en su primer tramo: «area/proyecto#AAAA-MM-DD»,
+    «#AAAA-MM-DD» o, en registros viejos, «AAAA-MM-DD»; sin proyecto es este mismo."""
+    primero = (linea or "").split(" · ")[0]
+    return [(m.group(1), m.group(2)) for m in re.finditer(r"(?:([a-z0-9][\w.-]*/[a-z0-9][\w.-]*)#|#)?(20\d\d-\d\d-\d\d(?:-\d+)?)", primero)]
+
+
+def parecidas(activo, texto, nuevas):
+    """Para cada decisión nueva, hasta cinco del proyecto (el registro con sus archivados de este año y del anterior) cuyo
+    título comparte con el suyo dos palabras con significado o más, de la que más comparte a la que menos, pesando más las
+    palabras raras en el registro. No cuentan las palabras de demasiados títulos (de más de uno de cada cinco con veinte
+    decisiones o más; de más de la mitad con cuatro a diecinueve), ni salen las que ya reemplazó otra decisión o las que su
+    propio «Reemplaza:» nombra. Para preguntar si la nueva reemplaza a alguna."""
+    import math
+    es = [e for e in entradas_con_id(texto) if e["id"]]
+    ya = set()   # identificadores de este proyecto que alguna decisión ya reemplazó
+    for e in es:
+        for linea in re.findall(r"^Reemplaza\s*:\s*(.+)$", e["texto"], re.M | re.I):
+            ya |= {i for p, i in referencias(linea) if p in (None, activo)}
+    pal = {e["id"]: palabras(e["titulo"]) for e in es}
+    df = {}
+    for ws in pal.values():
+        for w in ws:
+            df[w] = df.get(w, 0) + 1
+    n = len(es)
+    def distingue(w):
+        return n < 4 or (df[w] * 2 <= n if n < 20 else df[w] * 5 <= n)
+    out = []
+    for d in nuevas or []:
+        if not isinstance(d, str):
+            continue
+        titulo_d = re.sub(r"^## 20\d\d-\d\d-\d\d\s*·\s*", "", d.strip().split("\n", 1)[0]).strip()
+        mias = palabras(titulo_d)
+        nombra = {i for linea in re.findall(r"^Reemplaza\s*:\s*(.+)$", d, re.M | re.I) for p, i in referencias(linea) if p in (None, activo)}
+        cands = []
+        for e in es:
+            if e["texto"] == d.strip() or e["id"] in ya or e["id"] in nombra:
+                continue
+            comunes = {w for w in mias & pal[e["id"]] if distingue(w)}
+            if len(comunes) >= 2:
+                cands.append((sum(math.log(1 + n / df[w]) for w in comunes), e["fecha"], e))
+        cands.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        if cands:
+            out.append({"decision": titulo_d, "parecidas": [{"id": f"{activo}#{e['id']}", "titulo": e["titulo"]} for _, _, e in cands[:5]]})
+    return out
+
+
+def cabeza_de(p):
+    """El principio de un .md, sin leer su cuerpo: los primeros 16 KB bastan para cualquier cabecera."""
+    try:
+        with open(p, "rb") as f:
+            return f.read(16384).decode("utf-8-sig", errors="replace").replace("\r\n", "\n")
+    except OSError:
+        return ""
+
+
+def notas_del_taller(pd):
+    """(notas .md, otros archivos, informes) de taller/ del proyecto, como rutas dentro de él: sin lo que empieza por punto
+    ni restringido/; los informes de taller/revisiones-de-calidad/ aparte, porque se atan por su nombre. La misma regla que
+    notas_del_taller() de abrir.py: si cambia aquí, cambia allí."""
+    notas_, otros_, informes_ = [], [], []
+    if not (pd / "taller").is_dir():
+        return notas_, otros_, informes_
+    for r_, ds, fs in os.walk(pd / "taller"):
+        ds[:] = sorted(x for x in ds if not x.startswith(".") and x != "restringido")
+        for f in sorted(fs):
+            if f.startswith("."):
+                continue
+            rr = pathlib.Path(r_, f).relative_to(pd).as_posix()
+            (informes_ if rr.startswith("taller/revisiones-de-calidad/") else notas_ if f.endswith(".md") else otros_).append(rr)
+    return notas_, otros_, informes_
+
+
+def basado_en_de(texto):
+    """Las líneas de basado_en de una cabecera como texto donde buscar citas: en lista (sangrada o no) o en una línea."""
+    m = re.match(r"^---\n(.*?)\n---", texto or "", re.S)
+    b = re.search(r"^basado_en\s*:(.*(?:\n[ \t]*-.*)*)", m.group(1), re.M) if m else None
+    return b.group(1) if b else ""
+
+
+def citada(rr, activo, textos):
+    """Si alguno de los textos nombra la ruta rr del proyecto: sola, con «./», «../» o la ruta del proyecto delante, y
+    entre comillas, negritas o ángulos; nombres comparados en NFC. La misma función que en abrir.py."""
+    import unicodedata
+    nfc = lambda s: unicodedata.normalize("NFC", s or "")
+    patron = re.compile(r"(?:^|(?<=[\s`'\"(\[,:·«*_<>]))(?:\./|(?:\.\./)+|" + re.escape(nfc(activo)) + r"/)?" + re.escape(nfc(rr)) + r"(?![\w/-])", re.M)
+    return any(patron.search(nfc(t)) for t in textos)
+
+
+def sin_citar(pd, activo, escribio, cambios, dec):
+    """Las notas de taller/ que la sesión escribió y que nada del proyecto cita, contando lo que este cierre va a escribir:
+    proyecto.md, decisiones.md con sus archivados recientes (dec), las decisiones nuevas, el Estatus nuevo, un reemplazo
+    cuyo texto viejo está en su archivo, y el basado_en de los entregables (con sus subcarpetas) y de las otras notas. Los
+    informes de revisión no cuentan, ni las notas reemplazadas. La misma regla que el aviso de abrir.py."""
+    notas, _, _ = notas_del_taller(pd)
+    mias = [r for r in escribio if r in notas and "estado: reemplazado" not in cabeza_de(pd / r).split("\n---", 1)[0]]
+    if not mias:
+        return []
+    def lista(x):
+        return [y for y in x if isinstance(y, dict)] if isinstance(x, list) else []
+    pr = cambios.get("proyecto") if isinstance(cambios.get("proyecto"), dict) else {}
+    tp = texto_de(pd / "proyecto.md")
+    textos = [tp, dec, str(pr.get("estatus") or "")] + [d for d in cambios.get("decisiones") or [] if isinstance(d, str)]
+    textos += [str(r.get("a", "")) for r in lista(pr.get("reemplazos")) if str(r.get("de", "")) and tp.count(str(r.get("de"))) == 1]
+    raiz = pd.parent.parent
+    for o in lista(cambios.get("otros")):
+        t_o = texto_de(raiz / str(o.get("ruta", "")).replace("\\", "/").strip("/")) if o.get("ruta") else ""
+        textos += [str(r.get("a", "")) for r in lista(o.get("reemplazos")) if str(r.get("de", "")) and t_o.count(str(r.get("de"))) == 1]
+    bases = {r: basado_en_de(cabeza_de(pd / r)) for r in notas}
+    if (pd / "entregables").is_dir():
+        for r_, ds, fs in os.walk(pd / "entregables"):
+            ds[:] = [x for x in ds if not x.startswith(".") and x != "restringido"]
+            for f in fs:
+                if f.endswith(".md") and not f.startswith("."):
+                    bases[pathlib.Path(r_, f).relative_to(pd).as_posix()] = basado_en_de(cabeza_de(pathlib.Path(r_, f)))
+    return [r for r in mias if not citada(r, activo, textos + [t for k, t in bases.items() if k != r])]
+
+
 def nombres_en(carpeta):
     """Los nombres de los archivos de una carpeta, para las funciones de rotación del paquete, que no leen el disco."""
     try:
@@ -2166,6 +2349,12 @@ def main(argv):
     if comprobar:
         # antes de enseñar la entrada: lo que se escribiría y lo que cambió desde la apertura sin nombrarse, sin escribir nada
         out = {"comprobado": True, **({"entrada": con_autoria(ses, escribio, publico)} if ses else {})}
+        # el registro con sus archivados recientes se lee una vez para las dos cosas (1.26.3)
+        dec_, _ = con_archivados(pd, "decisiones", texto_de(pd / "decisiones.md"), datetime.datetime.now(tz).year, lambda q: texto_de(q) or None)
+        if isinstance(cambios.get("decisiones"), list) and cambios["decisiones"]:
+            out["parecidas"] = parecidas(activo, dec_, cambios["decisiones"])
+        if not sin_fechas:   # sin consola la copia no trae el taller: no se puede saber qué lo cita (cerrar.md, paso 7)
+            out["sin_citar"] = sin_citar(pd, activo, escribio, cambios, dec_)
         if abierto and not sin_fechas:
             out["sin_nombrar"] = sin_nombrar(pd, abierto, set(escribio) | set(publico))
         print(json.dumps(out, ensure_ascii=False)); return 0
