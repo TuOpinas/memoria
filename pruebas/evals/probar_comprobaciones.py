@@ -135,5 +135,17 @@ ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\n\n"), "v/c personas")[0], "sin
 ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\nAfecta a: personas-x\n\n"), "v/c personas")[0], "otro nombre que empieza igual no pasa")
 ok(not da(_con(f"## {_hoy} · Nueva\nDecidió: A\nAfecta a: personas\n\n"), "v/c")[0], "sin texto no pasa")
 
+print("El recuadro del mantenimiento como tabla (1.26.6)")
+g4 = {"re": re}
+exec("COMPROBACIONES = {}\ndef comprobacion(n):\n    def d(f):\n        COMPROBACIONES[n] = f\n        return f\n    return d\n", g4)
+exec(src[src.index("def texto_de("):src.index("def entradas_registro(")], g4)
+exec(src[src.index("def sin_codigo("):src.index('@comprobacion("recuadro")')], g4)
+exec(src[src.index('@comprobacion("tabla")'):src.index('@comprobacion("recuadro-cierre")')], g4)
+tb = g4["COMPROBACIONES"]["tabla"]
+_t = lambda r: {"turnos": [{"respuestas": [r]}]}
+ok(tb(_t("| Memoria · mantenimiento · 2026-11-17 |\n|---|\n| Adopción · bien |"), "Memoria · mantenimiento@1")[0], "la cabecera en una tabla pasa")
+ok(not tb(_t("Memoria · mantenimiento · 2026-11-17: todo bien"), "Memoria · mantenimiento@1")[0], "como texto no pasa")
+ok(not tb(_t("```\n| Memoria · mantenimiento |\n|---|\n```"), "Memoria · mantenimiento@1")[0], "dentro de un bloque de código no pasa")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)
