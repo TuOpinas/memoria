@@ -764,7 +764,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.26.9"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.26.10"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -3168,7 +3168,8 @@ function ayudaArts(){
       <dt>Sin nadie delante</dt><dd>Solo la puesta al día del tablero, y solo lo mecánico: fechas y tareas hechas con nota.</dd>
     </dl>
     <h3 class="hc-h">Cómo lee Claude la carpeta</h3>
-    <p>Claude nunca lee la carpeta entera: empieza por el mapa, el área y las premisas, sigue con la ficha y lo reciente del proyecto, y abre un documento solo cuando el trabajo lo pide. Así cada conversación empieza con el contexto justo.</p>`},
+    <p>Claude nunca lee la carpeta entera: empieza por el mapa, el área y las premisas, sigue con la ficha y lo reciente del proyecto, y abre un documento solo cuando el trabajo lo pide. Así cada conversación empieza con el contexto justo.</p>
+    <p>En una sesión de trabajo, cuando la respuesta a una pregunta lee más de lo que trajo al abrir, termina con un recuadro, «Memoria · lectura», que dice qué leyó y qué dejó fuera. Si lo que dejó fuera puede cambiar o completar la respuesta, debajo te pregunta si lo lee y cuánto tarda; basta con decirle que sí. Si le pides algo que pesa mucho, como «todas las revisiones», te pregunta antes cuánto lee.</p>`},
   ];
 }
 const _norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
