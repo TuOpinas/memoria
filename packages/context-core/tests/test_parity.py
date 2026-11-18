@@ -29,7 +29,10 @@ def script_functions():
     """The parsing functions of generar_vista.py, and «quién escribe» from its 1.25.1 copy (the scripts now take it from
     the package, so comparing against them would compare the package with itself)."""
     src = GEN.read_text(encoding="utf-8")
-    ns = {"re": re, "unicodedata": unicodedata, "datetime": datetime, "os": os}
+    from context_core import rules
+    # what the board's parser already takes from the package (1.26.8: the maintenance trace)
+    ns = {"re": re, "unicodedata": unicodedata, "datetime": datetime, "os": os,
+          "es_mantenimiento": rules.is_maintenance, "arreglados": rules.maintenance_files}
     exec(REF.read_text(encoding="utf-8"), ns)
     exec(RULES.read_text(encoding="utf-8"), ns)
     for n in NAMES:

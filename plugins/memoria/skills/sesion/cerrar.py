@@ -75,6 +75,13 @@ exactamente una vez, cruza un encabezado «## » o pasa de doce líneas no se ap
 encogería a menos de la mitad no se escribe salvo con --forzar <ruta>. `actualizado` de la cabecera se pone a hoy (salvo cuando lo único que cambia es la cabecera, como añadir `aportacion`) (en la
 zona horaria de guia.md) en cada archivo escrito; los finales de línea se conservan como estaban.
 
+El rastro del mantenimiento (1.26.8) va solo en su llamada, con {"mantenimiento": {"arreglos": [{"ruta": …, "que":
+"cabecera|movido|renombrado|cita", "de": …}]}} y --cuenta, primero con --comprobar y después sin él: escribe una entrada
+«## AAAA-MM-DD (mantenimiento)» con «Arregló:», «Último cierre:» y «Escrita:», que no es una sesión (sin rotación, sin
+marca del tablero, sin recuadro de cierre). Lo que comprueba y por qué está en rastro(), abajo. Una «sesion» con una
+etiqueta de las que no son sesiones en su cabecera se rechaza, y una clave que no es de las de arriba, también: un nombre
+mal escrito no se pierde en silencio.
+
 Lo primero, antes que todo lo demás (1.26): si guia.md tiene la sección «Versión mínima del plugin» y este script es de un
 plugin anterior a esa versión (ESTE_PLUGIN, que pone release.sh), o la sección no dice qué versión, no escribe nada, ni con
 --comprobar: imprime el JSON con «error» (el motivo en llano, con cómo actualizar), «solo_lectura», «version_minima» y
@@ -98,7 +105,7 @@ import sys
 import tempfile
 import time
 
-ESTE_PLUGIN = "1.26.7"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 
@@ -114,12 +121,12 @@ MAX_LINEAS_REEMPLAZO = 12
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'language': '4c689d7965c2de5182ee0fb8eac61570042af0051cdf4eaf51c828ec06b5d4fb',
+    'language': '9e900919e12e7a17d2eef48ac8da0f72ea4a20ed11a31f1268ea2dfcfaecad64',
     'records': '074bd7a0994a2cdf904cfa82827c7f26b226caff14317513a01d1a2af6a34def',
-    'rules': '30744f314ea02e49e0fb40dcfffab3f48e36bbd5092c192dc2669a51021794b5',
-    'compat': 'b4586f4947dd2f617127a7bf2ebd1bc8dddb9e64de6c8a0c8892a032ccb1737b',
-    'minimum': '8dfc9c9463cee3c451d065e5c7f22fe653dd7e90ccfbe19d6ee7d016dc65e8ff',
-    'write': 'c90a809a7411edfdd407da3a67e7d9c3ffb3b1848be65d60b3b0d330426730b3',
+    'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
+    'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
+    'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
+    'write': 'a744e346fed3ef9a5cf242c4070872bf5f763a8439091be18cbf4a853d0282b9',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -236,6 +243,14 @@ def _context_core():
         '    writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in \xabSesi\xf3n de\xbb\n'
         '    # guia.md: the section that declares the oldest plugin that may write in the root (1.26)\n'
         '    minimum_plugin: str = ""\n'
+        '    # sesiones.md entries that are not sessions: \xab## AAAA-MM-DD (tarea)\xbb and the like. They tell what happened, and no\n'
+        '    # reader counts them as a session (escribir.md, section 8). The last one is the maintenance trace (1.26.8), whose\n'
+        '    # entry names what it fixed, the instant of the last real close and its own\n'
+        '    non_session_tags: tuple = ()\n'
+        '    maintenance_tag: str = ""\n'
+        '    session_fixed: tuple = ()\n'
+        '    session_last_close: tuple = ()                       # \xab\xdaltimo cierre:\xbb, the instant of the last real close\n'
+        '    session_written: tuple = ()                          # \xabEscrita:\xbb, the instant the maintenance entry was written\n'
         '\n'
         '\n'
         'ES = Pack(\n'
@@ -267,12 +282,15 @@ def _context_core():
         '    session_by=("sesi\xf3n de:", "sesion de:"),\n'
         '    key_state="estado", key_updated="actualizado", key_based_on="basado_en", key_replaced_by="reemplazado_por",\n'
         '    key_contribution=("aportacion", "afirma"),\n'
-        '    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribi\xf3", "published": "Public\xf3", "by": "Sesi\xf3n de"},\n'
+        '    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribi\xf3", "published": "Public\xf3", "by": "Sesi\xf3n de",\n'
+        '                   "fixed": "Arregl\xf3", "last_close": "\xdaltimo cierre", "written": "Escrita"},\n'
         '    write_decision={"decided_by": "Decidi\xf3", "raised_by": "Plante\xf3", "why": "Por qu\xe9", "discarded": "Descartado",\n'
         '                    "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},\n'
         '    write_status={"completed": "Se complet\xf3", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},\n'
         '    writers={"plugin": "plugin", "server": "servidor"},\n'
         '    minimum_plugin="Versi\xf3n m\xednima del plugin",\n'
+        '    non_session_tags=("tarea", "tablero", "migracion", "mantenimiento"), maintenance_tag="mantenimiento",\n'
+        '    session_fixed=("arregl\xf3:", "arreglo:"), session_last_close=("\xfaltimo cierre:", "ultimo cierre:"), session_written=("escrita:",),\n'
         ')\n'
         '\n'
         'PACKS = {"es": ES}\n'
@@ -560,6 +578,7 @@ def _context_core():
         '"""\n'
         'from __future__ import annotations\n'
         '\n'
+        'import datetime\n'
         'import re\n'
         'import unicodedata\n'
         'from typing import Optional\n'
@@ -903,6 +922,119 @@ def _context_core():
         '\n'
         '\n'
         '\n'
+        '# \u2500\u2500 entries of sesiones.md that are not sessions (1.26.8) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        '_PATTERNS: dict = {}\n'
+        '\n'
+        '\n'
+        'def _patterns(lang: Pack) -> tuple:\n'
+        '    """(any tag, the maintenance tag) compiled once per pack: is_session runs once per entry of every log read."""\n'
+        '    k = id(lang)\n'
+        '    if k not in _PATTERNS:\n'
+        '        tags = "|".join(re.escape(x) for x in lang.non_session_tags)\n'
+        '        _PATTERNS[k] = (re.compile(r"\\((?:" + tags + r")\\)", re.I), re.compile(r"\\(" + re.escape(lang.maintenance_tag) + r"\\)", re.I))\n'
+        '    return _PATTERNS[k]\n'
+        '\n'
+        '\n'
+        'def is_session(heading: str, lang: Pack = ES) -> bool:\n'
+        '    """Whether a heading of sesiones.md (\xab## 2026-11-17 (tarea)\xbb, with or without \xab## \xbb) is a work session. The entries\n'
+        '    of a scheduled task, the board, a migration and the maintenance trace tell what they did, but are not sessions: no\n'
+        '    reader takes them as the last session, nor counts them, nor shows them among the recent ones."""\n'
+        '    return not _patterns(lang)[0].search(heading or "")\n'
+        '\n'
+        '\n'
+        'def is_maintenance(heading: str, lang: Pack = ES) -> bool:\n'
+        '    return bool(_patterns(lang)[1].search(heading or ""))\n'
+        '\n'
+        '\n'
+        'def _field(text: str, names: tuple) -> Optional[str]:\n'
+        '    for l in (text or "").split("\\n"):\n'
+        '        low = l.strip().lower()\n'
+        '        for n in names:\n'
+        '            if low.startswith(n):\n'
+        '                return l.strip()[len(n):].strip()\n'
+        '    return None\n'
+        '\n'
+        '\n'
+        'def path_key(path: str) -> str:\n'
+        '    """How two spellings of a path inside a project compare: \xab/\xbb separators, NFC (macOS and Drive may give NFD) and case\n'
+        '    folded (disks that do not tell case apart)."""\n'
+        '    return unicodedata.normalize("NFC", (path or "").replace("\\\\", "/").strip().strip("/")).casefold()\n'
+        '\n'
+        '\n'
+        'def maintenance_files(entry: str, lang: Pack = ES) -> list[str]:\n'
+        '    """The paths a maintenance entry says it fixed, inside the project: \xabArregl\xf3: taller/a.md (cabecera),\n'
+        '    entregables/b.md (antes b.md)\xbb. What follows a path in parentheses is not a path."""\n'
+        '    v = _field(entry, lang.session_fixed) or ""\n'
+        '    out = []\n'
+        '    for part in re.split(r",\\s*(?![^()]*\\))", v):\n'
+        '        r = re.sub(r"\\s*\\(.*\\)\\s*$", "", part.strip()).strip().strip("`").strip().replace("\\\\", "/")\n'
+        '        if r and r not in out:\n'
+        '            out.append(r)\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        'def _instant(value: Optional[str]) -> tuple:\n'
+        '    """(readable, epoch seconds or None) of an ISO 8601 instant with its offset. \xabninguno\xbb reads as no instant; a value\n'
+        '    without an offset does not read, because each reader would take it in its own zone."""\n'
+        '    v = (value or "").split()[0] if (value or "").strip() else ""\n'
+        '    if not v:\n'
+        '        return False, None\n'
+        '    if v.strip(".").lower() in ("ninguno", "ninguna"):\n'
+        '        return True, None\n'
+        '    try:\n'
+        '        d = datetime.datetime.fromisoformat(v.replace("Z", "+00:00"))\n'
+        '    except ValueError:\n'
+        '        return False, None\n'
+        '    return (True, d.timestamp()) if d.tzinfo is not None else (False, None)\n'
+        '\n'
+        '\n'
+        'def maintenance_trace(entries: list[tuple[str, str]], log_mtime: Optional[float], lang: Pack = ES) -> tuple:\n'
+        '    """(reference, discounted) for whoever compares file dates with the last close of a project (1.26.8).\n'
+        '\n'
+        '    `entries` are (heading, text) of sesiones.md newest first; `log_mtime` its modification time (epoch seconds). The\n'
+        '    entries above the last real session that are not sessions ((tarea), (tablero), (migracion), (mantenimiento)) are\n'
+        '    walked together. If a maintenance entry is among them, `reference` is the \xab\xdaltimo cierre\xbb of the newest one (the\n'
+        '    instant of the last real close, carried from entry to entry) and `discounted` maps each file the maintenance entries\n'
+        "    name (by path_key) to the instant until which it is discounted: its own entry's \xabEscrita\xbb plus a minute. A file that\n"
+        "    changed after that is someone's work and keeps showing, whatever else writes the log later. Without a maintenance\n"
+        '    entry above the last session, `reference` is `log_mtime` and nothing is discounted, as before 1.26.8. \xab\xdaltimo\n'
+        '    cierre: ninguno\xbb gives None: there was no close. A value that does not read gives `log_mtime`, and an \xabEscrita\xbb that\n'
+        '    does not read bounds its files by `log_mtime`."""\n'
+        '    ref_set, ref = False, log_mtime\n'
+        '    discounted: dict = {}\n'
+        '    for head, text in entries:\n'
+        '        if is_session(head, lang):\n'
+        '            break\n'
+        '        if not is_maintenance(head, lang):\n'
+        '            continue\n'
+        '        if not ref_set:\n'
+        '            ok, ts = _instant(_field(text, lang.session_last_close))\n'
+        '            ref, ref_set = (ts if ok else log_mtime), True\n'
+        '        ok, written = _instant(_field(text, lang.session_written))\n'
+        '        bound = (written if ok and written is not None else log_mtime)\n'
+        '        for r in maintenance_files(text, lang):\n'
+        '            k = path_key(r)\n'
+        '            if bound is not None:\n'
+        '                discounted[k] = max(discounted.get(k, 0), bound + 60)\n'
+        '    return ref, discounted\n'
+        '\n'
+        '\n'
+        'def discounted_file(path: str, seconds: Optional[float], discounted: dict) -> bool:\n'
+        '    """Whether a file (path inside the project, its modification time) is a maintenance fix nobody changed since."""\n'
+        '    b = discounted.get(path_key(path)) if discounted else None\n'
+        '    return b is not None and seconds is not None and seconds <= b\n'
+        '\n'
+        '\n'
+        'def project_finished(body: str, lang: Pack = ES) -> bool:\n'
+        '    """\xabProyecto terminado el AAAA-MM-DD\xbb in the status section, under its 1.22 name or the older ones."""\n'
+        '    for name in (lang.status,) + tuple(lang.status_legacy_project):\n'
+        '        m = re.search(r"^##\\s+" + re.escape(name) + r"\\s*$(.*?)(?=^## |\\Z)", body or "", re.M | re.S)\n'
+        '        if m and re.search(re.escape(lang.finished_marker) + r"\\s*20\\d\\d-\\d\\d-\\d\\d", m.group(1)):\n'
+        '            return True\n'
+        '    return False\n'
+        '\n'
+        '\n'
         '# \u2500\u2500 the people lines of \xabQui\xe9n participa\xbb (1.26) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
         'PEOPLE_LINE = re.compile(r"^\\s*[-*]?\\s*\\**\\s*(?:colabora[n]?|responsable|due[\xf1n][oa])\\s*\\**\\s*:", re.I)\n'
@@ -933,7 +1065,9 @@ def _context_core():
         '           "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",\n'
         '           "clave_nombre", "registro_personas",\n'
         '           "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",\n'
-        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]\n'
+        '           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area",\n'
+        '           "es_sesion", "es_mantenimiento", "arreglados", "rastro_mantenimiento", "descontado", "clave_ruta",\n'
+        '           "proyecto_terminado"]\n'
         '\n'
         'CORREO = rules.EMAIL\n'
         'PALABRA_COLABORA = rules._WORD_COLLABORATES\n'
@@ -942,6 +1076,13 @@ def _context_core():
         'cuentas = rules.account_cell\n'
         'clave_nombre = rules.name_key\n'
         'nombre_contexto = rules.context_owner_name\n'
+        'es_sesion = rules.is_session\n'
+        'es_mantenimiento = rules.is_maintenance\n'
+        'arreglados = rules.maintenance_files\n'
+        'rastro_mantenimiento = rules.maintenance_trace\n'
+        'descontado = rules.discounted_file\n'
+        'clave_ruta = rules.path_key\n'
+        'proyecto_terminado = rules.project_finished\n'
         '\n'
         '\n'
         'def _persona(p: Person) -> dict:\n'
@@ -1088,8 +1229,9 @@ def _context_core():
         '           "VERSION_MINIMA_ESTRUCTURA", "RECETA_ACTUALIZAR", "puerta_de_escritura", "seccion_minima"]\n'
         '\n'
         '# the minimum the current structure needs: what the migration writes, and what an opening calls \xabbehind\xbb (1.26: \xabQui\xe9n es\n'
-        '# qui\xe9n\xbb). Every structure change raises it with its migration\n'
-        'STRUCTURE_MINIMUM = "1.26.0"\n'
+        '# qui\xe9n\xbb; 1.26.8: the maintenance entries of sesiones.md, which an older plugin would count as sessions). Every structure\n'
+        '# change raises it with its migration\n'
+        'STRUCTURE_MINIMUM = "1.26.8"\n'
         '\n'
         '_VERSION = re.compile(r"(?<![\\d.])(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)")\n'
         '_LEADING = re.compile(r"^[\\s*_`\xab\\"(]*(?:v(?:ersi[o\xf3]n)?\\s*)?(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?!\\.?\\d)", re.I)\n'
@@ -1176,7 +1318,7 @@ def _context_core():
         '        return True, txt, ""\n'
         '    if estado == "unreadable":\n'
         '        return False, None, ("La secci\xf3n \xabVersi\xf3n m\xednima del plugin\xbb de guia.md no dice qu\xe9 versi\xf3n: no se escribe nada en esta "\n'
-        '                             "carpeta hasta que su primer p\xe1rrafo empiece por la versi\xf3n (por ejemplo \xab1.26.0.\xbb). La corrige el "\n'
+        '                             "carpeta hasta que su primer p\xe1rrafo empiece por la versi\xf3n (por ejemplo \xab1.26.8.\xbb). La corrige el "\n'
         '                             "responsable de contexto, en su sesi\xf3n o a mano. Leer y consultar siguen funcionando.")\n'
         '    if estado == "unknown":\n'
         '        return False, txt, (f"No s\xe9 qu\xe9 versi\xf3n del plugin corre aqu\xed (\xab{version_plugin}\xbb) y esta carpeta pide la {txt} o una m\xe1s "\n'
@@ -1217,6 +1359,7 @@ def _context_core():
         'from typing import Callable, Iterable, Optional\n'
         '\n'
         'from .language import ES, Pack\n'
+        'from .rules import is_session\n'
         '\n'
         '__all__ = ["with_header_today", "only_header_changed", "with_entry_on_top", "with_entries_on_top", "without_block",\n'
         '           "with_block", "DECISION_ID", "is_decision_ref", "FieldError", "one_line", "text_field", "session_entry",\n'
@@ -1527,7 +1670,10 @@ def _context_core():
         '    year) past 100 KB, or ("year", year) when its newest entry is from a year before `today`\'s (only with `by_year`: a\n'
         "    close that writes no entry in it does not archive it by year). `year` is its newest entry's, the archive's name.\n"
         '    A register with no dated entry is never archived."""\n'
-        '    years = re.findall(r"^## (20\\d\\d)-\\d\\d-\\d\\d", text, re.M)\n'
+        "    # the year of the newest session, not of a task's or a fix's entry (1.26.8): a maintenance entry written first thing in\n"
+        "    # January would otherwise keep last year's log alive all year\n"
+        '    years = [m.group(1) for m in re.finditer(r"^## ((20\\d\\d)-\\d\\d-\\d\\d.*)$", text, re.M) if is_session(m.group(1))]\n'
+        '    years = [y[:4] for y in years]\n'
         '    if not years:\n'
         '        return None\n'
         '    year = max(years)\n'
@@ -1626,8 +1772,10 @@ def _context_core():
         setattr(_pkg, _n, _m)
 _context_core()
 # --- end of context_core ---
-from context_core.compat import (registro_personas, fila_cuentas, con_archivados, archivados_de)  # noqa: E402
-from context_core.minimum import puerta_de_escritura  # noqa: E402
+from context_core.compat import (registro_personas, fila_cuentas, con_archivados, archivados_de,  # noqa: E402
+                                 colaboran_en, nombre_de, es_sesion, es_mantenimiento, rastro_mantenimiento,
+                                 descontado, clave_ruta, proyecto_terminado)
+from context_core.minimum import puerta_de_escritura, VERSION_MINIMA_ESTRUCTURA  # noqa: E402
 from context_core.rules import with_archives  # noqa: E402
 # los cambios sobre el texto viven en context_core.write desde la 1.25.5: el servidor escribe con las mismas funciones
 from context_core.write import (with_header_today as cabecera_hoy, only_header_changed as solo_cabecera,  # noqa: E402
@@ -2369,8 +2517,19 @@ def main(argv):
     _puede, _minima, _motivo = puerta_de_escritura(ESTE_PLUGIN, _guia)
     if not _puede:
         print(json.dumps({"error": _motivo, "solo_lectura": True, "version_minima": _minima, "plugin": ESTE_PLUGIN, **s}, ensure_ascii=False)); return 6
+    _claves = {"sesion", "decisiones", "escribio", "publico", "proyecto", "area", "estatus_area", "otros", "mantenimiento"}
+    if not isinstance(cambios, dict):
+        print(json.dumps({"error": "cambios.json es un objeto con sus claves; no se escribió nada", **s}, ensure_ascii=False)); return 1
+    if set(cambios) - _claves:
+        print(json.dumps({"error": "cambios.json lleva claves que no conozco: " + ", ".join(f"«{k}»" for k in sorted(set(cambios) - _claves))
+                          + " (van " + ", ".join(sorted(_claves)) + "). No se escribió nada", **s}, ensure_ascii=False)); return 1
+    if "mantenimiento" in cambios:
+        return rastro(raiz, activo, cambios, c, tz, _guia, _minima, (opciones["--cuenta"] or "").strip().lower(), comprobar, sin_fechas)
     malos = []
     ses = cambios.get("sesion")
+    if ses and not es_sesion(ses.strip().split("\n", 1)[0]):
+        malos.append("«sesion» lleva en su cabecera una etiqueta de las entradas que no son sesiones («(tarea)», «(tablero)», «(migracion)», «(mantenimiento)»): "
+                     "la del mantenimiento la escribe este script con «mantenimiento»; una sesión va sin etiqueta")
     if ses and not re.match(r"^## \d{4}-\d{2}-\d{2}", ses.strip()):
         malos.append("«sesion» tiene que empezar por «## AAAA-MM-DD»")
     for d in cambios.get("decisiones") or []:
@@ -2599,6 +2758,186 @@ def main(argv):
     # del tablero ya armada; hasta la 1.25.0 ese paso vivía al final de cerrar.md y un cierre lo dejó sin hacer
     print(json.dumps({"respuesta": respuesta(s, raiz, pd, area, slug, cuenta, bool(ses), sin_fechas), **s}, ensure_ascii=False))
     return 0
+
+
+# ---------- el rastro del mantenimiento (1.26.8) ----------
+ARREGLOS = ("cabecera", "movido", "renombrado", "cita")
+MAX_ARREGLOS = 100
+
+
+def rastro(raiz, activo, cambios, c, tz, guia, minima, cuenta, comprobar, sin_fechas):
+    """La entrada «## AAAA-MM-DD (mantenimiento)» de un proyecto: lo que el mantenimiento de la carpeta movió, renombró,
+    cabeceó o puso al día en sus citas dentro de él (sesion, anexo mantenimiento.md). No es una sesión: no rota, no pide
+    la marca del tablero, no lleva recuadro de cierre y no va con nada más. La escribe este script, nunca la conversación,
+    en dos llamadas por proyecto:
+
+        {"mantenimiento": {"nombre": "Nombre de la apertura", "arreglos": [{"ruta": "taller/a.md", "que": "cabecera"},
+                           {"ruta": "entregables/b.md", "que": "movido", "de": "b.md"}]}}
+
+    «ruta» es dónde queda el archivo, dentro de entregables/ o taller/ del proyecto; «de», solo con «movido» o
+    «renombrado», dónde estaba, en cualquier sitio del proyecto fuera de restringido/; «cita» es un archivo al que solo se
+    le puso al día una cita tras un renombre. «nombre» solo cuenta si «Quién es quién» no da el de la cuenta.
+
+    1. Con --comprobar, antes de arreglar: devuelve «con_trabajo_sin_sesion», los archivos de la lista que ya cambiaron
+       después del último cierre real (trabajo de alguien que nadie registró, que no se arregla hasta que se registre), y
+       guarda la fecha de cada uno en el estado de esta computadora.
+    2. Sin --comprobar, después de arreglar: escribe la entrada con «Arregló:», «Último cierre:» (el instante del último
+       cierre real: la fecha de sesiones.md si lo de arriba es una sesión; el «Último cierre» de la entrada del
+       mantenimiento más nueva si la hay por encima de la última sesión; si lo de arriba es una tarea, el principio del
+       día siguiente a la última sesión, como compara la apertura) y «Escrita:» (este instante). Cada archivo tiene que
+       existir y haber pasado por el paso 1 sin ser trabajo sin sesión.
+
+    Se rechaza (código 1, nada escrito) sin --cuenta o con una cuenta que no escribe en el proyecto, en un proyecto
+    terminado, con otras claves en la misma llamada, sin consola (--sin-fechas: la copia no tiene las fechas de verdad) y
+    en una raíz cuya versión mínima es anterior a la de esta estructura: un plugin viejo la contaría como una sesión."""
+    s = c.salida
+    area, slug = activo.split("/", 1)
+    pd = raiz / activo
+    malos = []
+    otras = [k for k in cambios if k != "mantenimiento"]
+    if otras:
+        malos.append("«mantenimiento» va solo en su llamada: sin " + ", ".join(f"«{k}»" for k in otras))
+    if sin_fechas:
+        malos.append("el rastro del mantenimiento necesita la consola de la computadora: sin ella las fechas son las de la copia "
+                     "y no se sabe qué cambió después del último cierre. Se arregla igual, sin entrada, y se dice")
+    m = cambios.get("mantenimiento")
+    arreglos = (m or {}).get("arreglos") if isinstance(m, dict) else None
+    if not isinstance(arreglos, list) or not arreglos:
+        malos.append("«mantenimiento» lleva «arreglos»: una lista con {\"ruta\", \"que\"} y «de» si se movió o renombró")
+        arreglos = []
+    if len(arreglos) > MAX_ARREGLOS:
+        malos.append(f"más de {MAX_ARREGLOS} arreglos en un proyecto: se parten en varias llamadas")
+    partes = []
+
+    def limpia(x):
+        return str(x or "").replace("\\", "/").strip().strip("/")
+    for a in arreglos:
+        if not isinstance(a, dict):
+            malos.append("cada arreglo es un objeto con «ruta» y «que»"); continue
+        r, que, de = limpia(a.get("ruta")), a.get("que"), limpia(a.get("de"))
+        if que not in ARREGLOS:
+            malos.append(f"«que» de {r or '(sin ruta)'} es «cabecera», «movido», «renombrado» o «cita»"); continue
+        if que in ("movido", "renombrado") and not de:
+            malos.append(f"{r or '(sin ruta)'}: «{que}» lleva «de», la ruta de antes"); continue
+        tr = r.split("/")
+        if not r or ".." in tr or tr[0] not in ("entregables", "taller") or "restringido" in tr or len(tr) < 2:
+            malos.append(f"{r or '(sin ruta)'}: «ruta» va dentro de entregables/ o taller/ del proyecto, fuera de restringido/ "
+                         "(lo demás se arregla igual, sin entrada)"); continue
+        if de and (".." in de.split("/") or "restringido" in de.split("/")):
+            malos.append(f"{de}: «de» va dentro del proyecto, fuera de restringido/"); continue
+        if re.search(r"[,()\n]", r + de):
+            malos.append(f"{r}: una ruta con coma, paréntesis o salto de línea no se puede nombrar en la entrada"); continue
+        partes.append((r, que, de if que in ("movido", "renombrado") else ""))
+    if not cuenta:
+        malos.append("el rastro del mantenimiento va con --cuenta: solo lo escribe quien escribe en el proyecto")
+    else:
+        reg = registro_personas(guia)
+        duenos, colab = celda_cuenta(raiz, area)
+        try:
+            tp = (pd / "proyecto.md").read_text(encoding="utf-8-sig")
+        except OSError:
+            tp = ""
+        quien = re.search(r"^## Qu[ií]en participa\s*$(.*?)(?=^## |\Z)", tp, re.M | re.S)
+        if cuenta not in duenos | colab | colaboran_en(quien.group(1) if quien else "", reg if reg.get("hay") else None):
+            malos.append(f"{cuenta} no es responsable ni colabora en {area} ni en este proyecto: el rastro lo escribe quien arregla lo suyo")
+        if proyecto_terminado(tp):
+            malos.append("el proyecto está terminado: no se toca, y su bitácora tampoco")
+    v = tuple(int(x) for x in minima.split(".")) if minima else ()
+    if v < tuple(int(x) for x in VERSION_MINIMA_ESTRUCTURA.split(".")):
+        malos.append(f"la raíz pide como mínimo el plugin {minima or '(ninguno)'} y el rastro necesita que pida la {VERSION_MINIMA_ESTRUCTURA}: "
+                     "con un plugin anterior la entrada contaría como una sesión. Lo sube el responsable de contexto (en su apertura o en "
+                     "su mantenimiento); hasta entonces el arreglo se hace sin entrada y se dice")
+    if not (pd / "sesiones.md").is_file():
+        malos.append("el proyecto no tiene sesiones.md: no hay bitácora donde dejar el rastro")
+    if malos:
+        print(json.dumps({"error": "; ".join(malos), **s}, ensure_ascii=False)); return 1
+    zona = tz or datetime.timezone.utc   # sin base de zonas, en UTC y con su desfase: cada lector lo entiende igual
+    hoy = datetime.datetime.now(zona).date().isoformat()
+    nombre = nombre_de(cuenta, registro_personas(guia)) or re.sub(r"[\n·]", " ", str((m or {}).get("nombre") or "")).strip()[:80] or cuenta
+
+    def iso(ts):
+        return datetime.datetime.fromtimestamp(ts, zona).isoformat(timespec="seconds")
+
+    def entradas_de(t):
+        return [(x.split("\n", 1)[0][3:].strip(), x) for x in re.split(r"^(?=## )", t or "", flags=re.M) if x.startswith("## ")]
+
+    def referencia(t):
+        """(texto de «Último cierre», segundos o None, descontados): el último cierre real, como lo leen los lectores."""
+        es = entradas_de(t)
+        try:
+            log = os.stat(pd / "sesiones.md").st_mtime
+        except OSError:
+            log = None
+        ref, desc = rastro_mantenimiento(es, log)
+        if any(es_mantenimiento(h) for h, _ in es[:next((i for i, (h, _) in enumerate(es) if es_sesion(h)), len(es))]):
+            mm = next(re.search(r"^[ÚU]ltimo cierre\s*:\s*(\S+)", x, re.M | re.I) for h, x in es if es_mantenimiento(h))
+            return (mm.group(1) if mm else (iso(ref) if ref else "ninguno")), ref, desc
+        if not es or es_sesion(es[0][0]):
+            return (iso(log) if log is not None else "ninguno"), log, desc
+        # lo de arriba es una tarea, el tablero o una migración: la hora del último cierre real ya no está en la fecha del
+        # archivo; vale el principio del día siguiente a la última sesión, que es como compara la apertura
+        ult = next((x for h, x in es if es_sesion(h) and re.match(r"\d{4}-\d{2}-\d{2}", h)), None)
+        if not ult:
+            return "ninguno", None, desc
+        d = datetime.date.fromisoformat(ult[3:13]) + datetime.timedelta(days=1)
+        ts = datetime.datetime.combine(d, datetime.time(0), zona).timestamp()
+        return iso(ts), ts, desc
+
+    def antes_de(r, q, d):
+        return d if q in ("movido", "renombrado") else r
+
+    actual = texto_de(pd / "sesiones.md")
+    txt_ref, ref, desc = referencia(actual)
+    vistos = c.propios.setdefault("#mantenimiento", {}).setdefault(activo, {})
+    if comprobar:
+        sin_ses, no_esta = [], []
+        for r, q, d in partes:
+            x = antes_de(r, q, d)
+            try:
+                mt = os.stat(pd / x).st_mtime
+            except OSError:
+                no_esta.append(x); continue
+            if not descontado(x, mt, desc) and (ref is None or mt > ref + 60):
+                sin_ses.append(x)
+            vistos[clave_ruta(x)] = mt
+        c.guardar_estado()
+        print(json.dumps({"comprobado": True, "con_trabajo_sin_sesion": sin_ses, **({"no_existen": no_esta} if no_esta else {}),
+                          "ultimo_cierre": txt_ref, "arreglos": len(partes)}, ensure_ascii=False)); return 0
+    faltan, ajenos, no_esta = [], [], []
+    for r, q, d in partes:
+        if not (pd / r).is_file():
+            no_esta.append(r); continue
+        x = antes_de(r, q, d)
+        mt = vistos.get(clave_ruta(x))
+        if mt is None:
+            faltan.append(x)
+        elif not descontado(x, mt, desc) and (ref is None or mt > ref + 60):
+            ajenos.append(x)
+    if faltan or ajenos or no_esta:
+        print(json.dumps({"error": "; ".join(y for y in (
+            ("no existen: " + ", ".join(no_esta) + " (la entrada nombra el archivo como queda)") if no_esta else "",
+            ("no pasaron antes por --comprobar: " + ", ".join(faltan)) if faltan else "",
+            ("ya eran trabajo sin sesión de alguien al comprobar, no se nombran: " + ", ".join(ajenos)) if ajenos else "") if y)
+            + ". No se escribió la entrada; se repite sin esos o después de --comprobar", **s}, ensure_ascii=False)); return 1
+    lista = ", ".join(f"{r} ({'antes ' + d if d else q})" for r, q, d in partes)
+
+    def entrada(t):
+        txt, _, _ = referencia(t)
+        return (f"## {hoy} (mantenimiento)\nTema: arreglos del mantenimiento de la carpeta.\nArregló: {lista}\n"
+                f"Último cierre: {txt}\nEscrita: {iso(time.time())}\nSesión de: mantenimiento de {nombre} · plugin {ESTE_PLUGIN}")
+
+    c.cambiar(pd / "sesiones.md", lambda t, sm: con_entrada_arriba(t, entrada(t)))
+    s["escritos"] = list(dict.fromkeys(s["escritos"]))
+    if s["escritos"]:
+        for r, q, d in partes:
+            vistos.pop(clave_ruta(antes_de(r, q, d)), None)
+        c.guardar_estado()
+    s["escrito_en"] = datetime.datetime.now(zona).isoformat(timespec="seconds")
+    if s["escritos"]:
+        print(json.dumps({"respuesta": ["Rastro escrito: no es una sesión ni se cierra nada (mantenimiento.md, paso 3)."], **s}, ensure_ascii=False))
+        return 0
+    print(json.dumps({"respuesta": ["No se escribió la entrada (mira «fallidos»): dilo en una línea; el arreglo está hecho y su próxima apertura lo dará como trabajo sin sesión."], **s}, ensure_ascii=False))
+    return 1
 
 
 def respuesta(s, raiz, pd, area, slug, cuenta, cierre, sin_fechas):

@@ -89,6 +89,14 @@ class Pack:
     writers: dict = field(default_factory=dict)           # plugin, server: the word before the version in «Sesión de»
     # guia.md: the section that declares the oldest plugin that may write in the root (1.26)
     minimum_plugin: str = ""
+    # sesiones.md entries that are not sessions: «## AAAA-MM-DD (tarea)» and the like. They tell what happened, and no
+    # reader counts them as a session (escribir.md, section 8). The last one is the maintenance trace (1.26.8), whose
+    # entry names what it fixed, the instant of the last real close and its own
+    non_session_tags: tuple = ()
+    maintenance_tag: str = ""
+    session_fixed: tuple = ()
+    session_last_close: tuple = ()                       # «Último cierre:», the instant of the last real close
+    session_written: tuple = ()                          # «Escrita:», the instant the maintenance entry was written
 
 
 ES = Pack(
@@ -120,12 +128,15 @@ ES = Pack(
     session_by=("sesión de:", "sesion de:"),
     key_state="estado", key_updated="actualizado", key_based_on="basado_en", key_replaced_by="reemplazado_por",
     key_contribution=("aportacion", "afirma"),
-    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribió", "published": "Publicó", "by": "Sesión de"},
+    write_session={"topic": "Tema", "progress": "Avances", "wrote": "Escribió", "published": "Publicó", "by": "Sesión de",
+                   "fixed": "Arregló", "last_close": "Último cierre", "written": "Escrita"},
     write_decision={"decided_by": "Decidió", "raised_by": "Planteó", "why": "Por qué", "discarded": "Descartado",
                     "challenges": "Cuestiona a", "responds_to": "Responde a", "replaces": "Reemplaza", "affects": "Afecta a"},
     write_status={"completed": "Se completó", "next": "Siguiente", "to_decide": "Falta decidir", "concern": "Preocupa"},
     writers={"plugin": "plugin", "server": "servidor"},
     minimum_plugin="Versión mínima del plugin",
+    non_session_tags=("tarea", "tablero", "migracion", "mantenimiento"), maintenance_tag="mantenimiento",
+    session_fixed=("arregló:", "arreglo:"), session_last_close=("último cierre:", "ultimo cierre:"), session_written=("escrita:",),
 )
 
 PACKS = {"es": ES}

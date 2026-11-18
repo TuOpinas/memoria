@@ -15,7 +15,7 @@ Abrir y cerrar una sesión de trabajo sobre un proyecto. Este archivo es lo que 
 - `premisas.md`: registrar, cambiar o retirar una premisa, en la sesión del responsable de contexto.
 - `sin-carpeta.md`: abrir, consultar o preguntar al director sin ninguna carpeta conectada, leyendo la raíz en Drive.
 - `permisos.md`: revisar y aplicar los permisos de Drive («revisa los permisos», «aplica los permisos»).
-- `mantenimiento.md`: el mantenimiento de la carpeta en siete temas (seis de uso y la estructura), arreglar con el sí lo propio y programarlo como tarea («haz el mantenimiento de la carpeta», «haz el mantenimiento de lo mío», «verifica la carpeta», «programa el mantenimiento», 1.26.6).
+- `mantenimiento.md`: el mantenimiento de la carpeta en siete temas (seis de uso y la estructura), arreglar con el sí lo propio y programarlo como tarea («haz el mantenimiento de la carpeta», «haz el mantenimiento de lo mío», «verifica la carpeta», «programa el mantenimiento», 1.26.6), con el rastro de sus arreglos en la bitácora de cada proyecto (1.26.8).
 
 Abrir solo lee. Antes de escribir cualquier cosa en la carpeta se carga el anexo `escribir.md` de `convenciones`, aunque sea una línea; para guardar un documento, mover algo o crear, `convenciones` entera.
 
@@ -51,7 +51,7 @@ La apertura son unas pocas llamadas seguidas, sin mensajes entre ellas, y la res
 
 Después, estos bloques, en este orden y sin encabezados largos.
 
-**Dónde quedó todo.** Cuatro o cinco líneas: el objetivo en una frase, qué se hizo en la última sesión y qué sigue. Si la sesión se abrió por una pregunta de estado, este bloque es la respuesta y empieza por el `Estatus`, diciendo si hubo sesiones después de su fecha.
+**Dónde quedó todo.** Cuatro o cinco líneas: el objetivo en una frase, qué se hizo en la última sesión y qué sigue. Si SESIONES trae «arreglos del mantenimiento desde tu última sesión aquí», una frase en llano: qué arregló el mantenimiento y cuándo (1.26.8). Si la sesión se abrió por una pregunta de estado, este bloque es la respuesta y empieza por el `Estatus`, diciendo si hubo sesiones después de su fecha.
 
 **Lo que viene de la memoria va en recuadros**, para que se distinga de lo que escribe Claude: una tabla por bloque con la cabecera «Memoria · <qué es> · <cuántos>», una fila por cosa con lo que dice y de dónde sale. Lo que dice Claude va debajo, en texto normal. Solo salen los que traen algo, en este orden: lo marcado en el tablero y las sugerencias (`cola.md`) y los avisos.
 

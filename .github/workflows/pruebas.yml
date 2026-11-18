@@ -75,7 +75,7 @@ jobs:
       - name: Scripts del tablero
         run: |
           fallos=0
-          for f in pruebas/tablero/probar_datos.py pruebas/tablero/probar_plan.py pruebas/tablero/probar_barrido.py; do
+          for f in pruebas/tablero/probar_datos.py pruebas/tablero/probar_plan.py pruebas/tablero/probar_barrido.py pruebas/tablero/probar_mantenimiento.py; do
             echo "== $f"
             python3 "$f" || fallos=$((fallos + 1))
           done

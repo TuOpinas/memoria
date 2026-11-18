@@ -125,6 +125,36 @@ for a in (["--cuenta", "ana@ejemplo.test", "--dias", "siete"], ["--cuenta", "ana
     ok(r.returncode == 2 and "Traceback" not in r.stderr, f"{' '.join(a)}: mensaje claro y salida 2")
 r = corre("--cuenta", "ana@ejemplo.test", "--tope", "1")
 ok("… y " in r.stdout and "--tema" in r.stdout, "con muchos, cada tema se acota y dice cuántos más")
+
+print("El rastro del mantenimiento (1.26.8)")
+arr_ = escribir(VC / "taller/arreglada.md", "---\nestado: borrador\nactualizado: 2026-11-16\nbasado_en: []\n---\n# x\n") or (VC / "taller/arreglada.md")
+t_arr = datetime.datetime(2026, 11, 16, 19, 50, tzinfo=MX).timestamp()
+os.utime(arr_, (t_arr, t_arr))
+anadir(VC / "sesiones.md", "# Sesiones\n", "\n## 2026-11-16 (mantenimiento)\nTema: arreglos del mantenimiento de la carpeta.\nArregló: taller/arreglada.md (cabecera)\n"
+       "Último cierre: " + datetime.datetime.fromtimestamp(ultimo, MX).isoformat(timespec="seconds") + "\nEscrita: "
+       + datetime.datetime(2026, 11, 16, 19, 55, tzinfo=MX).isoformat() + "\nSesión de: mantenimiento de Ana Prueba · plugin 1.26.8\n")
+t_ent = datetime.datetime(2026, 11, 16, 20, 0, tzinfo=MX).timestamp()
+os.utime(VC / "sesiones.md", (t_ent, t_ent))
+ss = sec(corre("--cuenta", "ana@ejemplo.test", "--tema", "SIN_SESION").stdout, "SIN_SESION")
+ok("arreglada.md" not in ss, f"lo que arregló el mantenimiento no cuenta ({ss.strip()[:300]})")
+ok("nota-nueva.md · cambió el 2026-11-16 a las 19:30" in ss and "último cierre (2026-11-16)" in ss, "el trabajo de otra persona después del último cierre real sigue saliendo, aunque la bitácora sea más nueva")
+t_otra = datetime.datetime(2026, 11, 16, 21, 0, tzinfo=MX).timestamp()
+os.utime(arr_, (t_otra, t_otra))
+ss = sec(corre("--cuenta", "ana@ejemplo.test", "--tema", "SIN_SESION").stdout, "SIN_SESION")
+ok("arreglada.md" in ss, "si alguien lo cambia después del arreglo, vuelve a salir")
+# un segundo arreglo, de otro archivo y más tarde, no vuelve a tapar lo que Carla cambió después del primero
+anadir(VC / "sesiones.md", "# Sesiones\n", "\n## 2026-11-16 (mantenimiento)\nTema: arreglos del mantenimiento de la carpeta.\nArregló: taller/otra.md (cabecera)\n"
+       "Último cierre: " + datetime.datetime.fromtimestamp(ultimo, MX).isoformat(timespec="seconds") + "\nEscrita: "
+       + datetime.datetime(2026, 11, 16, 22, 0, tzinfo=MX).isoformat() + "\nSesión de: mantenimiento de Ana Prueba · plugin 1.26.8\n")
+os.utime(VC / "sesiones.md", (t_otra + 3600, t_otra + 3600))
+ss = sec(corre("--cuenta", "ana@ejemplo.test", "--tema", "SIN_SESION").stdout, "SIN_SESION")
+ok("arreglada.md" in ss and "nota-nueva.md" in ss, "un segundo arreglo no tapa lo que otra persona cambió después del primero")
+anadir(VC / "sesiones.md", "# Sesiones\n", "\n## 2026-11-17 (tarea)\nTema: lo marcado como hecho en el tablero.\n")
+os.utime(VC / "sesiones.md", (t_otra + 7200, t_otra + 7200))
+ss = sec(corre("--cuenta", "ana@ejemplo.test", "--tema", "SIN_SESION").stdout, "SIN_SESION")
+ok("nota-nueva.md" in ss and "último cierre (2026-11-16)" in ss, "una tarea encima tampoco: el último cierre sigue siendo el real")
+ad_ = sec(corre("--cuenta", "ana@ejemplo.test", "--tema", "ADOPCION").stdout, "ADOPCION")
+ok("mantenimiento de Ana" not in ad_ and "Ana Prueba · última sesión 2026-11-16" not in ad_, f"la entrada no cuenta como sesión de nadie en la adopción ({ad_.strip()[:300]})")
 G.rename(R / "guia (1).md")
 r = corre("--cuenta", "ana@ejemplo.test")
 ok(r.returncode == 1 and "falta guia.md" in r.stdout, "una raíz que perdió guia.md lo dice, no se calla")

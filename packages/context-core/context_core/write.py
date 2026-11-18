@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, Optional
 
 from .language import ES, Pack
+from .rules import is_session
 
 __all__ = ["with_header_today", "only_header_changed", "with_entry_on_top", "with_entries_on_top", "without_block",
            "with_block", "DECISION_ID", "is_decision_ref", "FieldError", "one_line", "text_field", "session_entry",
@@ -335,7 +336,10 @@ def rotation_reason(text: str, today: str, by_year: bool = True) -> Optional[tup
     year) past 100 KB, or ("year", year) when its newest entry is from a year before `today`'s (only with `by_year`: a
     close that writes no entry in it does not archive it by year). `year` is its newest entry's, the archive's name.
     A register with no dated entry is never archived."""
-    years = re.findall(r"^## (20\d\d)-\d\d-\d\d", text, re.M)
+    # the year of the newest session, not of a task's or a fix's entry (1.26.8): a maintenance entry written first thing in
+    # January would otherwise keep last year's log alive all year
+    years = [m.group(1) for m in re.finditer(r"^## ((20\d\d)-\d\d-\d\d.*)$", text, re.M) if is_session(m.group(1))]
+    years = [y[:4] for y in years]
     if not years:
         return None
     year = max(years)
