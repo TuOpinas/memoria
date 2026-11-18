@@ -44,8 +44,8 @@ sesión diga si son suyos: no se atribuyen solos, porque pudo escribirlos otra p
 se validan la forma y la autoría (no los reemplazos ni los permisos) y se devuelven «entrada» (la entrada tal como quedaría, con sus líneas) y «sin_nombrar», para enseñar lo que toque
 completa antes de pedir el sí. Desde la 1.26.3 devuelve además, sin escribir nada: «parecidas», por cada decisión nueva
 que tiene alguna, hasta cinco decisiones del proyecto (con sus archivados de este año y del anterior) cuyo título comparte
-dos palabras con significado o más con el suyo, con su identificador, para preguntar si la nueva reemplaza a alguna (no
-salen las que ya reemplazó otra); y «sin_citar», las notas de taller/ de «escribio» que nada del proyecto cita, ni contando
+dos palabras con significado o más con el suyo, con su identificador, para que la sesión lea cada una y juzgue si la
+nueva la reemplaza (cerrar.md, paso 3; desde la 1.26.7 la lista no se enseña; no salen las que ya reemplazó otra); y «sin_citar», las notas de taller/ de «escribio» que nada del proyecto cita, ni contando
 lo que este cierre escribe, para preguntar para qué sirven y atarlas (cerrar.md, paso 7). Con --sin-fechas no hay
 «sin_citar»: la copia no trae el taller. Una «Escribió:» o «Publicó:» tecleada en «sesion» se rechaza, y con «escribio» o «publico»
 la entrada tiene que llevar «Sesión de: Nombre».
@@ -98,7 +98,7 @@ import sys
 import tempfile
 import time
 
-ESTE_PLUGIN = "1.26.6"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.7"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 INTENTOS = 5
 MAX_LINEAS_REEMPLAZO = 12
 
@@ -1932,7 +1932,7 @@ def sin_nombrar(pd, abierto, nombrados):
 
 
 # ---------- lo que --comprobar enseña además (1.26.3): decisiones parecidas y notas del taller sin atar ----------
-# Solo lee: la sesión lo enseña y la persona decide. Nada de esto cambia lo que se escribe.
+# Solo lee: la sesión lo juzga (las parecidas) o lo enseña (las notas) y la persona decide. Nada de esto cambia lo que se escribe.
 VACIAS = set("""
 para como pero cada sino desde hasta entre sobre tras solo toda todo todas todos este esta estos estas otro otra otros
 otras mismo misma cuando donde porque sigue siguen queda quedan puede pueden debe deben hace hacen tiene tienen sera

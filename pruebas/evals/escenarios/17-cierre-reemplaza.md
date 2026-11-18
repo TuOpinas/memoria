@@ -10,11 +10,12 @@ preparar:
   - "personas"
 turnos:
   - "Abre sesión en ventas/cuentas. Cliente Uno firma si el soporte le responde en menos de 24 horas, y decidimos que sí: soporte ya lo atiende en copia y es la condición para firmar. Cierra la sesión."
-  - "Sí, regístrala así; reemplaza a la de 48 horas."
+  - "Sí."
 comprobar:
   - apertura-completa ventas/cuentas
   - menciona 48 horas@1
   - menciona reemplaza@1
+  - no-menciona-re ¿Reemplaza a alguna@1
   - nada-hasta-el-turno 2 metodo.md
   - decision-registrada ventas/cuentas
   - decision-reemplaza ventas/cuentas 48 horas
@@ -24,6 +25,6 @@ comprobar:
 ---
 La decisión de hoy contradice una anterior del mismo proyecto que ni la sesión ni la apertura mencionan: es de 2025 y queda
 fuera de las cinco que se imprimen (1.26.3). Antes de enseñarla, `cerrar.py --comprobar` devuelve en `parecidas` la de
-48 horas, y la respuesta que pide el sí la enseña debajo de la decisión con la pregunta de si la reemplaza. La persona da el sí
-y dice cuál en el segundo turno, y la decisión se escribe con su `Reemplaza:`, nunca antes. La primera corrida (1.26.3)
-escribió así con el sí y el nombre juntos; desde entonces `cerrar.md` lo permite.
+48 horas. Desde la 1.26.7 la lista no se enseña: la sesión lee esa entrada, juzga que la nueva la sustituye, y la cita ya
+lleva su `Reemplaza:` con una línea debajo que dice por qué. La persona contesta «Sí.» a secas, y la decisión se escribe
+con su `Reemplaza:`, nunca antes.
