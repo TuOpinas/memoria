@@ -447,6 +447,85 @@ os.utime(sp_, (ahora_ - 7200, ahora_ - 7200))
 o = subprocess.run([sys.executable, str(ABRIR), str(RS), "ventas/cuentas", "--cuenta", "ana@ejemplo.test"], capture_output=True, text=True).stdout
 ok("Decisiones sin sesión" not in o, "una decisión que la última entrada ya cuenta no se avisa (fechas de archivo movidas)")
 
+print("El rastro del mantenimiento (1.26.8)")
+import datetime as _dt
+RM = tmp / "raiz-mantenimiento"; shutil.copytree(AQUI.parent / "tablero" / "raiz", RM)
+pm_ = RM / "ventas/cuentas"
+ahora_ = time.time()
+for d, _, fs in os.walk(RM):
+    for f in fs:
+        os.utime(os.path.join(d, f), (viejo, viejo))
+T0 = ahora_ - 7200   # el último cierre real
+os.utime(pm_ / "sesiones.md", (T0, T0))
+# el mantenimiento pone cabecera a una nota y la cambia de fecha a un entregable, y deja su entrada
+(pm_ / "taller/nota-anterior.md").write_text("---\nestado: borrador\nactualizado: " + _dt.date.today().isoformat() + "\nbasado_en: []\n---\n# Nota\n", encoding="utf-8")
+os.utime(pm_ / "taller/nota-anterior.md", (ahora_ - 3700, ahora_ - 3700))
+bv_ = pm_ / "entregables/borrador-viejo.md"
+bv_.write_text(bv_.read_text(encoding="utf-8").replace("actualizado: 2026-08-01", "actualizado: 2099-01-01"), encoding="utf-8")
+os.utime(bv_, (ahora_ - 3700, ahora_ - 3700))
+desde_ = _dt.datetime.fromtimestamp(T0).astimezone().isoformat(timespec="seconds")
+escrita_ = _dt.datetime.fromtimestamp(ahora_ - 3600).astimezone().isoformat(timespec="seconds")
+sm_ = pm_ / "sesiones.md"
+sm_.write_text(sm_.read_text(encoding="utf-8").replace("# Sesiones\n", "# Sesiones\n\n## 2099-01-01 (mantenimiento)\nTema: arreglos del mantenimiento de la carpeta.\n"
+               "Arregló: taller/nota-anterior.md (cabecera), entregables/borrador-viejo.md (cabecera)\nÚltimo cierre: " + desde_ + "\nEscrita: " + escrita_ + "\nSesión de: mantenimiento de Ana Prueba · plugin 1.26.8\n", 1), encoding="utf-8")
+os.utime(sm_, (ahora_ - 3600, ahora_ - 3600))
+
+
+def abrir_m(*extra):
+    return subprocess.run([sys.executable, str(ABRIR), str(RM), "ventas/cuentas", "--cuenta", "ana@ejemplo.test", *extra], capture_output=True, text=True).stdout
+
+
+o = abrir_m()
+av_ = o.split("=== AVISOS")[1].split("\n=== ")[0]
+_ts = "\n".join(l for l in av_.split("\n") if "Trabajo sin sesión" in l)
+ok("nota-anterior" not in _ts and "borrador-viejo" not in _ts, "lo que arregló el mantenimiento no sale como trabajo sin sesión: " + " | ".join(l for l in av_.split("\n") if "nota-anterior" in l or "borrador-viejo" in l))
+ses_ = o.split("=== SESIONES")[1].split("\n=== ")[0]
+ok("## 2099-01-01 (mantenimiento)" not in ses_ and "## 2026-10-01 (propuesta enviada)" in ses_, "la entrada no ocupa el sitio de una sesión entre las tres recientes")
+ok("arreglos del mantenimiento desde tu última sesión" in ses_ and "2099-01-01 (mantenimiento) · arregló taller/nota-anterior.md" in ses_, f"pero se dice en una línea qué arregló ({ses_[-300:]})")
+# una tarea del tablero encima del arreglo no lo deshace
+sm_.write_text(sm_.read_text(encoding="utf-8").replace("# Sesiones\n", "# Sesiones\n\n## 2099-01-02 (tarea)\nTema: lo marcado como hecho en el tablero.\n", 1), encoding="utf-8")
+os.utime(sm_, (ahora_ - 3500, ahora_ - 3500))
+o = abrir_m()
+_ts = "\n".join(l for l in o.split("=== AVISOS")[1].split("\n") if "Trabajo sin sesión" in l)
+ok("nota-anterior" not in _ts and "borrador-viejo" not in _ts, f"con una tarea encima, lo arreglado sigue sin salir ({_ts[:300]})")
+# sin consola, con el listado: el entregable cabeceado tampoco sale
+lst_e = tmp / "listado-e.json"
+lst_e.write_text(_json.dumps({"entries": [{"name": "proyecto.md", "type": "file", "mtimeMs": viejo * 1000},
+                                           {"name": "sesiones.md", "type": "file", "mtimeMs": (ahora_ - 3500) * 1000},
+                                           {"name": "decisiones.md", "type": "file", "mtimeMs": viejo * 1000},
+                                           {"name": "entregables/borrador-viejo.md", "type": "file", "mtimeMs": (ahora_ - 3700) * 1000},
+                                           {"name": "taller/nota-anterior.md", "type": "file", "mtimeMs": (ahora_ - 3700) * 1000}]}), encoding="utf-8")
+o = abrir_m("--sin-fechas", "--listado", str(lst_e))
+_ts = "\n".join(l for l in o.split("=== AVISOS")[1].split("\n") if "Trabajo sin sesión" in l)
+ok("borrador-viejo" not in _ts and "nota-anterior" not in _ts, f"sin consola, con el listado, el entregable cabeceado no sale ({_ts[:300]})")
+# trabajo de Carla después del último cierre real: una nota que el mantenimiento no nombra y una decisión sin sesión
+(pm_ / "taller/nota-precios.md").write_text("Carla, sin sesión.\n", encoding="utf-8")
+os.utime(pm_ / "taller/nota-precios.md", (ahora_ - 3000, ahora_ - 3000))
+dm_ = pm_ / "decisiones.md"
+dm_.write_text(dm_.read_text(encoding="utf-8").replace("# Decisiones\n", "# Decisiones\n\n## 2099-01-01 · DECISION-DE-CARLA sin cerrar\nDecidió: Carla Prueba\nPor qué: x.\n", 1), encoding="utf-8")
+os.utime(dm_, (ahora_ - 5000, ahora_ - 5000))   # después del último cierre, antes de la entrada del mantenimiento
+o = abrir_m()
+av_ = o.split("=== AVISOS")[1].split("\n=== ")[0]
+ok("taller/nota-precios.md" in av_, "el trabajo de otra persona que la entrada no nombra sigue saliendo")
+ok("Decisiones sin sesión" in av_ and "DECISION-DE-CARLA" in av_, f"y su decisión sin sesión también, aunque la bitácora sea más nueva ({av_[:400]})")
+os.utime(pm_ / "taller/nota-anterior.md", (ahora_ - 100, ahora_ - 100))   # alguien la cambia después del arreglo
+o = abrir_m()
+ok("taller/nota-anterior.md" in "\n".join(l for l in o.split("=== AVISOS")[1].split("\n") if "Trabajo sin sesión" in l), "un archivo arreglado que alguien cambió después vuelve a salir")
+# sin consola, con el listado
+lst_m = tmp / "listado-m.json"
+lst_m.write_text(_json.dumps({"entries": [{"name": "proyecto.md", "type": "file", "mtimeMs": viejo * 1000},
+                                           {"name": "sesiones.md", "type": "file", "mtimeMs": (ahora_ - 3600) * 1000},
+                                           {"name": "decisiones.md", "type": "file", "mtimeMs": (ahora_ - 5000) * 1000},
+                                           {"name": "taller/nota-anterior.md", "type": "file", "mtimeMs": (ahora_ - 3700) * 1000},
+                                           {"name": "taller/nota-precios.md", "type": "file", "mtimeMs": (ahora_ - 3000) * 1000}]}), encoding="utf-8")
+o = abrir_m("--sin-fechas", "--listado", str(lst_m))
+av_ = o.split("=== AVISOS")[1].split("\n=== ")[0]
+_ts = "\n".join(l for l in av_.split("\n") if "Trabajo sin sesión" in l)
+ok("nota-precios" in _ts and "nota-anterior" not in _ts and "DECISION-DE-CARLA" in av_, f"sin consola, con el listado, lo mismo ({av_[:400]})")
+o = abrir_m("--sin-fechas")
+av_ = o.split("=== AVISOS")[1].split("\n=== ")[0]
+ok("No cuentan, porque los arregló el mantenimiento" in av_ and str(int(T0 * 1000))[:9] in av_, "sin listado, el texto manual dice qué descontar y con qué hora comparar las decisiones")
+
 shutil.rmtree(tmp, ignore_errors=True)
 print("\nTodo bien." if not fallos else f"\n{fallos} fallos.")
 sys.exit(1 if fallos else 0)

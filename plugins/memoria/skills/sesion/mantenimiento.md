@@ -1,6 +1,6 @@
 # Mantenimiento de la carpeta
 
-Anexo de la skill `sesion` (1.26.6). Siete temas que quien administra la carpeta mira cada semana mientras el equipo arranca, y cada mes cuando ya trabaja solo: seis de uso (cómo se está usando la memoria) y el séptimo, la estructura (si sigue el método). Mirar solo lee: dos scripts y la explicación en llano. Arreglar es aparte, con la lista delante y el sí. También programa la revisión como una tarea que corre sola.
+Anexo de la skill `sesion` (1.26.6; el rastro de los arreglos, 1.26.8). Siete temas que quien administra la carpeta mira cada semana mientras el equipo arranca, y cada mes cuando ya trabaja solo: seis de uso (cómo se está usando la memoria) y el séptimo, la estructura (si sigue el método). Mirar solo lee: dos scripts y la explicación en llano. Arreglar es aparte, con la lista delante y el sí. También programa la revisión como una tarea que corre sola.
 
 ## Cuándo
 
@@ -56,13 +56,30 @@ Solo con la respuesta de la persona en la conversación; nunca solo. Antes: si p
 | área del mapa sin carpeta | crearla (skill `nuevo`) o quitar su fila; de una restringida, nada. Del responsable de contexto |
 | filas, columnas o secciones de `guia.md` mal escritas, zona horaria, «falta en la raíz», falta `guia.md` | lo que dice el hallazgo, con un reemplazo exacto o el archivo con su plantilla (skill `nuevo`). Del responsable de contexto |
 | copia en conflicto de Drive | es el tema 4: se junta en la sesión de ese proyecto |
-| nombre de carpeta o de archivo | antes, se busca qué lo cita; si lo cita un registro o algo de otra área, no se renombra y se dice; si no, `mv -n` y se ponen al día las citas propias |
-| sin cabecera, cabecera sin estado o sin actualizado | `borrador` y `basado_en: []`, con su `actualizado` y la `aportacion` que se pregunta; en `proyecto.md`, `area.md` o un registro no se toca y se dice |
+| nombre de carpeta o de archivo | antes, se busca qué lo cita; si lo cita un registro o algo de otra área, no se renombra y se dice; si no, `mv -n` y se ponen al día las citas propias. Dentro de un proyecto, con su rastro (abajo) |
+| sin cabecera, cabecera sin estado o sin actualizado | `borrador` y `basado_en: []`, con su `actualizado` y la `aportacion` que se pregunta; en `proyecto.md`, `area.md` o un registro no se toca y se dice. Dentro de un proyecto, con su rastro (abajo) |
 | un nivel de agrupación de más, carpeta prohibida, archivos sueltos, «Claude outputs» | subir o mover lo que sirve (skill `donde-va`); borrar, solo con el permiso de borrar y su sí: en la consola, borrar es para siempre |
 | dentro de un registro (enlace wiki, ruta absoluta en `sesiones.md` o `decisiones.md`) | un registro no se edita: se dice y se deja |
 | lo demás | lo que dice el hallazgo, en llano, y se pregunta |
 
-Tres hallazgos de una misma carpeta de área con mayúsculas o acento («área del mapa sin carpeta», «carpeta de área que no está en guia.md» y «nombre de carpeta») son uno: se renombra la carpeta, no se crea otra. Al terminar, `verificar.sh` otra vez y se dice lo que quedó. Mover o poner cabecera a un archivo de `taller/` o `entregables/` cambia su fecha: la siguiente apertura de ese proyecto lo avisará como trabajo sin sesión, y se dice.
+Tres hallazgos de una misma carpeta de área con mayúsculas o acento («área del mapa sin carpeta», «carpeta de área que no está en guia.md» y «nombre de carpeta») son uno: se renombra la carpeta, no se crea otra. Al terminar, `verificar.sh` otra vez y se dice lo que quedó.
+
+**El rastro en la bitácora** (1.26.8). Lo que se mueve, se renombra, recibe cabecera o se le pone al día una cita dentro de un proyecto cambia de fecha; para que su siguiente apertura no lo dé como trabajo sin sesión y quien trabaja ahí sepa por qué cambió, cada proyecto con arreglos así deja una entrada «## AAAA-MM-DD (mantenimiento)» en su `sesiones.md`. La escribe `cerrar.py`, nunca la conversación, y necesita la consola: sin ella el arreglo se hace igual, sin entrada, y se dice. Por proyecto, con `cambios.json` igual en las dos llamadas:
+
+```json
+{"mantenimiento": {"nombre": "<NOMBRE de la apertura>", "arreglos": [
+  {"ruta": "taller/a.md", "que": "cabecera"},
+  {"ruta": "entregables/b.md", "que": "movido", "de": "b.md"},
+  {"ruta": "entregables/c.md", "que": "cita"}]}}
+```
+
+«ruta» es dónde queda el archivo, en `entregables/` o `taller/`; «de», dónde estaba («movido» o «renombrado»), en cualquier sitio del proyecto fuera de `restringido/`; «cita», un archivo al que solo se le puso al día una cita tras renombrar otro.
+
+1. Antes de arreglar, `cerrar.py "<RAIZ>" <area>/<proyecto> cambios.json --cuenta <correo> --comprobar`. Lo que devuelve en `con_trabajo_sin_sesion` cambió después del último cierre real: es trabajo de alguien que nadie registró, no se arregla ahora y se dice («<archivo> lo cambió alguien sin sesión: se arregla cuando se registre»), y sale de la lista. Con varios proyectos, todos los `--comprobar` en un solo device_bash.
+2. Se arregla lo que queda.
+3. La misma llamada sin `--comprobar`, con la lista de lo que se arregló (todos los proyectos en un solo device_bash). Escribe «Arregló:», «Último cierre:» (el instante del último cierre real, que es con lo que comparan la apertura, el mantenimiento y el tablero) y «Escrita:» (cada archivo se descuenta hasta esa hora; si alguien lo cambia después, vuelve a salir). Rechaza un archivo que no existe o que no pasó por el paso 1. No es una sesión: no rota la bitácora, no avisa al tablero ni lleva recuadro de cierre; en la respuesta del mantenimiento basta una línea por proyecto.
+
+`cerrar.py` la rechaza, sin escribir nada, si la cuenta no es responsable ni colabora en el área o en el proyecto, si el proyecto está terminado (y entonces tampoco se arregla), con una clave que no conoce, y si la raíz pide como mínimo un plugin anterior a la 1.26.8, porque un plugin viejo contaría la entrada como una sesión. ESCRITURA de `mantenimiento.py` ya lo dice; en ese caso el arreglo se hace igual, sin entrada, y quien administra la carpeta puede subir la mínima ahí mismo: con su sí, `migrar_estructura.py --personas` (anexo `migracion.md`), después de decir quién cerró sesión hace poco con un plugin anterior. Lo que se arregla fuera de un proyecto (`area.md`, `guia.md`, una carpeta nueva) no deja entrada.
 
 ## Programarlo
 

@@ -17,7 +17,9 @@ __all__ = ["SOBRE_LA_CARPETA", "sin_carpeta", "ARCHIVADO", "archivados_de", "con
            "restringida_celda", "area_restringida", "acceso_de", "CORREO", "PALABRA_COLABORA", "LINEA_COLABORA", "cuentas",
            "clave_nombre", "registro_personas",
            "persona", "nombres_de", "cuentas_de_nombres", "altas_provisionales", "columnas_personas", "fila_cuentas",
-           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area"]
+           "nombre_contexto", "cuentas_contexto", "nombre_de", "colaboran_en", "personas_en_area",
+           "es_sesion", "es_mantenimiento", "arreglados", "rastro_mantenimiento", "descontado", "clave_ruta",
+           "proyecto_terminado"]
 
 CORREO = rules.EMAIL
 PALABRA_COLABORA = rules._WORD_COLLABORATES
@@ -26,6 +28,13 @@ LINEA_COLABORA = rules._LINE_COLLABORATES
 cuentas = rules.account_cell
 clave_nombre = rules.name_key
 nombre_contexto = rules.context_owner_name
+es_sesion = rules.is_session
+es_mantenimiento = rules.is_maintenance
+arreglados = rules.maintenance_files
+rastro_mantenimiento = rules.maintenance_trace
+descontado = rules.discounted_file
+clave_ruta = rules.path_key
+proyecto_terminado = rules.project_finished
 
 
 def _persona(p: Person) -> dict:

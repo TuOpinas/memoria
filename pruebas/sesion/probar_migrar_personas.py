@@ -191,6 +191,29 @@ c, s5 = migrar(R5, "--cuenta", "ana@ejemplo.test", "--personas")
 ok("org-prueba@proyecto.iam.gserviceaccount.com" not in json.dumps(s5), "la cuenta del servidor no entra en «Quién es quién» ni se pregunta su nombre")
 shutil.rmtree(R5.parent, ignore_errors=True)
 
+
+print("Una raíz que pide la 1.26.0 sube a la versión mínima de la estructura (1.26.8: el rastro del mantenimiento)")
+R5, _ = raiz_migrada()
+migrar(R5, "--cuenta", "ana@ejemplo.test", "--personas", "--plugin", "1.26.0", "--nombres", NOMBRES)
+g5 = (R5 / "guia.md").read_text(encoding="utf-8")
+(R5 / "guia.md").write_text(g5.replace(f"\n{STRUCTURE_MINIMUM}. Con un plugin anterior", "\n1.26.0. Con un plugin anterior"), encoding="utf-8")
+_hoy5 = datetime.date.today().isoformat()
+_s5 = R5 / "operacion/soporte/sesiones.md"
+_s5.write_text(_s5.read_text(encoding="utf-8").replace("# Sesiones\n", f"# Sesiones\n\n## {_hoy5}\nTema: x.\nSesión de: Beto Prueba · plugin 1.26.5\n"
+               f"\n## {_hoy5} (mantenimiento)\nTema: arreglos.\nSesión de: mantenimiento de Dani Prueba · plugin 1.26.0\n", 1), encoding="utf-8")
+c, s = migrar(R5, "--cuenta", "ana@ejemplo.test", "--personas", "--plan", "--plugin", "1.26.0")
+ok("Beto Prueba (1.26.5)" in (s.get("personas") or {}).get("atrasados", []) and not any("mantenimiento" in x for x in (s.get("personas") or {}).get("atrasados", [])),
+   f"el plan de subirla dice a quién avisar, sin contar las entradas que no son sesiones ({(s.get('personas') or {}).get('atrasados')})")
+o = abrir(R5, "ventas/cuentas", "--cuenta", "ana@ejemplo.test")
+ok("falta la versión mínima del plugin" in o and f"¿Subo la versión mínima a la {STRUCTURE_MINIMUM}?" in o and "mantenimiento" in o,
+   "la apertura del responsable de contexto pregunta si se sube, y dice por qué")
+o_b = abrir(R5, "personas/nomina", "--cuenta", "beto@ejemplo.test")
+ok("Subo la versión mínima" not in o_b, "a otro responsable no se le pregunta")
+c, s = migrar(R5, "--cuenta", "ana@ejemplo.test", "--personas", "--plugin", "1.26.0")
+g5 = (R5 / "guia.md").read_text(encoding="utf-8")
+ok(c == 0 and f"\n{STRUCTURE_MINIMUM}. Con un plugin anterior" in g5 and "1.26.0. Con un plugin anterior" not in g5, "con el sí, guia.md pasa a pedirla")
+ok("Personas: ANTERIOR" not in abrir(R5, "ventas/cuentas", "--cuenta", "ana@ejemplo.test"), "y ya no se pregunta")
+shutil.rmtree(R5.parent, ignore_errors=True)
 for d in (R, R2, R3, R4):
     shutil.rmtree(d.parent, ignore_errors=True)
 shutil.rmtree(COPIA, ignore_errors=True)

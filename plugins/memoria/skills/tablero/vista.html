@@ -764,7 +764,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.26.7"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.26.8"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1279,7 +1279,7 @@ function mtModal(){
     if(x.k==="sinses"){ const lugares = {entregables:"entregables", taller:"taller", fuentes:"fuentes", decisiones:"decisiones"}; const det = Object.entries(x.ss.donde).map(([k,n])=>k==="decisiones"?"las decisiones":`${n} archivo${n===1?"":"s"} en ${lugares[k]||k}`).join(", ").replace(/, ([^,]*)$/," y $1");
       // la entrada de referencia puede ser de una tarea («(tarea)»), que no es una sesión: entonces se dicen las dos fechas (1.22.4)
       const deTarea = p.ultima_sesion && x.ss.desde && x.ss.desde !== p.ultima_sesion;
-      const q0 = ((p.sesiones||[]).find(s=>s.quien)||{}).quien; const quien = deTarea ? ` (de una tarea; la última sesión es del ${fmtL(p.ultima_sesion)}),` : q0 ? `, cerrada por ${esc(q0)},` : ",";
+      const q0 = ((p.sesiones||[]).find(s=>s.quien && esSesion(s.titulo))||{}).quien; const quien = deTarea ? ` (de una tarea; la última sesión es del ${fmtL(p.ultima_sesion)}),` : q0 ? `, cerrada por ${esc(q0)},` : ",";
       const lista = (x.ss.lista||[]).length ? `<ul class="ent-l">${x.ss.lista.map(f=>`<li><code>${esc(f.archivo)}</code> <span class="more">· ${fmtD(f.fecha)}${f.hora?` ${esc(f.hora)}`:""}</span></li>`).join("")}</ul>${x.ss.archivos>x.ss.lista.length?`<p class="more">Los ${x.ss.lista.length} más recientes de ${x.ss.archivos}.</p>`:""}` : "";
       return `<h3>Trabajo sin sesión registrada</h3><p class="more" style="margin:0">${deTarea?"La última entrada de la bitácora":"La última sesión registrada"} es del ${fmtL(x.ss.desde)}${quien} y después ${x.ss.archivos===1?"cambió":"cambiaron"} ${det}; lo último, el ${fmtD(x.ss.ultimo)}. Seguramente una sesión no se cerró. Si tienes abierto el chat de esos días, búscalo y pídele «cierra la sesión». Si ya no lo tienes, la frase de abajo abre una sesión que lo reconstruye desde la carpeta.</p>${lista}${lista?`<p class="more">Quién hizo cada cambio no consta: la carpeta guarda cuándo, no quién. Quién trabajó queda en la bitácora al cerrar la sesión.</p>`:""}`; }
     if(x.k==="desf") return `<h3>Entregables con una base que cambió después <span class="c">${x.desf.length}</span></h3><p class="more" style="margin:0">Se construyen sobre otro entregable que se actualizó después que ellos. Puede que sigan valiendo; la sesión lo confirma o los pone al día.</p><ul class="ent-l">${x.desf.map(({e,d})=>`<li>${entBtn(p,e)} <span class="more">· ${fmtD(e.actualizado)} · su base ${d.ents.map(y=>`${inline(y.e.titulo||y.e.nombre)} cambió el ${fmtD(y.e.actualizado)}`).join("; ")}</span></li>`).join("")}</ul>`;
@@ -1429,12 +1429,15 @@ const escribenSet = () => { if(_M && _M.has("escriben")) return _M.get("escriben
 const escribenSet_ = () => new Set([persona(META && META.administra), ...AREAS.flatMap(a=>[persona(a.dueno), ...colaboranArea(a).map(persona)]), ...PROJ.flatMap(p=>[persona(p.dueno), ...(p.colaboran||[]).map(persona)])].filter(Boolean));
 const nombreCorto = n => (n||"").split(/\s+/)[0] || "";
 const activo = p => p && !p.restringido && !p.cerrado;
+// las entradas de la bitácora que no son sesiones: la misma lista que context_core (is_session, 1.26.8)
+const esSesion = t => !/\((tarea|tablero|migracion|mantenimiento)\)/i.test(t||"");
 function sesionesTodas(p){
   // las de las últimas cuatro semanas vienen con el proyecto; las demás, con su detalle cuando ya se trajo
   const s = [], d = TEXTOS[p.id];
   // las de un mismo día llevan el mismo título: las distingue su posición en el archivo (n, 1.23); sin ella, datos de antes
   for(const x of [...(p.sesiones_recientes||[]), ...(p.sesiones||[]), ...((d && d.sesiones)||[])]) if(x && !s.some(y=>y.fecha===x.fecha && y.titulo===x.titulo && y.n===x.n)) s.push(x);
-  return s.filter(x=>x.fecha && !/\((tarea|migracion)\)/i.test(x.titulo||"")).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  // como antes de la 1.26.8, sin tareas ni migraciones; los arreglos del mantenimiento van en p.arreglos (Registro)
+  return s.filter(x=>x.fecha && !/\((tarea|migracion|mantenimiento)\)/i.test(x.titulo||"")).sort((a,b)=>b.fecha.localeCompare(a.fecha));
 }
 function decisionesTodas(p){
   const s = (p.decisiones||[]).slice();
@@ -1478,15 +1481,17 @@ document.addEventListener("click", e => {
 const TABMAP = {resumen:"estatus", estado:"estatus", entregables:"quehay", decisiones:"registro", bitacora:"registro"};
 function registroTab(p){
   if(p.sesiones_aparte && !TEXTOS[p.id]) traerTextos(p.id);
-  const decs = decisionesTodas(p).map(d=>({f:d.fecha||"", k:"d", d})), ses = sesionesTodas(p).map(s=>({f:s.fecha, k:"s", s}));
+  const decs = decisionesTodas(p).map(d=>({f:d.fecha||"", k:"d", d})), ses = sesionesTodas(p).map(s=>({f:s.fecha, k:"s", s})), arr = (p.arreglos||[]).map(a=>({f:a.fecha||"", k:"a", a}));
   const nQ = decs.filter(x=>x.d.tipo==="cuestionamiento").length;
-  let items = REG_FILTRO==="decisiones" ? decs.filter(x=>x.d.tipo!=="cuestionamiento") : REG_FILTRO==="sesiones" ? ses : REG_FILTRO==="cuest" ? decs.filter(x=>x.d.tipo==="cuestionamiento") : decs.concat(ses);
+  let items = REG_FILTRO==="decisiones" ? decs.filter(x=>x.d.tipo!=="cuestionamiento") : REG_FILTRO==="sesiones" ? ses : REG_FILTRO==="cuest" ? decs.filter(x=>x.d.tipo==="cuestionamiento") : decs.concat(ses, arr);
   items.sort((a,b)=>b.f.localeCompare(a.f) || (a.k==="s"?-1:1));
   const desde = addDays(-(ACT_DIAS-1)), todos = REG_TODO.has(p.id), nAnt = items.filter(x=>x.f<desde).length;
   const vis = (todos ? items : items.filter(x=>x.f>=desde)).slice(0, 60);
   let mes = null, out = "";
   for(const x of vis){ const m = MES_L(x.f); if(m!==mes){ mes = m; out += `<div class="dl-m">${esc(m)}</div>`; }
     if(x.k==="d") out += decItem(x.d, p, false);
+    // lo que el mantenimiento de la carpeta movió, renombró o puso cabecera: no es una sesión, pero dice por qué cambió un archivo (1.26.8)
+    else if(x.k==="a") out += `<article class="dec ses"><div class="hd"><span class="pill none">Mantenimiento</span><time>${fmtD(x.a.fecha)}</time><h3>Arreglos de la carpeta</h3>${x.a.quien?`<span class="more">· ${esc(x.a.quien.replace(/^mantenimiento de\s+/i,""))}</span>`:""}</div><dl><dt>Arregló</dt><dd>${(x.a.arreglo||[]).map(r=>`<code>${esc(r)}</code>`).join(", ")}${x.a.mas?` y ${x.a.mas} más`:""}</dd></dl></article>`;
     else { const s = x.s, tit = s.titulo.replace(s.fecha,"").replace(/^[\s(]+|[)\s]+$/g,"").trim();
       out += `<article class="dec ses"><div class="hd"><span class="pill none">Sesión</span><time>${fmtD(s.fecha)}</time>${tit?`<h3>${inline(tit)}</h3>`:""}${s.quien?`<span class="more">· ${esc(s.quien)}</span>`:""}</div><dl>${s.trabajamos?`<dt>Tema</dt><dd>${inline(s.trabajamos)}</dd>`:""}${s.avances?`<dt>Avances</dt><dd>${inline(s.avances)}</dd>`:""}</dl></article>`; } }
   const chip = (k, l, n) => `<button type="button" class="chip${REG_FILTRO===k?" on":""}" data-reg="${k}">${l}${n!=null?` · ${n}`:""}</button>`;
@@ -3052,7 +3057,7 @@ function ayudaArts(){
       </tbody>
     </table></div>
     <dl class="hc-def">
-      <dt>Lo que arregla Claude</dt><dd>Al final te enseña la lista exacta de lo mecánico en las áreas donde eres responsable o colaboras (las carpetas que faltan, la línea de un entregable en su área) y pregunta «¿Arreglo esto?»; tu sí vale solo para esa lista. Lo que cambia nombres, borra, da de alta un proyecto o toca tu guía lo pregunta uno a uno.</dd>
+      <dt>Lo que arregla Claude</dt><dd>Al final te enseña la lista exacta de lo mecánico en las áreas donde eres responsable o colaboras (las carpetas que faltan, la línea de un entregable en su área) y pregunta «¿Arreglo esto?»; tu sí vale solo para esa lista. Lo que cambia nombres, borra, da de alta un proyecto o toca tu guía lo pregunta uno a uno. Lo que mueve, renombra o pone cabecera dentro de un proyecto queda en su bitácora como una entrada «(mantenimiento)», para que quien trabaja ahí sepa por qué cambió y su siguiente sesión no lo tome por trabajo sin registrar. Un archivo que alguien ya cambió sin sesión no se toca hasta que se registre.</dd>
       <dt>Lo de los demás</dt><dd>A cada persona le deja la frase para su sesión. Cualquier responsable puede pedir ${F("haz el mantenimiento de lo mío")}: lo mismo, solo con sus áreas, y sin nada restringido que no lleve.</dd>
       <dt>Solo la estructura</dt><dd>${F("verifica la carpeta")} hace solo el último tema.</dd>
       <dt>Y la pestaña Mantenimiento</dt><dd>La de Inicio, en <button type="button" class="lnk" data-help="tablero">Tu tablero</button>, enseña cada día lo que estorba hoy en la carpeta. Este mantenimiento es la revisión de fondo, cada semana o cada mes.</dd>
@@ -3148,7 +3153,7 @@ function ayudaArts(){
       <tbody>
         <tr><td>La ficha del proyecto</td><td>Se reescribe: siempre dice el presente. El estado y los siguientes pasos, al cerrar cada sesión.</td></tr>
         <tr><td>Las decisiones</td><td>Solo crecen. Si una decisión cambia, se añade otra que reemplaza a la anterior.</td></tr>
-        <tr><td>La bitácora</td><td>Solo crece. Una entrada por sesión; lo que escribe la puesta al día del tablero lleva «(tarea)».</td></tr>
+        <tr><td>La bitácora</td><td>Solo crece. Una entrada por sesión; lo que escribe la puesta al día del tablero lleva «(tarea)», y lo que el mantenimiento de la carpeta mueve, renombra o pone cabecera dentro de un proyecto, «(mantenimiento)». Ninguna de las dos es una sesión.</td></tr>
         <tr><td>Los documentos</td><td>Nacen en borrador y pasan a vigentes solo cuando su responsable lo pide.</td></tr>
         <tr><td>La ficha del área y el mapa</td><td>Se reescriben: la del área en una sesión de su responsable; el mapa y la base, en una del responsable del contexto.</td></tr>
       </tbody>
@@ -3315,7 +3320,7 @@ function projLinea(p, sinEstado){
   const est = projStatus(p), partes = [];
   const e1 = primeraFrase(p.estado_resumen);
   if(!sinEstado) partes.push(e1 ? inline(e1) : `${esc(p.nombre)} está ${est.label.toLowerCase()}.`);
-  const s0 = (p.sesiones||[])[0];
+  const s0 = (p.sesiones||[]).find(s=>esSesion(s.titulo));   // la última sesión real, no un arreglo ni una tarea (1.26.8)
   if(p.ultima_sesion){ const tr = s0 && s0.trabajamos ? primeraClausula(s0.trabajamos) : ""; partes.push(`Última sesión ${haceTxt(p.ultima_sesion)}${tr?`: ${inline(minus1(tr))}`:""}.`); }
   else if(!p.cerrado) partes.push("Sin sesiones registradas todavía.");
   const d0 = (p.decisiones||[]).find(d=>d.tipo!=="cuestionamiento" && d.fecha);

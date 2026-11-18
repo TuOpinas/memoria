@@ -8,6 +8,7 @@ frozen in `tests/reference/`.
 """
 from __future__ import annotations
 
+import datetime
 import re
 import unicodedata
 from typing import Optional
@@ -349,6 +350,119 @@ def with_archives(live: Optional[str], archives: list[Optional[str]]) -> tuple[s
             parts.append((t or "")[m.start():])
     return "\n\n".join(p.strip("\n") for p in parts if p.strip()) + "\n", len(re.findall(r"^## ", live or "", re.M))
 
+
+
+# ── entries of sesiones.md that are not sessions (1.26.8) ──────────────────────────────────────────────────────────
+
+_PATTERNS: dict = {}
+
+
+def _patterns(lang: Pack) -> tuple:
+    """(any tag, the maintenance tag) compiled once per pack: is_session runs once per entry of every log read."""
+    k = id(lang)
+    if k not in _PATTERNS:
+        tags = "|".join(re.escape(x) for x in lang.non_session_tags)
+        _PATTERNS[k] = (re.compile(r"\((?:" + tags + r")\)", re.I), re.compile(r"\(" + re.escape(lang.maintenance_tag) + r"\)", re.I))
+    return _PATTERNS[k]
+
+
+def is_session(heading: str, lang: Pack = ES) -> bool:
+    """Whether a heading of sesiones.md («## 2026-11-17 (tarea)», with or without «## ») is a work session. The entries
+    of a scheduled task, the board, a migration and the maintenance trace tell what they did, but are not sessions: no
+    reader takes them as the last session, nor counts them, nor shows them among the recent ones."""
+    return not _patterns(lang)[0].search(heading or "")
+
+
+def is_maintenance(heading: str, lang: Pack = ES) -> bool:
+    return bool(_patterns(lang)[1].search(heading or ""))
+
+
+def _field(text: str, names: tuple) -> Optional[str]:
+    for l in (text or "").split("\n"):
+        low = l.strip().lower()
+        for n in names:
+            if low.startswith(n):
+                return l.strip()[len(n):].strip()
+    return None
+
+
+def path_key(path: str) -> str:
+    """How two spellings of a path inside a project compare: «/» separators, NFC (macOS and Drive may give NFD) and case
+    folded (disks that do not tell case apart)."""
+    return unicodedata.normalize("NFC", (path or "").replace("\\", "/").strip().strip("/")).casefold()
+
+
+def maintenance_files(entry: str, lang: Pack = ES) -> list[str]:
+    """The paths a maintenance entry says it fixed, inside the project: «Arregló: taller/a.md (cabecera),
+    entregables/b.md (antes b.md)». What follows a path in parentheses is not a path."""
+    v = _field(entry, lang.session_fixed) or ""
+    out = []
+    for part in re.split(r",\s*(?![^()]*\))", v):
+        r = re.sub(r"\s*\(.*\)\s*$", "", part.strip()).strip().strip("`").strip().replace("\\", "/")
+        if r and r not in out:
+            out.append(r)
+    return out
+
+
+def _instant(value: Optional[str]) -> tuple:
+    """(readable, epoch seconds or None) of an ISO 8601 instant with its offset. «ninguno» reads as no instant; a value
+    without an offset does not read, because each reader would take it in its own zone."""
+    v = (value or "").split()[0] if (value or "").strip() else ""
+    if not v:
+        return False, None
+    if v.strip(".").lower() in ("ninguno", "ninguna"):
+        return True, None
+    try:
+        d = datetime.datetime.fromisoformat(v.replace("Z", "+00:00"))
+    except ValueError:
+        return False, None
+    return (True, d.timestamp()) if d.tzinfo is not None else (False, None)
+
+
+def maintenance_trace(entries: list[tuple[str, str]], log_mtime: Optional[float], lang: Pack = ES) -> tuple:
+    """(reference, discounted) for whoever compares file dates with the last close of a project (1.26.8).
+
+    `entries` are (heading, text) of sesiones.md newest first; `log_mtime` its modification time (epoch seconds). The
+    entries above the last real session that are not sessions ((tarea), (tablero), (migracion), (mantenimiento)) are
+    walked together. If a maintenance entry is among them, `reference` is the «Último cierre» of the newest one (the
+    instant of the last real close, carried from entry to entry) and `discounted` maps each file the maintenance entries
+    name (by path_key) to the instant until which it is discounted: its own entry's «Escrita» plus a minute. A file that
+    changed after that is someone's work and keeps showing, whatever else writes the log later. Without a maintenance
+    entry above the last session, `reference` is `log_mtime` and nothing is discounted, as before 1.26.8. «Último
+    cierre: ninguno» gives None: there was no close. A value that does not read gives `log_mtime`, and an «Escrita» that
+    does not read bounds its files by `log_mtime`."""
+    ref_set, ref = False, log_mtime
+    discounted: dict = {}
+    for head, text in entries:
+        if is_session(head, lang):
+            break
+        if not is_maintenance(head, lang):
+            continue
+        if not ref_set:
+            ok, ts = _instant(_field(text, lang.session_last_close))
+            ref, ref_set = (ts if ok else log_mtime), True
+        ok, written = _instant(_field(text, lang.session_written))
+        bound = (written if ok and written is not None else log_mtime)
+        for r in maintenance_files(text, lang):
+            k = path_key(r)
+            if bound is not None:
+                discounted[k] = max(discounted.get(k, 0), bound + 60)
+    return ref, discounted
+
+
+def discounted_file(path: str, seconds: Optional[float], discounted: dict) -> bool:
+    """Whether a file (path inside the project, its modification time) is a maintenance fix nobody changed since."""
+    b = discounted.get(path_key(path)) if discounted else None
+    return b is not None and seconds is not None and seconds <= b
+
+
+def project_finished(body: str, lang: Pack = ES) -> bool:
+    """«Proyecto terminado el AAAA-MM-DD» in the status section, under its 1.22 name or the older ones."""
+    for name in (lang.status,) + tuple(lang.status_legacy_project):
+        m = re.search(r"^##\s+" + re.escape(name) + r"\s*$(.*?)(?=^## |\Z)", body or "", re.M | re.S)
+        if m and re.search(re.escape(lang.finished_marker) + r"\s*20\d\d-\d\d-\d\d", m.group(1)):
+            return True
+    return False
 
 
 # ── the people lines of «Quién participa» (1.26) ──────────────────────────────────────────────────────────────────

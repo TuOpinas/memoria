@@ -407,7 +407,7 @@ actualizado: 2026-09-01
 Responsable y colaboradores: en la tabla de áreas de guia.md.
 ```
 
-En una raíz que todavía tiene la columna «Cuenta» en la tabla de áreas (sin migrar a «Quién es quién»), `Quién participa` lleva como antes `Responsable: Marta Ruiz`. Una raíz nueva se monta con «Quién es quién» y, al final de `guia.md`, la sección «Versión mínima del plugin» con la versión que pide su estructura (la 1.26.0), como la escribe la migración.
+En una raíz que todavía tiene la columna «Cuenta» en la tabla de áreas (sin migrar a «Quién es quién»), `Quién participa` lleva como antes `Responsable: Marta Ruiz`. Una raíz nueva se monta con «Quién es quién» y, al final de `guia.md`, la sección «Versión mínima del plugin» con la versión que pide su estructura (hoy la 1.26.8: el rastro del mantenimiento), como la escribe la migración.
 
 El `Estatus` nace con la fecha de hoy, una frase y las prioridades; lo reescribe la skill `director` al cerrar cada sesión en el área.
 

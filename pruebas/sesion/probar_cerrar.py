@@ -511,5 +511,116 @@ ok(c == 0 and s.get("registradas") and s["registradas"][0].get("afecta", "").sta
 c, s = corre(raiz_nueva(), {"decisiones": [DEC2]}, "--abierto", ABIERTO_)
 ok(c == 0 and not any("a quién avisar" in x for x in s["respuesta"]), "sin «Afecta a» ni cuestionamiento, no pide aviso")
 
+print("cerrar.py: el rastro del mantenimiento (1.26.8)")
+# un cerrar.py que se dice 9.9.9: la raíz de prueba pide la versión mínima de esta estructura
+_tmp = pathlib.Path(tempfile.mkdtemp())
+CERRAR_NUEVO = _tmp / "cerrar.py"
+CERRAR_NUEVO.write_text(CERRAR.read_text(encoding="utf-8").replace('ESTE_PLUGIN = "', 'ESTE_PLUGIN = "9.9.9"  # ', 1), encoding="utf-8")
+import re as _re
+_vm = _re.search(r'STRUCTURE_MINIMUM = "([\d.]+)"', CERRAR.read_text(encoding="utf-8")).group(1)
+
+
+def raiz_rastro(minima=None):
+    r = raiz_nueva()
+    g = r / "guia.md"
+    g.write_text(g.read_text(encoding="utf-8").rstrip("\n") + f"\n\n## Versión mínima del plugin\n\n{minima or _vm}. Con un plugin anterior, esta carpeta se lee y no se escribe.\n", encoding="utf-8")
+    return r
+
+
+def corre_n(raiz, cambios, *extra, proyecto="ventas/cuentas"):
+    f = raiz.parent / f"cambios-{time.time_ns()}.json"; f.write_text(json.dumps(cambios, ensure_ascii=False), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(CERRAR_NUEVO), str(raiz), proyecto, str(f), *extra], capture_output=True, text=True)
+    try:
+        return r.returncode, json.loads(r.stdout)
+    except ValueError:
+        return r.returncode, r.stdout + r.stderr
+
+
+ARR = {"mantenimiento": {"nombre": "Ana Prueba", "arreglos": [{"ruta": "taller/nota-anterior.md", "que": "cabecera"},
+                                      {"ruta": "entregables/kit.md", "que": "renombrado", "de": "entregables/kit-cuentas.md"}]}}
+RM = raiz_rastro()
+ses0 = (RM / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+m_antes = os.stat(RM / "ventas/cuentas/sesiones.md").st_mtime
+c, s = corre_n(RM, ARR, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 0 and s.get("con_trabajo_sin_sesion") == [] and "entrada" not in s and (RM / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") == ses0,
+   f"--comprobar no escribe, no repite la entrada y no ve trabajo sin sesión en archivos viejos ({s})")
+c, s = corre_n(RM, ARR, "--cuenta", "ana@ejemplo.test")
+ok(c == 1 and "no existen: entregables/kit.md" in str(s.get("error")), f"sin el archivo donde queda, no escribe ({s.get('error')})")
+(RM / "ventas/cuentas/entregables/kit-cuentas.md").rename(RM / "ventas/cuentas/entregables/kit.md")
+(RM / "ventas/cuentas/taller/nota-anterior.md").write_text("---\nestado: borrador\n---\n# x\n", encoding="utf-8")   # la cabecera: fecha de ahora
+c, s = corre_n(RM, ARR, "--cuenta", "ana@ejemplo.test")
+ses = (RM / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+ent = ses[ses.index(f"## {HOY} (mantenimiento)"):].split("\n## ", 1)[0] if f"## {HOY} (mantenimiento)" in ses else ""
+ok(c == 0 and s["escritos"] == ["ventas/cuentas/sesiones.md"] and "Arregló: taller/nota-anterior.md (cabecera), entregables/kit.md (antes entregables/kit-cuentas.md)" in ent
+   and "Sesión de: mantenimiento de Ana Prueba · plugin 9.9.9" in ent, f"escribe la entrada con lo que arregló y quién ({s if c else ent})")
+d_ = _re.search(r"^Último cierre: (\S+)$", ent, _re.M)
+ok(bool(d_) and abs(datetime.datetime.fromisoformat(d_.group(1)).timestamp() - m_antes) < 2, f"«Último cierre» es la hora de sesiones.md antes de la entrada ({d_ and d_.group(1)})")
+w_ = _re.search(r"^Escrita: (\S+)$", ent, _re.M)
+ok(bool(w_) and abs(datetime.datetime.fromisoformat(w_.group(1)).timestamp() - time.time()) < 30, "y «Escrita», la hora de la entrada")
+ok(ses.index(f"## {HOY} (mantenimiento)") < ses.index("## 2026-10-01"), "va arriba, como toda entrada")
+ok(not any("db_write" in x or "sesión cerrada" in x for x in s.get("respuesta") or []), "la respuesta no pide la marca del tablero ni el recuadro de cierre")
+c, s = corre_n(RM, ARR, "--cuenta", "ana@ejemplo.test")
+ok(c == 1 and "no pasaron antes por --comprobar" in str(s.get("error")), "repetir la escritura sin comprobar otra vez se rechaza")
+time.sleep(1.1)
+A2 = {"mantenimiento": {"arreglos": [{"ruta": "taller/nota-precios.md", "que": "cabecera"}, {"ruta": "taller/nota-anterior.md", "que": "renombrado", "de": "taller/nota-anterior.md"}]}}
+c, s = corre_n(RM, A2, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 0 and s.get("con_trabajo_sin_sesion") == [], f"lo que arregló un mantenimiento anterior no es trabajo ajeno ({s})")
+c, s = corre_n(RM, {"mantenimiento": {"arreglos": [A2["mantenimiento"]["arreglos"][0]]}}, "--cuenta", "ana@ejemplo.test")
+ses = (RM / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+d2 = _re.findall(r"^Último cierre: (\S+)$", ses, _re.M)
+ok(c == 0 and len(d2) == 2 and d2[0] == d2[1], f"un segundo arreglo hereda el «Último cierre» del primero ({d2})")
+# una tarea del tablero encima: el último cierre sigue siendo el de antes
+sm_ = RM / "ventas/cuentas/sesiones.md"
+sm_.write_text(sm_.read_text(encoding="utf-8").replace("# Sesiones\n", f"# Sesiones\n\n## {HOY} (tarea)\nTema: lo marcado como hecho en el tablero.\n", 1), encoding="utf-8")
+c, s = corre_n(RM, {"mantenimiento": {"arreglos": [{"ruta": "taller/nota-precios.md", "que": "cabecera"}]}}, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 0 and s.get("ultimo_cierre") == d2[0], f"con una tarea encima, el último cierre sigue siendo el real ({s.get('ultimo_cierre')})")
+# una tarea encima de una sesión: el último cierre real es el día siguiente a esa sesión, y lo de Carla en medio cuenta
+RT2 = raiz_rastro()
+pt2 = RT2 / "ventas/cuentas"
+(pt2 / "taller/nota-anterior.md").write_text("Carla, sin sesión.\n", encoding="utf-8")
+st2 = pt2 / "sesiones.md"
+st2.write_text(st2.read_text(encoding="utf-8").replace("# Sesiones\n", f"# Sesiones\n\n## {HOY} (tarea)\nTema: lo marcado como hecho en el tablero.\n", 1), encoding="utf-8")
+c, s = corre_n(RT2, ARR, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 0 and s.get("con_trabajo_sin_sesion") == ["taller/nota-anterior.md"] and s.get("ultimo_cierre", "").startswith("2026-10-02T00:00:00"),
+   f"una tarea encima no tapa el trabajo de Carla anterior a ella ({s})")
+
+R2 = raiz_rastro()
+(R2 / "ventas/cuentas/sesiones.md").write_text("# Sesiones\n\n## 2025-03-01\nTema: viejo.\nSesión de: Ana Prueba · plugin 1.20.0\n", encoding="utf-8")
+A3 = {"mantenimiento": {"arreglos": [{"ruta": "taller/nota-anterior.md", "que": "cabecera"}]}}
+corre_n(R2, A3, "--cuenta", "ana@ejemplo.test", "--comprobar")
+c, s = corre_n(R2, A3, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and not s.get("rotados") and not list((R2 / "ventas/cuentas").glob("sesiones-20*.md")), f"no rota la bitácora aunque su última entrada sea de otro año ({s.get('rotados') if c == 0 else s})")
+c, s = corre_n(R2, {"sesion": SESION}, "--cuenta", "ana@ejemplo.test")
+ok(c == 0 and list((R2 / "ventas/cuentas").glob("sesiones-2025.md")), "y el cierre siguiente sí rota por el año de la última sesión, aunque arriba haya un arreglo de este año")
+c, s = corre_n(raiz_rastro(), {"mantenimiento": {"arreglos": [{"ruta": "entregables/b.md", "que": "movido", "de": "b.md"}]}}, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 0 and s.get("no_existen") == ["b.md"], f"«de» puede estar suelto en el proyecto, como en el ejemplo del anexo ({s})")
+
+for que, cambios, extra, rx in (
+        ("sin --cuenta", ARR, (), "--cuenta"),
+        ("con una cuenta que no escribe en el proyecto", ARR, ("--cuenta", "beto@ejemplo.test"), "no es responsable"),
+        ("con una cuenta que no existe", ARR, ("--cuenta", "nadie@ejemplo.test"), "no es responsable"),
+        ("junto con la entrada de una sesión", dict(ARR, sesion=SESION), ("--cuenta", "ana@ejemplo.test"), "va solo"),
+        ("sin consola", ARR, ("--cuenta", "ana@ejemplo.test", "--sin-fechas"), "consola"),
+        ("con una clave mal escrita", {"mantenimento": ARR["mantenimiento"]}, ("--cuenta", "ana@ejemplo.test"), "no conozco"),
+        ("con un archivo de fuentes/", {"mantenimiento": {"arreglos": [{"ruta": "fuentes/x.md", "que": "cabecera"}]}}, ("--cuenta", "ana@ejemplo.test"), "entregables/ o taller/"),
+        ("con un archivo de restringido/", {"mantenimiento": {"arreglos": [{"ruta": "entregables/restringido/x.md", "que": "cabecera"}]}}, ("--cuenta", "ana@ejemplo.test"), "restringido"),
+        ("movido sin «de»", {"mantenimiento": {"arreglos": [{"ruta": "taller/x.md", "que": "movido"}]}}, ("--cuenta", "ana@ejemplo.test"), "«de»"),
+        ("vacío", {"mantenimiento": {}}, ("--cuenta", "ana@ejemplo.test"), "arreglos")):
+    Rx = raiz_rastro(); antes_ = (Rx / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8")
+    c, s = corre_n(Rx, cambios, *extra)
+    ok(c == 1 and rx in str(s.get("error") if isinstance(s, dict) else s) and (Rx / "ventas/cuentas/sesiones.md").read_text(encoding="utf-8") == antes_,
+       f"se rechaza {que}, sin escribir nada ({s.get('error') if isinstance(s, dict) else s})")
+for sec in ("Estatus", "Estado actual"):
+    Rt = raiz_rastro()
+    _pt = Rt / "ventas/cuentas/proyecto.md"
+    _pt.write_text(_pt.read_text(encoding="utf-8").replace("# Cuentas\n", f"# Cuentas\n\n## {sec}\nProyecto terminado el 2026-10-30. Firmado.\n", 1), encoding="utf-8")
+    c, s = corre_n(Rt, ARR, "--cuenta", "ana@ejemplo.test", "--comprobar")
+    ok(c == 1 and "terminado" in str(s.get("error")), f"se rechaza en un proyecto terminado, también con «{sec}» ({s})")
+Rv = raiz_rastro("1.26.0")
+c, s = corre_n(Rv, ARR, "--cuenta", "ana@ejemplo.test", "--comprobar")
+ok(c == 1 and _vm in str(s.get("error")) and "sesión" in str(s.get("error")), f"se rechaza si la raíz pide una mínima anterior a la del rastro ({s})")
+c, s = corre_n(raiz_rastro(), {"sesion": SESION.replace(f"## {HOY}", f"## {HOY} (mantenimiento)")}, "--cuenta", "ana@ejemplo.test")
+ok(c == 1 and "etiqueta" in str(s.get("error")), "una «sesion» con la etiqueta del mantenimiento a mano se rechaza")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

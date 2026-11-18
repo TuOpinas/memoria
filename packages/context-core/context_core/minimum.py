@@ -21,8 +21,9 @@ __all__ = ["version_tuple", "minimum_plugin_version", "plugin_may_write", "STRUC
            "VERSION_MINIMA_ESTRUCTURA", "RECETA_ACTUALIZAR", "puerta_de_escritura", "seccion_minima"]
 
 # the minimum the current structure needs: what the migration writes, and what an opening calls «behind» (1.26: «Quién es
-# quién»). Every structure change raises it with its migration
-STRUCTURE_MINIMUM = "1.26.0"
+# quién»; 1.26.8: the maintenance entries of sesiones.md, which an older plugin would count as sessions). Every structure
+# change raises it with its migration
+STRUCTURE_MINIMUM = "1.26.8"
 
 _VERSION = re.compile(r"(?<![\d.])(\d+)\.(\d+)(?:\.(\d+))?(?!\.?\d)")
 _LEADING = re.compile(r"^[\s*_`«\"(]*(?:v(?:ersi[oó]n)?\s*)?(\d+)\.(\d+)(?:\.(\d+))?(?!\.?\d)", re.I)
@@ -109,7 +110,7 @@ def puerta_de_escritura(version_plugin: str, guia: str) -> tuple:
         return True, txt, ""
     if estado == "unreadable":
         return False, None, ("La sección «Versión mínima del plugin» de guia.md no dice qué versión: no se escribe nada en esta "
-                             "carpeta hasta que su primer párrafo empiece por la versión (por ejemplo «1.26.0.»). La corrige el "
+                             "carpeta hasta que su primer párrafo empiece por la versión (por ejemplo «1.26.8.»). La corrige el "
                              "responsable de contexto, en su sesión o a mano. Leer y consultar siguen funcionando.")
     if estado == "unknown":
         return False, txt, (f"No sé qué versión del plugin corre aquí («{version_plugin}») y esta carpeta pide la {txt} o una más "
