@@ -2,7 +2,7 @@
 
 Anexo de la skill `calidad` (su paso 8). Se lee solo cuando toca leer la efectividad.
 
-Cuando el paso 6 lo propone, cuando cambia el modelo que se usa o cuando alguien lo pide («¿qué tan bien funcionan las revisiones?»), se leen los informes de `taller/revisiones-de-calidad/` de los proyectos del área que no son restringidos (sus secciones `Medición` y `Lo que se escapó` y las líneas `Lens:`, `Pesa:` y `Modelo:` de cada hallazgo; los informes de antes de la 1.26.2 pueden llevar `Lente:` con las lentes en español, o las mejoras en una lista con las lentes entre paréntesis, y se leen igual) y se reescribe `taller/revisiones-de-calidad/efectividad-de-las-revisiones.md`, uno solo por área: el que ya exista en algún proyecto del área, o si no, en el proyecto donde se pidió; en `borrador`, con `aportacion` y `basado_en`. Como su `aportacion` la ve el área entera, solo lleva cifras agregadas y nombres de proyectos que no son restringidos.
+Se leen los informes de `taller/revisiones-de-calidad/` de los proyectos del área que no son restringidos (sus secciones `Medición` y `Lo que se escapó` y las líneas `Lens:`, `Pesa:` y `Modelo:` de cada hallazgo; los informes de antes de la 1.26.2 pueden llevar `Lente:` con las lentes en español, o las mejoras en una lista con las lentes entre paréntesis, y se leen igual) y se reescribe `taller/revisiones-de-calidad/efectividad-de-las-revisiones.md`, uno solo por área: el que ya exista en algún proyecto del área, o si no, en el proyecto donde se pidió; en `borrador`, con `aportacion` y `basado_en`. Como su `aportacion` la ve el área entera, solo lleva cifras agregadas y nombres de proyectos que no son restringidos.
 
 Dice, con el número de revisiones detrás de cada cifra:
 

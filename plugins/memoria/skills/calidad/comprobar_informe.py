@@ -58,14 +58,21 @@ def comprobar(texto, ruta=""):
     modelo = next((m for m in medicion if m.startswith("Modelo: ")), "")
     contraste = "contraste" in modelo
     tipo = next((m for m in medicion if m.startswith("Tipo: ")), "")
-    arreglos = ", arreglos" in tipo.split("·")[0]
+    en_tipo = re.search(r", arreglos (\d+) de \S", tipo.split("·")[0])
     ronda = re.search(r"-arreglos-(\d+)\.md$", ruta or "")
-    if ronda and not re.search(r", arreglos %s de \S" % ronda.group(1), tipo.split("·")[0]):
+    if ronda and not (en_tipo and en_tipo.group(1).lstrip("0") == ronda.group(1).lstrip("0")):
         return [f"una ronda de arreglos lleva en «Tipo:» «, arreglos {ronda.group(1)} de <informe de la primera revisión>», con el número de su nombre (anexo arreglos.md)"]
-    arreglos = arreglos or bool(ronda)
+    nombre = (ruta or "").replace("\\", "/").rsplit("/", 1)[-1]
+    if en_tipo and nombre.startswith("revision-de-calidad-") and not ronda:
+        return [f"«Tipo:» dice que es la ronda de arreglos {en_tipo.group(1)}: el archivo se llama «…-arreglos-{en_tipo.group(1)}.md» (anexo arreglos.md)"]
+    arreglos = bool(en_tipo or ronda)
+    n_ronda = int((en_tipo or ronda).group(1)) if arreglos else 0
     prof = next((m for m in medicion if m.startswith("Profundidad: ")), "")
-    corrieron = set(re.findall(r"\b[EIORF]\b", prof.split("Lentes:", 1)[1].split("(")[0])) if "Lentes:" in prof else set()
+    ini = re.match(r"\s*([EIORF](?:\s*,\s*[EIORF])*)", prof.split("Lentes:", 1)[1]) if "Lentes:" in prof else None
+    corrieron = set(re.findall(r"[EIORF]", ini.group(1))) if ini else set()
     rev = re.search(r"Revisores: (\d+)( \()?", prof)
+    if arreglos and not rev:
+        problemas.append("una ronda de arreglos lleva «Profundidad: … · Revisores: n · Lentes: …» (paso 7)")
     if arreglos and rev and int(rev.group(1)) < 3 and not rev.group(2):
         problemas.append("una ronda de arreglos con menos de tres revisores dice por qué entre paréntesis («Revisores: 2 (…)»)")
     for n, l in enumerate(lineas, 1):
@@ -113,14 +120,17 @@ def comprobar(texto, ruta=""):
                 elif preg and INICIAL[preg] in corrieron:
                     problemas.append(f"línea {n}: «{preg}» corrió en esta revisión: una lente que corrió no va entre paréntesis")
             libre = re.search(r"^Lens: [^·]*\(([^)]*)\) · Pesa", l)
-            if libre and " " not in libre.group(1).strip() and libre.group(1).strip().lower() in LENTES and libre.group(1).strip() not in LENTES:
-                problemas.append(f"línea {n}: la lente pegada va en minúscula y sola: ({libre.group(1)})")
+            palabras = [p for p in re.split(r"[,\s]+", libre.group(1).strip()) if p] if libre else []
+            if palabras and len(palabras) <= 2 and all(re.fullmatch(NOMBRES + r"|[EIORF]", p, re.I) for p in palabras) and libre.group(1).strip() not in LENTES:
+                problemas.append(f"línea {n}: la lente pegada va sola, en inglés y en minúscula («objective (inconsistencies)»): ({libre.group(1)})")
             if malas:
                 problemas.append(f"línea {n}: lentes que no existen o no van en inglés ({', '.join(malas)}); son {', '.join(LENTES)}")
             pesa = m.group("pesa").strip()
             if pesa not in PESOS:
                 problemas.append(f"línea {n}: «Pesa: {pesa}» no es «impide cumplir el objetivo», «pone en riesgo el objetivo» ni «lo mejora»")
-            if arreglos and (m.group("origen") or "").strip() not in ORIGENES:
+            if arreglos and n_ronda == 1 and (m.group("origen") or "").strip() == "lo abrió un arreglo anterior":
+                problemas.append(f"línea {n}: en la ronda 1 no hay arreglo anterior: «(en el original)» o «(lo abrió este arreglo)»")
+            elif arreglos and (m.group("origen") or "").strip() not in ORIGENES:
                 problemas.append(f"línea {n}: en una revisión de arreglos, «Pesa:» dice de dónde viene: «(en el original)», «(lo abrió un arreglo anterior)» o «(lo abrió este arreglo)»")
             if contraste and not m.group("modelo"):
                 problemas.append(f"línea {n}: en un contraste cada hallazgo dice «· Modelo: los dos» o el modelo que lo encontró")
@@ -150,11 +160,15 @@ def comprobar(texto, ruta=""):
         problemas.append("una ronda de arreglos lleva «Hallazgos: n · impiden n · riesgo n · mejoran n» (paso 7)")
     if h:
         total, imp, rie, mej = (int(x) for x in h.groups())
-        arr = next((re.match(r"^Arreglados: (\d+)(?: · impiden (\d+))?\s*$", m.strip()) for m in medicion if m.startswith("Arreglados:")), None)
+        arr = next((re.match(r"^Arreglados: (\d+)(?: · impiden (\d+))?(?: \([^)]*\))?\s*$", m.strip()) for m in medicion if m.startswith("Arreglados:")), None)
         if arr is None:
-            problemas.append("la medición no lleva «Arreglados: n» (paso 7)")
-        elif arreglos and imp and int(arr.group(1)) > 0 and arr.group(2) is None:
-            problemas.append(f"«Arreglados:» dice detrás cuántos de los {imp} que impiden se arreglaron («Arreglados: {arr.group(1)} · impiden {imp}»)")
+            problemas.append("la medición no lleva «Arreglados: n», o lleva detrás algo que no es «· impiden n» o una nota entre paréntesis (paso 7)")
+        else:
+            n_arr, m_arr = int(arr.group(1)), int(arr.group(2) or 0)
+            if n_arr > total or m_arr > imp or m_arr > n_arr:
+                problemas.append(f"«Arreglados: {n_arr}{' · impiden ' + str(m_arr) if arr.group(2) else ''}» no cuadra: n son los arreglados (como mucho {total}) y m, cuántos de ellos impedían (como mucho {imp})")
+            elif arreglos and imp and n_arr > 0 and arr.group(2) is None:
+                problemas.append(f"«Arreglados:» dice detrás cuántos de los {imp} que impiden se arreglaron («Arreglados: {arr.group(1)} · impiden {imp}»)")
         if imp + rie + mej != total:
             problemas.append(f"«Hallazgos: {total}» no es la suma de sus pesos ({imp} + {rie} + {mej})")
         cuenta = {"impiden": 0, "riesgo": 0, "mejoran": 0}

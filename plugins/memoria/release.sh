@@ -18,12 +18,12 @@ if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VE
   [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
   echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
   echo "guarda el informe como taller/revisiones-de-calidad/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada <esa ruta, leída desde aquí>" >&2
-  echo "Toca errores, riesgos, objetivo y eficiencia, que una versión del plugin siempre lleva: con contraste si es una versión menor o mayor o un diff de 300 líneas o más; por debajo, cuatro revisores sin contraste salvo bloqueos, concurrencia, autenticación o migración de datos." >&2
+  echo "Con el panel que pide su tamaño (skill calidad, paso 1): una versión del plugin lleva siempre eficiencia." >&2
   exit 1
 fi
 # el informe lleva su medición (skill calidad, paso 7; 1.25.8): sin ella no se puede medir qué rinde cada lente y cada
 # modelo. Se piden las líneas que se suman, con número donde va un número
-MEDICION="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{m=0} m' "$REVISADA")"
+MEDICION="$(awk 'm && /^## /{exit} /^## Medición[[:space:]]*$/{m=1; next} m' "$REVISADA")"
 for LINEA in '^Fecha: [0-9]{4}-[0-9]{2}-[0-9]{2}' '^Tipo: .*Tamaño: [0-9]+ líneas' '^Modelo: .' '^Profundidad: .*Lentes: .' '^Hallazgos: [0-9]+ · impiden [0-9]+ · riesgo [0-9]+ · mejoran [0-9]+' '^Arreglados: [0-9]+'; do
   if ! printf '%s\n' "$MEDICION" | grep -Eq "$LINEA"; then
     echo "El informe de la revisión de la $VERSION no tiene su medición completa (skill calidad, paso 7): falta una línea como «${LINEA#^}» en su sección «## Medición», con los arreglados puestos al día." >&2
@@ -37,31 +37,34 @@ if ! INFORME="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$
   echo "El informe de la revisión de la $VERSION no se puede medir (skill calidad, pasos 6 y 7): arréglalo y repite." >&2
   exit 1
 fi
-# lo que impide el objetivo, arreglado: en el informe de la versión y en su última ronda de arreglos, si la hay (skill calidad,
-# paso 7 y anexo arreglos.md; 1.26.11). «Arreglados: n · impiden m» dice cuántos de los que impiden se arreglaron
+# lo que impide el objetivo, arreglado: en el informe de la versión y en cada ronda de sus arreglos (skill calidad, paso 7 y
+# anexo arreglos.md; 1.26.11). «Arreglados: n · impiden m» dice cuántos de los que impiden se arreglaron
+medicion_nueva() { awk 'm && /^## /{exit} /^## Medición[[:space:]]*$/{m=1; next} m' "$1"; }
 impiden_sin_arreglar() {  # $1 = informe; imprime cuántos de los que impiden quedan sin arreglar
   local med imp arr
-  med="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$1")"
+  med="$(medicion_nueva "$1")"
   imp="$(printf '%s\n' "$med" | sed -n 's/^Hallazgos: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
-  arr="$(printf '%s\n' "$med" | sed -n 's/^Arreglados: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
+  arr="$(printf '%s\n' "$med" | grep -m1 '^Arreglados:' | sed -n 's/^Arreglados: [0-9]* · impiden \([0-9]*\).*/\1/p')"
   echo $(( ${imp:-0} - ${arr:-0} ))
 }
-RONDA=""; N_RONDA=0
-for F in "${REVISADA%.md}"-arreglos-*.md; do
+RONDAS=()
+for F in "${REVISADA%.md}"-*.md; do
   [ -f "$F" ] || continue
-  N="${F##*-arreglos-}"; N="${N%.md}"
-  case "$N" in ''|*[!0-9]*) continue ;; esac
-  if [ "$N" -gt "$N_RONDA" ]; then N_RONDA="$N"; RONDA="$F"; fi
+  RESTO="${F#"${REVISADA%.md}"-}"
+  if [[ "$RESTO" =~ ^arreglos-([0-9]+)\.md$ ]]; then
+    RONDAS+=("$F")
+  else
+    echo "Junto al informe de la versión hay $F, que no se llama como una ronda de arreglos («…-arreglos-<n>.md», anexo arreglos.md): renómbralo y repite." >&2; exit 1
+  fi
 done
-for INF in "$REVISADA" $([ -n "$RONDA" ] && printf '%s' "RONDA"); do
-  [ "$INF" = "RONDA" ] && INF="$RONDA"
-  if [ "$INF" = "$RONDA" ]; then
-    MED_RONDA="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$RONDA")"
-    for LINEA in '^Tipo: .*, arreglos [0-9]+ de ' '^Hallazgos: [0-9]+ · impiden [0-9]+ · riesgo [0-9]+ · mejoran [0-9]+' '^Arreglados: [0-9]+'; do
-      printf '%s\n' "$MED_RONDA" | grep -Eq "$LINEA" || { echo "La ronda de arreglos $RONDA no tiene su medición completa: falta una línea como «${LINEA#^}» (anexo arreglos.md)." >&2; exit 1; }
+for INF in "$REVISADA" ${RONDAS[@]+"${RONDAS[@]}"}; do
+  if [ "$INF" != "$REVISADA" ]; then
+    MED_RONDA="$(medicion_nueva "$INF")"
+    for LINEA in '^Fecha: [0-9]{4}-[0-9]{2}-[0-9]{2}' '^Tipo: .*, arreglos [0-9]+ de .*Tamaño: ' '^Profundidad: .*Revisores: [0-9]+.*Lentes: .' '^Modelo: .' '^Hallazgos: [0-9]+ · impiden [0-9]+ · riesgo [0-9]+ · mejoran [0-9]+' '^Arreglados: [0-9]+'; do
+      printf '%s\n' "$MED_RONDA" | grep -Eq "$LINEA" || { echo "La ronda de arreglos $INF no tiene su medición completa: falta una línea como «${LINEA#^}» (anexo arreglos.md)." >&2; exit 1; }
     done
-    if ! SALIDA_RONDA="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$RONDA")"; then
-      printf '%s\n' "$SALIDA_RONDA" >&2; echo "La ronda de arreglos $RONDA no se puede medir: arréglala y repite." >&2; exit 1
+    if ! SALIDA_RONDA="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$INF")"; then
+      printf '%s\n' "$SALIDA_RONDA" >&2; echo "La ronda de arreglos $INF no se puede medir: arréglala y repite." >&2; exit 1
     fi
   fi
   FALTAN="$(impiden_sin_arreglar "$INF")"
