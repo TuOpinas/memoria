@@ -655,7 +655,7 @@ def _(ctx, arg):
     """no-menciona-re <regex>[@N]: ninguna respuesta (o la del turno N) casa con la expresión, sin distinguir mayúsculas."""
     pat, _, n = arg.rpartition("@") if re.search(r"@\d+$", arg) else (arg, "", "")
     turnos = [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
-    for i, t in enumerate(turnos, 1):
+    for i, t in enumerate(turnos, int(n) if n else 1):
         m = re.search(pat, texto_de(t), re.I)
         if m:
             return False, f"casa en el turno {i}: «{m.group(0)[:60]}»"
