@@ -8,7 +8,10 @@ guardar un informe y release.sh antes de publicar una versión: un hallazgo que 
 puede contar deja sin crédito a la lente que lo encontró.
 
 - Cada hallazgo es una entrada «### n.» seguida de su línea «Lens: <lentes> · Pesa: <peso>[ · Modelo: …]», con las lentes
-  en inglés y en minúscula; «Modelo:» es obligatorio si la medición dice «contraste».
+  en inglés y en minúscula; «Modelo:» es obligatorio si la medición dice «contraste». Una lente puede llevar pegada entre
+  paréntesis otra que no corrió y cuya pregunta hizo («objective (inconsistencies), risks»; 1.26.11).
+- En una revisión de arreglos («, arreglos» en «Tipo:»), cada «Pesa:» dice de dónde viene el hallazgo: «(en el original)»,
+  «(lo abrió un arreglo anterior)» o «(lo abrió este arreglo)» (1.26.11).
 - Ninguna otra línea lleva «Lens:» o «Lente:», y en las secciones de hallazgos no hay listas ni tablas con lentes.
 - Las dudas van en su sección («## Dudas», «## Doubts»…), sin «Lens:».
 - La medición más nueva es la primera «## Medición»; sus «Hallazgos» por peso cuadran con las entradas, y lleva
@@ -20,7 +23,9 @@ import re, sys
 LENTES = ("errors", "inconsistencies", "objective", "risks", "efficiency")
 PESOS = {"impide cumplir el objetivo": "impiden", "pone en riesgo el objetivo": "riesgo", "lo mejora": "mejoran"}
 NIVELES = ("máximo", "alto", "medio", "bajo", "no consta")
-LENS_RE = re.compile(r"^Lens: (?P<lentes>[a-z]+(?:, [a-z]+)*)(?: \([^)]*\))? · Pesa: (?P<pesa>[^·(]+?)(?: \([^)]*\))?"
+ORIGENES = ("en el original", "lo abrió un arreglo anterior", "lo abrió este arreglo")
+LENTE = r"[a-z]+(?: \([a-z]+\))?"
+LENS_RE = re.compile(r"^Lens: (?P<lentes>" + LENTE + r"(?:, " + LENTE + r")*)(?: \([^)]*\))? · Pesa: (?P<pesa>[^·(]+?)(?: \((?P<origen>[^)]*)\))?"
                      r"(?: · Modelo: (?P<modelo>\S.*))?$")
 NOMBRES = r"errors|inconsistencies|objective|risks|efficiency|errores|inconsistencias|objetivo|riesgos|eficiencia"
 LISTA_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)]|\|).*[(\[]\s*(?:%s)\b" % NOMBRES, re.I)
@@ -48,6 +53,8 @@ def comprobar(texto):
         return ["falta la sección «## Medición» (paso 7)"]
     modelo = next((m for m in medicion if m.startswith("Modelo: ")), "")
     contraste = "contraste" in modelo
+    tipo = next((m for m in medicion if m.startswith("Tipo: ")), "")
+    arreglos = ", arreglos" in tipo.split("·")[0]
     for n, l in enumerate(lineas, 1):
         if l.lstrip().startswith("```"):
             en_codigo = not en_codigo
@@ -82,12 +89,21 @@ def comprobar(texto):
                 problemas.append(f"línea {n}: la línea no tiene la forma «Lens: errors, risks · Pesa: lo mejora[ · Modelo: …]»: {l[:80]}")
                 entrada_abierta.append(None)
                 continue
-            malas = [x for x in m.group("lentes").split(", ") if x not in LENTES]
+            malas = []
+            for x in m.group("lentes").split(", "):
+                nombre, _, preg = x.partition(" (")
+                preg = preg.rstrip(")")
+                if nombre not in LENTES:
+                    malas.append(nombre)
+                if preg and (preg not in LENTES or preg == nombre):
+                    malas.append(f"({preg})")
             if malas:
                 problemas.append(f"línea {n}: lentes que no existen o no van en inglés ({', '.join(malas)}); son {', '.join(LENTES)}")
             pesa = m.group("pesa").strip()
             if pesa not in PESOS:
                 problemas.append(f"línea {n}: «Pesa: {pesa}» no es «impide cumplir el objetivo», «pone en riesgo el objetivo» ni «lo mejora»")
+            if arreglos and (m.group("origen") or "").strip() not in ORIGENES:
+                problemas.append(f"línea {n}: en una revisión de arreglos, «Pesa:» dice de dónde viene: «(en el original)», «(lo abrió un arreglo anterior)» o «(lo abrió este arreglo)»")
             if contraste and not m.group("modelo"):
                 problemas.append(f"línea {n}: en un contraste cada hallazgo dice «· Modelo: los dos» o el modelo que lo encontró")
             entrada_abierta.append(PESOS.get(pesa))

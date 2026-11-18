@@ -6,9 +6,8 @@
 #   ./release.sh 1.8.0 --revisada taller/revisiones-de-calidad/revision-de-calidad-1-8-0.md [--formato-igual]
 #
 # Ninguna versión se publica sin su revisión de calidad (skill `calidad`), con el informe guardado en `taller/revisiones-de-calidad/` del
-# proyecto que mantiene el plugin (decisiones del 2026-10-23, del 2026-10-24 y del 2026-11-10): una versión menor o mayor, o
-# un diff de 300 líneas o más, las cinco lentes con contraste; por debajo, errores, riesgos y objetivo con tres revisores, sin
-# contraste salvo que toque bloqueos, concurrencia, autenticación o una migración de datos.
+# proyecto que mantiene el plugin, con el panel que pide su tamaño (skill calidad, paso 1); si sus arreglos tienen ronda
+# (revision-de-calidad-<versión>-arreglos-<n>.md), la última no puede dejar sin arreglar lo que impide el objetivo (1.26.11).
 set -euo pipefail
 VERSION="${1:?Falta la versión, con el formato mayor.menor.parche}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Versión mal formada: $VERSION" >&2; exit 1; }
@@ -19,7 +18,7 @@ if [ -z "$REVISADA" ] || [ "$(basename "$REVISADA")" != "revision-de-calidad-$VE
   [ -n "$REVISADA" ] && [ ! -s "$REVISADA" ] && echo "No encuentro el informe $REVISADA (o está vacío): pásalo con una ruta que se lea desde aquí." >&2
   echo "Falta la revisión de calidad de la $VERSION. Pásala con la skill calidad (en una sesión: «revisión de calidad de la $VERSION») y" >&2
   echo "guarda el informe como taller/revisiones-de-calidad/revision-de-calidad-$VER_GUION.md; luego: ./release.sh $VERSION --revisada <esa ruta, leída desde aquí>" >&2
-  echo "Toca las cinco lentes con contraste si es una versión menor o mayor o un diff de 300 líneas o más; por debajo, errores, riesgos y objetivo con tres revisores, sin contraste salvo bloqueos, concurrencia, autenticación o migración de datos." >&2
+  echo "Toca errores, riesgos, objetivo y eficiencia, que una versión del plugin siempre lleva: con contraste si es una versión menor o mayor o un diff de 300 líneas o más; por debajo, cuatro revisores sin contraste salvo bloqueos, concurrencia, autenticación o migración de datos." >&2
   exit 1
 fi
 # el informe lleva su medición (skill calidad, paso 7; 1.25.8): sin ella no se puede medir qué rinde cada lente y cada
@@ -37,6 +36,20 @@ if ! INFORME="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$
   printf '%s\n' "$INFORME" >&2
   echo "El informe de la revisión de la $VERSION no se puede medir (skill calidad, pasos 6 y 7): arréglalo y repite." >&2
   exit 1
+fi
+# la última ronda de arreglos de la versión, si la hay (skill calidad, paso 1; 1.26.11): lo que encontró que impide el objetivo
+# tiene que estar arreglado antes de publicar
+RONDA="$(ls "${REVISADA%.md}"-arreglos-*.md 2>/dev/null | sort -V | tail -1 || true)"
+if [ -n "$RONDA" ]; then
+  if ! SALIDA_RONDA="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$RONDA")"; then
+    printf '%s\n' "$SALIDA_RONDA" >&2; echo "La ronda de arreglos $RONDA no se puede medir: arréglala y repite." >&2; exit 1
+  fi
+  MED_RONDA="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$RONDA")"
+  IMP="$(printf '%s\n' "$MED_RONDA" | sed -n 's/^Hallazgos: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
+  ARR="$(printf '%s\n' "$MED_RONDA" | sed -n 's/^Arreglados: \([0-9]*\).*/\1/p' | head -1)"
+  if [ "${IMP:-0}" -gt 0 ] && [ "${ARR:-0}" -lt "${IMP:-0}" ]; then
+    echo "La última ronda de arreglos ($RONDA) encontró $IMP hallazgos que impiden el objetivo y dice «Arreglados: ${ARR:-0}»: arréglalos y pon al día la línea." >&2; exit 1
+  fi
 fi
 # los scripts corren en la computadora de cada persona, con su Python (3.10 en la consola de la app, 3.9 en un Mac): sin
 # comprobarlo con uno viejo, la 1.23.0 salió con un cierre que no arrancaba (1.23.1)

@@ -71,5 +71,12 @@ rechaza(BUENO + medicion(raz="normalito"), "el nivel es uno de", "rechaza un niv
 rechaza(BUENO + medicion().replace("Razonamiento: medio\n", ""), "Razonamiento: medio", "rechaza una medición sin razonamiento")
 rechaza(BUENO + "## Doubts\n\n### 4. Duda\nLens: risks · Pesa: lo mejora\n\n" + medicion(), "una duda no lleva", "rechaza una duda con «Lens:»")
 acepta(BUENO + medicion(raz="Fable 5.2 medio · Opus 5.5 alto"), "acepta un nivel por modelo")
+# 1.26.11: la pregunta de una lente que no corrió, pegada a la lente que la hizo; el origen en una revisión de arreglos
+acepta(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencies), risks (efficiency) ·") + medicion(), "acepta una lente con la pregunta de otra pegada")
+rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencias), risks ·") + medicion(), "no existen", "rechaza una pregunta que no es una lente")
+ARR = medicion().replace("Tipo: parche ·", "Tipo: parche, arreglos 1 de revision-de-calidad-x ·")
+CON = BUENO.replace("impide cumplir el objetivo\n", "impide cumplir el objetivo (lo abrió este arreglo)\n").replace("pone en riesgo el objetivo\n", "pone en riesgo el objetivo (en el original)\n").replace("lo mejora\nPropuesta", "lo mejora (lo abrió un arreglo anterior)\nPropuesta")
+acepta(CON + ARR, "acepta una revisión de arreglos con el origen de cada hallazgo")
+rechaza(BUENO + ARR, "de dónde viene", "rechaza una revisión de arreglos sin el origen")
 print(); print("Todo bien." if fallos == 0 else f"{fallos} fallo(s).")
 sys.exit(1 if fallos else 0)
