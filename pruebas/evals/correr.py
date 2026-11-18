@@ -146,6 +146,22 @@ def aplicar_paso(e, raiz, paso):
             if viejo not in t:
                 raise SystemExit(f"{e['nombre']}: «{viejo}» no está en {r}")
             (raiz / r).write_text(t.replace(viejo, nuevo, 1), encoding="utf-8")
+        elif orden == "nota":                  # nota <ruta> <KB> <aportacion>: una nota de taller de ese tamaño (1.26.10)
+            # vieja como el resto (sin «trabajo sin sesión»), en KB de 1000 como los da abrir.py, y con marcas que dicen si se
+            # leyó: NOTA-LEIDA-<nombre>-n desde la línea 20, y FIN-NOTA-LEIDA-<nombre> al final (lee, no-lee)
+            r, _, resto = arg.partition(" ")
+            kb, _, aport = resto.partition(" ")
+            marca = "NOTA-LEIDA-" + pathlib.Path(r).stem
+            cuerpo = f"---\nestado: borrador\nactualizado: 2026-09-20\naportacion: \"{aport}\"\n---\n\n# {aport}\n\n"
+            n = 1
+            while len(cuerpo.encode("utf-8")) < int(kb) * 1000:
+                cuerpo += f"- Incidencia {n}: soporte pidió a cuentas que la respuesta a Cliente Uno saliera en el día; cuentas contestó al día siguiente." + (f" {marca}-{n}" if n >= 20 else "") + "\n"
+                n += 1
+            cuerpo += f"\nFIN-{marca}\n"
+            (raiz / r).parent.mkdir(parents=True, exist_ok=True)
+            (raiz / r).write_text(cuerpo, encoding="utf-8")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            os.utime(raiz / r, (viejo, viejo))
         elif orden == "otro-cierre":           # otro-cierre <area>/<proyecto>: otra persona cierra sesión ahora (entrada arriba y un paso nuevo)
             ses = raiz / arg / "sesiones.md"
             t = ses.read_text(encoding="utf-8")
@@ -263,7 +279,10 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
                         if isinstance(b, ToolResultBlock) and turno["herramientas"]:
                             cont = b.content if isinstance(b.content, str) else json.dumps(b.content, ensure_ascii=False)
                             h = next((x for x in turno["herramientas"] if x["id"] == b.tool_use_id), turno["herramientas"][-1])
-                            h["resultado"] = (cont or "")[:30000]   # las comprobaciones buscan secciones que pueden quedar lejos (REGISTROS)
+                            cont = cont or ""
+                            # las comprobaciones buscan secciones que pueden quedar lejos (REGISTROS); y el final, que dice si
+                            # una lectura llegó entera (FIN- de la nota, 1.26.10)
+                            h["resultado"] = cont[:30000] + ("\n[…]\n" + cont[-2000:] if len(cont) > 30000 else "")
                 elif isinstance(m, ResultMessage):
                     u = m.usage or {}
                     medidas["tokens_entrada"] += u.get("input_tokens", 0)
@@ -327,6 +346,43 @@ def en_tabla(t, patron):
     return bool(re.search(r"(?m)^ {0,3}\|? *(?:\*\*)?" + patron + r"[^|\n]*\|?[ \t]*\n {0,3}\|? *:?-{3,}:? *\|?[ \t]*$", sin_codigo(t)))
 
 
+def al_final(t, patron):
+    """El recuadro con esa cabecera cierra la respuesta (1.26.10): en el último bloque de texto del turno (lo escrito
+    antes de una herramienta no cuenta como respuesta), con texto que no es tabla antes de él, sus filas «Leí:» y «Dejé
+    fuera:», y detrás como mucho dos líneas, cada una una pregunta (la de si se lee). Devuelve (bien, por qué)."""
+    s = sin_codigo(t)
+    ms = list(re.finditer(r"(?m)^ {0,3}\|? *(?:\*\*)?" + patron + r"[^|\n]*\|?[ \t]*\n {0,3}\|? *:?-{3,}:? *\|?[ \t]*$", s))
+    if not ms:
+        return False, "no es la cabecera de una tabla de una columna"
+    m = ms[-1]
+    prosa = [l for l in s[:m.start()].splitlines() if l.strip() and not l.lstrip().startswith("|")]
+    if not prosa:
+        return False, "no hay respuesta antes del recuadro"
+    resto = s[m.end():].split("\n")
+    filas = []
+    while resto and (resto[0].lstrip().startswith("|") or not resto[0].strip()):
+        filas.append(resto.pop(0))
+    filas = "\n".join(filas)
+    if not ("Leí:" in filas and "Dejé fuera:" in filas):
+        return False, "al recuadro le falta la fila «Leí:» o la de «Dejé fuera:»"
+    lineas = [l for l in resto if l.strip()]
+    if len(lineas) > 2 or any("?" not in l for l in lineas):
+        return False, f"después del recuadro siguen {len(lineas)} líneas que no son la pregunta: la respuesta no termina con él"
+    return True, "cierra la respuesta, con sus dos filas"
+
+
+def tras_recuadro(t, patron):
+    """El texto que sigue al último recuadro con esa cabecera, sin sus filas (1.26.10); vacío si no está."""
+    s = sin_codigo(t)
+    ms = list(re.finditer(r"(?m)^ {0,3}\|? *(?:\*\*)?" + patron + r"[^\n]*$", s))
+    if not ms:
+        return ""
+    resto = s[ms[-1].end():].split("\n")
+    while resto and (resto[0].lstrip().startswith("|") or not resto[0].strip()):
+        resto.pop(0)
+    return "\n".join(resto)
+
+
 @comprobacion("recuadro")
 def _(ctx, arg):
     """La primera respuesta lleva el recuadro «Memoria de trabajo · …» (1.22.1; antes, «Memoria activa»), como tabla de
@@ -345,6 +401,93 @@ def _(ctx, arg):
     pat = re.escape(texto.strip()).replace("·", "(?:·|·)")
     hay = any(en_tabla(texto_de(t), pat) for t in turnos)
     return hay, "es una tabla" if hay else f"«{texto.strip()}» no es la cabecera de una tabla de una columna"
+
+
+def _turnos(ctx, n):
+    return [ctx["turnos"][int(n) - 1]] if n else ctx["turnos"]
+
+
+@comprobacion("sin-tabla")
+def _(ctx, arg):
+    """sin-tabla <texto>[@N]: ninguna respuesta (o la del turno N) lleva un recuadro con esa cabecera, ni la cabecera
+    suelta (1.26.10: la pregunta que se responde con la apertura no lleva «Memoria · lectura»)."""
+    texto, _, n = arg.partition("@")
+    pat = re.escape(texto.strip())
+    malos = [i for i, t in enumerate(_turnos(ctx, n), int(n) if n else 1) if re.search(pat, texto_de(t))]
+    return not malos, f"«{texto.strip()}» en el turno {malos[0]}" if malos else f"sin «{texto.strip()}»"
+
+
+@comprobacion("tabla-al-final")
+def _(ctx, arg):
+    """tabla-al-final <texto>@N: la respuesta del turno N (su último bloque de texto) termina con el recuadro de esa
+    cabecera, con sus filas «Leí:» y «Dejé fuera:»; detrás, como mucho la pregunta de si se lee (1.26.10)."""
+    texto, _, n = arg.partition("@")
+    r = _turnos(ctx, n)[0]["respuestas"]
+    return al_final(r[-1] if r else "", re.escape(texto.strip()))
+
+
+LEER = re.compile(r"\b(?:le[oaí]|leer(?:la|lo|las|los)?|l[ée]el[oa]s?|abro|abrir(?:la|lo)?)\b", re.I)
+
+
+@comprobacion("pregunta-leer")
+def _(ctx, arg):
+    """pregunta-leer <texto>@N: debajo del recuadro «Memoria · lectura» del turno N, en texto y no con la herramienta de
+    preguntas, una línea con «?» y un verbo de leer ofrece leer lo que nombra el texto, en esa línea o en la fila «Dejé
+    fuera:» (1.26.10)."""
+    texto, _, n = arg.partition("@")
+    t = _turnos(ctx, n)[0]
+    if any(h["nombre"] == "AskUserQuestion" for h in t["herramientas"]):
+        return False, "pregunta con la herramienta de preguntas, no en texto bajo el recuadro"
+    s = texto_de(t)
+    tras = tras_recuadro(s, r"Memoria · lectura")
+    fila = next((l for l in sin_codigo(s).splitlines() if l.lstrip().startswith("|") and "Dejé fuera:" in l), "")
+    ofrece = [l for l in tras.splitlines() if "?" in l and LEER.search(l)]
+    nombra = any(texto.strip().lower() in l.lower() for l in ofrece) or (ofrece and texto.strip().lower() in fila.lower())
+    return bool(nombra), "ofrece leerlo, en texto bajo el recuadro" if nombra else (f"la pregunta no nombra «{texto.strip()}»" if ofrece else "no ofrece leer nada bajo el recuadro")
+
+
+@comprobacion("pregunta-tamano")
+def _(ctx, arg):
+    """pregunta-tamano @N: en el turno N se pregunta antes de leer, diciendo cuánto pesa: con la herramienta de preguntas,
+    o en texto con «?», y en los dos casos con «KB» (1.26.10, una petición de «todo» por encima de 50 KB)."""
+    _, _, n = arg.partition("@")
+    t = _turnos(ctx, n)[0]
+    herr = any(h["nombre"] == "AskUserQuestion" and "KB" in json.dumps(h["entrada"], ensure_ascii=False) for h in t["herramientas"])
+    txt = "?" in texto_de(t) and "KB" in texto_de(t)
+    return herr or txt, ("con la herramienta" if herr else "en texto") if herr or txt else "no pregunta con el tamaño"
+
+
+@comprobacion("primera-frase")
+def _(ctx, arg):
+    """primera-frase <texto>@N: la primera línea de texto de la respuesta del turno N (su último bloque, sin recuadros)
+    lo nombra: una respuesta desde una parte lo dice al empezar (1.26.10)."""
+    texto, _, n = arg.partition("@")
+    r = _turnos(ctx, n)[0]["respuestas"]
+    lineas = [l for l in sin_codigo(r[-1] if r else "").splitlines() if l.strip() and not l.lstrip().startswith("|")]
+    hay = bool(lineas) and texto.strip().lower() in lineas[0].lower()
+    return hay, "la primera frase lo dice" if hay else f"la primera línea no nombra «{texto.strip()}»: «{(lineas[0] if lineas else '')[:80]}»"
+
+
+def _leidas(t, marca):
+    return [h["nombre"] for h in t["herramientas"] if marca in str(h.get("resultado", ""))]
+
+
+@comprobacion("lee")
+def _(ctx, arg):
+    """lee <marca>@N: algún resultado de herramienta del turno N trae «FIN-<marca>», la última línea de la nota que
+    siembra el paso nota: se leyó entera (1.26.10)."""
+    marca, _, n = arg.partition("@")
+    h = [x for t in _turnos(ctx, n) for x in _leidas(t, "FIN-" + marca.strip())]
+    return bool(h), f"la lee entera con {h[0]}" if h else f"no la lee entera («FIN-{marca.strip()}» no sale en ningún resultado)"
+
+
+@comprobacion("no-lee")
+def _(ctx, arg):
+    """no-lee <marca>@N: ningún resultado de herramienta del turno N trae la marca de las líneas del cuerpo de la nota:
+    medirla o mirar su cabecera no es leerla (1.26.10)."""
+    marca, _, n = arg.partition("@")
+    h = [x for t in _turnos(ctx, n) for x in _leidas(t, marca.strip())]
+    return not h, f"la lee con {h[0]}" if h else "no abre su cuerpo"
 
 
 @comprobacion("recuadro-cierre")

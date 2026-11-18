@@ -399,7 +399,7 @@ Con eso ya se sabe qué existe, de quién es y dónde está. Todo lo demás se p
 | Un archivo de `taller/` | hace falta cómo se llegó al entregable, y el entregable no basta |
 | Un archivo de `fuentes/` | el trabajo del día lo pide, por su nombre |
 
-En una sesión, la skill `sesion` agrupa estas lecturas por lo que pide cada pregunta, en tres niveles (básico, de proyecto y a fondo) con un tope de unos 50 KB sin preguntar («Cuánto se lee después»); los disparadores de esta tabla siguen valiendo dentro de ellos.
+En una sesión, la skill `sesion` agrupa estas lecturas por lo que pide cada pregunta, en tres niveles (básico, de proyecto y a fondo) con un tope de unos 50 KB sin preguntar («Cuánto se lee después»); los disparadores de esta tabla siguen valiendo dentro de ellos. Los niveles son el criterio de Claude: lo que ve la persona es el recuadro «Memoria · lectura» al final de la respuesta, con lo que se leyó y lo que se dejó fuera (1.26.10).
 
 Ningún nivel se salta: no se abre el cuerpo de un entregable sin haber visto su cabecera, ni un proyecto sin haber visto el bloque `Proyectos` de su área. Y se para en el primer nivel que responde: si `guia.md` ya dice quién lleva algo, ahí termina la lectura.
 

@@ -147,5 +147,49 @@ ok(tb(_t("| Memoria · mantenimiento · 2026-11-17 |\n|---|\n| Adopción · bien
 ok(not tb(_t("Memoria · mantenimiento · 2026-11-17: todo bien"), "Memoria · mantenimiento@1")[0], "como texto no pasa")
 ok(not tb(_t("```\n| Memoria · mantenimiento |\n|---|\n```"), "Memoria · mantenimiento@1")[0], "dentro de un bloque de código no pasa")
 
+print("El recuadro de lectura, al final y con su pregunta (1.26.10)")
+import json
+g5 = {"re": re, "json": json}
+exec("COMPROBACIONES = {}\ndef comprobacion(n):\n    def d(f):\n        COMPROBACIONES[n] = f\n        return f\n    return d\n", g5)
+exec(src[src.index("def texto_de("):src.index("def entradas_registro(")], g5)
+exec(src[src.index("def sin_codigo("):src.index('@comprobacion("recuadro")')], g5)
+exec(src[src.index('@comprobacion("tabla")'):src.index('@comprobacion("recuadro-cierre")')], g5)
+K = g5["COMPROBACIONES"]
+_h = lambda r, h=(): {"turnos": [{"respuestas": r if isinstance(r, list) else [r], "herramientas": list(h)}]}
+LECT = "| Memoria · lectura · cuentas y soporte |\n|---|\n| **Leí:** las decisiones · 9 KB |\n| **Dejé fuera:** la nota de incidencias (60 KB) |\n"
+PREG = "¿Leo también la nota de incidencias? Son 60 KB: enseguida."
+bien = "Cuadran, salvo el plazo de soporte.\n\n" + LECT + "\n" + PREG
+ok(K["tabla-al-final"](_h(bien), "Memoria · lectura@1")[0], "respuesta, recuadro y pregunta pasa")
+ok(not K["tabla-al-final"](_h(LECT), "Memoria · lectura@1")[0], "el recuadro sin respuesta antes no pasa")
+ok(not K["tabla-al-final"](_h(["Leo soporte y precios.", LECT + "Cuadran.\n" + PREG]), "Memoria · lectura@1")[0], "narración antes de una herramienta y la respuesta detrás del recuadro no pasa")
+ok(not K["tabla-al-final"](_h("Reviso.\n" + LECT + "Cuadran.\nSalvo el plazo."), "Memoria · lectura@1")[0], "una respuesta corta detrás del recuadro no pasa")
+ok(not K["tabla-al-final"](_h("Cuadran.\n\n| Memoria · lectura · cuentas |\n|---|\n| algo |\n"), "Memoria · lectura@1")[0], "sin las filas Leí y Dejé fuera no pasa")
+ok(not K["tabla-al-final"](_h("Lectura: a fondo · Memoria · lectura · x\n\nCuadran."), "Memoria · lectura@1")[0], "como texto no pasa")
+ok(not K["tabla-al-final"](_h(bien + "\n\n| Memoria · avisos · 1 |\n|---|\n| x |"), "Memoria · lectura@1")[0], "otro recuadro después no pasa")
+ok(K["tabla-al-final"](_h(["Leo soporte.", bien]), "Memoria · lectura@1")[0], "mide el último bloque del turno")
+ok(K["sin-tabla"](_h("Va bien: falta la firma."), "Memoria · lectura@1")[0], "sin recuadro pasa")
+ok(not K["sin-tabla"](_h(bien), "Memoria · lectura@1")[0], "con recuadro no pasa")
+ok(K["pregunta-leer"](_h(bien), "incidencias@1")[0], "la pregunta en texto bajo el recuadro pasa")
+ok(K["pregunta-leer"](_h("Cuadran.\n\n" + LECT + "\n¿La leo también? Son 60 KB."), "incidencias@1")[0], "con el nombre en la fila Dejé fuera pasa")
+ok(not K["pregunta-leer"](_h("Cuadran.\n\n" + LECT + "\n¿Registramos hoy el trabajo de la nota de incidencias?"), "incidencias@1")[0], "otra pregunta que la nombra no pasa")
+ok(not K["pregunta-leer"](_h(PREG + "\n\n" + LECT), "incidencias@1")[0], "la pregunta antes del recuadro no pasa")
+ok(not K["pregunta-leer"](_h("Cuadran.\n\n" + LECT), "incidencias@1")[0], "sin pregunta no pasa")
+ok(not K["pregunta-leer"](_h(bien, [{"nombre": "AskUserQuestion", "entrada": {"questions": [{"question": "¿Leo la nota de incidencias?"}]}}]), "incidencias@1")[0], "con la herramienta de preguntas no pasa")
+ok(K["pregunta-tamano"](_h("Son 619 KB. ¿Los leo todos o solo los de 1.26?"), "@1")[0], "la pregunta previa con el tamaño pasa")
+ok(not K["pregunta-tamano"](_h("Resumen: todo bien."), "@1")[0], "sin preguntar no pasa")
+ok(K["primera-frase"](_h("Esto resume la nota de incidencias, una de las cinco.\nDetalle."), "incidencias@1")[0], "la primera frase dice la parte")
+ok(not K["primera-frase"](_h("Detalle.\nEsto resume solo la de incidencias."), "incidencias@1")[0], "dicho después no pasa")
+M = "NOTA-LEIDA-incidencias-cliente-uno"
+leer = {"nombre": "mcp__remote-devices__device_bash", "entrada": {"command": "cat ventas/cuentas/taller/*.md"}, "resultado": f"... {M}-20\n...\nFIN-{M}\n"}
+medir = {"nombre": "mcp__remote-devices__device_bash", "entrada": {"command": "head -6 ventas/cuentas/taller/incidencias-cliente-uno.md"}, "resultado": "---\nestado: borrador\n"}
+ok(K["lee"](_h("x", [leer]), M + "@1")[0], "leerla entera, aunque sea con un comodín, cuenta")
+ok(not K["lee"](_h("x", [medir]), M + "@1")[0], "mirar su cabecera no es leerla")
+ok(K["no-lee"](_h("x", [medir]), M + "@1")[0], "y no-lee pasa con la cabecera")
+ok(not K["no-lee"](_h("x", [leer]), M + "@1")[0], "no-lee falla si la abrió")
+NIV = [r"(?m)^\W*lectura\W{0,3}:", r"lectura · (?:de |nivel )?(?:proyecto|a fondo|básico)\b"]
+mal = ["**Lectura:** de proyecto · decisiones.md", "Lectura:\nde proyecto", "| Memoria · lectura · de proyecto |", "| Memoria · lectura · a fondo |"]
+ok(all(any(re.search(p, x, re.I) for p in NIV) for x in mal), "las expresiones del eval 19 cazan la línea vieja y el nivel en la cabecera")
+ok(not any(re.search(p, x, re.I) for p in NIV for x in ["Dejé fuera de la lectura: la nota", "lo reviso a fondo mañana", "A nivel de proyecto, va bien"]), "y no el español corriente")
+
 print("\n" + ("Todo bien." if not fallos else f"{fallos} fallo(s)."))
 sys.exit(1 if fallos else 0)

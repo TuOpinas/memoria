@@ -13,6 +13,8 @@ En la misma conversación la copia se reutiliza: abrir otro proyecto, o el mismo
 
 **«Claude outputs».** La copia no lo trae: lo da el listado que recibe `abrir.py` con `--outputs`, y su RESPUESTA lleva la fila y la pregunta como con consola.
 
+**Cuánto se lee después** (1.26.10). Sin consola el INVENTARIO no cuenta `taller/` ni `fuentes/`. Para saber qué dejar fuera y cuánto pesa, `device_list_dir` del taller del proyecto antes de responder da los nombres y los tamaños; si no se miró, la fila «Dejé fuera:» del recuadro de lectura dice que el taller no se pudo contar desde aquí, nunca que nada trata de esto.
+
 ## Cerrar
 
 `cerrar.py` corre con Bash en el contenedor sobre la copia (`cambios.json` se escribe antes con la herramienta Write, por lo mismo que el listado): `python3 <directorio de esta skill>/cerrar.py "<la copia>" <area>/<proyecto> cambios.json --cuenta <correo> --sin-fechas --abierto <la línea «ahora» de REGISTROS de abrir.py>` (con `--sin-fechas`, `--abierto` no compara fechas de la copia, que no dicen nada: solo deja reconocer lo que escribió esta sesión, 1.26.4), con cada archivo traído y registrado antes como dice `sin-consola.md`, y después `espejo.py devolver`: su `respuesta` (1.25.1) pone la devolución primero, y la marca del tablero y el recuadro solo cuando todo salió en «written». Si `device_commit_files` rechaza uno por `mtime-drift`, alguien lo cambió en la computadora: se trae otra vez, se registra, se repite `cerrar.py` sobre la copia (una entrada que ya está no se repite; los reemplazos van sobre lo nuevo) y se devuelve. La llamada `--comprobar` no da `sin_nombrar`.
