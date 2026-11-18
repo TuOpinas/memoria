@@ -37,20 +37,38 @@ if ! INFORME="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$
   echo "El informe de la revisión de la $VERSION no se puede medir (skill calidad, pasos 6 y 7): arréglalo y repite." >&2
   exit 1
 fi
-# la última ronda de arreglos de la versión, si la hay (skill calidad, paso 1; 1.26.11): lo que encontró que impide el objetivo
-# tiene que estar arreglado antes de publicar
-RONDA="$(ls "${REVISADA%.md}"-arreglos-*.md 2>/dev/null | sort -V | tail -1 || true)"
-if [ -n "$RONDA" ]; then
-  if ! SALIDA_RONDA="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$RONDA")"; then
-    printf '%s\n' "$SALIDA_RONDA" >&2; echo "La ronda de arreglos $RONDA no se puede medir: arréglala y repite." >&2; exit 1
+# lo que impide el objetivo, arreglado: en el informe de la versión y en su última ronda de arreglos, si la hay (skill calidad,
+# paso 7 y anexo arreglos.md; 1.26.11). «Arreglados: n · impiden m» dice cuántos de los que impiden se arreglaron
+impiden_sin_arreglar() {  # $1 = informe; imprime cuántos de los que impiden quedan sin arreglar
+  local med imp arr
+  med="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$1")"
+  imp="$(printf '%s\n' "$med" | sed -n 's/^Hallazgos: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
+  arr="$(printf '%s\n' "$med" | sed -n 's/^Arreglados: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
+  echo $(( ${imp:-0} - ${arr:-0} ))
+}
+RONDA=""; N_RONDA=0
+for F in "${REVISADA%.md}"-arreglos-*.md; do
+  [ -f "$F" ] || continue
+  N="${F##*-arreglos-}"; N="${N%.md}"
+  case "$N" in ''|*[!0-9]*) continue ;; esac
+  if [ "$N" -gt "$N_RONDA" ]; then N_RONDA="$N"; RONDA="$F"; fi
+done
+for INF in "$REVISADA" $([ -n "$RONDA" ] && printf '%s' "RONDA"); do
+  [ "$INF" = "RONDA" ] && INF="$RONDA"
+  if [ "$INF" = "$RONDA" ]; then
+    MED_RONDA="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$RONDA")"
+    for LINEA in '^Tipo: .*, arreglos [0-9]+ de ' '^Hallazgos: [0-9]+ · impiden [0-9]+ · riesgo [0-9]+ · mejoran [0-9]+' '^Arreglados: [0-9]+'; do
+      printf '%s\n' "$MED_RONDA" | grep -Eq "$LINEA" || { echo "La ronda de arreglos $RONDA no tiene su medición completa: falta una línea como «${LINEA#^}» (anexo arreglos.md)." >&2; exit 1; }
+    done
+    if ! SALIDA_RONDA="$(python3 "$(dirname "$0")/skills/calidad/comprobar_informe.py" "$RONDA")"; then
+      printf '%s\n' "$SALIDA_RONDA" >&2; echo "La ronda de arreglos $RONDA no se puede medir: arréglala y repite." >&2; exit 1
+    fi
   fi
-  MED_RONDA="$(awk '/^## Medición[[:space:]]*$/{m=1; next} /^## /{if (m) exit} m' "$RONDA")"
-  IMP="$(printf '%s\n' "$MED_RONDA" | sed -n 's/^Hallazgos: [0-9]* · impiden \([0-9]*\).*/\1/p' | head -1)"
-  ARR="$(printf '%s\n' "$MED_RONDA" | sed -n 's/^Arreglados: \([0-9]*\).*/\1/p' | head -1)"
-  if [ "${IMP:-0}" -gt 0 ] && [ "${ARR:-0}" -lt "${IMP:-0}" ]; then
-    echo "La última ronda de arreglos ($RONDA) encontró $IMP hallazgos que impiden el objetivo y dice «Arreglados: ${ARR:-0}»: arréglalos y pon al día la línea." >&2; exit 1
+  FALTAN="$(impiden_sin_arreglar "$INF")"
+  if [ "$FALTAN" -gt 0 ]; then
+    echo "$INF deja $FALTAN hallazgos que impiden el objetivo sin arreglar: arréglalos (o registra la decisión de no hacerlo) y pon al día «Arreglados: n · impiden m»." >&2; exit 1
   fi
-fi
+done
 # los scripts corren en la computadora de cada persona, con su Python (3.10 en la consola de la app, 3.9 en un Mac): sin
 # comprobarlo con uno viejo, la 1.23.0 salió con un cierre que no arrancaba (1.23.1)
 COMPILA="$(cd "$(dirname "$0")" && pwd)/../../pruebas/probar_compila.py"

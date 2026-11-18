@@ -11,7 +11,10 @@ puede contar deja sin crédito a la lente que lo encontró.
   en inglés y en minúscula; «Modelo:» es obligatorio si la medición dice «contraste». Una lente puede llevar pegada entre
   paréntesis otra que no corrió y cuya pregunta hizo («objective (inconsistencies), risks»; 1.26.11).
 - En una revisión de arreglos («, arreglos» en «Tipo:»), cada «Pesa:» dice de dónde viene el hallazgo: «(en el original)»,
-  «(lo abrió un arreglo anterior)» o «(lo abrió este arreglo)» (1.26.11).
+  «(lo abrió un arreglo anterior)» o «(lo abrió este arreglo)», y con menos de tres revisores, el motivo; un archivo
+  «…-arreglos-<n>.md» es una ronda y su «Tipo:» lleva «, arreglos <n> de …» (1.26.11, anexo arreglos.md).
+- En una ronda, «Arreglados:» lleva detrás «· impiden n» cuando hay hallazgos que impiden y se arregló alguno; release.sh
+  lo pide también al informe de la versión (1.26.11).
 - Ninguna otra línea lleva «Lens:» o «Lente:», y en las secciones de hallazgos no hay listas ni tablas con lentes.
 - Las dudas van en su sección («## Dudas», «## Doubts»…), sin «Lens:».
 - La medición más nueva es la primera «## Medición»; sus «Hallazgos» por peso cuadran con las entradas, y lleva
@@ -24,7 +27,8 @@ LENTES = ("errors", "inconsistencies", "objective", "risks", "efficiency")
 PESOS = {"impide cumplir el objetivo": "impiden", "pone en riesgo el objetivo": "riesgo", "lo mejora": "mejoran"}
 NIVELES = ("máximo", "alto", "medio", "bajo", "no consta")
 ORIGENES = ("en el original", "lo abrió un arreglo anterior", "lo abrió este arreglo")
-LENTE = r"[a-z]+(?: \([a-z]+\))?"
+LENTE = r"[a-z]+(?: \((?:errors|inconsistencies|objective|risks|efficiency)\))?"
+INICIAL = {"errors": "E", "inconsistencies": "I", "objective": "O", "risks": "R", "efficiency": "F"}
 LENS_RE = re.compile(r"^Lens: (?P<lentes>" + LENTE + r"(?:, " + LENTE + r")*)(?: \([^)]*\))? · Pesa: (?P<pesa>[^·(]+?)(?: \((?P<origen>[^)]*)\))?"
                      r"(?: · Modelo: (?P<modelo>\S.*))?$")
 NOMBRES = r"errors|inconsistencies|objective|risks|efficiency|errores|inconsistencias|objetivo|riesgos|eficiencia"
@@ -34,7 +38,7 @@ DUDAS_RE = re.compile(r"^## .*\b(dudas?|doubts?)\b", re.I)
 SECCION_HALLAZGOS_RE = re.compile(r"^## .*\b(impide|riesgo|mejora|hallazgos|blocks?|risk|improves?|findings)\b", re.I)
 
 
-def comprobar(texto):
+def comprobar(texto, ruta=""):
     lineas = texto.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     problemas = []
     seccion, en_codigo, entrada_abierta = "", False, None
@@ -55,6 +59,15 @@ def comprobar(texto):
     contraste = "contraste" in modelo
     tipo = next((m for m in medicion if m.startswith("Tipo: ")), "")
     arreglos = ", arreglos" in tipo.split("·")[0]
+    ronda = re.search(r"-arreglos-(\d+)\.md$", ruta or "")
+    if ronda and not re.search(r", arreglos %s de \S" % ronda.group(1), tipo.split("·")[0]):
+        return [f"una ronda de arreglos lleva en «Tipo:» «, arreglos {ronda.group(1)} de <informe de la primera revisión>», con el número de su nombre (anexo arreglos.md)"]
+    arreglos = arreglos or bool(ronda)
+    prof = next((m for m in medicion if m.startswith("Profundidad: ")), "")
+    corrieron = set(re.findall(r"\b[EIORF]\b", prof.split("Lentes:", 1)[1].split("(")[0])) if "Lentes:" in prof else set()
+    rev = re.search(r"Revisores: (\d+)( \()?", prof)
+    if arreglos and rev and int(rev.group(1)) < 3 and not rev.group(2):
+        problemas.append("una ronda de arreglos con menos de tres revisores dice por qué entre paréntesis («Revisores: 2 (…)»)")
     for n, l in enumerate(lineas, 1):
         if l.lstrip().startswith("```"):
             en_codigo = not en_codigo
@@ -97,6 +110,11 @@ def comprobar(texto):
                     malas.append(nombre)
                 if preg and (preg not in LENTES or preg == nombre):
                     malas.append(f"({preg})")
+                elif preg and INICIAL[preg] in corrieron:
+                    problemas.append(f"línea {n}: «{preg}» corrió en esta revisión: una lente que corrió no va entre paréntesis")
+            libre = re.search(r"^Lens: [^·]*\(([^)]*)\) · Pesa", l)
+            if libre and " " not in libre.group(1).strip() and libre.group(1).strip().lower() in LENTES and libre.group(1).strip() not in LENTES:
+                problemas.append(f"línea {n}: la lente pegada va en minúscula y sola: ({libre.group(1)})")
             if malas:
                 problemas.append(f"línea {n}: lentes que no existen o no van en inglés ({', '.join(malas)}); son {', '.join(LENTES)}")
             pesa = m.group("pesa").strip()
@@ -128,8 +146,15 @@ def comprobar(texto):
         elif clave == "Tokens" and contraste and "no consta" not in linea and len(re.findall(r"\d+k", linea)) < 3:
             problemas.append(f"«{linea.strip()}»: en un contraste van también los de cada modelo («Tokens: 693k · Fable 5.2 360k (E, R 240k) · Opus 5.5 333k»)")
     h = next((HALLAZGOS_RE.match(m.strip()) for m in medicion if m.startswith("Hallazgos:")), None)
+    if arreglos and not h:
+        problemas.append("una ronda de arreglos lleva «Hallazgos: n · impiden n · riesgo n · mejoran n» (paso 7)")
     if h:
         total, imp, rie, mej = (int(x) for x in h.groups())
+        arr = next((re.match(r"^Arreglados: (\d+)(?: · impiden (\d+))?\s*$", m.strip()) for m in medicion if m.startswith("Arreglados:")), None)
+        if arr is None:
+            problemas.append("la medición no lleva «Arreglados: n» (paso 7)")
+        elif arreglos and imp and int(arr.group(1)) > 0 and arr.group(2) is None:
+            problemas.append(f"«Arreglados:» dice detrás cuántos de los {imp} que impiden se arreglaron («Arreglados: {arr.group(1)} · impiden {imp}»)")
         if imp + rie + mej != total:
             problemas.append(f"«Hallazgos: {total}» no es la suma de sus pesos ({imp} + {rie} + {mej})")
         cuenta = {"impiden": 0, "riesgo": 0, "mejoran": 0}
@@ -147,7 +172,7 @@ def main():
         print(__doc__.strip().split("\n")[2], file=sys.stderr)
         return 2
     with open(sys.argv[1], encoding="utf-8") as f:
-        problemas = comprobar(f.read())
+        problemas = comprobar(f.read(), sys.argv[1])
     for p in problemas:
         print(p)
     return 1 if problemas else 0

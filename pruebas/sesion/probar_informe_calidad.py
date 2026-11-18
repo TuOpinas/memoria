@@ -73,10 +73,30 @@ rechaza(BUENO + "## Doubts\n\n### 4. Duda\nLens: risks · Pesa: lo mejora\n\n" +
 acepta(BUENO + medicion(raz="Fable 5.2 medio · Opus 5.5 alto"), "acepta un nivel por modelo")
 # 1.26.11: la pregunta de una lente que no corrió, pegada a la lente que la hizo; el origen en una revisión de arreglos
 acepta(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencies), risks (efficiency) ·") + medicion(), "acepta una lente con la pregunta de otra pegada")
-rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencias), risks ·") + medicion(), "no existen", "rechaza una pregunta que no es una lente")
+rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencias), risks ·") + medicion(), "no tiene la forma", "rechaza una pregunta que no es una lente")
 ARR = medicion().replace("Tipo: parche ·", "Tipo: parche, arreglos 1 de revision-de-calidad-x ·")
 CON = BUENO.replace("impide cumplir el objetivo\n", "impide cumplir el objetivo (lo abrió este arreglo)\n").replace("pone en riesgo el objetivo\n", "pone en riesgo el objetivo (en el original)\n").replace("lo mejora\nPropuesta", "lo mejora (lo abrió un arreglo anterior)\nPropuesta")
 acepta(CON + ARR, "acepta una revisión de arreglos con el origen de cada hallazgo")
 rechaza(BUENO + ARR, "de dónde viene", "rechaza una revisión de arreglos sin el origen")
+# 1.26.11, segunda ronda: aclaración de una palabra, lente que corrió, mayúscula, nombre de ronda, «· impiden»
+acepta(BUENO.replace("Lens: errors, risks ·", "Lens: risks, errors (dudas) ·") + medicion(), "una aclaración de una palabra que no es lente sigue pasando")
+rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: errors (risks) ·") + medicion(), "corrió en esta revisión", "rechaza entre paréntesis una lente que corrió")
+rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: objective (Inconsistencies) ·") + medicion(), "minúscula", "rechaza una lente pegada con mayúscula")
+rechaza(CON + ARR.replace("Arreglados: 0", "Arreglados: 2"), "· impiden", "rechaza «Arreglados» sin cuántos de los que impiden")
+acepta(CON + ARR.replace("Arreglados: 0", "Arreglados: 2 · impiden 1"), "acepta «Arreglados: n · impiden n»")
+rechaza(CON + ARR.replace("Revisores: 3", "Revisores: 2"), "menos de tres", "rechaza una ronda con dos revisores sin motivo")
+
+
+def corre_como(texto, nombre):
+    d = pathlib.Path(tempfile.mkdtemp())
+    (d / nombre).write_text(texto, encoding="utf-8")
+    r = subprocess.run([sys.executable, str(SCRIPT), str(d / nombre)], capture_output=True, text=True)
+    return r.returncode, r.stdout
+
+
+c, out = corre_como(BUENO + medicion(), "revision-de-calidad-x-arreglos-2.md")
+ok(c == 1 and "arreglos 2 de" in out, "un archivo -arreglos-2 sin «, arreglos 2 de …» en «Tipo:» se rechaza")
+c, out = corre_como(CON + ARR.replace("arreglos 1 de", "arreglos 2 de"), "revision-de-calidad-x-arreglos-2.md")
+ok(c == 0, "un archivo -arreglos-2 con su «Tipo:» pasa" + ("" if c == 0 else f" — dijo: {out[:160]}"))
 print(); print("Todo bien." if fallos == 0 else f"{fallos} fallo(s).")
 sys.exit(1 if fallos else 0)
