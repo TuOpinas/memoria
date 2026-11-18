@@ -499,6 +499,18 @@ def _(ctx, arg):
     return bien, (linea.group(0)[:120] if linea else ("la decisión de hoy no lleva «Reemplaza:»" if m else "sin decisión de hoy"))
 
 
+@comprobacion("decision-sin-reemplaza")
+def _(ctx, arg):
+    """decision-sin-reemplaza <area>/<proyecto>: hay decisión de hoy arriba y no lleva «Reemplaza:» (1.26.7)."""
+    p = ctx["raiz"] / arg.strip() / "decisiones.md"
+    t = p.read_text(encoding="utf-8") if p.exists() else ""
+    m = re.search(r"^## " + re.escape(HOY) + r" · .*?(?=^## |\Z)", t, re.M | re.S)
+    if not m:
+        return False, "sin decisión de hoy"
+    linea = re.search(r"^Reemplaza\s*:.*$", m.group(0), re.M)
+    return not linea, (linea.group(0)[:120] if linea else "sin «Reemplaza:»")
+
+
 @comprobacion("decision-afecta")
 def _(ctx, arg):
     """decision-afecta <area>/<proyecto> <texto>: la decisión de hoy de arriba lleva «Afecta a:» con el texto (1.26.5)."""
