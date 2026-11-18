@@ -47,7 +47,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.26.8"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.26.9"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):

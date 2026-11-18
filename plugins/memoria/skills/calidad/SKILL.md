@@ -147,7 +147,7 @@ Dice, con el número de revisiones detrás de cada cifra:
 Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 
 - Arreglar lo que encuentro. Se propone; lo cambia la sesión del proyecto.
-- Registrar decisiones. Si un hallazgo pide decidir, se dice y la sesión lo registra con la confirmación de su responsable.
+- Registrar decisiones. Si un hallazgo pide decidir, se dice y la sesión lo registra con la confirmación de su responsable: en cuanto sale, en cita (`sesion`, `cerrar.md`, «Al proponer», 1.26.9), sin esperar al final de la revisión.
 - Dar un hallazgo sin evidencia, o una opinión como si fuera un hallazgo.
 - Empezar sin acordar el alcance, o una revisión a fondo sin haber recomendado el modelo.
 - Guardar un informe sin su medición.
