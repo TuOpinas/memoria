@@ -5,7 +5,8 @@ archivos del kit en la memoria. No llama a GitHub ni escribe en GitHub.
   seguimiento.py seguimiento <raíz o copia> <area>/<proyecto> --github <json> --pidio "Nombre Apellido" [--fecha AAAA-MM-DD]
                  [--escribir] [--migraciones <carpeta>]...
       La entrada nueva del seguimiento, en Markdown, por la salida (y un JSON en la última línea, tras «=== DATOS»). Con
-      --escribir la pone arriba del archivo de «Seguimiento:», sin borrar las anteriores; si la línea dice «por crear», crea
+      --escribir la pone arriba del archivo de «Seguimiento:», sin borrar las anteriores, salvo si no se pudo leer GitHub
+      («no_escrito» en DATOS); si la línea dice «por crear», crea
       <proyecto>/entregables/seguimiento.md, que nace vigente, y dice en DATOS el reemplazo de proyecto.md que pone su ruta
       (lo escribe cerrar.py con solo «reemplazos»).
   seguimiento.py auditoria <raíz o copia> <area>/<proyecto> --github <json> [--fecha AAAA-MM-DD]
@@ -1094,7 +1095,10 @@ def cmd_seguimiento(a):
     texto, datos = entrada(a["fecha"], a.get("pidio") or "?", gh, sec, textos, a.get("migraciones", []))
     datos["anterior"] = previo
     print(texto)
-    if a.get("escribir"):
+    if a.get("escribir") and not any(r.get("main_sha") for r in gh.get("repos", [])):
+        # sin GitHub no hay seguimiento que guardar: su fecha diría que se comparó lo unido, y no se comparó nada
+        datos["no_escrito"] = "sin GitHub: se da en la conversación y no se guarda"
+    elif a.get("escribir"):
         r = sec.paths.get(FOLLOW_UP, "")
         if r == TO_BUILD or not r:
             r = f"{proyecto}/entregables/seguimiento.md"
