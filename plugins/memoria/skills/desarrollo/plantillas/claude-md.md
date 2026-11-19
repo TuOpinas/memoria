@@ -17,7 +17,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | No se toca | [lo que no se cambia nunca] |
 
 ## Reglas
-1. Una rama por pieza y nunca `main`. El título del pull request empieza por el identificador de la pieza seguido de « · ».
+1. Una rama por bloque (una o varias piezas) y nunca `main`. El título del pull request a `main` empieza por el identificador de su pieza, o por los de sus piezas unidos con « + », seguido de « · » («P03 · …», «P01 + P02 · …»).
 2. Antes de abrir el pull request, la revisión de calidad, como dice «Cómo se revisa».
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita.
 4. Ningún secreto en el código.

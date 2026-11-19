@@ -34,7 +34,7 @@ Quien no tenga el plugin se lo pide a quien audita o a quien construye.
 **Qué hace cada rol**
 - **Acepta:** valida lo funcional del diseño, prueba lo unido y da el sí sobre un seguimiento.
 - **Audita:** valida el diseño técnico y el plan, decide en los puntos de control, da el sí, aprueba los cambios de la plataforma y hace la auditoría mensual.
-- **Construye:** construye con Claude una pieza por pull request, la une con las pruebas en verde y la revisión de calidad hecha.
+- **Construye:** construye con Claude por bloques, de una o varias piezas por pull request a la rama principal, y une cada uno con las pruebas en verde y la revisión de calidad hecha.
 - **Administra:** mantiene las dos configuraciones y pasa a Prod lo que recibió el sí. Es el único que despliega a Prod.
 
 Una persona puede tener varios roles. Los pasos a Prod que aprobó quien construyó salen en el seguimiento, para que los vea quien acepta.

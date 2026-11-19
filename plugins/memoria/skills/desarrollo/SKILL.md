@@ -1,0 +1,52 @@
+---
+name: desarrollo
+description: Seguimiento y auditoria mensual de un proyecto de desarrollo (con la seccion «Desarrollo» en su proyecto.md) - lee GitHub, compara lo unido con el plan y el diseno y vigila las reglas imprescindibles. Usala cuando digan 'seguimiento', 'haz el seguimiento de...', '¿como va el desarrollo?', '¿que piezas faltan?', 'audita', 'la auditoria mensual', o antes de dar el si para pasar algo a Prod.
+---
+
+# Desarrollo
+
+El seguimiento y la auditoría del kit de desarrollo (1.27). El kit garantiza solo dos cosas: que cada cambio se puede rastrear hasta una pieza del plan y auditar, y que nadie libera directo a `main`, edita una migración o pone un secreto en el código (tecnologia/metodologia-desarrollo#2026-11-18-3). Todo lo que se le dice a la persona es breve y se entiende sin ser técnico, y nada le añade pasos más allá de los del kit.
+
+Un proyecto de desarrollo es el que tiene la sección `## Desarrollo` en su `proyecto.md` (`convenciones`, `escribir.md`, sección 3, «Un proyecto de desarrollo»). Sin ella, esta skill no hace nada: se dice en una línea y se ofrece `nuevo`, que la escribe. La sesión del proyecto se abre antes, como siempre (skill `sesion`): su apertura ya dio los avisos del kit, y su línea «CUENTA EN EL PROYECTO» dice si esta cuenta escribe aquí.
+
+Es lo único del plugin que lee GitHub, y solo cuando alguien lo pide: nunca al abrir ni al sincronizar el tablero, y sin tarea programada (#2026-11-18-8).
+
+## Dónde corre
+
+Los dos scripts, junto a este archivo, corren **en el contenedor**, desde el plugin instalado (`<directorio de esta skill>`), nunca en la computadora:
+
+- `recoger_github.py` lee GitHub con `gh api` (solo la API REST) y deja un JSON. Sin `gh` pero con un conector de GitHub, la sesión arma el mismo JSON a mano con la forma que dice la cabecera del script. Sin ninguno de los dos, se sigue con `{"repos": [{"repo": "<cada uno>", "error": "<por qué>"}]}`: el seguimiento lo dice en su cabecera y da solo la parte de la memoria.
+- `seguimiento.py` lee los archivos del kit de una copia de la memoria y el JSON, y escribe en la copia.
+
+**La copia**: `device_stage_files` con el `proyecto.md` del proyecto y las rutas de su sección que no digan «por crear» (las dos configuraciones, el diseño, el plan y el seguimiento), como `<ruta de get_device_info>/<ruta>`. Lo que la apertura dijo que no se pudo comprobar (un área restringida ajena, `restringido/`, `fuentes/`, `taller/` de otro proyecto) no se trae. La copia es la carpeta de `/mnt/user-data/uploads/` que dan los `stagedPath`, hasta antes del área. **Lo escrito vuelve** con `device_commit_files`, con el `mtimeMs` de cuando se trajo como `expectedMtimeMs`: si alguien lo cambió entre medias, se trae otra vez y se repite. Un archivo nuevo vuelve sin `expectedMtimeMs`.
+
+Las fechas son las de la línea HOY de la apertura (`--fecha`), nunca la del reloj del contenedor.
+
+## El seguimiento
+
+Lo pide cualquiera que lea el proyecto. Quien da el sí para pasar algo a Prod lo pide antes, y el sí se da sobre él (#2026-11-18-9).
+
+1. **GitHub**: `python3 <directorio de esta skill>/recoger_github.py <cada repositorio de «Repositorios:»> --desde <fecha del último seguimiento, o nada> --salida /tmp/github-<proyecto>.json`. Sin redirecciones en el comando.
+2. **La entrada**: `python3 <directorio de esta skill>/seguimiento.py seguimiento "<la copia>" <area>/<proyecto> --github /tmp/github-<proyecto>.json --pidio "<nombre de quien lo pide, como en «Quién es quién»>" --fecha <HOY>`, con `--escribir` si la cuenta escribe en el proyecto. Si el código guarda las migraciones en una carpeta que no se llama `migrations/`, `migraciones/` ni `schema/`, se añade `--migraciones <carpeta>` (lo dice la fila «Migraciones» del `CLAUDE.md` del repositorio).
+3. **Lo que el script no ve**: con el diff delante (los `patch` del JSON), Claude mira si lo unido añade una entidad, un componente o un concepto que el diseño no tiene, con otro nombre que el script no reconoce. Lo que encuentre se dice debajo de la entrada como «Además, a ojo: …», sin escribirlo en el archivo; si la persona lo confirma, entra en el siguiente seguimiento o en una decisión.
+4. **Escribir**: con `--escribir`, el script pone la entrada arriba del archivo de «Seguimiento:», sin borrar las anteriores. Si la línea decía «por crear», crea `<proyecto>/entregables/seguimiento.md`, que nace `vigente` (shared-memory/plugin-memoria#2026-11-18-3), y su sección DATOS trae el reemplazo que pone la ruta en `proyecto.md`: se escribe con `cerrar.py` y solo `reemplazos` (`sesion`, `cerrar.md`), con el `--abierto` de la apertura. Después, `device_commit_files` del seguimiento. Quien solo lee recibe el seguimiento en la conversación, y se le dice que lo guarde quien construye o quien audita.
+5. **Responder**: la entrada tal cual (es corta y ya va en llano), el enlace al archivo y, si algo rompe una regla o está fuera del plan o del diseño, una línea con a quién le toca: lo fuera del plan y del diseño, a quien construye; lo que rompe las reglas y los síes propios, a quien audita.
+
+Qué dice cada entrada, y en qué orden, está en la plantilla de la sección (`plantillas/seccion-desarrollo.md`): quién lo pidió y qué commit leyó, qué pudo comparar, qué forma de «Paso a Prod» entendió, las piezas con su estado, lo fuera del plan, lo que no está en el diseño, lo que rompe las reglas y los pasos a Prod que aprobó quien construyó. **El estado de cada pieza** sale de sus pull requests a la rama principal por la regla de las decisiones -10 y -12 (`context_core`, `estado_piezas`): uno de bloque, que nombra varias piezas («P01 + P02 · …»), cuenta para cada una, y los pull requests a otras ramas son pasos dentro de un bloque y no cuentan; sin ninguno, `pendiente`; alguno abierto, `en curso`; todos unidos, `unida`; todos dentro del último paso a Prod de su repositorio, `entregada`. Con «release de GitHub», el último paso a Prod es el último release publicado con «Aprobó:»; con otra forma, el último release o etiqueta, y si no hay ninguno, nada sale entregado. **Quién construyó** un pull request es la persona de «Construye» cuyo `@usuario` es su autor (shared-memory/plugin-memoria#2026-11-18-4): un pull request que Claude abre en la nube sale a nombre de la cuenta de quien trabaja con Claude.
+
+## La auditoría mensual
+
+La hace quien audita (`Audita:` en la sección); la apertura le avisa cuando la fecha más reciente de las dos configuraciones tiene más de 31 días. Quien no audita puede pedirla para verla, sin escribir los estados.
+
+1. **GitHub**, con la configuración: el mismo `recoger_github.py` con `--auditoria` y `--desde` de hace 31 días.
+2. **Lo que se comprueba solo**: `python3 <directorio de esta skill>/seguimiento.py auditoria "<la copia>" <area>/<proyecto> --github <json> --fecha <HOY>`. Da R1, R2, R3 y R6 de cada repositorio y PL1 y PL2 con su estado y su evidencia, lo que no se pudo (sin permiso, o que no está en GitHub) en `preguntar`, y en `si_propio` los pasos a Prod del último mes que aprobó quien construyó lo que llevaban.
+3. **Se enseña** en una tabla: la regla por su nombre en llano (`regla` del JSON, con su código entre paréntesis, «las pruebas pasan antes de unir (R2)»), el repositorio, el estado y la evidencia en llano. Nunca solo el código: R1 o PL2 no le dicen nada a nadie. Lo de `preguntar` se le pregunta a quien audita, con la herramienta de preguntas si está (cumple, no cumple, no aplica, excepción), con la ruta de clics de la columna «Cómo se comprueba» de su configuración. Con la protección clásica de ramas en lugar de un ruleset, R1 y R2 se miran en Settings → Branches → la regla de la rama principal. Una «excepción» cita su decisión, y un «no aplica» su porqué, en una nota debajo de la tabla: se pide la frase y va con el estado.
+4. **Escribir**, si la cuenta escribe donde vive cada configuración: un JSON con todos los estados (`{"R1": {"org/repo": "cumple"}, "PL1": "no cumple"}`) y `seguimiento.py aplicar "<copia>/<ruta de la configuración>" <json> --fecha <HOY>` para cada una; el script pone la fecha a «cumple» y a «no cumple» y no toca nada más. Las notas van con Edit sobre la copia. Después, `device_commit_files` de las dos.
+5. **Lo que encuentra** (un «no cumple», un sí propio, una regla que alguien se salta) se propone como tarea de `Siguientes pasos` o como decisión, en cita y con el sí, como dice `cerrar.md` («Al proponer»): nada entra sin que quien audita lo confirme. Un cambio en lo que cubren PL1 a PL7 o en R1 a R4 lo aprueba quien audita y va como línea fechada en «Cambios aprobados» de la configuración de plataforma.
+
+## Lo que nunca hago
+
+- Leer GitHub sin que nadie lo pida, o escribir en GitHub: ni etiquetas, ni comentarios, ni releases, ni cambios de configuración. Lo que hay que cambiar en GitHub lo hace quien administra, con el sí de quien audita.
+- Dar por entregada una pieza sin un paso a Prod que lo diga, o un estado de pieza sin haber leído GitHub.
+- Escribir los estados de una configuración sin que los haya confirmado quien audita, o borrar una entrada anterior del seguimiento.
+- Copiar las piezas a `Siguientes pasos`: en un proyecto de desarrollo, las tareas del código son las piezas del plan.
