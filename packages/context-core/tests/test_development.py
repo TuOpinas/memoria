@@ -423,18 +423,18 @@ class Status(unittest.TestCase):
         self.assertEqual(d["pieces"][1]["status"], "unida")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class FollowUpEntriesTest(unittest.TestCase):
-    def test_real_watched_design(self):
+    def test_real_and_whole(self):
         t = ("---\nestado: vigente\n---\n\n# Seguimiento\n\n## 2026-11-15 · nota\nmirar\n\n"
-             "## 2026-11-10 · pidió Ana\nLeído: acme/app en `abcdef1` (main), desde el 2026-11-01.\nComparó: piezas, reglas.\n\n"
-             "**Rompe las reglas:** nada. Un commit dice «**Rompe las reglas:** sin vigilar».\n\n"
-             "## 2026-11-01 · pidió Ana\nLeído: acme/app en `1234567` (main), desde el 2026-10-01.\nComparó: piezas, diseño, reglas.\n\n"
-             "**Rompe las reglas:** sin vigilar: no se leyeron enteros los pasos a Prod.\n")
+             "## 2026-11-10 · pidió Ana\nLeído: acme/app en `abcdef1` (main), desde el 2026-11-01.\nComparó: piezas, controles.\n"
+             "Sin comprobar: el diseño (acme/app: detalle cortado).\n\n"
+             "## 2026-11-01 · pidió Ana\nLeído: acme/app en `1234567` (main), desde el 2026-10-01.\nComparó: piezas, diseño.\n"
+             "Un commit dice «Sin comprobar: nada».\n")
         e = dev.follow_up_entries(t)
         self.assertEqual([x["date"] for x in e], ["2026-11-10", "2026-11-01"])
-        self.assertEqual([(x["watched"], x["design"]) for x in e], [(True, False), (False, True)])
+        self.assertEqual([x["whole"] for x in e], [False, True])
         self.assertEqual(e[0]["repos"], ["acme/app"])
+
+
+if __name__ == "__main__":
+    unittest.main()

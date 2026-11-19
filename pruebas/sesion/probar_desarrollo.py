@@ -91,7 +91,7 @@ doc(r, E + "repositorios.md", "configuracion-repositorios.md", hace(40),
     {"[organización/repositorio]": "acme/app"}, fila=("R1", f"| R1 | Nada a main | Rules | cumple · {hace(35)} |"))
 doc(r, E + "diseno.md", "diseno.md", hace(5), {"| Componente | Qué hace | Dónde vive |": "| Componente | Qué hace | Ruta |"})
 doc(r, E + "plan.md", "plan.md", hace(10))
-(r / E / "seguimiento.md").write_text(f"---\nestado: vigente\nactualizado: {hace(3)}\n---\n\n# Seguimiento\n\n## {hace(1)} · nota de Ana\nmirar luego\n\n## {hace(3)} · pedido por Ana Prueba\nLeído: acme/app en `abcdef1` (main), desde el 2026-10-01.\n\n**Rompe las reglas:** sin vigilar: no se leyeron enteros los pasos a Prod.\n\n## {hace(20)} · pedido por Ana Prueba\nLeído: acme/app en `1234567` (main), desde el 2026-09-01.\nComparó: piezas, diseño, reglas.\n\n**Rompe las reglas:** nada en los pasos a Prod ni en los controles.\n", encoding="utf-8")
+(r / E / "seguimiento.md").write_text(f"---\nestado: vigente\nactualizado: {hace(3)}\n---\n\n# Seguimiento\n\n## {hace(1)} · nota de Ana\nmirar luego\n\n## {hace(3)} · pedido por Ana Prueba\nLeído: acme/app en `abcdef1` (main), desde el 2026-10-01.\n\nComparó: piezas.\nSin comprobar: pasos a Prod (acme/app: releases cortado).\n\n## {hace(20)} · pedido por Ana Prueba\nLeído: acme/app en `1234567` (main), desde el 2026-09-01.\nComparó: piezas, diseño, controles, pasos a Prod.\n\n**Rompe las reglas:** nada.\n", encoding="utf-8")
 dp = r / "ventas/cuentas/decisiones.md"
 t = dp.read_text(encoding="utf-8")
 i = t.index("\n## ")
@@ -103,8 +103,8 @@ ok(not any("por crear" in x or "no existe" in x for x in a), "nada falta")
 ok(any("al diseño" in x and "columna Dónde vive en Componentes" in x for x in a), "una columna que el diseño no tiene")
 ok(any("el plan" in x and "puede estar desfasado" in x and "La vista entra en la fase 2" in x for x in a), "el plan es anterior a una decisión que lo nombra")
 ok(not any("el diseño" in x and "desfasado" in x for x in a), "el diseño, que nadie nombra, no")
-ok(any(f"el último seguimiento es del {hace(3)} (hace 3 días); el último que vigiló los pasos a Prod y comparó el diseño es del {hace(20)}" in x for x in a),
-   "la fecha del seguimiento es la de su entrada más nueva de verdad, no una nota, y dice el último que vigiló")
+ok(any(f"el último seguimiento es del {hace(3)} (hace 3 días); el último que se leyó entero es del {hace(20)}" in x for x in a),
+   "la fecha del seguimiento es la de su entrada más nueva de verdad, no una nota, y dice la última entera")
 ok(any("toca la auditoría mensual" in x and f"comprobada hace más tiempo es del {hace(40)}" in x and "sin comprobar (PL2" in x and "Beto Prueba" in x for x in a),
    "auditoría pendiente: la línea más vieja de las dos y las que faltan, y quién la hace")
 ok("kit de desarrollo, fuera de entregables/ del proyecto: configuración de plataforma operacion/plataforma.md" in o,

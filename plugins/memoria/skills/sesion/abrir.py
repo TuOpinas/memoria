@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': '074dde1865f55d7d5b66ee72ac8e322c34693ab3183dd0125e511cd633d91bb0',
+    'development': '8d66fbd49e6b19382cf0439bfe3df870e6a7300a4924bfac0df619d730f2c1bb',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -2274,11 +2274,10 @@ def _context_core():
         '\n'
         '\n'
         'def follow_up_entries(text: str) -> list:\n'
-        '    """The real entries of a follow-up file, newest first, as dicts with \xabdate\xbb, \xabrepos\xbb (lower-case owner/name read),\n'
-        '    \xabwatched\xbb (its \xab**Rompe las reglas:**\xbb line, at the start of a line, does not say \xabsin vigilar\xbb) and \xabdesign\xbb (its\n'
-        "    \xabCompar\xf3:\xbb line includes \xabdise\xf1o\xbb). A real entry has its \xabLe\xeddo:\xbb line with each repository's commit; a hand-written\n"
-        '    note does not count, and neither does one marked \xab**Incompleto, no se guarda:**\xbb. One rule for the follow-up script\n'
-        '    and the opening (fixes 5, finding 12; fixes 6, findings 3 and 14)."""\n'
+        '    """The real entries of a follow-up file, newest first, as dicts with \xabdate\xbb, \xabrepos\xbb (lower-case owner/name read)\n'
+        '    and \xabwhole\xbb (it has no \xabSin comprobar:\xbb line: everything that applied was read whole). A real entry has its \xabLe\xeddo:\xbb\n'
+        "    line with each repository's commit; a hand-written note does not count, and neither does one marked \xab**Incompleto,\n"
+        '    no se guarda:**\xbb. One rule for the follow-up script and the opening (plugin-memoria#2026-11-19-5)."""\n'
         '    body = text or ""\n'
         '    if body.startswith("---\\n") and "\\n---\\n" in body[4:]:\n'
         '        body = body[body.index("\\n---\\n", 4) + 5:]\n'
@@ -2288,12 +2287,9 @@ def _context_core():
         '        read = _READ.search(e)\n'
         '        if not m or not read or re.search(r"^\\*\\*Incompleto, no se guarda:\\*\\*", e, re.M):\n'
         '            continue\n'
-        '        compared = re.search(r"^Compar\xf3:(.*)$", e, re.M)\n'
         '        out.append({"date": m.group(1),\n'
         '                    "repos": [x.lower() for x in re.findall(r"([\\w.-]+/[\\w.-]+) en `[0-9a-f]{7,40}`", read.group(0))],\n'
-        '                    "watched": bool(re.search(r"^\\*\\*Rompe las reglas:\\*\\*", e, re.M))\n'
-        '                               and not re.search(r"^\\*\\*Rompe las reglas:\\*\\* sin (vigilar|comprobar)", e, re.M),\n'
-        '                    "design": bool(compared and "dise\xf1o" in compared.group(1))})\n'
+        '                    "whole": bool(re.search(r"^Compar\xf3:", e, re.M)) and not re.search(r"^Sin comprobar:", e, re.M)})\n'
         '    return out\n'
         '\n'
         '\n'
@@ -3441,17 +3437,16 @@ if KIT.found:
         if "Seguimiento" in _textos:
             m_ = re.search(r"^## .*?\b(20\d\d-\d\d-\d\d)\b", cabecera(_textos["Seguimiento"][1])[1], re.M)
             f_seg = m_.group(1) if m_ and fecha_ok(m_.group(1)) else cabecera(_textos["Seguimiento"][1])[0].get("actualizado", "")
-        # el último que vigiló las reglas, si no es el de arriba: el sí y la auditoría se apoyan en ese (arreglos 4, hallazgo 13)
-        # la misma regla que seguimiento.py, desde context_core (entradas_seguimiento): una entrada de verdad tiene su línea
-        # «Leído:» con el commit, y la ventana avanza con la que vigiló los pasos a Prod y comparó el diseño (arreglos 6, 14)
+        # la misma regla que seguimiento.py, desde context_core: una entrada de verdad tiene su «Leído:» con el commit, y es
+        # entera si comparó todo lo que le tocaba (sin «Sin comprobar:»); el sí y la auditoría se apoyan en la última entera
         if "Seguimiento" in _textos:
             ents_ = entradas_seguimiento(_textos["Seguimiento"][1])
             f_seg = max((x["date"] for x in ents_), default="")
-            f_vig = max((x["date"] for x in ents_ if x["watched"] and x["design"]), default="")
+            f_vig = max((x["date"] for x in ents_ if x["whole"]), default="")
         else:
             f_vig = ""
         avisos.append(f"Desarrollo: el último seguimiento es del {f_seg} (hace {(HOY - datetime.date.fromisoformat(f_seg)).days} días)"
-                      + ("." if f_vig == f_seg else (f"; el último que vigiló los pasos a Prod y comparó el diseño es del {f_vig}." if f_vig else "; ninguno vigiló los pasos a Prod y comparó el diseño entero."))
+                      + ("." if f_vig == f_seg else (f"; el último que se leyó entero es del {f_vig}." if f_vig else "; ninguno se leyó entero."))
                       if fecha_ok(f_seg) else "Desarrollo: todavía no hay ningún seguimiento; lo pide cualquiera que lea el proyecto (skill desarrollo).")
     # la auditoría mensual: la línea comprobada hace más tiempo de las dos configuraciones, más de 31 días, o líneas sin
     # comprobar; una sola celda reciente no la apaga (hallazgo 10)

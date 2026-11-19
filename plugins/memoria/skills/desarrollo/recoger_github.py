@@ -20,9 +20,9 @@ Uso:
   --max-pulls    cuántos pull requests a la rama principal se leen como mucho (2.000), de los más nuevos a los más viejos
 
 Lo que no se pudo leer o se cortó se dice, nunca se calla: cada repositorio lleva «errores» ({lista: motivo}) y «truncado»
-([listas]), y el seguimiento no se guarda si falta algo (revisión de la 1.27.0, hallazgo 2). Solo se leen los pull
+([listas]), y la parte del seguimiento que necesitaba esa lista sale «Sin comprobar». Solo se leen los pull
 requests a la rama principal (decisión tecnologia/metodologia-desarrollo#2026-11-18-12). De cada archivo se guarda el
-`patch` solo si es código o SQL, que es lo que el seguimiento compara: cortado a 4.000 caracteres, salvo una migración, que
+`patch` solo si es código o una migración, que es lo que el seguimiento compara: cortado a 4.000 caracteres, salvo una migración, que
 va entera; el de todo lo demás (configuración, secretos, datos) no se guarda, y lleva «patch_quitado». Con --auditoria el JSON
 lleva «"auditoria": true» y ningún «detalle»: no sirve para un seguimiento.
 
@@ -46,27 +46,27 @@ trae los cambios de cada commit desde «desde»:
                             "admins": ["login"], "errores": {"org": "…"}},
               "errores": {"pulls": "…"}, "truncado": ["commits"]}]}
 """
-import base64, datetime, json, os, re, subprocess, sys, time
+import base64, datetime, json, os, re, subprocess, sys, time, urllib.parse
 
 PATCH_MAX = 4000
-MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
-# lista blanca: se guarda el patch solo del código y el SQL, que es lo que el seguimiento compara; lo demás (configuración,
-# secretos, datos) lleva «patch_quitado», y un secreto con un nombre que nadie previó no entra al JSON (arreglos 5, hallazgo 6)
+# una migración, como la reconoce seguimiento.py: bajo migrations/, migraciones/ o migrate/, o un archivo numerado de schema/
+MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/(.+/)?[^/]+\.(sql|py|rb|php|ts|js|cs|go|java|kt|xml|ya?ml)$"
+                       r"|(^|/)schema/\d+[_-][^/]+\.sql$", re.I)
+# lista blanca: solo el código y las migraciones guardan su patch, que es lo que el seguimiento compara; lo demás
+# (configuración, secretos, datos) lleva «patch_quitado» (shared-memory/plugin-memoria#2026-11-19-5)
 CODIGO = re.compile(r"\.(py|ts|tsx|js|jsx|mjs|cjs|go|rb|java|kt|kts|cs|php|rs|swift|scala|ex|exs|sql|prisma|vue|svelte|astro|dart"
                     r"|c|cc|cpp|h|hpp|m|mm|lua|hs|clj|erl|graphql|gql|proto)$", re.I)
-# y encima, por nombre: código con nombre de configuración o de secretos, y volcados de datos (arreglos 6, hallazgo 4)
-SECRETO_NOMBRE = re.compile(r"(^|/)(wp-config\.php|[^/]*(secret|credential|password|passwd|token|apikey|api_key|vault)[^/]*"
-                            r"|[^/]*(settings|config)/(prod|production|local)[^/]*|[^/]*(settings|config)[-_.](prod|production|local)[^/]*"
-                            r"|environment\.prod[^/]*|\.env[^/]*|[^/]*\b(dump|seed|seeds|backup)[^/]*\.sql)$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
                        r"\.(md|txt|png|jpe?g|gif|svg|pdf|lock|min\.js|map)$", re.I)
 
 
+ESPERADO = [False]
+
+
 def gh(path, reintento=True):
-    """(datos, error) de `gh api <path>`. Ante un límite de tasa (403 o 429 con «rate limit»), espera un minuto y repite
-    una vez (arreglos 6, hallazgo 12)."""
+    """(datos, error) de `gh api <path>`. Ante un límite de tasa, espera un minuto y repite, una sola vez en la lectura."""
     try:
         p = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github+json", path], capture_output=True, text=True, timeout=60)
     except FileNotFoundError:
@@ -76,7 +76,8 @@ def gh(path, reintento=True):
     if p.returncode != 0:
         msg = (p.stderr or p.stdout or "").strip().splitlines()
         err = (msg[-1] if msg else f"gh salió con {p.returncode}")[:300]
-        if reintento and ("rate limit" in err.lower() or "429" in err):
+        if reintento and ("rate limit" in err.lower() or "HTTP 429" in err) and not ESPERADO[0]:
+            ESPERADO[0] = True      # una sola espera en toda la lectura: con el límite por hora agotado, se corta y se dice
             time.sleep(60)
             return gh(path, reintento=False)
         return None, err
@@ -86,9 +87,8 @@ def gh(path, reintento=True):
         return None, "GitHub devolvió algo que no es JSON"
 
 
-def paginas(path, n, basta=None):
-    """(lista, error, truncado): truncado si llenó las n páginas y quedaba más. Con «basta», para en cuanto la página
-    leída ya cubre lo que hace falta (arreglos 6, hallazgo 18)."""
+def paginas(path, n):
+    """(lista, error, truncado): truncado si llenó las n páginas y quedaba más."""
     out = []
     sep = "&" if "?" in path else "?"
     for i in range(1, n + 1):
@@ -96,14 +96,30 @@ def paginas(path, n, basta=None):
         if e:
             return out, e, False
         out += d or []
-        if len(d or []) < 100 or (basta and basta(d or [])):
+        if len(d or []) < 100:
             return out, None, False
     return out, None, True
 
 
-def quitar_patch(fn):
-    """Lo que no es código, y el código con nombre de secretos salvo una migración (cuyas tablas se comparan)."""
-    return not CODIGO.search(fn) or (SECRETO_NOMBRE.search(fn) and not MIGRACION.search(fn))
+def archivo(f):
+    """Un archivo de un commit, como lo guarda el JSON: el patch solo del código y las migraciones (una migración entera, el
+    resto hasta PATCH_MAX); `patch_quitado` si no se guarda, `sin_patch` si GitHub no lo dio, `patch_cortado` si se cortó."""
+    fn = f.get("filename") or ""
+    x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
+    if SIN_PATCH.search(fn):
+        return x
+    if not (CODIGO.search(fn) or MIGRACION.search(fn)):
+        if f.get("patch"):
+            x["patch_quitado"] = True
+        return x
+    if f.get("patch"):
+        tope = 10 ** 6 if MIGRACION.search(fn) else PATCH_MAX
+        x["patch"] = f["patch"][:tope]
+        if len(f["patch"]) > tope:
+            x["patch_cortado"] = True
+    elif f.get("status") in ("added", "modified"):
+        x["sin_patch"] = True
+    return x
 
 
 def es_bot(user):
@@ -132,8 +148,8 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                    "merged_at": p.get("merged_at") or "", "base": (p.get("base") or {}).get("ref") or rama} for p in pulls]
     # hasta la primera página que llega a un commit anterior a «desde»: con él se ve que la lista cubre la ventana
     fecha_c = lambda c: (((c.get("commit") or {}).get("committer") or {}).get("date") or "")[:10]
-    commits, e, _ = paginas(f"repos/{nombre}/commits?sha={rama}", max(1, (max_commits + 99) // 100),
-                            basta=lambda pg: any(fecha_c(c) < desde for c in pg))
+    # hasta el tope, no hasta «desde»: el commit del último paso a Prod suele ser anterior a la ventana
+    commits, e, _ = paginas(f"repos/{nombre}/commits?sha={rama}", max(1, (max_commits + 99) // 100))
     if e:
         r["errores"]["commits"] = e
     commits = commits[:max_commits]
@@ -158,43 +174,24 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
             if e:
                 fallos.append(f"{c['sha'][:7]}: {e}")
                 continue
-            files = []
-            for f in d.get("files") or []:
-                x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
-                fn_ = f.get("filename") or ""
-                if f.get("patch") and quitar_patch(fn_) and not SIN_PATCH.search(fn_):
-                    x["patch_quitado"] = True       # se dice que no se miró, sin guardar lo que no es código
-                elif f.get("patch") and not SIN_PATCH.search(fn_):
-                    # una migración va entera: sus «create table» del final se comparan con el diseño (arreglos 1, hallazgo 14)
-                    tope = 10 ** 6 if MIGRACION.search(f.get("filename") or "") else PATCH_MAX
-                    x["patch"] = f["patch"][:tope]
-                    if len(f["patch"]) > tope:
-                        x["patch_cortado"] = True
-                elif f.get("status") in ("added", "modified") and "patch" not in f and not SIN_PATCH.search(f.get("filename") or ""):
-                    x["sin_patch"] = True          # GitHub no da el patch de un archivo grande
-                files.append(x)
-            # un commit grande trae sus archivos de 300 en 300: se piden las páginas siguientes (arreglos 6, hallazgo 12)
-            pag = 2
-            while len(d.get("files") or []) >= 300 * (pag - 1) and pag <= 10:
+            # un commit grande trae sus archivos de 300 en 300: se piden las páginas siguientes, y un fallo se dice
+            todos, pag = list(d.get("files") or []), 2
+            while len(todos) >= 300 * (pag - 1) and pag <= 10:
                 d2, e2 = gh(f"repos/{nombre}/commits/{c['sha']}?page={pag}")
-                if e2 or not (d2 or {}).get("files"):
+                if e2:
+                    fallos.append(f"{c['sha'][:7]}, archivos de la página {pag}: {e2}")
                     break
-                for f in d2["files"]:
-                    fn_ = f.get("filename") or ""
-                    x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
-                    if f.get("patch") and not quitar_patch(fn_) and not SIN_PATCH.search(fn_):
-                        x["patch"] = f["patch"][:10 ** 6 if MIGRACION.search(fn_) else PATCH_MAX]
-                    elif f.get("patch"):
-                        x["patch_quitado"] = True
-                    files.append(x)
-                d["files"] = (d.get("files") or []) + d2["files"]
+                if not (d2 or {}).get("files"):
+                    break
+                todos += d2["files"]
                 pag += 1
-            if len(d.get("files") or []) >= 3000:
+            if len(todos) >= 3000:
                 r["truncado"].append(f"archivos de {c['sha'][:7]}")
+            files = [archivo(f) for f in todos]
             r["detalle"].append({"sha": c["sha"], "files": files})
         if fallos:
             r["errores"]["detalle"] = "; ".join(fallos[:5]) + (f" y {len(fallos) - 5} más" if len(fallos) > 5 else "")
-    # las etiquetas traen su commit: con ellas se sabe el de cada release sin una llamada por release (hallazgo 8)
+    # las etiquetas traen su commit: con ellas se sabe el de cada release sin una llamada por release
     tags, e, t = paginas(f"repos/{nombre}/tags", max(1, (max_tags + 99) // 100))
     if e:
         r["errores"]["tags"] = e
@@ -221,7 +218,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
         a = {"repo": {k: info.get(k) for k in ("private", "allow_squash_merge", "allow_merge_commit", "allow_rebase_merge",
                                                 "security_and_analysis", "default_branch") if k in info}, "errores": {}}
         # «protected» de la rama lo ve cualquiera con lectura; el detalle de la protección, solo quien administra, y a
-        # los demás GitHub les da un 404 como a una rama sin proteger (arreglos 2, hallazgo 1)
+        # los demás GitHub les da un 404 como a una rama sin proteger
         br, e = gh(f"repos/{nombre}/branches/{rama}")
         if br is not None:
             a["rama_protegida"] = bool(br.get("protected"))
@@ -248,20 +245,26 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
         elif e:
             a["errores"]["claude_md"] = e
         # R4: las carpetas de migraciones (del árbol de la rama) y los commits del último mes que las tocan, para que quien
-        # audita lo confirme con lo que se vio (arreglos 6, hallazgo 5)
+        # audita lo confirme con lo que se vio
         arbol, e = gh(f"repos/{nombre}/git/trees/{rama}?recursive=1")
         if arbol and isinstance(arbol.get("tree"), list):
             dirs = sorted({m.group(0).rstrip("/") for t in arbol["tree"] if t.get("type") == "blob"
-                           for m in [re.match(r"^(.*?/)?(migrations?|migraciones|migrate)/", t.get("path") or "")] if m})[:10]
-            a["migraciones"] = {}
-            for dir_ in dirs:
-                cs, e2, _ = paginas(f"repos/{nombre}/commits?sha={rama}&path={dir_}&since={desde}T00:00:00Z", 2)
+                           for m in [re.match(r"^(.*?/)?(migrations?|migraciones|migrate)/", t.get("path") or "")] if m})
+            a["migraciones"], avisos = {}, []
+            if len(dirs) > 10:
+                avisos.append(f"{len(dirs)} carpetas de migraciones: solo se leen las 10 primeras")
+            if arbol.get("truncated"):
+                avisos.append("el árbol de la rama vino cortado: puede haber más carpetas de migraciones")
+            for dir_ in dirs[:10]:
+                cs, e2, t2 = paginas(f"repos/{nombre}/commits?sha={rama}&path={urllib.parse.quote(dir_)}&since={desde}T00:00:00Z", 3)
                 if e2:
-                    a["errores"]["migraciones"] = f"{dir_}: {e2}"
+                    avisos.append(f"{dir_}: {e2}")
+                if t2:
+                    avisos.append(f"{dir_}: más de 300 commits en el mes, solo se leen 300")
                 a["migraciones"][dir_] = [{"sha": c["sha"][:7], "date": fecha_c(c), "message": ((c.get("commit") or {}).get("message") or "").split("\n", 1)[0][:120]}
                                           for c in cs]
-            if arbol.get("truncated"):
-                a["errores"]["migraciones"] = "el árbol de la rama vino cortado: puede haber más carpetas de migraciones"
+            if avisos:
+                a["errores"]["migraciones"] = "; ".join(avisos)
         elif e:
             a["errores"]["migraciones"] = e
         org = nombre.split("/")[0]
@@ -319,7 +322,7 @@ def main(argv):
     hoy = datetime.date.today()
     desde = desde or (hoy - datetime.timedelta(days=31)).isoformat()
     yo, _ = gh("user")
-    # «pedidos» y «terminado»: un JSON cortado a mitad no se da nunca por completo (arreglos 1, hallazgo 1)
+    # «pedidos» y «terminado»: un JSON cortado a mitad no se da nunca por completo
     out = {"leido": "gh", "cuenta": (yo or {}).get("login", ""), "hoy": hoy.isoformat(), "desde": desde, "pedidos": repos,
            "terminado": False, "repos": []}
     if auditoria:

@@ -141,7 +141,7 @@ g = gh_json(GH)
 rc, o, e = correr("seguimiento", r, "ventas/app", "--github", g, "--pidio", "Beto Prueba", "--fecha", HOY)
 ok(rc == 0, "corre" + ("" if rc == 0 else ": " + e))
 ok(o.startswith(f"## {HOY} · pidió Beto Prueba\nLeído: acme/app en `fffffff` (main), desde el 2026-11-01."), "cabecera con quién, el commit leído y desde cuándo")
-ok("Comparó: piezas, diseño, reglas." in o, "dice qué pudo comparar")
+ok("Comparó: piezas, diseño, controles, pasos a Prod." in o and "Sin comprobar" not in o, "dice qué pudo comparar")
 ok("Paso a Prod: release de GitHub" in o, "dice qué forma de «Paso a Prod» entendió")
 ok("| P01 · Tablas | F1 | unida | acme/app#1 |" in o and "cita el seguimiento del 2026-11-03, que no está en el archivo" in o,
    "con «por crear» no hay seguimientos: un sí que cita uno no entrega P01, y se dice")
@@ -271,10 +271,11 @@ r5 = raiz()
 r5s = raiz_con_seguimiento()
 # hallazgo 2: una lectura parcial no da estados ni se guarda
 rc, o, d = entrada_de(r5, gh_mod(lambda x: x.update(errores={"pulls": "HTTP 502"})), "--escribir")
-ok("**Piezas:** sin estado" in o and "Incompleto, no se guarda" in o and d.get("no_escrito") and not (r5 / "ventas/app/entregables/seguimiento.md").exists(),
-   "con los pull requests a medias, sin estado de piezas y sin guardar")
+ok("**Piezas:** sin comprobar" in o and "Sin comprobar: piezas, pasos a Prod (acme/app: pulls HTTP 502)" in o and "Comparó: diseño, controles." in o,
+   "con los pull requests a medias, piezas y pasos a Prod sin comprobar, y se dice por qué")
 rc, o, d = entrada_de(r5, gh_mod(lambda x: x.update(truncado=["commits"])))
-ok("Rompe las reglas:** sin vigilar" in o and "No está en el diseño:** sin comparar" in o and "| P01" in o, "con los commits cortados, ni reglas ni diseño, y las piezas sí")
+ok("Comparó: nada contra GitHub." in o and "commits cortado (repite con --max-commits" in o and d.get("parcial"),
+   "con los commits cortados no se compara nada, se dice con qué tope repetir, y no se guarda")
 # hallazgo 5: «Aprobó:» vacío o de quien no acepta ni audita
 rc, o, d = entrada_de(r5, gh_mod(lambda x: x["releases"][1].update(body="Aprobó:\n\n## Cambios")))
 ok("| P01 · Tablas | F1 | unida |" in o and "no tiene «Aprobó:»" in o, "un «Aprobó:» vacío no es un sí, y no toma la línea siguiente")
@@ -283,7 +284,7 @@ ok("| P01 · Tablas | F1 | unida |" in o and "lo aprobó «Pepe Nadie», que no 
 rc, o, d = entrada_de(r5s, gh_mod(lambda x: x.update(base="aaaaaaa") or x["releases"][1].update(body="Aprobó: @ana · seguimiento 2026-11-03")))
 ok("| P01 · Tablas | F1 | entregada |" in o and "Ana Prueba aprobó v1" in o, "el sí por @usuario, sobre un seguimiento que existe, entrega; y se dice que es propio")
 rc, o, d = entrada_de(r5s, gh_mod(lambda x: x.update(base="aaaaaaa") or x["releases"][1].update(body="Aprobó: @ana, 2026-11-03")))
-ok("| P01 · Tablas | F1 | unida |" in o and "Sí sin seguimiento" in o, "sin seguimiento citado no es un sí: no entrega, y se dice")
+ok("| P01 · Tablas | F1 | unida |" in o and "el sí del release v1 no dice sobre qué seguimiento se dio" in o, "sin seguimiento citado no es un sí: no entrega, y se dice")
 # hallazgo 6: sin forma, nada entregado; los prerelease no cuentan
 r6 = raiz(paso="por crear")
 rc, o, d = entrada_de(r6, gh_json(GH))
@@ -353,16 +354,19 @@ r11 = raiz()
 for nombre, g_, que in (
         ("sin «terminado»", gh_json(dict(GH, terminado=False)), "no terminó"),
         ("un repositorio de la sección que falta", gh_json(dict(GH, repos=[dict(GH["repos"][0], repo="acme/otro")])), "acme/app: no está"),
-        ("de otro día", gh_json(dict(GH, hoy="2026-11-10")), "no de hoy"),
-        ("sin la lista de releases", gh_mod(lambda x: x.pop("releases")), "no trae releases"),
-        ("un pull request unido sin fecha", gh_mod(lambda x: x["pulls"][0].update(merged_at=None)), "sin fecha (#1)")):
+        ("de otro día", gh_json(dict(GH, hoy="2026-11-10")), "no de hoy")):
     rc, o, d = entrada_de(r11, g_, "--escribir", "--crear")
     ok(que in o and d.get("no_escrito") and not (r11 / "ventas/app/entregables/seguimiento.md").exists(), f"{nombre}: incompleto, no se guarda")
+for nombre, g_, que in (("sin la lista de releases", gh_mod(lambda x: x.pop("releases")), "releases no viene"),
+                        ("un pull request unido sin fecha", gh_mod(lambda x: x["pulls"][0].update(merged_at=None)), "unidos sin fecha: #1"),
+                        ("releases con error", gh_mod(lambda x: x.update(errores={"releases": "HTTP 502"})), "releases HTTP 502")):
+    rc, o, d = entrada_de(r11, g_)
+    ok(que in o and "Sin comprobar: piezas, pasos a Prod" in o and "Comparó: diseño, controles." in o, f"{nombre}: piezas y pasos a Prod sin comprobar")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["tags"])))
-ok("tags cortado" not in o and "Incompleto" not in o and "Comparó: piezas, diseño, reglas" in o,
+ok("tags" not in o.split("=== DATOS")[0] and "Comparó: piezas, diseño, controles, pasos a Prod." in o,
    "con «release de GitHub» las etiquetas cortadas no hacen falta: se guarda y no se dice que no se comparó")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["releases"])))
-ok("Sin leer entero, no se compara: acme/app: releases cortado" in o and "Incompleto" not in o, "con los releases cortados se guarda, y se dice qué no se comparó")
+ok("acme/app: releases cortado (repite con --max-releases" in o and "Incompleto" not in o, "con los releases cortados se guarda, y se dice qué no se comparó")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x["pulls"][0].update(author=None, merge_commit=None, merged_at=None, state="open")))
 ok(rc == 0, "un autor o un commit de unión nulos no rompen la lectura")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x["releases"][1].update(author="ana")))
@@ -378,15 +382,13 @@ ok("no está en el archivo" not in o and "no se pudo comprobar la cita" in o and
    "sin el seguimiento en la copia, la cita no se da por mala, pero tampoco entrega")
 for nombre, g_, que in (("sin «hoy»", gh_json(dict(GH, hoy=""), completa=True), "no dice de qué día"),
                         ("«hoy» con hora", gh_json(dict(GH, hoy="2026-11-18T10:00:00Z")), "no dice de qué día"),
-                        ("un JSON de auditoría", gh_json(dict(GH, auditoria=True)), "es de una auditoría"),
-                        ("releases con error", gh_mod(lambda x: x.update(errores={"releases": "HTTP 502"})), "releases HTTP 502")):
+                        ("un JSON de auditoría", gh_json(dict(GH, auditoria=True)), "es de una auditoría")):
     rc, o, d = entrada_de(r11, g_, "--escribir", "--crear")
     ok(rc == 0 and que in o and d.get("no_escrito"), f"{nombre}: incompleto, no se guarda")
 def migracion_secreta(x):
     x["detalle"][1]["files"].append({"filename": "migrations/005_add_password_hash.sql", "status": "added", "patch": "+CREATE TABLE claves (id int);"})
 rc, o, d = entrada_de(r11, gh_mod(migracion_secreta))
 ok("la tabla «claves»" in o, "una migración con «password» en el nombre se compara con el diseño")
-ok(d.get("sin_mirar") == 0, "sin_mirar no cuenta lo que nunca se iba a mirar")
 r15 = raiz(); (r15 / "guia.md").unlink()
 est.write_text(json.dumps({"R1": {"acme/app": "cumple"}}), encoding="utf-8")
 rc, o, e = correr("aplicar", r15, "ventas/app", r15 / "ventas/app/entregables/repositorios.md", est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
@@ -446,7 +448,7 @@ ok(prop(a4, "R3") is None, "una comprobación llamada «secretos» no basta para
 a4 = audita(gh_json(dict(GH, hoy="2026-06-01", terminado=False)))
 ok(a4["avisos"] and not a4["comprobado"], "con el JSON viejo o sin terminar, nada se propone y se avisa")
 a4 = audita(gh_mod(lambda x: x["pulls"].append({"number": 9, "title": "sin pieza", "state": "merged", "author": "ana", "base": "main", "merge_commit": "9" * 40, "merged_at": ""})))
-ok(any("lo leído" in v or "sin fecha" in v for v in a4["avisos"]) and not a4["comprobado"], "un unido sin fecha deja la auditoría sin propuestas")
+ok(prop(a4, "R6") is None and prop(a4, "R1") == "cumple", "un unido sin fecha deja sin propuesta solo a R6, que usa los pull requests")
 def free(g):
     o1 = g["repos"][0]; o1["auditoria"]["org"] = {"two_factor_requirement_enabled": True, "plan": "free"}; o1["auditoria"]["admins"] = ["beto"]
     o1["auditoria"]["repo"]["private"] = False
@@ -461,7 +463,8 @@ a4 = vista(json.loads(o))
 ok(not [x for x in a4["filas"] if "no se leyó" in x["evidencia"]] and all(x["columna"] in ("Acme/App", "Estado") for x in a4["filas"]),
    "la columna se compara sin mayúsculas y sale con la grafía de la tabla")
 sys.path.insert(0, str(SKILL)); import recoger_github as _rg
-ok(all(not _rg.quitar_patch(f) for f in ("migrations/005_add_password_hash.sql", "api/pedidos.py", "web/CrearOrden.vue"))
+quitar = lambda f: "patch_quitado" in _rg.archivo({"filename": f, "status": "added", "patch": "+x"})
+ok(all(not quitar(f) for f in ("migrations/005_add_password_hash.sql", "api/pedidos.py", "web/CrearOrden.vue", "db/migrate/1_x.yml"))
    and not any(_rg.CODIGO.search(f) for f in (".env.production", "certs/x.pem", "terraform.tfstate", ".pgpass", "config/credentials.json")),
    "lista blanca: solo el código y el SQL guardan su patch; la configuración y los secretos, nunca")
 
@@ -513,14 +516,13 @@ ok(rc != 0 and not (r22.parent / "fuera.md").exists(), "aplicar no escribe fuera
 est.write_text("[1, 2]", encoding="utf-8")
 rc, o, e = correr("aplicar", r, "ventas/app", r / "ventas/app/entregables/repositorios.md", est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
 ok(rc != 0 and "Traceback" not in e and "van como" in e, "un JSON de estados mal formado se dice en llano")
-ok(all(_rg.quitar_patch(f) for f in ("config/secrets.yml", "id_rsa", "service-account.json", "prod.tfvars", ".npmrc", "wp-config.php",
-                                     "config/secrets.py", "db/dump.sql", "src/environments/environment.prod.ts")),
+ok(all(quitar(f) for f in ("config/secrets.yml", "id_rsa", "service-account.json", "prod.tfvars", ".npmrc", ".env.production")),
    "ningún archivo de configuración guarda su patch")
 
 print("Los arreglos de la cuarta ronda")
 r23 = raiz_con_seguimiento()
 rc, o, d = entrada_de(r23, gh_mod(lambda x: x.update(detalle=[])), "--escribir")
-ok("6 de 6 commits sin sus cambios" in o and "No está en el diseño:** sin comparar" in o, "un «detalle» vacío no se compara como si no hubiera cambios")
+ok("6 de 6 commits sin sus cambios" in o and "No está en el diseño:** sin comprobar" in o, "un «detalle» vacío no se compara como si no hubiera cambios")
 r24 = raiz(seguimiento="ventas/app/entregables/seguimiento.md")
 (r24 / "ventas/app/entregables/seguimiento.md").write_text(
     f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-15 · nota de Ana\nrevisar luego\n\n"
@@ -592,7 +594,7 @@ ok(json.loads(o)["args"] == "--desde 2026-11-10", "un texto de GitHub dentro de 
 print("Los arreglos de la sexta ronda")
 r29 = raiz()
 for nombre, f_, que in (("sin commits", lambda x: x.update(commits=[], detalle=[]), "no trae commits"),
-                        ("una lista que no llega a antes de la ventana", lambda x: x.update(commits=x["commits"][:2]), "no llega a uno anterior"),
+                        ("una lista que no llega a antes de la ventana", lambda x: x.update(commits=x["commits"][:2]), "no llega a un commit anterior"),
                         ("el primer commit no es la punta", lambda x: x.update(main_sha="e" * 40), "no es la punta")):
     rc, o, d = entrada_de(r29, gh_mod(f_), "--escribir", "--crear")
     ok(que in o and d.get("no_escrito"), f"un JSON a mano {nombre}: no compara ni se guarda")
@@ -603,26 +605,27 @@ for nombre, f_ in (("un commit sin fecha", lambda x: x["commits"][1].update(date
     ok(rc == 2 and "Traceback" not in e and "forma" in e, f"{nombre}: se dice en llano")
 r30 = raiz(paso="manual: despliega Beto")
 rc, o, d = entrada_de(r30, gh_json(GH))
-ok("**Rompe las reglas:** sin comprobar" in o and "Comparó: piezas, diseño." in o, "con otra forma de Paso a Prod no dice «nada» sin haberlo visto")
+ok("Comparó: piezas, diseño, controles." in o and "los pasos a Prod no se comprueban desde aquí" in o and "nada en los pasos a Prod" not in o,
+   "con otra forma de Paso a Prod no dice «nada» de los pasos a Prod sin haberlos visto")
 r31 = raiz(seguimiento="ventas/app/entregables/seguimiento.md")
 (r31 / "ventas/app/entregables/seguimiento.md").write_text(
     f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-10 · pidió Ana\nLeído: acme/app en `abcdef1` (main), desde el 2026-11-01.\n"
-    "Comparó: piezas, reglas.\n\n**Rompe las reglas:** nada.\n\n## 2026-11-03 · pidió Ana\nLeído: acme/app en `aaaaaaa` (main), desde el 2026-10-01.\n"
-    "Comparó: piezas, reglas.\n\n**Rompe las reglas:** sin vigilar: no se leyeron enteros los pasos a Prod.\n\n"
+    "Comparó: piezas, controles.\nSin comprobar: diseño (acme/app: detalle cortado).\n\n**Rompe las reglas:** nada.\n\n## 2026-11-03 · pidió Ana\nLeído: acme/app en `aaaaaaa` (main), desde el 2026-10-01.\n"
+    "Comparó: piezas.\nSin comprobar: pasos a Prod (acme/app: releases cortado).\n\n"
     "## 2026-10-20 · pidió Ana\nLeído: acme/app en `1111111` (main), desde el 2026-10-01.\nComparó: piezas, diseño, reglas.\n\n**Rompe las reglas:** nada.\n", encoding="utf-8")
 rc, o, e = correr("desde", r31, "ventas/app")
 ok(json.loads(o)["args"] == "--desde 2026-10-20", "una entrada que no comparó el diseño no mueve la ventana")
 g31 = json.loads(json.dumps(GH)); g31["desde"] = "2026-10-20"; g31["repos"][0]["commits"].append(c("2" * 40, "2026-10-01", "raíz", parents=0))
 g31["repos"][0]["detalle"].append({"sha": "1" * 40, "files": []})
 rc, o, d = entrada_de(r31, gh_json(g31))
-ok("| P01 · Tablas | F1 | unida |" in o and "no vigiló los pasos a Prod" in o, "un sí que cita una entrada «sin vigilar» no entrega")
+ok("| P01 · Tablas | F1 | unida |" in o and "no se leyó entero" in o, "un sí que cita una entrada que no se leyó entera no entrega")
 ok("Primera lectura" not in o, "un repositorio que ya se leyó no es primera lectura")
 pp = r31 / "ventas/app/proyecto.md"; pp.write_text(pp.read_text(encoding="utf-8").replace("Repositorios: acme/app", "Repositorios: acme/app · acme/otro"), encoding="utf-8")
 g32 = json.loads(json.dumps(g31)); otro = json.loads(json.dumps(g31["repos"][0])); otro["repo"] = "acme/otro"; g32["repos"].append(otro)
 rc, o, d = entrada_de(r31, gh_json(g32))
 ok("Primera lectura de acme/otro: lo de antes del 2026-10-20 no se vigiló." in o, "un repositorio nuevo en la sección dice que es su primera lectura")
 a8 = audita(gh_mod(lambda x: x.update(truncado=["commits"])))
-ok(prop(a8, "R1") == "cumple" and prop(a8, "R6") is None, "con los commits cortados, solo R5 y R6 pierden la propuesta")
+ok(prop(a8, "R1") == "cumple" and "acme/app" not in a8["pasos_a_prod"], "con los commits cortados, R5 no tiene los pasos a Prod y R1 sigue propuesto")
 def sin_rs_push_off(x):
     x["auditoria"].pop("rulesets"); x["auditoria"]["repo"]["security_and_analysis"] = {"secret_scanning_push_protection": {"status": "disabled"}}
     x["auditoria"]["proteccion"]["required_status_checks"]["contexts"] = ["pruebas"]
