@@ -3311,7 +3311,7 @@ if KIT.found:
                          ("Configuración de repositorios", leer_configuracion)):
         if clave in _textos and leer_(_textos[clave][1]).missing:
             faltan_ = leer_(_textos[clave][1]).missing
-            avisos.append(f"Desarrollo: a {NOMBRE_KIT[clave]} ({_textos[clave][0]}) le falta {', '.join(faltan_[:6])}"
+            avisos.append(f"Desarrollo: {re.sub(r'^a el ', 'al ', 'a ' + NOMBRE_KIT[clave])} ({_textos[clave][0]}) le falta {', '.join(faltan_[:6])}"
                           + (f" y {len(faltan_) - 6} más" if len(faltan_) > 6 else "") + ": el plugin lee esos títulos tal cual.")
     # desfasado: el diseño o el plan son anteriores a una decisión de este proyecto que los nombra en «Afecta a»
     for clave in ("Diseño", "Plan"):

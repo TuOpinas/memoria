@@ -161,6 +161,11 @@ rc, o, e = correr("seguimiento", r, "ventas/app", "--github", gh_json({"repos": 
                   "--pidio", "Ana Prueba", "--fecha", HOY)
 ok(rc == 0 and "GitHub: no se pudo leer (acme/app: no hay gh en esta sesión). Solo va lo que dice la memoria." in o, "lo dice en la cabecera")
 ok("Comparó: nada contra GitHub." in o and "| P01" not in o, "y no inventa estados")
+antes = (r / "ventas/app/entregables/seguimiento.md").read_text(encoding="utf-8")
+rc, o, e = correr("seguimiento", r, "ventas/app", "--github", gh_json({"repos": [{"repo": "acme/app", "error": "HTTP 404"}]}),
+                  "--pidio", "Ana Prueba", "--fecha", "2026-11-20", "--escribir")
+ok(json.loads(o.split("=== DATOS\n")[1]).get("no_escrito") and (r / "ventas/app/entregables/seguimiento.md").read_text(encoding="utf-8") == antes,
+   "sin GitHub, --escribir no guarda nada")
 
 print("Otra forma de «Paso a Prod»")
 r3 = raiz(paso="sí sobre el resumen del despliegue")

@@ -100,7 +100,7 @@ c, o = abrir(r)
 a = [x for x in avisos(o) if x.startswith("Desarrollo")]
 ok(c == 0, "abre sin error")
 ok(not any("por crear" in x or "no existe" in x for x in a), "nada falta")
-ok(any("el diseño" in x and "columna Dónde vive en Componentes" in x for x in a), "una columna que el diseño no tiene")
+ok(any("al diseño" in x and "columna Dónde vive en Componentes" in x for x in a), "una columna que el diseño no tiene")
 ok(any("el plan" in x and "puede estar desfasado" in x and "La vista entra en la fase 2" in x for x in a), "el plan es anterior a una decisión que lo nombra")
 ok(not any("el diseño" in x and "desfasado" in x for x in a), "el diseño, que nadie nombra, no")
 ok(any(f"el último seguimiento es del {hace(3)} (hace 3 días)" in x for x in a), "la fecha del seguimiento es la de su entrada más nueva")

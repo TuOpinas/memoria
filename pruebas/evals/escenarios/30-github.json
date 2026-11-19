@@ -1,0 +1,125 @@
+{
+ "repos/acme/portal": {
+  "default_branch": "main",
+  "private": true
+ },
+ "repos/acme/portal/pulls": [
+  {
+   "number": 3,
+   "title": "P02 · lista de propuestas",
+   "state": "open",
+   "merged_at": null,
+   "merge_commit_sha": null,
+   "user": {
+    "login": "ana-prueba",
+    "type": "User"
+   },
+   "base": {
+    "ref": "main"
+   }
+  },
+  {
+   "number": 2,
+   "title": "P01 · acceso por correo",
+   "state": "closed",
+   "merged_at": "{HOY-6}T16:00:00Z",
+   "merge_commit_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "user": {
+    "login": "ana-prueba",
+    "type": "User"
+   },
+   "base": {
+    "ref": "main"
+   }
+  },
+  {
+   "number": 1,
+   "title": "Arranque del repositorio",
+   "state": "closed",
+   "merged_at": "{HOY-10}T16:00:00Z",
+   "merge_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "user": {
+    "login": "ana-prueba",
+    "type": "User"
+   },
+   "base": {
+    "ref": "main"
+   }
+  }
+ ],
+ "repos/acme/portal/commits": [
+  {
+   "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "parents": [
+    {}
+   ],
+   "commit": {
+    "message": "P01 · acceso por correo (#2)",
+    "committer": {
+     "date": "{HOY-6}T16:00:00Z"
+    }
+   },
+   "author": {
+    "login": "ana-prueba"
+   }
+  },
+  {
+   "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "parents": [
+    {}
+   ],
+   "commit": {
+    "message": "Arranque del repositorio (#1)",
+    "committer": {
+     "date": "{HOY-10}T16:00:00Z"
+    }
+   },
+   "author": {
+    "login": "ana-prueba"
+   }
+  }
+ ],
+ "repos/acme/portal/commits/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": {
+  "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "files": [
+   {
+    "filename": "app/acceso.py",
+    "status": "added",
+    "patch": "+def entrar(correo):\n+    return correo"
+   }
+  ]
+ },
+ "repos/acme/portal/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files": [
+   {
+    "filename": "README.md",
+    "status": "added",
+    "patch": "+# Portal"
+   }
+  ]
+ },
+ "repos/acme/portal/releases": [
+  {
+   "tag_name": "v0.1.0",
+   "draft": false,
+   "prerelease": false,
+   "published_at": "{HOY-5}T18:00:00Z",
+   "body": "Primer paso a Prod del acceso.",
+   "author": {
+    "login": "beto-prueba"
+   }
+  }
+ ],
+ "repos/acme/portal/commits/v0.1.0": {
+  "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+ },
+ "repos/acme/portal/tags": [
+  {
+   "name": "v0.1.0",
+   "commit": {
+    "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   }
+  }
+ ]
+}
