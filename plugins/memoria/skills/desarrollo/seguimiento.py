@@ -1585,13 +1585,20 @@ def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=()):
             lineas += ["", "**Pasos a Prod que aprobó quien construyó:** " + ("; ".join(
                 f"{x['quien']} aprobó {x['tag']} ({x['repo']}), que lleva su #{x['pr']}" for x in rg["si_propio"]) + "." if rg["si_propio"] else "ninguno.")]
     # lo que Claude mira «a ojo» (skill desarrollo, paso 3): los archivos de código añadidos, con tope; no el JSON entero
-    para_mirar = [{"repo": r["repo"], "archivo": f["filename"], "commit": corto(d["sha"]), "cortado": bool(f.get("patch_cortado"))}
+    para_mirar = [{"repo": r["repo"], "archivo": f["filename"], "commit": corto(d["sha"]), "cortado": bool(f.get("patch_cortado")),
+                   "bytes": len((f.get("patch") or "").encode("utf-8"))}
                   for r in repos for d in r.get("detalle", []) for f in d.get("files", [])
                   if f.get("status") == "added" and f.get("patch") and not IGNORADAS.match(f.get("filename", ""))
                   and not es_migracion(f.get("filename", ""), migraciones_extra)]
     datos["sin_mirar"] = sum(1 for r in repos for d in r.get("detalle", []) for f in d.get("files", [])
                              if f.get("status") == "added" and not f.get("patch") and not IGNORADAS.match(f.get("filename", "")))
-    datos["para_mirar"] = acotar(para_mirar, 40)
+    # hasta 40 archivos y unos 60 KB de patch, lo que llegue antes: es lo que Claude lee a ojo (arreglos 1, hallazgo 16)
+    suma, n = 0, 0
+    for x in para_mirar[:40]:
+        if n and suma + x["bytes"] > 60_000:
+            break
+        suma, n = suma + x["bytes"], n + 1
+    datos["para_mirar"] = acotar(para_mirar, n)
     lineas.insert(2, "Comparó: " + (", ".join(pudo) if pudo else "nada contra GitHub") + ".")
     return "\n".join(lineas) + "\n", datos
 

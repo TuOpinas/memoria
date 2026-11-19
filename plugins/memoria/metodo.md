@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.26.11 · huella 382abca · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.26.11 · huella 0600450 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -520,7 +520,7 @@ Administra: Nombre Apellido (correo, @usuario)
 - **Los roles**: quien acepta valida lo funcional del diseño, prueba lo unido y da el sí; quien audita valida el diseño técnico y el plan, decide en los puntos de control, da el sí, aprueba los cambios de plataforma y hace la auditoría mensual; quien construye construye con Claude por bloques, de una o varias piezas en un pull request a la rama principal, revisado, unido y desplegado antes del siguiente (tecnologia/metodologia-desarrollo#2026-11-18-12); quien administra mantiene las dos configuraciones y es el único que pasa a Prod, y solo lo que tiene el sí.
 - **Paso a Prod** dice dónde queda escrito ese sí (lo recomendado, `release de GitHub`: un release publicado con la línea «Aprobó: Nombre Apellido, AAAA-MM-DD · seguimiento AAAA-MM-DD»).
 
-La sección la escribe la persona o la skill `nuevo`, nunca el cierre (la skill `desarrollo` solo pone la ruta de `Seguimiento:` cuando decía `por crear`): `Estatus` y `Siguientes pasos` siguen siendo lo único que reescribe. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador, y su estado sale de los pull requests a la rama principal en GitHub (skill `desarrollo`): no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
+La sección la escribe la persona o la skill `nuevo`; el cierre solo cuando la skill `desarrollo` crea el seguimiento y le pasa a `cerrar.py` el reemplazo que pone su ruta en `Seguimiento:`, que decía `por crear`: `Estatus` y `Siguientes pasos` siguen siendo lo único que reescribe. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador, y su estado sale de los pull requests a la rama principal en GitHub (skill `desarrollo`): no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
 
 #### Un proyecto cerrado
 
