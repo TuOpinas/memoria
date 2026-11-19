@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.26.11 · huella 820da97 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.26.11 · huella c3197d6 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -494,6 +494,33 @@ Cada línea de `Siguientes pasos` es una **tarea**: así se la llama al hablar c
 `Responsable`, en `Quién participa`, responde por todo el proyecto: por sus entregables y sus decisiones, y es quien pide publicar. Quien colabora registra las decisiones de su propio trabajo, y el responsable puede reemplazarlas (sección 1, «Quién colabora»). Si un documento concreto tiene otro responsable, se dice en la primera línea del cuerpo de ese documento, no en la cabecera.
 
 Quién consume un proyecto lo dicen las líneas `Afecta a:` y `basado_en` que lo nombran.
+
+#### Un proyecto de desarrollo (1.27)
+
+Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia es la marca: con ella, la apertura avisa de lo que le falta al kit de desarrollo (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza del kit y quién hace qué, una línea por clave, en este orden:
+
+```markdown
+## Desarrollo
+Repositorios: organización/repositorio · organización/otro
+Configuración de plataforma: ruta
+Configuración de repositorios: ruta
+Diseño: ruta
+Plan: ruta
+Seguimiento: ruta
+Paso a Prod: release de GitHub
+Acepta: Nombre Apellido (correo, @usuario)
+Audita: Nombre Apellido (correo, @usuario)
+Construye: Nombre Apellido (correo, @usuario) · Otra Persona (correo, @usuario)
+Administra: Nombre Apellido (correo, @usuario)
+```
+
+- **Las claves** se escriben tal cual, en español, aunque el proyecto esté en otro idioma, y se comparan sin acentos ni mayúsculas. Varios valores van separados por ` · `.
+- **Las rutas** son desde la raíz y pueden salir del proyecto (dos proyectos que comparten plataforma apuntan al mismo archivo, y lo mantiene el proyecto donde vive). Lo que aún no existe dice `por crear`. Falta una pieza cuando falta su línea, dice `por crear` o su archivo no existe; `Seguimiento: por crear` no cuenta, porque lo crea el primer seguimiento en `entregables/seguimiento.md`, que nace `vigente`.
+- **Cada persona** va como `Nombre Apellido (correo, @usuario)`, con su usuario de GitHub, que se omite si no tiene cuenta. Puede ser alguien de fuera, que no está en «Quién es quién»: estas líneas no dan permiso de escribir, que siguen dando `guia.md` y `Quién participa`. Una persona puede tener dos roles, y se ve aquí.
+- **Los roles**: quien acepta valida lo funcional del diseño, prueba lo unido y da el sí; quien audita valida el diseño técnico y el plan, decide en los puntos de control, da el sí, aprueba los cambios de plataforma y hace la auditoría mensual; quien construye construye con Claude una pieza por pull request y la une con las pruebas en verde y la revisión de calidad hecha; quien administra mantiene las dos configuraciones y es el único que pasa a Prod, y solo lo que tiene el sí.
+- **Paso a Prod** dice dónde queda escrito ese sí (lo recomendado, `release de GitHub`: un release publicado con la línea «Aprobó: Nombre Apellido, AAAA-MM-DD · seguimiento AAAA-MM-DD»).
+
+La sección la escribe la persona o la skill `nuevo`, nunca el cierre: `Estatus` y `Siguientes pasos` siguen siendo lo único que reescribe. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador, y su estado sale de GitHub (skill `desarrollo`): no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
 
 #### Un proyecto cerrado
 
