@@ -12,7 +12,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | Diseño y plan | [rutas en la memoria] |
 | Audita | [Nombre Apellido] |
 | Cómo se revisa | [la skill calidad del plugin Memoria, o la que use el equipo] |
-| Cómo se prueba | [comando de la suite de pruebas del código] |
+| Cómo se prueba | [comando de la suite de pruebas del código, que deja fuera la carpeta de aceptación, p. ej. `pytest --ignore=tests/aceptacion`] |
 | Pruebas de aceptación | [carpeta, lista de piezas activas y cómo se corren las de una pieza, los mismos que en .github/workflows/pruebas-aceptacion.yml, p. ej. `tests/aceptacion`, `.github/piezas-activas.txt`, `pytest tests/aceptacion -k P01`] |
 | Migraciones | [carpeta, o «no hay base de datos»] |
 | No se toca | [lo que no se cambia nunca] |
