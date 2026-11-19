@@ -5,7 +5,8 @@ A project is a development project when its proyecto.md has a «## Desarrollo» 
 (tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the two configurations,
 the design, the plan and the follow-up) and names the people of each role. The design and the plan are two living
 documents whose fixed tables this module reads (#2026-11-18-10); the configurations are seven lines each with a dated
-state (#2026-11-18-11). A piece's status comes from its pull requests by one rule (#2026-11-18-10), and this module
+state (#2026-11-18-11). A piece's status comes from its pull requests into the main branch by one rule (#2026-11-18-10
+and -12), and this module
 applies it to pull requests the caller already read: it never calls GitHub.
 
 The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code
@@ -602,6 +603,7 @@ class PullRequest:
     author: str = ""
     bot: bool = False                           # GitHub's user type «Bot», or a login ending in «[bot]»
     merge_commit: str = ""
+    to_main: bool = True                        # its base is the repository's main branch; the others are steps inside a block
 
 
 @dataclass
@@ -618,15 +620,16 @@ class PieceReport:
     ignored: list = field(default_factory=list)            # [PullRequest] closed without merging, or from bots
 
 
-def _piece_of(title: str) -> str:
-    """The identifier a pull request's title starts with, followed by « · »; a GitHub revert («Revert "P03 · …"»)
-    carries its piece's. "" when there is none."""
+def _pieces_of(title: str) -> list:
+    """The identifiers a pull request's title starts with, followed by « · »: one («P03 · …»), or the pieces of a block
+    joined by « + » («P01 + P02 · …», tecnologia/metodologia-desarrollo#2026-11-18-12). A GitHub revert («Revert "P03 ·
+    …"») carries its pieces. [] when there is none."""
     t = _nfc(title).strip()
     m = re.match(r'^Revert\s+"(.*?)"?$', t)
     if m:
         t = m.group(1)
-    m = re.match(r"^([^\s·]+)\s+·\s+\S", t)
-    return m.group(1) if m else ""
+    m = re.match(r"^([^\s·+]+(?:\s*\+\s*[^\s·+]+)*)\s+·\s+\S", t)
+    return [x.strip() for x in m.group(1).split("+")] if m else []
 
 
 def _is_bot(pr: PullRequest) -> bool:
@@ -635,24 +638,27 @@ def _is_bot(pr: PullRequest) -> bool:
 
 def piece_status(plan: Plan, pull_requests: Iterable[PullRequest],
                  delivered: Optional[Mapping[str, Iterable[int]]] = None) -> PieceReport:
-    """Each piece's status by the rule of tecnologia/metodologia-desarrollo#2026-11-18-10, from pull requests already
-    read. `delivered` maps a repository to the numbers of its merged pull requests inside its last step to Prod (the
-    caller works that out from the release or tag «Paso a Prod» leaves); without it no piece is delivered.
+    """Each piece's status by the rule of tecnologia/metodologia-desarrollo#2026-11-18-10 and -12, from pull requests
+    already read. `delivered` maps a repository to the numbers of its merged pull requests inside its last step to Prod
+    (the caller works that out from the release or tag «Paso a Prod» leaves); without it no piece is delivered.
 
-    With several pull requests the least advanced decides. A pull request closed without merging does not count, and
-    neither do bots'. One without a piece, or with a piece the plan does not have, is outside the plan."""
+    Only pull requests into the main branch count: those into another branch are steps inside a block (-12). A block's
+    pull request counts for every piece its title names. With several pull requests the least advanced decides. A pull
+    request closed without merging does not count, and neither do bots'. One without a piece, or naming a piece the plan
+    does not have, is outside the plan."""
     inside = {r.lower(): {int(n) for n in nums} for r, nums in (delivered or {}).items()}
     by_piece: dict = {p.id.casefold(): [] for p in plan.pieces}
     rep = PieceReport()
     for pr in pull_requests:
-        if pr.state not in ("open", "merged") or _is_bot(pr):
+        if pr.state not in ("open", "merged") or _is_bot(pr) or not pr.to_main:
             rep.ignored.append(pr)
             continue
-        ident = _piece_of(pr.title)
-        if not ident or ident.casefold() not in by_piece:
+        idents = _pieces_of(pr.title)
+        if not idents or any(i.casefold() not in by_piece for i in idents):
             rep.outside_plan.append(pr)
             continue
-        by_piece[ident.casefold()].append(pr)
+        for i in dict.fromkeys(x.casefold() for x in idents):
+            by_piece[i].append(pr)
     for p in plan.pieces:
         prs = by_piece[p.id.casefold()]
         if not prs:

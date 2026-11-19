@@ -15,7 +15,8 @@ archivos del kit en la memoria. No llama a GitHub ni escribe en GitHub.
       Escribe en una de las dos configuraciones los estados que da el JSON: {"R1": {"org/repo": "cumple"}, "PL1": "no cumple"};
       la fecha la pone el script («cumple · AAAA-MM-DD»), y «no aplica» y «excepción» van sin fecha. No toca nada más.
 
-Las reglas que vigila son las de tecnologia/metodologia-desarrollo#2026-11-18-11 y el estado de cada pieza el de -10, por
+Las reglas que vigila son las de tecnologia/metodologia-desarrollo#2026-11-18-11 y el estado de cada pieza el de -10 y -12
+(solo cuentan los pull requests a la rama principal, y uno de bloque cuenta para cada pieza que nombra), por
 context_core/development.py. Quién construyó un pull request es la persona de «Construye» cuyo usuario de GitHub es su autor
 (shared-memory/plugin-memoria#2026-11-18-4).
 """
@@ -25,7 +26,7 @@ import datetime, json, os, pathlib, re, sys, unicodedata
 def _context_core():
     import sys as _s, types as _t
     _fp = {
-    'development': '031b3e7430e52f7e6fd97dbb64197318b7d136a7f193bdc0cd7f57beb8e42ebd',
+    'development': 'fb1c03fd7cf9ee3a3616eea31c7d7e4d6a06bd21211d1119987fdc47526c428a',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -58,7 +59,8 @@ def _context_core():
         '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the two configurations,\n'
         'the design, the plan and the follow-up) and names the people of each role. The design and the plan are two living\n'
         'documents whose fixed tables this module reads (#2026-11-18-10); the configurations are seven lines each with a dated\n'
-        "state (#2026-11-18-11). A piece's status comes from its pull requests by one rule (#2026-11-18-10), and this module\n"
+        "state (#2026-11-18-11). A piece's status comes from its pull requests into the main branch by one rule (#2026-11-18-10\n"
+        'and -12), and this module\n'
         'applies it to pull requests the caller already read: it never calls GitHub.\n'
         '\n'
         "The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code\n"
@@ -655,6 +657,7 @@ def _context_core():
         '    author: str = ""\n'
         "    bot: bool = False                           # GitHub's user type \xabBot\xbb, or a login ending in \xab[bot]\xbb\n"
         '    merge_commit: str = ""\n'
+        "    to_main: bool = True                        # its base is the repository's main branch; the others are steps inside a block\n"
         '\n'
         '\n'
         '@dataclass\n'
@@ -671,15 +674,16 @@ def _context_core():
         '    ignored: list = field(default_factory=list)            # [PullRequest] closed without merging, or from bots\n'
         '\n'
         '\n'
-        'def _piece_of(title: str) -> str:\n'
-        '    """The identifier a pull request\'s title starts with, followed by \xab \xb7 \xbb; a GitHub revert (\xabRevert "P03 \xb7 \u2026"\xbb)\n'
-        '    carries its piece\'s. "" when there is none."""\n'
+        'def _pieces_of(title: str) -> list:\n'
+        '    """The identifiers a pull request\'s title starts with, followed by \xab \xb7 \xbb: one (\xabP03 \xb7 \u2026\xbb), or the pieces of a block\n'
+        '    joined by \xab + \xbb (\xabP01 + P02 \xb7 \u2026\xbb, tecnologia/metodologia-desarrollo#2026-11-18-12). A GitHub revert (\xabRevert "P03 \xb7\n'
+        '    \u2026"\xbb) carries its pieces. [] when there is none."""\n'
         '    t = _nfc(title).strip()\n'
         '    m = re.match(r\'^Revert\\s+"(.*?)"?$\', t)\n'
         '    if m:\n'
         '        t = m.group(1)\n'
-        '    m = re.match(r"^([^\\s\xb7]+)\\s+\xb7\\s+\\S", t)\n'
-        '    return m.group(1) if m else ""\n'
+        '    m = re.match(r"^([^\\s\xb7+]+(?:\\s*\\+\\s*[^\\s\xb7+]+)*)\\s+\xb7\\s+\\S", t)\n'
+        '    return [x.strip() for x in m.group(1).split("+")] if m else []\n'
         '\n'
         '\n'
         'def _is_bot(pr: PullRequest) -> bool:\n'
@@ -688,24 +692,27 @@ def _context_core():
         '\n'
         'def piece_status(plan: Plan, pull_requests: Iterable[PullRequest],\n'
         '                 delivered: Optional[Mapping[str, Iterable[int]]] = None) -> PieceReport:\n'
-        '    """Each piece\'s status by the rule of tecnologia/metodologia-desarrollo#2026-11-18-10, from pull requests already\n'
-        '    read. `delivered` maps a repository to the numbers of its merged pull requests inside its last step to Prod (the\n'
-        '    caller works that out from the release or tag \xabPaso a Prod\xbb leaves); without it no piece is delivered.\n'
+        '    """Each piece\'s status by the rule of tecnologia/metodologia-desarrollo#2026-11-18-10 and -12, from pull requests\n'
+        '    already read. `delivered` maps a repository to the numbers of its merged pull requests inside its last step to Prod\n'
+        '    (the caller works that out from the release or tag \xabPaso a Prod\xbb leaves); without it no piece is delivered.\n'
         '\n'
-        '    With several pull requests the least advanced decides. A pull request closed without merging does not count, and\n'
-        '    neither do bots\'. One without a piece, or with a piece the plan does not have, is outside the plan."""\n'
+        "    Only pull requests into the main branch count: those into another branch are steps inside a block (-12). A block's\n"
+        '    pull request counts for every piece its title names. With several pull requests the least advanced decides. A pull\n'
+        "    request closed without merging does not count, and neither do bots'. One without a piece, or naming a piece the plan\n"
+        '    does not have, is outside the plan."""\n'
         '    inside = {r.lower(): {int(n) for n in nums} for r, nums in (delivered or {}).items()}\n'
         '    by_piece: dict = {p.id.casefold(): [] for p in plan.pieces}\n'
         '    rep = PieceReport()\n'
         '    for pr in pull_requests:\n'
-        '        if pr.state not in ("open", "merged") or _is_bot(pr):\n'
+        '        if pr.state not in ("open", "merged") or _is_bot(pr) or not pr.to_main:\n'
         '            rep.ignored.append(pr)\n'
         '            continue\n'
-        '        ident = _piece_of(pr.title)\n'
-        '        if not ident or ident.casefold() not in by_piece:\n'
+        '        idents = _pieces_of(pr.title)\n'
+        '        if not idents or any(i.casefold() not in by_piece for i in idents):\n'
         '            rep.outside_plan.append(pr)\n'
         '            continue\n'
-        '        by_piece[ident.casefold()].append(pr)\n'
+        '        for i in dict.fromkeys(x.casefold() for x in idents):\n'
+        '            by_piece[i].append(pr)\n'
         '    for p in plan.pieces:\n'
         '        prs = by_piece[p.id.casefold()]\n'
         '        if not prs:\n'
@@ -817,7 +824,8 @@ def prs_de(gh):
     for r in gh.get("repos", []):
         for p in r.get("pulls", []):
             out.append(PullRequest(repo=r["repo"], number=int(p["number"]), title=p.get("title", ""), state=p.get("state", ""),
-                                   author=p.get("author", ""), bot=bool(p.get("bot")), merge_commit=p.get("merge_commit", "")))
+                                   author=p.get("author", ""), bot=bool(p.get("bot")), merge_commit=p.get("merge_commit", ""),
+                                   to_main=not p.get("base") or p.get("base") == r.get("rama", "main")))
     return out
 
 
@@ -1144,6 +1152,16 @@ def _reglas_de_la_rama(au, rama):
     return pr_sin, metodos, list(dict.fromkeys(c for c in checks if c)), checks_sin, ev
 
 
+# cada fila con su nombre en llano: la persona no tiene por qué saber qué es «R1»
+REGLAS = {"PL1": "GitHub es de la empresa, con verificación en dos pasos", "PL2": "dos personas pueden administrar GitHub",
+          "PL3": "el dominio y la nube a nombre de la empresa", "PL4": "un entorno de Release aparte de Prod",
+          "PL5": "los secretos en un gestor de secretos", "PL6": "respaldos con la restauración probada",
+          "PL7": "un aviso si Prod se cae", "R1": "nada a main sin pull request, con squash y sin saltarse la regla",
+          "R2": "las pruebas pasan antes de unir", "R3": "ningún secreto en el código",
+          "R4": "las migraciones solo nuevas", "R5": "solo quien administra despliega a Prod, con el sí",
+          "R6": "cada pull request lleva su pieza", "R7": "el CLAUDE.md con las reglas del kit"}
+
+
 def cmd_auditoria(a):
     raiz, proyecto = a["pos"][0], a["pos"][1].strip("/")
     tp, sec, textos = kit(raiz, proyecto)
@@ -1215,6 +1233,11 @@ def cmd_auditoria(a):
                                                                               "R7": "se mira el CLAUDE.md del repositorio"}[f]})
     gh_mes = dict(gh, desde=hace31)
     res["si_propio"] = reglas(gh_mes, sec, sec.step_to_prod or "")["si_propio"]
+    for f, cols in res["comprobado"].items():
+        for v in cols.values():
+            v["regla"] = REGLAS.get(f, "")
+    for x in res["preguntar"]:
+        x["regla"] = REGLAS.get(x["fila"], "")
     print(json.dumps(res, ensure_ascii=False, indent=1))
     return 0
 

@@ -343,6 +343,10 @@ class Status(unittest.TestCase):
             ("un revert de GitHub lleva su pieza", [self.pr(1, "P03 · a", "merged"), self.pr(2, 'Revert "P03 · a"', "open")],
              None, {"P03": "en curso"}),
             ("identificador sin importar mayúsculas", [self.pr(1, "p01 · a", "open")], None, {"P01": "en curso"}),
+            ("un bloque con varias piezas", [self.pr(1, "P01 + P02 · bloque", "merged")], {self.REPO: [1]},
+             {"P01": "entregada", "P02": "entregada", "P03": "pendiente"}),
+            ("solo cuentan los de la rama principal", [self.pr(1, "P01 · a", "merged"), self.pr(2, "P01 · paso interno", "open", to_main=False)],
+             None, {"P01": "unida"}),
         ]
         for name, prs, delivered, want in cases:
             with self.subTest(name):
@@ -358,9 +362,11 @@ class Status(unittest.TestCase):
             self.pr(4, "Bump actions/checkout", "merged", author="dependabot[bot]"),
             self.pr(5, "Otra cosa", "open", author="renovate", bot=True),
             self.pr(6, "Sin pieza y cerrado", "closed"),
+            self.pr(7, "P01 + P09 · bloque con una que no está", "open"),
+            self.pr(8, "Sin pieza, a una rama intermedia", "merged", to_main=False),
         ])
-        self.assertEqual([p.number for p in r.outside_plan], [1, 2, 3])
-        self.assertEqual(sorted(p.number for p in r.ignored), [4, 5, 6])
+        self.assertEqual([p.number for p in r.outside_plan], [1, 2, 3, 7])
+        self.assertEqual(sorted(p.number for p in r.ignored), [4, 5, 6, 8])
         self.assertTrue(all(p.status == "pendiente" for p in r.pieces))
 
     def test_reports_pull_requests_and_plain_dicts(self):

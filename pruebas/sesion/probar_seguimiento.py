@@ -187,6 +187,17 @@ ok(co["R6"]["acme/app"]["estado"] == "no cumple" and "#4" in co["R6"]["acme/app"
 ok({x["fila"] for x in a["preguntar"]} >= {"PL1", "PL2", "PL3", "PL7", "R4", "R5", "R7"}, "lo que no se pudo, a preguntar")
 ok(any(x["fila"] == "PL1" and "403" in x["porque"] for x in a["preguntar"]), "con el motivo")
 ok(a["si_propio"] and a["si_propio"][0]["pr"] == 1, "los síes que alguien se dio a sí mismo")
+ok(co["R2"]["acme/app"]["regla"] == "las pruebas pasan antes de unir" and all(x["regla"] for x in a["preguntar"]),
+   "cada fila lleva su regla en llano")
+
+print("Un bloque y los pasos dentro de él")
+g2 = json.loads(json.dumps(GH))
+g2["repos"][0]["pulls"] += [{"number": 9, "title": "P03 · paso interno", "state": "merged", "author": "ana", "bot": False,
+                             "merge_commit": "9" * 40, "merged_at": "2026-11-14T10:00:00Z", "base": "version-2"},
+                            {"number": 10, "title": "P02 + P03 · el bloque", "state": "open", "author": "ana", "bot": False,
+                             "merge_commit": "", "merged_at": "", "base": "main"}]
+rc, o, e = correr("seguimiento", r, "ventas/app", "--github", gh_json(g2), "--pidio", "Beto Prueba", "--fecha", HOY)
+ok("| P03 · Vista | F1 | en curso | acme/app#10 |" in o and "#9" not in o, "el pull request del bloque cuenta para P02 y P03, y el paso interno no cuenta")
 
 print("Aplicar los estados")
 conf = r / "ventas/app/entregables/repositorios.md"
