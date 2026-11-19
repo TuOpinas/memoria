@@ -46,7 +46,8 @@ END = "# --- end of context_core ---"
 PL = REPO / "plugins" / "memoria"
 SCRIPTS = [PL / "skills/sesion/abrir.py", PL / "skills/sesion/cerrar.py", PL / "skills/sesion/permisos.py",
            PL / "skills/sesion/migrar_estructura.py", PL / "skills/sesion/mantenimiento.py", PL / "skills/tablero/aplicar_cambios.py",
-           PL / "skills/tablero/generar_vista.py", PL / "skills/tablero/barrido.py", PL / "verificar.sh"]
+           PL / "skills/tablero/generar_vista.py", PL / "skills/tablero/barrido.py", PL / "verificar.sh",
+           PL / "skills/desarrollo/seguimiento.py"]
 
 
 def fingerprint(text: str) -> str:
