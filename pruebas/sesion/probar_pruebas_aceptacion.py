@@ -69,6 +69,7 @@ def pr(cambios, acept=None, sin_carpeta=False):
     cuerpo, envw = script()
     env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept if acept is not None else envw["ACEPTACION"],
                RUNNER_TEMP=tempfile.mkdtemp())
+    env.pop("GITHUB_WORKFLOW_REF", None)   # en el CI de este repositorio apunta a pruebas.yml, no al workflow que se prueba
     p = subprocess.run(["bash", "-c", cuerpo], cwd=d, env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
 
