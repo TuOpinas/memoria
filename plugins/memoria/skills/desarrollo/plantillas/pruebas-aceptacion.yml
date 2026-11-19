@@ -13,10 +13,17 @@
 #   sin instalar) es un error.
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
 #   Mientras la carpeta no exista, pasa: el kit se monta en cualquier orden.
-# - PRUEBA no lee configuración del ejecutor fuera de la carpeta: un conftest.py, un pytest.ini o un pyproject.toml que
-#   cambia código podrían poner en verde las pruebas. Con pytest, -c /dev/null, --confcutdir en la carpeta y sin cargar
-#   plugins solos (PYTEST_DISABLE_PLUGIN_AUTOLOAD); lo que necesiten va en un conftest.py de la carpeta o en PRUEBA
-#   («-p asyncio»). Con otro ejecutor, lo mismo con sus opciones.
+# - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
+#   en verde: PRUEBA corre pytest con -c /dev/null y --confcutdir en la carpeta, el paso sin cargar plugins solos ni leer
+#   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
+#   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["asyncio"])
+#   y sys.path si el código no se instala; python3 -m pytest ya pone la raíz del repositorio en sys.path. Una opción del
+#   ini va en PRUEBA con -o, en un pull request «Kit · ».
+# - Una pieza activa pasa si su corrida tiene alguna prueba pasada y ninguna saltada o esperada como fallo (PASADAS y
+#   SALTADAS, sobre la última línea de la salida): unas pruebas que no corren no cuentan como verdes.
+# - Esto cierra la configuración, no el código: lo que importan las pruebas corre en su proceso y puede hacer trampa (salir
+#   con 0, tocar pytest). Eso lo ven la verificación sobre Release y quien revisa. Está hecho para pytest; con otro
+#   ejecutor, PRUEBA, FALLAN, PASADAS y SALTADAS se cambian por los suyos, y lo que lee de fuera lo revisa quien audita (R2).
 # Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o este workflow; si es otra
 # persona, lo exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
@@ -29,7 +36,9 @@ env:
   ACEPTACION: tests/aceptacion                 # la carpeta de las pruebas de aceptación
   ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
   # cómo se corren las pruebas de una pieza ({pieza} es su identificador), sin configuración de fuera de la carpeta
-  PRUEBA: pytest -c /dev/null --rootdir=. --confcutdir=tests/aceptacion -p no:cacheprovider tests/aceptacion -k {pieza}
+  PRUEBA: python3 -m pytest -c /dev/null --rootdir=. --confcutdir="$ACEPTACION" -p no:cacheprovider "$ACEPTACION" -k {pieza}
+  PASADAS: ' passed'                           # en la última línea de la salida: hubo pruebas que pasaron
+  SALTADAS: ' (skipped|xfailed|xpassed)'       # en la última línea: pruebas que no corrieron o se esperaba que fallaran
   FALLAN: "1"                                  # el código con el que sale el ejecutor cuando hay pruebas que fallan (pytest: 1)
 jobs:
   aparte:
@@ -67,6 +76,9 @@ jobs:
               echo "::error::Este pull request quita o mueve la carpeta de las pruebas de aceptación ($carpeta)."; exit 1
             fi
             echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."; exit 0
+          fi
+          if git cat-file -e "$HEAD:${carpeta}__init__.py" 2>/dev/null; then
+            echo "::error::${carpeta}__init__.py convierte las pruebas de aceptación en un paquete, y pytest ejecutaría el __init__.py de la carpeta de arriba, que un pull request de código puede cambiar. Quítalo: python3 -m pytest ya encuentra el código."; exit 1
           fi
           # las piezas del título, en mayúsculas: «P01 · …», «P01 + P02 · …», «Escenarios · P01[ · …]» o la reversión
           # que pone GitHub, «Revert "P01 · …"»
@@ -128,11 +140,14 @@ jobs:
         env:
           TITULO: ${{ github.event.pull_request.title }}
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"   # un plugin que instala el código no entra solo en las pruebas
+          PYTEST_ADDOPTS: ""                    # ni opciones o plugins que deje en el entorno lo que se instaló
+          PYTEST_PLUGINS: ""
         run: |
           set -o pipefail
           [ -d "$ACEPTACION" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }
           ident='^[A-Za-z]+[0-9]+$'
-          correr() { local c="${PRUEBA//\{pieza\}/$1}"; bash -c "$c" < /dev/null; }
+          correr() { local c="${PRUEBA//\{pieza\}/$1}"; bash -c "$c" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; }
+          final() { grep -v '^[[:space:]]*$' "$RUNNER_TEMP/salida" | tail -n 1; }
           activas=" "
           if [ -f "$ACTIVAS" ]; then
             mapfile -t filas < "$ACTIVAS"
@@ -144,7 +159,11 @@ jobs:
             done
             for p in $activas; do
               echo "== $p (activa): sus pruebas tienen que pasar"
-              correr "$p" || { echo "::error::Las pruebas de aceptación de $p, que ya cuenta, no pasan."; exit 1; }
+              correr "$p" || { echo "::error::Las pruebas de aceptación de $p, que ya cuenta, no pasan. Si es un error al importar o un plugin que falta: no se lee configuración de fuera de $ACEPTACION, y lo que necesiten va en su conftest.py (cabecera de este workflow)."; exit 1; }
+              ultima="$(final)"
+              if ! grep -qE -- "$PASADAS" <<< "$ultima" || grep -qE -- "$SALTADAS" <<< "$ultima"; then
+                echo "::error::Las pruebas de aceptación de $p no pasaron todas: «$ultima». Una prueba saltada o sin correr no cuenta (una async sin su plugin se salta)."; exit 1
+              fi
             done
           fi
           if [[ "$TITULO" == "Escenarios · "* ]]; then

@@ -13,7 +13,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | Audita | [Nombre Apellido] |
 | Cómo se revisa | [la skill calidad del plugin Memoria, o la que use el equipo] |
 | Cómo se prueba | [comando de la suite de pruebas del código, que deja fuera la carpeta de aceptación, p. ej. `pytest --ignore=tests/aceptacion`] |
-| Pruebas de aceptación | [carpeta, lista de piezas activas, cómo se corren las de una pieza y con qué código sale el ejecutor cuando fallan, los mismos que en .github/workflows/pruebas-aceptacion.yml, p. ej. `tests/aceptacion`, `.github/piezas-activas.txt`, `pytest -c /dev/null --rootdir=. --confcutdir=tests/aceptacion -p no:cacheprovider tests/aceptacion -k P01`, que no lee configuración de fuera de la carpeta, `1`] |
+| Pruebas de aceptación | [carpeta, lista de piezas activas, cómo se corren las de una pieza y con qué código sale el ejecutor cuando fallan, los mismos que en .github/workflows/pruebas-aceptacion.yml, p. ej. `tests/aceptacion`, `.github/piezas-activas.txt`, `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= python3 -m pytest -c /dev/null --rootdir=. --confcutdir=tests/aceptacion -p no:cacheprovider tests/aceptacion -k P01`, que no lee configuración de fuera de la carpeta (lo que necesiten va en un `conftest.py` de la carpeta, que no lleva `__init__.py`), `1`] |
 | Migraciones | [carpeta, o «no hay base de datos»] |
 | No se toca | [lo que no se cambia nunca] |
 

@@ -7,7 +7,7 @@ Uso: python3 pruebas/sesion/probar_pruebas_aceptacion.py
 Saca el script del paso del workflow y lo corre con bash en un repositorio de git temporal, como lo correría GitHub con
 la base y la cabeza del pull request.
 """
-import os, pathlib, re, shutil, subprocess, sys, tempfile
+import os, pathlib, re, subprocess, sys, tempfile
 
 AQUI = pathlib.Path(__file__).resolve().parent
 YML = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "desarrollo" / "plantillas" / "pruebas-aceptacion.yml"
@@ -27,7 +27,7 @@ def script(paso="Las pruebas de aceptación van en su propio pull request"):
     m = re.compile(r"^(\s*)run: \|\n((?:\1  .*\n|\s*\n)+)", re.M).search(texto, i)
     sangria = len(m.group(1)) + 2
     cuerpo = "".join(l[sangria:] + "\n" for l in m.group(2).rstrip("\n").split("\n"))
-    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"') for k in ("ACEPTACION", "ACTIVAS", "PRUEBA", "FALLAN")}
+    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"').strip("'") for k in ("ACEPTACION", "ACTIVAS", "PRUEBA", "FALLAN", "PASADAS", "SALTADAS")}
     return cuerpo, env
 
 
@@ -144,12 +144,12 @@ def activas(pruebas, lista, titulo, prueba="sh tests/aceptacion/{pieza}.sh"):
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
     for p, rc in pruebas.items():
-        (d / f"tests/aceptacion/{p}.sh").write_text(f"exit {rc}\n", encoding="utf-8")
+        (d / f"tests/aceptacion/{p}.sh").write_text(f"echo '1 {'passed' if rc == 0 else 'failed'} in 0.01s'\nexit {rc}\n", encoding="utf-8")
     if lista is not None:
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
     env = dict(os.environ, ACEPTACION="tests/aceptacion", ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba, FALLAN=ENVW["FALLAN"],
-               TITULO=titulo)
+               PASADAS=ENVW["PASADAS"], SALTADAS=ENVW["SALTADAS"], TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp())
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
@@ -194,17 +194,22 @@ TRAMPAS = {
     "conftest.py": "import pytest\ndef pytest_collection_modifyitems(items):\n    for i in items: i.add_marker(pytest.mark.skip)\n",
     "tests/conftest.py": ("import pytest\n@pytest.hookimpl(hookwrapper=True)\ndef pytest_runtest_makereport(item, call):\n"
                           "    o = yield; o.get_result().outcome = 'passed'\n"),
-    "pyproject.toml": "[tool.pytest.ini_options]\naddopts = '--deselect tests/aceptacion/test_p01.py::test_p01_caso'\n",
+    "pyproject.toml": "[tool.pytest.ini_options]\naddopts = '--co'\n",
     "pytest.ini": "[pytest]\naddopts = -p no:python\n",
+    "setup.cfg": "[tool:pytest]\naddopts = --co\n",
 }
 
 
-def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro=None):
+def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro=None, extra=None, entorno=None,
+               cabecera=""):
     """Un repositorio con la prueba de P01 en la carpeta y un archivo de fuera que intenta ponerla en verde; corre el
     segundo paso con el PRUEBA de la plantilla."""
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
-    (d / "tests/aceptacion/test_p01.py").write_text(f"def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
+    (d / "tests/aceptacion/test_p01.py").write_text(f"{cabecera}def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
+    for ruta, texto in (extra or {}).items():
+        (d / ruta).parent.mkdir(parents=True, exist_ok=True)
+        (d / ruta).write_text(texto, encoding="utf-8")
     if conftest_dentro:
         (d / "tests/aceptacion/conftest.py").write_text(conftest_dentro, encoding="utf-8")
     if trampa:
@@ -214,16 +219,25 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
     env = dict(os.environ, ACEPTACION=ENVW["ACEPTACION"], ACTIVAS=ENVW["ACTIVAS"], PRUEBA=ENVW["PRUEBA"],
-               FALLAN=ENVW["FALLAN"], TITULO=titulo)
+               FALLAN=ENVW["FALLAN"], PASADAS=ENVW["PASADAS"], SALTADAS=ENVW["SALTADAS"], TITULO=titulo,
+               RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
+    env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
 
 yml = YML.read_text(encoding="utf-8")
-ok('PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in yml, "el paso que corre las pruebas no carga solos los plugins que instala el código")
-ok(all(x in ENVW["PRUEBA"] for x in ("-c /dev/null", "--confcutdir=tests/aceptacion")), "PRUEBA no lee la configuración de fuera")
-if shutil.which("pytest") is None:
+ok(all(f'{v}: ""' in yml for v in ("PYTEST_ADDOPTS", "PYTEST_PLUGINS")) and 'PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in yml,
+   "el paso no carga solos los plugins que instala el código, ni lee PYTEST_ADDOPTS o PYTEST_PLUGINS del entorno")
+ok(all(x in ENVW["PRUEBA"] for x in ("-c /dev/null", '--confcutdir="$ACEPTACION"', "--rootdir=.")), "PRUEBA no lee la configuración de fuera")
+try:
+    import pytest as _pytest  # noqa: F401
+    hay_pytest = True
+except ImportError:
+    hay_pytest = False
+if not hay_pytest:
     print("  (sin pytest instalado: se saltan los casos con pytest de verdad)")
+    ok(not os.environ.get("CI"), "en CI, pytest está instalado")
 else:
     for trampa in TRAMPAS:
         c, o = con_pytest(trampa, "P01\n", "P02 · otra cosa")
@@ -235,6 +249,25 @@ else:
     ok(c == 0, "el conftest.py de la propia carpeta sí cuenta")
     c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="pass")
     ok(c == 0, "y unas pruebas que pasan, pasan")
+    for var, valor in (("PYTEST_ADDOPTS", "--co"), ("PYTEST_PLUGINS", "trampa")):
+        c, o = con_pytest(None, "P01\n", "P02 · x", entorno={var: valor},
+                          extra={"trampa.py": "import pytest\ndef pytest_collection_modifyitems(items):\n    for i in items: i.add_marker(pytest.mark.skip)\n"})
+        ok(c == 1, f"{var} que dejó algo instalado no las pone en verde")
+    c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="from app.p01 import f\n    assert f() == 2",
+                      extra={"app/__init__.py": "", "app/p01.py": "import pytest\ndef f():\n    pytest.skip('luego')\n"})
+    ok(c == 1 and "no pasaron todas" in o, "el código de la pieza que salta su prueba no la pone en verde")
+    c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="import asyncio\n    assert False", cabecera="async ")
+    ok(c == 1, "una prueba async sin su plugin no cuenta como verde")
+    c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="from app.p01 import f\n    assert f() == 2",
+                      extra={"app/__init__.py": "", "app/p01.py": "def f():\n    return 2\n"})
+    ok(c == 0, "el código del repositorio se importa sin instalarlo ni configurar nada")
+    c, o = con_pytest(None, None, "Escenarios · P01", prueba_p01="from app.p01 import f\n    assert f() == 2",
+                      extra={"app/__init__.py": ""})
+    ok(c == 0 and "ModuleNotFoundError: No module named 'app.p01'" in o,
+       "en un pull request de escenarios, lo que falta es la pieza, no el paquete de la aplicación")
+
+c, o = pr([("escribir", "tests/aceptacion/__init__.py", None)], titulo="Escenarios · P01")
+ok(c == 1 and "__init__.py" in o, "una carpeta de aceptación con __init__.py falla: pytest ejecutaría el de arriba")
 
 print("La lista de piezas activas no pierde ninguna pieza (#2026-11-19-7)")
 c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo="P03 · x")
