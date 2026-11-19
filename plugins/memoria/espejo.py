@@ -18,7 +18,8 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
       abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo; cuarta, los archivados de
       este año y del anterior que nombra la línea «Archivado:» de esos registros y, con --listado, todos los archivados del
-      proyecto activo que hay en la computadora (1.23). Lo que no se trajo se vuelve a
+      proyecto activo que hay en la computadora (1.23), y en un proyecto de desarrollo los archivos del kit que nombra su
+      sección «Desarrollo» (1.27). Lo que no se trajo se vuelve a
       pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
       minutos. (La apertura mínima no pasa por aquí desde la 1.24.9: trae su copia con lo que lista device_list_dir.)
@@ -190,6 +191,26 @@ def archivados_del_listado(ruta):
 
 
 
+KIT_RUTAS = ("configuracion de plataforma", "configuracion de repositorios", "diseno", "plan", "seguimiento")
+
+
+def rutas_del_kit(texto_proyecto):
+    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». Claves comparadas
+    sin acentos ni mayúsculas, como context_core/development.py, que es la lectura de verdad."""
+    import unicodedata
+    clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z ]", " ", "".join(
+        c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn").lower())).strip()
+    m = re.search(r"^## Desarrollo\s*\n(.*?)(?=^## |\Z)", unicodedata.normalize("NFC", texto_proyecto), re.M | re.S)
+    out = []
+    for l in (m.group(1).split("\n") if m else []):
+        mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip())
+        if mm and clave(mm.group(1)) in KIT_RUTAS:
+            r = mm.group(2).replace("`", "").replace("**", "").strip().lstrip("/")
+            if r and clave(r) != "por crear" and ".." not in r.split("/") and r.endswith(".md"):
+                out.append(r)
+    return out
+
+
 def rutas(copia, activo, listado=None):
     copia = pathlib.Path(copia)
     faltan = set(estado(copia)["faltan"])
@@ -233,6 +254,9 @@ def rutas(copia, activo, listado=None):
                 # que ya existe y para que sus «Responde a:» cierren cuestionamientos (revisión de la 1.23, segunda vuelta)
                 if listado:
                     ronda += [f"{activo}/{n}" for n in archivados_del_listado(listado)]
+                # en un proyecto de desarrollo (1.27), los archivos del kit que nombra su sección «Desarrollo», que pueden
+                # vivir fuera del proyecto: abrir.py mira que existan para avisar de la que falta
+                ronda += [r for r in rutas_del_kit(leer(copia / activo / "proyecto.md") or "") if not set(r.split("/")[:-1]) & set(FUERA)]
                 ronda = [r for r in dict.fromkeys(ronda) if ausente(r)]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0

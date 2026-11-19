@@ -281,6 +281,13 @@ for _z in ("Pacific/Kiritimati", "Pacific/Pago_Pago"):
 (_c / "guia.md").write_text("# X · esta carpeta\n", encoding="utf-8")
 ok(_em.anio_de_la_organizacion(_c) == _dt2.datetime.now(_ZI("America/Mexico_City")).year, "sin la línea, el de Ciudad de México")
 
+print("Los archivos del kit de desarrollo (1.27)")
+_pk = ("# P\n\n## Quién participa\nResponsable: Ana\n\n## Desarrollo\nRepositorios: acme/app\nDiseño: otra/area/entregables/diseno.md\n"
+       "- **Plan:** `ventas/x/entregables/plan.md`\nConfiguración de plataforma: por crear\nDISENO: no/vale/dos.md\nSeguimiento: ../fuera.md\n\n## Otra\nPlan: no.md\n")
+ok(_em.rutas_del_kit(_pk) == ["otra/area/entregables/diseno.md", "ventas/x/entregables/plan.md", "no/vale/dos.md"],
+   "trae las rutas de la sección, sin «por crear», sin salir de la raíz y sin lo de otra sección")
+ok(_em.rutas_del_kit("# P\n\n## Quién participa\nResponsable: Ana\n") == [], "sin la sección, nada")
+
 print()
 print("Todo bien." if not fallos else f"{fallos} fallos.")
 shutil.rmtree(tmp, ignore_errors=True)

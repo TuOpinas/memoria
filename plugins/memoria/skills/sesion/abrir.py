@@ -336,6 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
+    'development': 'ea036a4b79bdfcf735407d88e9bdb7f887fbcacfdca83f1fa198a30e60891974',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1536,6 +1537,248 @@ def _context_core():
         '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
         '                        f"hasta que lo actualices: {RECETA_ACTUALIZAR}.")\n'
     ),
+    'development': (
+        '"""The development kit (1.27): how the plugin recognises a project that builds software. Pure functions: text in, data\n'
+        'out; no I/O, no network, no clock.\n'
+        '\n'
+        'A project is a development project when its proyecto.md has a \xab## Desarrollo\xbb section\n'
+        '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the\n'
+        'design, the plan and the follow-up) and names the people of each role. This module reads the section and says which\n'
+        'pieces are missing; it reads nothing else. The design and the plan are read by the model, not by code, and the status of\n'
+        "each piece is applied by the model from the plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
+        '\n'
+        "The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code\n"
+        'names things in English; `seccion_desarrollo` and `piezas_faltantes` are aliases of the same functions, at the end.\n'
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'import unicodedata\n'
+        'from dataclasses import dataclass, field\n'
+        'from typing import Callable\n'
+        '\n'
+        '__all__ = [\n'
+        '    "SECTION", "PATH_KEYS", "ROLE_KEYS", "ALL_KEYS", "TO_BUILD", "DevPerson", "DevSection", "Missing",\n'
+        '    "key", "development_section", "missing_pieces", "seccion_desarrollo", "piezas_faltantes",\n'
+        ']\n'
+        '\n'
+        'SECTION = "Desarrollo"\n'
+        'TO_BUILD = "por crear"\n'
+        '\n'
+        "# the section's keys, as written in the template (plantilla-seccion-desarrollo.md), in their order\n"
+        'REPOSITORIES = "Repositorios"\n'
+        'PLATFORM = "Configuraci\xf3n de plataforma"\n'
+        'REPOSITORY_CONFIG = "Configuraci\xf3n de repositorios"\n'
+        'DESIGN = "Dise\xf1o"\n'
+        'PLAN = "Plan"\n'
+        'FOLLOW_UP = "Seguimiento"\n'
+        'STEP_TO_PROD = "Paso a Prod"\n'
+        'PATH_KEYS = (PLATFORM, REPOSITORY_CONFIG, DESIGN, PLAN, FOLLOW_UP)\n'
+        'ROLE_KEYS = ("Acepta", "Audita", "Construye", "Administra")\n'
+        'ALL_KEYS = (REPOSITORIES,) + PATH_KEYS + (STEP_TO_PROD,) + ROLE_KEYS\n'
+        '\n'
+        'SEPARATOR = re.compile(r"\\s+\xb7\\s+")          # \xab \xb7 \xbb between values; a bare \xab\xb7\xbb inside a name is not a separator\n'
+        'REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")\n'
+        'EMAIL = re.compile(r"^[\\w.+\'-]+@[\\w-]+(?:\\.[\\w-]+)+$")\n'
+        'GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))$")\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 comparing \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'def key(text: str) -> str:\n'
+        '    """How a key, a heading or a column title compares: NFC or NFD alike, without accents, case, markup or punctuation."""\n'
+        '    t = unicodedata.normalize("NFD", text or "")\n'
+        '    t = "".join(c for c in t if unicodedata.category(c) != "Mn").replace("\xa0", " ").lower()\n'
+        '    return re.sub(r"\\s+", " ", re.sub(r"[^a-z0-9 ]", " ", t)).strip()\n'
+        '\n'
+        '\n'
+        'def _nfc(text: str) -> str:\n'
+        '    return unicodedata.normalize("NFC", (text or "").replace("\\r\\n", "\\n").replace("\\r", "\\n")).replace("\xa0", " ")\n'
+        '\n'
+        '\n'
+        'def _clean(value: str) -> str:\n'
+        '    """A value as written, without the Markdown around it: backticks, bold, a link\'s brackets (its target is kept)."""\n'
+        '    v = value.strip()\n'
+        '    v = re.sub(r"\\[([^\\]]*)\\]\\(([^)]*)\\)", lambda m: m.group(2) or m.group(1), v)\n'
+        '    return v.replace("`", "").replace("**", "").strip()\n'
+        '\n'
+        '\n'
+        'def _is_to_build(value: str) -> bool:\n'
+        '    return key(value) == key(TO_BUILD)\n'
+        '\n'
+        '\n'
+        'def _sections(body: str) -> dict:\n'
+        '    """Every \xab## \xbb section of a text by its key, cut at the next \xab## \xbb (the same cut abrir.py, cerrar.py and\n'
+        '    verificar.sh make). The first of two with the same key wins. Fenced code blocks are skipped, so a \xab## \xbb inside an\n'
+        '    example does not open a section."""\n'
+        '    out: dict = {}\n'
+        '    name, lines, fence = None, [], False\n'
+        '    for line in _nfc(body).split("\\n"):\n'
+        '        if re.match(r"^\\s*(```|~~~)", line):\n'
+        '            fence = not fence\n'
+        '        if not fence and line.startswith("## "):\n'
+        '            if name is not None and key(name) not in out:\n'
+        '                out[key(name)] = (name, "\\n".join(lines))\n'
+        '            name, lines = line[3:].strip(), []\n'
+        '        elif name is not None:\n'
+        '            lines.append(line)\n'
+        '    if name is not None and key(name) not in out:\n'
+        '        out[key(name)] = (name, "\\n".join(lines))\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 the \xabDesarrollo\xbb section \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        '@dataclass\n'
+        'class DevPerson:\n'
+        '    """One person of a role: \xabNombre Apellido (correo, @usuario)\xbb; the GitHub user is left out without an account."""\n'
+        '    name: str\n'
+        '    email: str = ""\n'
+        '    user: str = ""                              # GitHub login, without \xab@\xbb\n'
+        '    raw: str = ""\n'
+        '\n'
+        '\n'
+        '@dataclass\n'
+        'class DevSection:\n'
+        '    """The \xab## Desarrollo\xbb section of a proyecto.md. `found` False means the project is not a development project."""\n'
+        '    found: bool = False\n'
+        '    repositories: list = field(default_factory=list)       # \xaborganizaci\xf3n/repositorio\xbb\n'
+        '    paths: dict = field(default_factory=dict)              # PATH_KEYS -> path from the root, or TO_BUILD\n'
+        '    step_to_prod: str = ""                                 # \xabPaso a Prod\xbb, as written\n'
+        '    roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]\n'
+        '    present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling\n'
+        '    to_build: list = field(default_factory=list)           # the keys whose value is \xabpor crear\xbb\n'
+        '    unknown: list = field(default_factory=list)            # lines of the section it does not recognise\n'
+        '    warnings: list = field(default_factory=list)\n'
+        '\n'
+        '\n'
+        '_BY_KEY = {key(k): k for k in ALL_KEYS}\n'
+        '\n'
+        '\n'
+        'def _person(text: str) -> tuple[DevPerson, list]:\n'
+        '    t = text.strip()\n'
+        '    warnings = []\n'
+        '    m = re.match(r"^(.*?)\\s*\\(([^()]*)\\)\\s*$", t)\n'
+        '    name, inside = (m.group(1), m.group(2)) if m else (t, "")\n'
+        '    p = DevPerson(name=_clean(name), raw=t)\n'
+        '    for item in (x.strip() for x in inside.split(",")):\n'
+        '        if not item:\n'
+        '            continue\n'
+        '        if EMAIL.match(item):\n'
+        '            if p.email:\n'
+        '                warnings.append(f"\xab{t}\xbb: dos correos; se toma el primero")\n'
+        '            else:\n'
+        '                p.email = item.lower()\n'
+        '        elif item.startswith("@") and GITHUB_USER.match(item):\n'
+        '            p.user = GITHUB_USER.match(item).group(1)\n'
+        '        else:\n'
+        '            warnings.append(f"\xab{t}\xbb: \xab{item}\xbb no es un correo ni un usuario de GitHub (@usuario)")\n'
+        '    if not p.name:\n'
+        '        warnings.append(f"\xab{t}\xbb: falta el nombre")\n'
+        '    return p, warnings\n'
+        '\n'
+        '\n'
+        'def development_section(project_text: str) -> DevSection:\n'
+        '    """The \xab## Desarrollo\xbb section of a proyecto.md, split in repositories, paths, \xabPaso a Prod\xbb and the roles with\n'
+        "    their people. Keys compared without accents or case (NFC or NFD alike); people separated by \xab \xb7 \xbb and each one's\n"
+        '    data by commas. What it does not recognise comes back in `unknown`."""\n'
+        '    sec = _sections(project_text).get(key(SECTION))\n'
+        '    out = DevSection()\n'
+        '    if sec is None:\n'
+        '        return out\n'
+        '    out.found = True\n'
+        '    for raw in sec[1].split("\\n"):\n'
+        '        line = raw.strip()\n'
+        '        if not line or re.match(r"^<!--.*-->$", line):\n'
+        '            continue\n'
+        '        m = re.match(r"^[-*]?\\s*\\**\\s*([^:*]+?)\\s*\\**\\s*:\\s*\\**\\s*(.*)$", line)\n'
+        '        k = _BY_KEY.get(key(m.group(1))) if m else None\n'
+        '        if k is None:\n'
+        '            out.unknown.append(line)\n'
+        '            continue\n'
+        '        if k in out.present:\n'
+        '            out.warnings.append(f"\xab{k}\xbb aparece dos veces; vale la primera")\n'
+        '            continue\n'
+        '        out.present.append(k)\n'
+        '        value = _clean(m.group(2))\n'
+        '        if _is_to_build(value):\n'
+        '            out.to_build.append(k)\n'
+        '            if k in PATH_KEYS:\n'
+        '                out.paths[k] = TO_BUILD\n'
+        '            elif k in ROLE_KEYS:\n'
+        '                out.roles[k] = []\n'
+        '            continue\n'
+        '        if k == REPOSITORIES:\n'
+        '            for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):\n'
+        '                if REPO.match(r):\n'
+        '                    if r.lower() not in (x.lower() for x in out.repositories):\n'
+        '                        out.repositories.append(r)\n'
+        '                else:\n'
+        '                    out.warnings.append(f"\xab{r}\xbb en Repositorios no es organizaci\xf3n/repositorio")\n'
+        '        elif k in PATH_KEYS:\n'
+        '            out.paths[k] = value.strip().lstrip("/")\n'
+        '        elif k == STEP_TO_PROD:\n'
+        '            out.step_to_prod = value\n'
+        '        else:\n'
+        '            people = []\n'
+        '            for t in (x for x in SEPARATOR.split(value) if x.strip()):\n'
+        '                p, w = _person(t)\n'
+        '                people.append(p)\n'
+        '                out.warnings += w\n'
+        '            out.roles[k] = people\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        '@dataclass\n'
+        'class Missing:\n'
+        '    """A piece of the kit that is missing: its line, or the file its line points to."""\n'
+        '    key: str                                    # in ALL_KEYS spelling\n'
+        '    reason: str                                 # "sin l\xednea" | "por crear" | "no existe" | "vac\xeda"\n'
+        '    path: str = ""\n'
+        '\n'
+        '\n'
+        'def missing_pieces(section: DevSection, exists: Callable[[str], bool]) -> list:\n'
+        '    """The lines of the section that are missing or point to a file that is not there, with `exists(path)` saying\n'
+        '    whether a path from the root exists. \xabSeguimiento: por crear\xbb does not count: the plugin creates it at the first\n'
+        '    follow-up. Empty for a project without the section."""\n'
+        '    if not section.found:\n'
+        '        return []\n'
+        '    out = []\n'
+        '    for k in ALL_KEYS:\n'
+        '        if k not in section.present:\n'
+        '            out.append(Missing(k, "sin l\xednea"))\n'
+        '        elif k in section.to_build:\n'
+        '            if k != FOLLOW_UP:\n'
+        '                out.append(Missing(k, "por crear"))\n'
+        '        elif k == REPOSITORIES and not section.repositories:\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k in ROLE_KEYS and not section.roles.get(k):\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k == STEP_TO_PROD and not section.step_to_prod:\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k in PATH_KEYS:\n'
+        '            v = section.paths.get(k, "")\n'
+        '            if not v:\n'
+        '                out.append(Missing(k, "vac\xeda"))\n'
+        '            elif not exists(v):\n'
+        '                out.append(Missing(k, "no existe", v))\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        "# the Spanish names the plugin's scripts use\n"
+        'seccion_desarrollo = development_section\n'
+        'piezas_faltantes = missing_pieces\n'
+    ),
     }
     for _n in _todo:
         _m = _t.ModuleType("context_core." + _n); _m.__package__ = "context_core"; _m.__fingerprint__ = _fp[_n]
@@ -1550,6 +1793,7 @@ from context_core.compat import (CORREO, registro_personas, persona, nombres_de,
                                  es_sesion, es_mantenimiento, arreglados, rastro_mantenimiento,
                                  descontado)
 from context_core.minimum import puerta_de_escritura, RECETA_ACTUALIZAR, VERSION_MINIMA_ESTRUCTURA  # noqa: E402
+from context_core.development import seccion_desarrollo, piezas_faltantes  # noqa: E402
 # --- fin de quién escribe ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
@@ -2551,6 +2795,37 @@ def citada(rr, activo, textos):
     nfc = lambda s: unicodedata.normalize("NFC", s or "")
     patron = re.compile(r"(?:^|(?<=[\s`'\"(\[,:·«*_<>]))(?:\./|(?:\.\./)+|" + re.escape(nfc(activo)) + r"/)?" + re.escape(nfc(rr)) + r"(?![\w/-])", re.M)
     return any(patron.search(nfc(t)) for t in textos)
+
+
+# el kit de desarrollo (1.27): solo en un proyecto con la sección «## Desarrollo», una línea por motivo con las piezas que
+# le faltan (su línea, «por crear» o un archivo que no existe). No lee GitHub ni el contenido de esos archivos: el
+# seguimiento lo pide una persona (skill desarrollo). Lo que está en un área restringida ajena, en restringido/, fuentes/ o
+# taller/ no se mira: se dice que no se pudo comprobar, sin suponer qué hay.
+KIT = seccion_desarrollo(tp)
+if KIT.found:
+    _no_comprobadas, _faltan = [], {}
+
+    def _existe(r):
+        partes = pathlib.PurePosixPath(r).parts
+        if not partes or ".." in partes or r.startswith(("/", "~")):
+            return False
+        ajena = next((a for a in areas if a["slug"] == partes[0]), None)
+        if (ajena and ajena["restringida"] and partes[0] != area_activa) or {"restringido", "fuentes", "taller"} & set(partes[1:]):
+            _no_comprobadas.append(r)
+            return True        # no se puede mirar: ni se da por que falta ni se abre
+        return (RAIZ / r).is_file()
+
+    for m in piezas_faltantes(KIT, _existe):
+        _faltan.setdefault(m.reason, []).append(m.key + (f" ({m.path})" if m.path else ""))
+    _uno = {"sin línea": "no tiene su línea en la sección", "vacía": "tiene la línea vacía",
+            "por crear": "está por crear", "no existe": "apunta a un archivo que no existe"}
+    _varios = {"sin línea": "no tienen su línea en la sección", "vacía": "tienen la línea vacía",
+               "por crear": "están por crear", "no existe": "apuntan a un archivo que no existe"}
+    for motivo, claves in _faltan.items():
+        avisos.append(f"Desarrollo: {', '.join(claves)} " + (_varios if len(claves) > 1 else _uno).get(motivo, motivo)
+                      + (". Sus plantillas están en el plugin (skills/desarrollo/plantillas/)." if motivo in ("por crear", "sin línea") else "."))
+    if _no_comprobadas:
+        avisos.append("Desarrollo: no se pudo comprobar, porque está donde este proyecto no lee: " + ", ".join(_no_comprobadas) + ".")
 
 
 titulo("INVENTARIO (lo que esta apertura no imprimió)")

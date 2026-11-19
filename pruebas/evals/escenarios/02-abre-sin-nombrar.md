@@ -18,6 +18,8 @@ comprobar:
   - sin-ingles
   - skill sesion 1
   - sin-buscar-plugin
+  - no-menciona kit de desarrollo
+  - no-menciona Desarrollo:
 ---
 Trabajo de un proyecto sin nombrarlo: la pregunta es de `ventas/cuentas` (Cliente Uno). Debe abrir la sesión completa
 de ese proyecto antes de responder (abrir.py con el proyecto, no solo la apertura mínima), responder con lo que dice la

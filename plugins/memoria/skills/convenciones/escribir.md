@@ -81,6 +81,33 @@ Cada línea de `Siguientes pasos` es una **tarea**: así se la llama al hablar c
 
 Quién consume un proyecto lo dicen las líneas `Afecta a:` y `basado_en` que lo nombran.
 
+### Un proyecto de desarrollo (1.27)
+
+Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia es la marca: con ella, la apertura avisa de las piezas del kit de desarrollo que le faltan (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza y quién hace qué, una línea por clave, en este orden:
+
+```markdown
+## Desarrollo
+Repositorios: organización/repositorio · organización/otro
+Configuración de plataforma: ruta
+Configuración de repositorios: ruta
+Diseño: ruta
+Plan: ruta
+Seguimiento: ruta
+Paso a Prod: release de GitHub
+Acepta: Nombre Apellido (correo, @usuario)
+Audita: Nombre Apellido (correo, @usuario)
+Construye: Nombre Apellido (correo, @usuario) · Otra Persona (correo, @usuario)
+Administra: Nombre Apellido (correo, @usuario)
+```
+
+- **Las claves** se escriben tal cual, en español, aunque el proyecto esté en otro idioma, y se comparan sin acentos ni mayúsculas. Varios valores van separados por ` · `.
+- **Las rutas** son desde la raíz y pueden salir del proyecto: la plataforma y los repositorios van en una sola configuración, y las dos claves pueden apuntar al mismo archivo, como dos proyectos que comparten plataforma (lo mantiene el proyecto donde vive). Lo que aún no existe dice `por crear`. Falta una pieza cuando falta su línea, dice `por crear` o su archivo no existe; `Seguimiento: por crear` no cuenta, porque lo crea el primer seguimiento en `entregables/seguimiento.md` del proyecto, que nace `vigente`.
+- **Cada persona** va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub se omite si no tiene cuenta. Puede ser alguien de fuera, que no está en «Quién es quién»: estas líneas no dan permiso de escribir, que siguen dando `guia.md` y `Quién participa`. Una persona puede tener varios roles.
+- **Los roles**: quien acepta aprueba lo funcional del diseño y los escenarios de cada pieza, lee el reporte de la verificación y da el sí; quien audita valida el diseño técnico y el plan, decide en los puntos de control, da el sí y comprueba la configuración al montar el proyecto y cuando cambia; quien construye construye con Claude, por bloques de una o varias piezas en un pull request a la rama principal, y lo une con las pruebas en verde y la revisión de calidad hecha (tecnologia/metodologia-desarrollo#2026-11-18-12); quien administra mantiene la configuración y es el único que pasa a Prod, y solo lo que tiene el sí.
+- **Paso a Prod** dice dónde queda escrito ese sí (lo recomendado, `release de GitHub`: un release publicado con la línea «Aprobó: Nombre Apellido, AAAA-MM-DD · seguimiento AAAA-MM-DD»).
+
+La sección la escribe la persona o la skill `nuevo`, nunca el cierre; la única línea que cambia sola es `Seguimiento: por crear`, que el primer seguimiento pasa a su ruta con un reemplazo de `cerrar.py`. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador: no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
+
 ### Un proyecto cerrado
 
 Cuando se cumple lo que dice la segunda frase de `Objetivo`, el responsable lo pide y el `Estatus` queda en una línea, la fecha y la frase en negrita, que empieza por **«Proyecto terminado el AAAA-MM-DD.»** y dice cómo acabó. A partir de ahí el proyecto no evoluciona: sus archivos siguen donde están, con el estado que tengan, y su `Siguientes pasos` dice que no queda ninguno propio.

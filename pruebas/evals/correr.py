@@ -162,6 +162,14 @@ def aplicar_paso(e, raiz, paso):
             (raiz / r).write_text(cuerpo, encoding="utf-8")
             viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
             os.utime(raiz / r, (viejo, viejo))
+        elif orden == "copiar":                # copiar <archivo de escenarios/> <ruta>: un archivo entero, viejo como el resto (1.27)
+            o, _, r = arg.partition(" ")
+            t = (AQUI / "escenarios" / o).read_text(encoding="utf-8")
+            t = re.sub(r"\{HOY-(\d+)\}", lambda m: (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=int(m.group(1)))).isoformat(), t)
+            (raiz / r).parent.mkdir(parents=True, exist_ok=True)
+            (raiz / r).write_text(t, encoding="utf-8")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            os.utime(raiz / r, (viejo, viejo))
         elif orden == "otro-cierre":           # otro-cierre <area>/<proyecto>: otra persona cierra sesión ahora (entrada arriba y un paso nuevo)
             ses = raiz / arg / "sesiones.md"
             t = ses.read_text(encoding="utf-8")
@@ -238,6 +246,23 @@ def sembrar_scripts(plugin, hogar):
             shutil.copy2(plugin / r, d / pathlib.Path(r).name)
 
 
+# ---------- GitHub de mentira (1.27) ----------
+def github_falso(e, cwd):
+    """Con `github: sin-acceso`, un `gh` de mentira (gh_falso.py) delante en el PATH de la conversación, que responde 404
+    a todo: la skill desarrollo no ve el repositorio, sin red. Sin la clave, nada cambia."""
+    g = (e.get("github") or "").strip()
+    if not g:
+        return {}
+    if g != "sin-acceso":
+        raise SystemExit(f"github: «{g}»: solo vale «sin-acceso»")
+    d = pathlib.Path(cwd) / ".gh-falso"
+    d.mkdir(parents=True, exist_ok=True)
+    gh = d / "gh"
+    gh.write_text(f"#!/bin/sh\nexec {sys.executable} {AQUI / 'gh_falso.py'} \"$@\"\n", encoding="utf-8")
+    gh.chmod(0o755)
+    return {"PATH": f"{d}:{os.environ.get('PATH', '')}", "GH_TOKEN": "falso"}
+
+
 # ---------- la conversación ----------
 async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, TextBlock, ToolResultBlock, ToolUseBlock, UserMessage
@@ -257,7 +282,7 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
         model=ALIAS.get(modelo, modelo) if modelo else None,
         max_turns=e["max_turnos"],
         cwd=str(cwd),
-        env={"IS_SANDBOX": "1", "TZ": "America/Mexico_City"},
+        env={"IS_SANDBOX": "1", "TZ": "America/Mexico_City", **github_falso(e, cwd)},
         setting_sources=[],
     )
     turnos, medidas = [], {"tokens_entrada": 0, "tokens_salida": 0, "cache_leida": 0, "cache_escrita": 0, "costo_usd": 0.0, "duracion_s": 0.0, "llamadas": {}}
