@@ -174,6 +174,12 @@ ok(d["reemplazo_proyecto"] == {"de": "Seguimiento: por crear", "a": "Seguimiento
 p = r / "ventas/app/proyecto.md"
 p.write_text(p.read_text(encoding="utf-8").replace("Seguimiento: por crear", "Seguimiento: ventas/app/entregables/seguimiento.md"), encoding="utf-8")
 rc, o, e = correr("seguimiento", r, "ventas/app", "--github", g, "--pidio", "Ana Prueba", "--fecha", "2026-11-19", "--escribir")
+ok("lo leído no parte del commit `fffffff`" in o and f.read_text(encoding="utf-8") == t,
+   "con un seguimiento anterior que vigiló, lo leído sin su «base» no se guarda")
+rc, o, e = correr("desde", r, "ventas/app")
+ok(json.loads(o)["args"] == f"--desde {HOY} --base acme/app=fffffff", "«desde» da la base del que se acaba de escribir")
+gb = json.loads(json.dumps(GH)); gb["repos"][0]["base"] = "fffffff"
+rc, o, e = correr("seguimiento", r, "ventas/app", "--github", gh_json(gb), "--pidio", "Ana Prueba", "--fecha", "2026-11-19", "--escribir")
 t = f.read_text(encoding="utf-8")
 ok(t.index("## 2026-11-19 · pidió Ana Prueba") < t.index(f"## {HOY} · pidió Beto Prueba"), "la nueva arriba, sin borrar la anterior")
 ok(json.loads(o.split("=== DATOS\n")[1])["anterior"] == HOY, "dice de cuándo era el anterior")
@@ -262,7 +268,7 @@ def raiz_con_seguimiento(**k):
     """Una raíz con el seguimiento del 2026-11-03 al que citan los síes de la prueba."""
     r_ = raiz(seguimiento="ventas/app/entregables/seguimiento.md", **k)
     (r_ / "ventas/app/entregables/seguimiento.md").write_text(
-        f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-03 · pidió Ana\nLeído: acme/app en `1111111` (main), desde el 2026-10-01.\n", encoding="utf-8")
+        f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-03 · pidió Ana\nLeído: acme/app en `aaaaaaa` (main), desde el 2026-10-01.\n\n**Rompe las reglas:** nada.\n", encoding="utf-8")
     return r_
 r5 = raiz()
 r5s = raiz_con_seguimiento()
@@ -277,9 +283,9 @@ rc, o, d = entrada_de(r5, gh_mod(lambda x: x["releases"][1].update(body="Aprobó
 ok("| P01 · Tablas | F1 | unida |" in o and "no tiene «Aprobó:»" in o, "un «Aprobó:» vacío no es un sí, y no toma la línea siguiente")
 rc, o, d = entrada_de(r5, gh_mod(lambda x: x["releases"][1].update(body="Aprobó: Pepe Nadie, 2026-11-03")))
 ok("| P01 · Tablas | F1 | unida |" in o and "lo aprobó «Pepe Nadie», que no acepta ni audita" in o, "un sí de quien no acepta ni audita no entrega y se dice")
-rc, o, d = entrada_de(r5s, gh_mod(lambda x: x["releases"][1].update(body="Aprobó: @ana · seguimiento 2026-11-03")))
+rc, o, d = entrada_de(r5s, gh_mod(lambda x: x.update(base="aaaaaaa") or x["releases"][1].update(body="Aprobó: @ana · seguimiento 2026-11-03")))
 ok("| P01 · Tablas | F1 | entregada |" in o and "Ana Prueba aprobó v1" in o, "el sí por @usuario, sobre un seguimiento que existe, entrega; y se dice que es propio")
-rc, o, d = entrada_de(r5s, gh_mod(lambda x: x["releases"][1].update(body="Aprobó: @ana, 2026-11-03")))
+rc, o, d = entrada_de(r5s, gh_mod(lambda x: x.update(base="aaaaaaa") or x["releases"][1].update(body="Aprobó: @ana, 2026-11-03")))
 ok("| P01 · Tablas | F1 | unida |" in o and "Sí sin seguimiento" in o, "sin seguimiento citado no es un sí: no entrega, y se dice")
 # hallazgo 6: sin forma, nada entregado; los prerelease no cuentan
 r6 = raiz(paso="por crear")
@@ -364,7 +370,10 @@ for nombre, g_, que in (
     rc, o, d = entrada_de(r11, g_, "--escribir", "--crear")
     ok(que in o and d.get("no_escrito") and not (r11 / "ventas/app/entregables/seguimiento.md").exists(), f"{nombre}: incompleto, no se guarda")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["tags"])))
-ok("Sin leer entero, no se compara: acme/app: tags cortado" in o and "Incompleto" not in o, "con las etiquetas cortadas se guarda, y se dice qué no se comparó")
+ok("tags cortado" not in o and "Incompleto" not in o and "Comparó: piezas, diseño, reglas" in o,
+   "con «release de GitHub» las etiquetas cortadas no hacen falta: se guarda y no se dice que no se comparó")
+rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["releases"])))
+ok("Sin leer entero, no se compara: acme/app: releases cortado" in o and "Incompleto" not in o, "con los releases cortados se guarda, y se dice qué no se comparó")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x["pulls"][0].update(author=None, merge_commit=None, merged_at=None, state="open")))
 ok(rc == 0, "un autor o un commit de unión nulos no rompen la lectura")
 def tras_union(x):
@@ -526,6 +535,49 @@ rc, o, e = correr("aplicar", r, "ventas/app", r / "ventas/app/entregables/reposi
 ok(rc != 0 and "Traceback" not in e and "van como" in e, "un JSON de estados mal formado se dice en llano")
 ok(all(_rg.SECRETO.search(f) for f in ("config/credentials.json", "config/secrets.yml", "id_rsa", "service-account.json", "prod.tfvars", ".npmrc")),
    "los archivos de secretos con nombre de configuración pierden su patch")
+
+print("Los arreglos de la cuarta ronda")
+r23 = raiz_con_seguimiento()
+rc, o, d = entrada_de(raiz(), gh_mod(lambda x: x.update(base="1234567")), "--escribir", "--crear")
+ok("ya no está en la rama principal" in o and d.get("no_escrito"), "una base que ya no está en la historia: se reescribió, se dice y no se guarda")
+rc, o, d = entrada_de(r23, gh_json(GH), "--escribir")
+ok("no parte del commit `aaaaaaa`" in o and d.get("no_escrito"), "sin la base del seguimiento anterior que vigiló, no se guarda")
+r24 = raiz(seguimiento="ventas/app/entregables/seguimiento.md")
+(r24 / "ventas/app/entregables/seguimiento.md").write_text(
+    f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-15 · nota de Ana\nrevisar luego\n\n"
+    "## 2026-11-06 · pidió Ana\nLeído: acme/app en `bbbbbbb` (main), desde el 2026-10-01.\n\n**Rompe las reglas:** nada.\n", encoding="utf-8")
+rc, o, e = correr("desde", r24, "ventas/app")
+ok(json.loads(o)["args"] == "--desde 2026-11-06 --base acme/app=bbbbbbb", "una nota a mano no cuenta como seguimiento vigilado")
+r25 = raiz(seguimiento="ventas/app/entregables/seguimiento.md")
+rc, o, e = correr("desde", r25, "ventas/app", "--crear")
+ok(rc == 0 and json.loads(o)["args"] == "", "«desde --crear» da los args vacíos cuando el archivo no existe")
+rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["detalle"], commits_ventana=212)))
+ok("repite con --max-detalle 212" in o, "con los cambios cortados, dice con qué tope repetir")
+def capa_sin_ver(x):
+    x["auditoria"].pop("rulesets")
+    x["auditoria"]["proteccion"] = {"enforce_admins": {"enabled": True}, "required_status_checks": {"contexts": ["pruebas"]},
+                                    "required_pull_request_reviews": {"bypass_pull_request_allowances": {"users": [{"login": "ana"}]}}}
+a6 = audita(gh_mod(capa_sin_ver))
+ok(prop(a6, "R1") is None, "con una capa sin ver, las excepciones de otra no dan «no cumple»")
+a6 = audita(gh_mod(lambda x: x["auditoria"].update(proteccion=None, rulesets=[], errores={})))
+ok(prop(a6, "R1") is None and prop(a6, "R2") is None, "una protección a null sin error es «no se leyó», no «no hay»")
+pp = r / "ventas/app/proyecto.md"; t0 = pp.read_text(encoding="utf-8")
+pp.write_text(t0.replace("Repositorios: acme/app", "Repositorios: acme/app · acme/otro"), encoding="utf-8")
+a6 = audita(gh_json(GH))
+ok(not a6["comprobado"] and any(x["columna"] == "acme/otro" and x["fila"] == "R1" for x in a6["preguntar"]),
+   "un repositorio que falta deja todo sin propuesta y tiene sus filas")
+pp.write_text(t0, encoding="utf-8")
+rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_json(dict(GH, desde="2026-10-19")), "--fecha", HOY)
+ok(not vista(json.loads(o))["avisos"], "la auditoría da un día de margen al «desde»")
+rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_json(GH), "--fecha", "2026-13-45")
+ok(rc == 2 and "Traceback" not in e, "un --fecha imposible se rechaza en llano")
+r26 = raiz(); pp = r26 / "ventas/app/proyecto.md"
+pp.write_text(pp.read_text(encoding="utf-8").replace("Configuración de plataforma: ventas/app/entregables/plataforma.md",
+                                                      "Configuración de plataforma: ventas/app/restringido/plataforma.md"), encoding="utf-8")
+(r26 / "ventas/app/restringido").mkdir(); shutil.copy(r26 / "ventas/app/entregables/plataforma.md", r26 / "ventas/app/restringido/plataforma.md")
+est.write_text(json.dumps({"PL3": "cumple"}), encoding="utf-8")
+rc, o, e = correr("aplicar", r26, "ventas/app", r26 / "ventas/app/restringido/plataforma.md", est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
+ok(rc == 0, "aplicar escribe en el restringido/ del propio proyecto: " + e.strip()[:120])
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")
