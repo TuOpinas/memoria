@@ -13,6 +13,10 @@
 #   sin instalar) es un error.
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
 #   Mientras la carpeta no exista, pasa: el kit se monta en cualquier orden.
+# - PRUEBA no lee configuración del ejecutor fuera de la carpeta: un conftest.py, un pytest.ini o un pyproject.toml que
+#   cambia código podrían poner en verde las pruebas. Con pytest, -c /dev/null, --confcutdir en la carpeta y sin cargar
+#   plugins solos (PYTEST_DISABLE_PLUGIN_AUTOLOAD); lo que necesiten va en un conftest.py de la carpeta o en PRUEBA
+#   («-p asyncio»). Con otro ejecutor, lo mismo con sus opciones.
 # Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o este workflow; si es otra
 # persona, lo exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
@@ -24,7 +28,8 @@ permissions:
 env:
   ACEPTACION: tests/aceptacion                 # la carpeta de las pruebas de aceptación
   ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
-  PRUEBA: pytest tests/aceptacion -k {pieza}   # cómo se corren las pruebas de una pieza; {pieza} es su identificador
+  # cómo se corren las pruebas de una pieza ({pieza} es su identificador), sin configuración de fuera de la carpeta
+  PRUEBA: pytest -c /dev/null --rootdir=. --confcutdir=tests/aceptacion -p no:cacheprovider tests/aceptacion -k {pieza}
   FALLAN: "1"                                  # el código con el que sale el ejecutor cuando hay pruebas que fallan (pytest: 1)
 jobs:
   aparte:
@@ -122,6 +127,7 @@ jobs:
       - name: Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios
         env:
           TITULO: ${{ github.event.pull_request.title }}
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"   # un plugin que instala el código no entra solo en las pruebas
         run: |
           set -o pipefail
           [ -d "$ACEPTACION" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }

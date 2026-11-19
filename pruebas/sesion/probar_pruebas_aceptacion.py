@@ -7,7 +7,7 @@ Uso: python3 pruebas/sesion/probar_pruebas_aceptacion.py
 Saca el script del paso del workflow y lo corre con bash en un repositorio de git temporal, como lo correría GitHub con
 la base y la cabeza del pull request.
 """
-import os, pathlib, re, subprocess, sys, tempfile
+import os, pathlib, re, shutil, subprocess, sys, tempfile
 
 AQUI = pathlib.Path(__file__).resolve().parent
 YML = AQUI.parent.parent / "plugins" / "memoria" / "skills" / "desarrollo" / "plantillas" / "pruebas-aceptacion.yml"
@@ -188,6 +188,53 @@ ok(c == 1 and "no fallaron como pruebas" in o, "el ejecutor sin instalar: falla 
 d = pathlib.Path(tempfile.mkdtemp())
 c, o = activas({"P01": 0, "P02": 1}, "P01\nP02\n", "P03 · x", prueba="cat > /dev/null; sh tests/aceptacion/{pieza}.sh")
 ok(c == 1 and "P02" in o, "un comando que lee la entrada estándar no se come la lista")
+
+print("La configuración del ejecutor de fuera de la carpeta no pone en verde las pruebas (con pytest de verdad)")
+TRAMPAS = {
+    "conftest.py": "import pytest\ndef pytest_collection_modifyitems(items):\n    for i in items: i.add_marker(pytest.mark.skip)\n",
+    "tests/conftest.py": ("import pytest\n@pytest.hookimpl(hookwrapper=True)\ndef pytest_runtest_makereport(item, call):\n"
+                          "    o = yield; o.get_result().outcome = 'passed'\n"),
+    "pyproject.toml": "[tool.pytest.ini_options]\naddopts = '--deselect tests/aceptacion/test_p01.py::test_p01_caso'\n",
+    "pytest.ini": "[pytest]\naddopts = -p no:python\n",
+}
+
+
+def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro=None):
+    """Un repositorio con la prueba de P01 en la carpeta y un archivo de fuera que intenta ponerla en verde; corre el
+    segundo paso con el PRUEBA de la plantilla."""
+    d = pathlib.Path(tempfile.mkdtemp())
+    (d / "tests/aceptacion").mkdir(parents=True)
+    (d / "tests/aceptacion/test_p01.py").write_text(f"def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
+    if conftest_dentro:
+        (d / "tests/aceptacion/conftest.py").write_text(conftest_dentro, encoding="utf-8")
+    if trampa:
+        (d / trampa).parent.mkdir(parents=True, exist_ok=True)
+        (d / trampa).write_text(TRAMPAS[trampa], encoding="utf-8")
+    if lista is not None:
+        (d / ".github").mkdir()
+        (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
+    env = dict(os.environ, ACEPTACION=ENVW["ACEPTACION"], ACTIVAS=ENVW["ACTIVAS"], PRUEBA=ENVW["PRUEBA"],
+               FALLAN=ENVW["FALLAN"], TITULO=titulo)
+    r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+yml = YML.read_text(encoding="utf-8")
+ok('PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in yml, "el paso que corre las pruebas no carga solos los plugins que instala el código")
+ok(all(x in ENVW["PRUEBA"] for x in ("-c /dev/null", "--confcutdir=tests/aceptacion")), "PRUEBA no lee la configuración de fuera")
+if shutil.which("pytest") is None:
+    print("  (sin pytest instalado: se saltan los casos con pytest de verdad)")
+else:
+    for trampa in TRAMPAS:
+        c, o = con_pytest(trampa, "P01\n", "P02 · otra cosa")
+        ok(c == 1 and "no pasan" in o, f"un {trampa} fuera de la carpeta no pone en verde las pruebas de una pieza activa")
+        c, o = con_pytest(trampa, None, "Escenarios · P01")
+        ok(c == 0, f"ni hace que las de un pull request de escenarios «ya pasen» ({trampa})")
+    c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="assert dato == 1",
+                      conftest_dentro="import pytest\n@pytest.fixture\ndef dato():\n    return 1\n")
+    ok(c == 0, "el conftest.py de la propia carpeta sí cuenta")
+    c, o = con_pytest(None, "P01\n", "P02 · x", prueba_p01="pass")
+    ok(c == 0, "y unas pruebas que pasan, pasan")
 
 print("La lista de piezas activas no pierde ninguna pieza (#2026-11-19-7)")
 c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo="P03 · x")
