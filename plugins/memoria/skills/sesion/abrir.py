@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'ea036a4b79bdfcf735407d88e9bdb7f887fbcacfdca83f1fa198a30e60891974',
+    'development': '1cdfd8f23c07e9e4c8144f69118add2c8193a2ef162dd494d90030f2188dc0be',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1627,16 +1627,6 @@ def _context_core():
         '    return out\n'
         '\n'
         '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
-        '\n'
         '# \u2500\u2500 the \xabDesarrollo\xbb section \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
         '\n'
         '@dataclass\n'
@@ -1720,6 +1710,9 @@ def _context_core():
         '            continue\n'
         '        if k == REPOSITORIES:\n'
         '            for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):\n'
+        '                # pegado como enlace de GitHub: se queda con organizaci\xf3n/repositorio\n'
+        '                r = re.sub(r"^(?:https?://)?(?:www\\.)?github\\.com/", "", r).rstrip("/")\n'
+        '                r = r[:-4] if r.endswith(".git") else r\n'
         '                if REPO.match(r):\n'
         '                    if r.lower() not in (x.lower() for x in out.repositories):\n'
         '                        out.repositories.append(r)\n'
@@ -1793,7 +1786,7 @@ from context_core.compat import (CORREO, registro_personas, persona, nombres_de,
                                  es_sesion, es_mantenimiento, arreglados, rastro_mantenimiento,
                                  descontado)
 from context_core.minimum import puerta_de_escritura, RECETA_ACTUALIZAR, VERSION_MINIMA_ESTRUCTURA  # noqa: E402
-from context_core.development import seccion_desarrollo, piezas_faltantes  # noqa: E402
+from context_core.development import seccion_desarrollo, piezas_faltantes, PATH_KEYS as CLAVES_RUTA  # noqa: E402
 # --- fin de quién escribe ---
 # --- el administrador principal: una sola persona (1.22.2) ---
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
@@ -2810,7 +2803,9 @@ if KIT.found:
         if not partes or ".." in partes or r.startswith(("/", "~")):
             return False
         ajena = next((a for a in areas if a["slug"] == partes[0]), None)
-        if (ajena and ajena["restringida"] and partes[0] != area_activa) or {"restringido", "fuentes", "taller"} & set(partes[1:]):
+        propio = bool(ACTIVO) and r.startswith(ACTIVO + "/")
+        if (ajena and ajena["restringida"] and partes[0] != area_activa) or (
+                not propio and {"restringido", "fuentes", "taller"} & set(partes[1:])) or (propio and "restringido" in partes[2:]):
             _no_comprobadas.append(r)
             return True        # no se puede mirar: ni se da por que falta ni se abre
         return (RAIZ / r).is_file()
@@ -2823,9 +2818,13 @@ if KIT.found:
                "por crear": "están por crear", "no existe": "apuntan a un archivo que no existe"}
     for motivo, claves in _faltan.items():
         avisos.append(f"Desarrollo: {', '.join(claves)} " + (_varios if len(claves) > 1 else _uno).get(motivo, motivo)
-                      + (". Sus plantillas están en el plugin (skills/desarrollo/plantillas/)." if motivo in ("por crear", "sin línea") else "."))
+                      + (". Sus plantillas están en el plugin (skills/desarrollo/plantillas/)."
+                         if motivo in ("por crear", "sin línea") and any(c.split(" (")[0] in CLAVES_RUTA for c in claves) else "."))
     if _no_comprobadas:
         avisos.append("Desarrollo: no se pudo comprobar, porque está donde este proyecto no lee: " + ", ".join(_no_comprobadas) + ".")
+    if KIT.warnings:
+        # lo que la sección dice y no se entiende (un repositorio que no es organización/repositorio, una persona mal escrita)
+        avisos.append("Desarrollo: en la sección, " + "; ".join(KIT.warnings[:3]) + (f"; y {len(KIT.warnings) - 3} más" if len(KIT.warnings) > 3 else "") + ".")
 
 
 titulo("INVENTARIO (lo que esta apertura no imprimió)")

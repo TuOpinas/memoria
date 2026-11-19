@@ -32,6 +32,7 @@ class Dispositivo:
         self.ruta_disp = (f"C:/Users/prueba/Documents/Memoria/{nombre}" if plataforma == "win32"
                           else f"/Users/prueba/Documents/Memoria/{nombre}")
         self.hogar = pathlib.Path(hogar or (self.raiz.parent / "hogar")).resolve()
+        self.entorno = {}   # lo que el escenario añade al entorno de device_bash (el gh de mentira de la 1.27)
         self.hogar.mkdir(parents=True, exist_ok=True)
         (self.hogar / "mnt").mkdir(exist_ok=True)
         # la app monta una carpeta con el último tramo de su ruta; solo con otra conectada del mismo nombre antepone «<padre>--»
@@ -108,7 +109,8 @@ class Dispositivo:
         cmd = args.get("command", "")
         if not self.borrar and re.search(r"(^|[;&|\s])(rm|rmdir|unlink)\s", cmd + " ") and f"mnt/{self.nombre}" in cmd:
             return {"content": [{"type": "text", "text": "rm: Operation not permitted\n[exit 1]"}]}
-        env = {"HOME": str(self.hogar), "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C.UTF-8", "TZ": "America/Mexico_City"}
+        env = {"HOME": str(self.hogar), "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C.UTF-8", "TZ": "America/Mexico_City",
+               **self.entorno}
         try:
             r = subprocess.run(["bash", "-c", args.get("command", "")], cwd=self.hogar, env=env, capture_output=True, text=True,
                                timeout=min(int(args.get("timeout_ms") or 120000), 180000) / 1000)

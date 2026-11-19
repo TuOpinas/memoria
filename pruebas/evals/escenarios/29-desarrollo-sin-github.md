@@ -31,6 +31,7 @@ comprobar:
   - no-existe ventas/cuentas/entregables/seguimiento.md
   - contiene ventas/cuentas/proyecto.md Seguimiento: por crear
   - solo-escribe-en metodo.md
+  - llamadas-maximo 40
   - sin-ingles
 ---
 El seguimiento sin GitHub (1.27): la cuenta no ve el repositorio (el `gh` de mentira responde 404 a todo y no hay

@@ -87,16 +87,6 @@ def _sections(body: str) -> dict:
     return out
 
 
-
-
-
-
-
-
-
-
-
-
 # ── the «Desarrollo» section ───────────────────────────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -180,6 +170,9 @@ def development_section(project_text: str) -> DevSection:
             continue
         if k == REPOSITORIES:
             for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):
+                # pegado como enlace de GitHub: se queda con organización/repositorio
+                r = re.sub(r"^(?:https?://)?(?:www\.)?github\.com/", "", r).rstrip("/")
+                r = r[:-4] if r.endswith(".git") else r
                 if REPO.match(r):
                     if r.lower() not in (x.lower() for x in out.repositories):
                         out.repositories.append(r)

@@ -284,8 +284,22 @@ ok(_em.anio_de_la_organizacion(_c) == _dt2.datetime.now(_ZI("America/Mexico_City
 print("Los archivos del kit de desarrollo (1.27)")
 _pk = ("# P\n\n## Quién participa\nResponsable: Ana\n\n## Desarrollo\nRepositorios: acme/app\nDiseño: otra/area/entregables/diseno.md\n"
        "- **Plan:** `ventas/x/entregables/plan.md`\nConfiguración de plataforma: por crear\nDISENO: no/vale/dos.md\nSeguimiento: ../fuera.md\n\n## Otra\nPlan: no.md\n")
-ok(_em.rutas_del_kit(_pk) == ["otra/area/entregables/diseno.md", "ventas/x/entregables/plan.md", "no/vale/dos.md"],
-   "trae las rutas de la sección, sin «por crear», sin salir de la raíz y sin lo de otra sección")
+ok(_em.rutas_del_kit(_pk) == ["otra/area/entregables/diseno.md", "ventas/x/entregables/plan.md"],
+   "trae las rutas de la sección, sin «por crear», sin salir de la raíz, sin la clave repetida y sin lo de otra sección")
+# la misma lectura que context_core/development.py, que usa abrir.py: lo que una ve y la otra no, sin consola, saldría
+# como un archivo que no existe
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "packages" / "context-core"))
+from context_core import development as _dev
+for _nom, _txt in (
+        ("la forma normal", _pk),
+        ("el encabezado en minúsculas", _pk.replace("## Desarrollo", "## desarrollo")),
+        ("una ruta como enlace", _pk.replace("Diseño: otra/area/entregables/diseno.md", "Diseño: [el diseño](otra/area/entregables/diseno.md)")),
+        ("un archivo que no es .md", _pk.replace("diseno.md", "diseno.pdf")),
+        ("un ejemplo en un bloque de código antes", _pk.replace("## Quién participa", "```\n## Desarrollo\nPlan: ejemplo.md\n```\n\n## Quién participa")),
+        ("dos espacios en el encabezado", _pk.replace("## Desarrollo", "##  Desarrollo"))):
+    _s = _dev.development_section(_txt)
+    _esperado = [v for k, v in _s.paths.items() if v != _dev.TO_BUILD and ".." not in v.split("/")]
+    ok(sorted(_em.rutas_del_kit(_txt)) == sorted(_esperado), f"la misma lectura que context_core: {_nom}")
 ok(_em.rutas_del_kit("# P\n\n## Quién participa\nResponsable: Ana\n") == [], "sin la sección, nada")
 
 print()

@@ -29,6 +29,7 @@ comprobar:
   - no-menciona-re \bR[1-7]\b|\bPL[1-7]\b
   - solo-escribe-en metodo.md
   - sin-herramienta mcp__remote-devices__device_commit_files
+  - sin-comando gh
   - sin-ingles
 ---
 Un proyecto de desarrollo (1.27): `ventas/cuentas` lleva la sección «Desarrollo», con las configuraciones y el diseño por

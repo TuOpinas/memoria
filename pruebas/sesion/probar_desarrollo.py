@@ -91,6 +91,25 @@ ok(any("Acepta no tiene su línea en la sección" in x for x in a), "una línea 
 ok(any("no se pudo comprobar" in x and "personas/nomina/plan.md" in x for x in a), "un área restringida ajena no se abre ni se da por que falta")
 ok(not any("Plan" in x and "no existe" in x for x in a), "y no sale como que no existe")
 
+print("Lo que la sección dice y no se entiende")
+r = raiz()
+kit(r, **{"Repositorios": "https://github.com/acme/app", "Construye": "Ana Prueba (ana en el correo)",
+          "Diseño": "ventas/cuentas/taller/no-esta.md"})
+c, o = abrir(r)
+a = del_kit(o)
+ok(not any("Repositorios" in x and "vacía" in x for x in a), "un enlace de GitHub en Repositorios se entiende")
+ok(any("en la sección" in x and "ana en el correo" in x for x in a), "una persona mal escrita se dice")
+ok(any("Diseño (ventas/cuentas/taller/no-esta.md) apunta a un archivo que no existe" in x for x in a),
+   "el taller del propio proyecto se comprueba")
+ok(not any("Acepta" in x for x in a), "las personas bien escritas no salen")
+r = raiz()
+kit(r, **{"Acepta": "por crear", "Configuración de plataforma": "x/y.md", "Configuración de repositorios": "x/y.md",
+          "Diseño": "x/y.md", "Plan": "x/y.md"})
+(r / "x").mkdir(); (r / "x/y.md").write_text("---\nestado: borrador\nactualizado: 2026-11-01\n---\n", encoding="utf-8")
+c, o = abrir(r)
+a = del_kit(o)
+ok(any("Acepta está por crear." in x for x in a) and not any("plantillas" in x for x in a), "a un rol por crear no se le mandan plantillas")
+
 print("La sección después de «Quién participa» no cambia quién escribe")
 c, o = abrir(r, cuenta="beto@ejemplo.test")
 ok(re.search(r"=== CUENTA EN EL PROYECTO\nbeto@ejemplo.test: (?!colabora en este proyecto)", o) is not None,

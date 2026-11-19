@@ -39,7 +39,8 @@ def repo():
     git(d, "init", "-q", "-b", "main")
     git(d, "config", "user.email", "p@e.test")
     git(d, "config", "user.name", "Prueba")
-    for f in ("app/main.py", "tests/aceptacion/test_p01.py", "tests/unit/test_x.py"):
+    for f in ("app/main.py", "tests/aceptacion/test_p01.py", "tests/unit/test_x.py", "pruebas/aceptación/test_p01.py",
+              ".github/workflows/pruebas-aceptacion.yml"):
         (d / f).parent.mkdir(parents=True, exist_ok=True)
         (d / f).write_text("x = 1\n", encoding="utf-8")
     git(d, "add", "-A")
@@ -61,7 +62,8 @@ def pr(cambios, acept=None):
     git(d, "add", "-A")
     git(d, "commit", "-qm", "cambio")
     cuerpo, acept_yml = script()
-    env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept or acept_yml)
+    env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept if acept is not None else acept_yml,
+               RUNNER_TEMP=tempfile.mkdtemp())
     p = subprocess.run(["bash", "-c", cuerpo], cwd=d, env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
 
@@ -79,6 +81,22 @@ c, o = pr([("escribir", "tests/aceptacion-viejas/test_z.py", None), ("escribir",
 ok(c == 1, "una carpeta que solo empieza igual cuenta como fuera")
 c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept="tests/aceptacion/")
 ok(c == 1, "con la barra final en ACEPTACION, igual")
+
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_año.py", None)])
+ok(c == 1, "una prueba con acento en el nombre cuenta como dentro: con código, falla")
+c, o = pr([("escribir", "tests/aceptacion/test_sesión.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)])
+ok(c == 0, "y un pull request de escenarios con acentos pasa")
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "pruebas/aceptación/test_p01.py", None)], acept="pruebas/aceptación")
+ok(c == 1, "una carpeta con acento, también")
+for mala in ("tests/acceptance", "./tests/otra", ""):
+    c, o = pr([("escribir", "app/main.py", None)], acept=mala)
+    ok(c == 1 and "no existe" in o, f"con ACEPTACION «{mala}», que no existe, falla y lo dice")
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept="./tests/aceptacion")
+ok(c == 1, "con «./» delante, la carpeta se reconoce")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "app/main.py", None)])
+ok(c == 1 and "va solo en su pull request" in o, "cambiar el workflow junto con código falla")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None)])
+ok(c == 0, "cambiarlo solo pasa")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")

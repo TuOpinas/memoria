@@ -84,6 +84,11 @@ class Section(unittest.TestCase):
         self.assertEqual(s.paths[dev.DESIGN], "shared-memory/product-design/entregables/diseno.md")
         self.assertTrue(any("dos veces" in w for w in s.warnings))
 
+    def test_github_link_in_repositories(self):
+        s = dev.development_section(PROYECTO.replace("decisionbits/work-memory", "https://github.com/decisionbits/work-memory.git"))
+        self.assertEqual(s.repositories, ["decisionbits/work-memory", "TuOpinas/memoria"])
+        self.assertEqual(s.warnings, [])
+
     def test_bad_values_warn(self):
         s = dev.development_section(PROYECTO.replace("decisionbits/work-memory", "work-memory")
                                     .replace("(fabi@smilepill.mx)", "(fabi en smile pill)"))

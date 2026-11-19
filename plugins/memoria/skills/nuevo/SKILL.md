@@ -464,7 +464,7 @@ Sesión de: Ana Pérez · plugin <la versión del plugin>
 
 **7. La línea del proyecto en el bloque `Proyectos` de `area.md`**: `` `nombre-del-proyecto/` — qué es ``, sin entregables debajo porque todavía no hay ninguno vigente. Es lo único que se toca de `area.md`.
 
-**8. Si construye software**, la sección `## Desarrollo` al final de `proyecto.md`, después de `Quién participa`, con la forma de `escribir.md` (sección 3, «Un proyecto de desarrollo»): cada ruta con `por crear`, y en los roles las personas que ya se sepan como `Nombre Apellido (correo, @usuario)`. Después se ofrece, en una línea, crear el diseño y el plan desde las plantillas del plugin (`skills/desarrollo/plantillas/diseno.md` y `plan.md`) en `entregables/` del proyecto, como borradores con su `aportacion`, y poner sus rutas en la sección. La configuración y el `CLAUDE.md` no se crean aquí: los crea quien administra, desde sus plantillas.
+**8. Si construye software**, la sección `## Desarrollo` al final de `proyecto.md`, después de `Quién participa`, con la forma de `escribir.md` (sección 3, «Un proyecto de desarrollo»): cada ruta con `por crear`, `Paso a Prod: release de GitHub`, y en `Repositorios` y los roles lo que ya se sepa (las personas como `Nombre Apellido (correo, @usuario)`) o `por crear`. Después se ofrece, en una línea, crear el diseño y el plan desde las plantillas del plugin (`skills/desarrollo/plantillas/diseno.md` y `plan.md`) en `entregables/` del proyecto, como borradores con su `aportacion`, y poner sus rutas en la sección. La configuración y el `CLAUDE.md` no se crean aquí: los crea quien administra, desde sus plantillas.
 
 ## Qué respondo al terminar
 

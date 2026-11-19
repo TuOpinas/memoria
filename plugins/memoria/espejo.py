@@ -195,19 +195,32 @@ KIT_RUTAS = ("configuracion de plataforma", "configuracion de repositorios", "di
 
 
 def rutas_del_kit(texto_proyecto):
-    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». Claves comparadas
-    sin acentos ni mayúsculas, como context_core/development.py, que es la lectura de verdad."""
+    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». Lee como
+    context_core/development.py, que es la lectura de verdad y la que usa abrir.py (pruebas/sesion/probar_espejo.py las
+    compara): encabezado y claves sin acentos ni mayúsculas, sin contar lo que va en un bloque de código, la primera vez
+    que aparece cada clave y el destino de un enlace; si no, abrir.py daría por inexistente lo que no se trajo."""
     import unicodedata
-    clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z ]", " ", "".join(
-        c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn").lower())).strip()
-    m = re.search(r"^## Desarrollo\s*\n(.*?)(?=^## |\Z)", unicodedata.normalize("NFC", texto_proyecto), re.M | re.S)
-    out = []
-    for l in (m.group(1).split("\n") if m else []):
-        mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip())
-        if mm and clave(mm.group(1)) in KIT_RUTAS:
-            r = mm.group(2).replace("`", "").replace("**", "").strip().lstrip("/")
-            if r and clave(r) != "por crear" and ".." not in r.split("/") and r.endswith(".md"):
-                out.append(r)
+    clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", "".join(
+        c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn").replace("\u00a0", " ").lower())).strip()
+    dentro, cerca, vistas, out = False, False, set(), []
+    for l in unicodedata.normalize("NFC", texto_proyecto.replace("\r\n", "\n")).split("\n"):
+        if re.match(r"^\s*(```|~~~)", l):
+            cerca = not cerca
+        if cerca:
+            continue
+        if l.startswith("## "):
+            if dentro:
+                break
+            dentro = clave(l[3:]) == "desarrollo"
+            continue
+        mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip()) if dentro else None
+        if not mm or clave(mm.group(1)) not in KIT_RUTAS or clave(mm.group(1)) in vistas:
+            continue
+        vistas.add(clave(mm.group(1)))
+        r = re.sub(r"\[([^\]]*)\]\(([^)]*)\)", lambda x: x.group(2) or x.group(1), mm.group(2).strip())
+        r = r.replace("`", "").replace("**", "").strip().lstrip("/")
+        if r and clave(r) != "por crear" and ".." not in r.split("/") and not r.startswith("~"):
+            out.append(r)
     return out
 
 

@@ -29,11 +29,11 @@ Una columna por repositorio de la línea «Repositorios:».
 | # | Qué se cumple | Cómo se comprueba | [organización/repositorio] |
 |---|---|---|---|
 | R1 | Nada llega a la rama principal sin pull request, se une con squash y nadie se salta la regla | En GitHub, el repositorio → Settings → Rules: la regla de la rama principal, sin excepciones; en General, solo squash | |
-| R2 | Las pruebas pasan antes de unir, y el pull request de una pieza no cambia sus pruebas de aceptación | En la regla de la rama principal, las pruebas y «pruebas de aceptación» (`.github/workflows/pruebas-aceptacion.yml`) son obligatorias | |
+| R2 | La suite pasa antes de unir, y el pull request de una pieza no cambia sus pruebas de aceptación | En la regla de la rama principal, la suite de «Cómo se prueba» y el check «pruebas de aceptación» (`.github/workflows/pruebas-aceptacion.yml`, con su carpeta puesta) son obligatorios | |
 | R3 | Ningún secreto entra en el código | En la regla de la rama principal, el control de secretos es obligatorio | |
 | R4 | La base de datos cambia solo con migraciones nuevas, y una unida no se edita | Quien revisa el pull request; sin base de datos, `no aplica` | |
 | R5 | A Prod solo despliega quien administra, y solo lo que tiene el sí, como dice «Paso a Prod» | Quién tiene permiso de desplegar en Prod | |
-| R6 | Cada pull request, salvo los de bots, empieza por el identificador de su pieza, o por «Escenarios · » y la pieza | El apartado «fuera del plan» del último seguimiento | |
+| R6 | Cada pull request, salvo los de bots, empieza por el identificador de su pieza, por «Escenarios · » y la pieza, o por «Kit · » si solo cambia el `CLAUDE.md` o el workflow | El apartado «fuera del plan» del último seguimiento | |
 | R7 | El `CLAUDE.md` existe y tiene las reglas de la plantilla del kit | El archivo | |
 
-Un cambio al workflow de las pruebas de aceptación va en su propio pull request, y lo revisa quien audita: en su pull request corre ya la versión cambiada.
+Un cambio al workflow de las pruebas de aceptación va solo en su pull request («Kit · »): si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow, el `CLAUDE.md` o la carpeta de aceptación, para que lo vea quien audita.

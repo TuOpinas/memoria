@@ -20,11 +20,12 @@ Administra: Nombre Apellido (correo, @usuario)
 Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub se omite si no tiene cuenta. La plataforma y los repositorios van en una sola configuración (`configuracion.md`): las dos claves pueden apuntar al mismo archivo.
 
 **Seguimiento** lo escribe Claude cuando alguien lo pide (skill `desarrollo`), y mientras diga `por crear` no cuenta como pieza que falta: el primero se crea en `entregables/seguimiento.md` del proyecto, que nace `vigente`, y pone aquí su ruta. Cada entrada va arriba de la anterior, sin borrarla, y lleva en este orden:
-1. la fecha, quién lo pidió y el último commit de la rama principal que se leyó en cada repositorio;
+1. la fecha, quién lo pidió, desde cuándo se leyó y el último commit de la rama principal que se leyó en cada repositorio;
 2. cada pieza del plan con su estado;
 3. lo que está fuera del plan: pull requests sin pieza o con una que el plan no tiene;
 4. lo que lo unido añade y el diseño no tiene: datos, componentes o conceptos nuevos, también con otro nombre;
-5. los pasos a Prod sin sí, y las verificaciones de las piezas unidas desde el anterior.
+5. los pull requests unidos que tocaron las pruebas de aceptación, el workflow o el `CLAUDE.md`, con la fecha de «Aprobó:» de su pieza: un cambio en los escenarios posterior a su aprobación, o hecho después de unir la pieza, se señala;
+6. los pasos a Prod sin sí, y las verificaciones de las piezas unidas desde el anterior.
 
 Quien no tenga el plugin se lo pide a quien audita o a quien construye.
 

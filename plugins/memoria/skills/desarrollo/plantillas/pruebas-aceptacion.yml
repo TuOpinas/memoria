@@ -1,9 +1,11 @@
 # Plantilla del kit de desarrollo (plugin Memoria 1.27). Se copia como .github/workflows/pruebas-aceptacion.yml del
-# repositorio, se pone en ACEPTACION la carpeta de «Pruebas de aceptación» del CLAUDE.md y se marca como obligatoria en
-# la regla de la rama principal (R2 de la configuración).
+# repositorio, se pone en ACEPTACION la carpeta de «Pruebas de aceptación» del CLAUDE.md y se marca como obligatorio en
+# la regla de la rama principal el check «pruebas de aceptación» (R2 de la configuración).
 #
 # Falla si un mismo pull request cambia las pruebas de aceptación y algo fuera de ellas: los escenarios entran en su
 # propio pull request, que solo toca esa carpeta, y el de la pieza no la toca. Un archivo movido cuenta en los dos sitios.
+# Este archivo también va solo en su pull request: en un pull request corre la versión que trae, así que si cambia junto
+# con otra cosa falla, y el seguimiento lista los que lo cambiaron.
 name: pruebas de aceptación
 on:
   pull_request:
@@ -11,6 +13,7 @@ env:
   ACEPTACION: tests/aceptacion
 jobs:
   aparte:
+    name: pruebas de aceptación
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,13 +24,24 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          carpeta="${ACEPTACION%/}/"
-          dentro=0; fuera=0
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            if [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1)); else fuera=$((fuera + 1)); echo "fuera: $f"; fi
-          done < <(git diff --name-only --no-renames "$BASE...$HEAD")
+          set -eo pipefail
+          carpeta="${ACEPTACION#./}"; carpeta="${carpeta%/}/"
+          este=".github/workflows/pruebas-aceptacion.yml"
+          if [ "$carpeta" = "/" ] || ! git cat-file -e "$HEAD:${carpeta%/}" 2>/dev/null; then
+            echo "::error::La carpeta de ACEPTACION («$carpeta») no existe en este pull request: ponla igual que «Pruebas de aceptación» del CLAUDE.md."
+            exit 1
+          fi
+          git -c core.quotepath=off diff --name-only --no-renames -z "$BASE...$HEAD" > "$RUNNER_TEMP/cambios" || exit 1
+          dentro=0; fuera=0; workflow=0
+          while IFS= read -r -d '' f; do
+            if [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1)); else fuera=$((fuera + 1)); fi
+            if [ "$f" = "$este" ]; then workflow=1; fi
+          done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta y $fuera fuera."
+          if [ "$workflow" = 1 ] && [ $((dentro + fuera)) -gt 1 ]; then
+            echo "::error::Este pull request cambia $este junto con otros archivos: va solo en su pull request."
+            exit 1
+          fi
           if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."
             exit 1
