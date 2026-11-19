@@ -1,71 +1,109 @@
 # Plantilla del kit de desarrollo (plugin Memoria 1.27). Se copia como .github/workflows/pruebas-aceptacion.yml del
-# repositorio, se rellenan ACEPTACION, ACTIVAS y PRUEBA con lo que dice «Pruebas de aceptación» del CLAUDE.md, se completa
-# el paso «Prepara el entorno» y se marca como obligatorio en la regla de la rama principal el check «pruebas de
+# repositorio, se rellenan ACEPTACION, ACTIVAS, PRUEBA y FALLAN con lo que dice «Pruebas de aceptación» del CLAUDE.md, se
+# completa el paso «Prepara el entorno» y se marca como obligatorio en la regla de la rama principal el check «pruebas de
 # aceptación» (R2 de la configuración). Decisión tecnologia/metodologia-desarrollo#2026-11-19-7.
 #
 # - Un pull request no cambia las pruebas de aceptación y código a la vez: los escenarios entran en su propio pull request.
 # - Las pruebas de una pieza cuentan desde que el pull request de la pieza añade su identificador a ACTIVAS, un archivo
-#   fuera de la carpeta: desde entonces tienen que pasar en cada pull request.
-# - Un pull request de escenarios («Escenarios · P01») se une en verde si las pruebas de sus piezas aún no activas fallan,
-#   que es lo que tiene que pasar antes de construirlas.
+#   fuera de la carpeta. El pull request de una pieza que ya tiene pruebas en la carpeta tiene que añadirla, y ninguno
+#   puede quitar una pieza de la lista, salvo el de escenarios de esa misma pieza, que la saca mientras se cambian.
+#   Una pieza técnica, sin escenarios, no tiene pruebas y no entra en la lista.
+# - Un pull request de escenarios («Escenarios · P01») se une en verde si las pruebas de sus piezas no activas fallan con
+#   el código de «pruebas fallidas» del ejecutor (FALLAN): otra salida (sin pruebas, un error al cargarlas, el ejecutor
+#   sin instalar) es un error.
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
 #   Mientras la carpeta no exista, pasa: el kit se monta en cualquier orden.
-# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas o este workflow; si es otra persona, lo
-# exige un CODEOWNERS (configuración, R2).
+# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o este workflow; si es otra
+# persona, lo exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
+permissions:
+  contents: read
 env:
   ACEPTACION: tests/aceptacion                 # la carpeta de las pruebas de aceptación
   ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
   PRUEBA: pytest tests/aceptacion -k {pieza}   # cómo se corren las pruebas de una pieza; {pieza} es su identificador
+  FALLAN: "1"                                  # el código con el que sale el ejecutor cuando hay pruebas que fallan (pytest: 1)
 jobs:
   aparte:
     name: pruebas de aceptación
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Las pruebas de aceptación van en su propio pull request
+          persist-credentials: false
+      - name: Las pruebas de aceptación van en su propio pull request, y la lista de piezas activas no pierde ninguna
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          TITULO: ${{ github.event.pull_request.title }}
         run: |
           set -eo pipefail
-          carpeta="$ACEPTACION"
-          while [[ "$carpeta" == ./* ]]; do carpeta="${carpeta#./}"; done
-          carpeta="$(printf '%s' "$carpeta" | tr -s '/')"; carpeta="${carpeta%/}/"
+          ident='^[A-Za-z]+[0-9]+$'
+          norm() { local c="$1"; while [[ "$c" == ./* ]]; do c="${c#./}"; done; printf '%s' "$c" | tr -s '/'; }
+          carpeta="$(norm "$ACEPTACION")"; carpeta="${carpeta%/}/"
+          lista="$(norm "$ACTIVAS")"
           este="${GITHUB_WORKFLOW_REF%@*}"; este="${este#*/*/}"
           [ -n "$este" ] || este=".github/workflows/pruebas-aceptacion.yml"
+          if [ "$carpeta" = "/" ] || [[ "/$carpeta" == */./* || "/$carpeta" == */../* ]]; then
+            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1
+          fi
+          COMUN="$(git merge-base "$BASE" "$HEAD")"
           tipo() { git cat-file -t "$1:${carpeta%/}" 2>/dev/null || true; }
-          if [ "$carpeta" = "/" ] || { [ -n "$(tipo "$HEAD")" ] && [ "$(tipo "$HEAD")" != tree ]; }; then
-            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."
-            exit 1
+          if [ -n "$(tipo "$HEAD")" ] && [ "$(tipo "$HEAD")" != tree ]; then
+            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1
           fi
           if [ -z "$(tipo "$HEAD")" ]; then
-            if [ "$(tipo "$BASE")" = tree ]; then
-              echo "::error::Este pull request quita o mueve la carpeta de las pruebas de aceptación ($carpeta)."
-              exit 1
+            if [ "$(tipo "$COMUN")" = tree ]; then
+              echo "::error::Este pull request quita o mueve la carpeta de las pruebas de aceptación ($carpeta)."; exit 1
             fi
-            echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."
-            exit 0
+            echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."; exit 0
           fi
-          git -c core.quotepath=off diff --name-only --no-renames -z "$BASE...$HEAD" > "$RUNNER_TEMP/cambios" || exit 1
-          dentro=0; fuera=0; kit=0; workflow=0
+          # las piezas del título: «P01 · …», «P01 + P02 · …» o «Escenarios · P01 · …»
+          escenarios=0; t="$TITULO"
+          if [[ "$t" == "Escenarios · "* ]]; then escenarios=1; t="${t#Escenarios · }"; fi
+          piezas=" "
+          if [[ "$t" == *" · "* ]]; then
+            IFS='+' read -r -a ps <<< "${t%% · *}"
+            for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ $ident ]] && piezas="$piezas$p "; done
+          fi
+          # qué cambia
+          git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
+          dentro=0; fuera=0; kit=0; workflow=0; lista_cambia=0
           while IFS= read -r -d '' f; do
             if [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
+            elif [ "$f" = "$lista" ]; then lista_cambia=1
             elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
-          echo "Cambian $dentro archivos de $carpeta, $kit del kit y $fuera fuera."
+          echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
           if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
-            echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."
-            exit 1
+            echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
           if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then
-            echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."
-            exit 1
+            echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
+          fi
+          # la lista no pierde ninguna pieza, salvo la que saca su propio pull request de escenarios
+          leer() { git show "$1:$lista" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -v '^$' || true; }
+          antes="$(leer "$COMUN")"; ahora=" $(leer "$HEAD" | tr '\n' ' ')"
+          for p in $antes; do
+            [[ "$ahora" == *" $p "* ]] && continue
+            if [ "$escenarios" = 1 ] && [[ "$piezas" == *" $p "* ]]; then
+              echo "$p sale de la lista mientras se cambian sus escenarios; su próximo pull request la vuelve a añadir."; continue
+            fi
+            echo "::error::Este pull request quita $p de $lista: sus pruebas dejarían de contar. Solo la saca el pull request de escenarios de $p («Escenarios · $p · …»)."; exit 1
+          done
+          # el pull request de una pieza con pruebas en la carpeta la añade a la lista
+          if [ "$escenarios" = 0 ]; then
+            for p in $piezas; do
+              if git ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | grep -qiE "(^|[^A-Za-z0-9])${p}([^0-9]|$)" && [[ "$ahora" != *" $p "* ]]; then
+                echo "::error::$p tiene pruebas de aceptación en $carpeta y no está en $lista: su pull request la añade. Una pieza técnica, sin escenarios, no tiene pruebas."; exit 1
+              fi
+            done
           fi
       - name: Prepara el entorno
         run: |
@@ -78,17 +116,20 @@ jobs:
           set -o pipefail
           [ -d "$ACEPTACION" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }
           ident='^[A-Za-z]+[0-9]+$'
-          correr() { local c="${PRUEBA//\{pieza\}/$1}"; bash -c "$c"; }
+          correr() { local c="${PRUEBA//\{pieza\}/$1}"; bash -c "$c" < /dev/null; }
           activas=" "
           if [ -f "$ACTIVAS" ]; then
-            while IFS= read -r p || [ -n "$p" ]; do
+            mapfile -t filas < "$ACTIVAS"
+            for p in "${filas[@]}"; do
               p="${p%%#*}"; p="${p//[[:space:]]/}"
               [ -z "$p" ] && continue
               [[ "$p" =~ $ident ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
               activas="$activas$p "
+            done
+            for p in $activas; do
               echo "== $p (activa): sus pruebas tienen que pasar"
               correr "$p" || { echo "::error::Las pruebas de aceptación de $p, que ya cuenta, no pasan."; exit 1; }
-            done < "$ACTIVAS"
+            done
           fi
           if [[ "$TITULO" == "Escenarios · "* ]]; then
             resto="${TITULO#Escenarios · }"; resto="${resto%% · *}"
@@ -97,7 +138,9 @@ jobs:
               p="${p//[[:space:]]/}"
               [[ "$p" =~ $ident ]] || { echo "::error::El título no dice qué pieza («Escenarios · P01»)."; exit 1; }
               [[ "$activas" == *" $p "* ]] && continue
-              echo "== $p (escenarios nuevos): sus pruebas tienen que fallar"
-              if correr "$p"; then echo "::error::Las pruebas nuevas de $p ya pasan antes de construir la pieza: no comprueban lo que piden sus escenarios."; exit 1; fi
+              echo "== $p (escenarios): sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
+              set +e; correr "$p"; rc=$?; set -e
+              if [ "$rc" = 0 ]; then echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios."; exit 1; fi
+              if [ "$rc" != "$FALLAN" ]; then echo "::error::Las pruebas de $p no fallaron como pruebas (salida $rc, se esperaba $FALLAN): no hay pruebas de $p, no se pudieron cargar o el ejecutor no está instalado."; exit 1; fi
             done
           fi
