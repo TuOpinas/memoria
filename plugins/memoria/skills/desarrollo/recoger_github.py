@@ -5,7 +5,7 @@ solo corre cuando alguien pide un seguimiento o la auditoría (tecnologia/metodo
 
 Uso:
   recoger_github.py <organización/repositorio>... --salida <archivo.json> [--desde AAAA-MM-DD] [--auditoria]
-                    [--max-commits N] [--max-detalle N]
+                    [--max-commits N] [--max-detalle N] [--max-pulls N]
 
   --salida       dónde deja el JSON; se escribe después de cada repositorio, así que un corte deja lo ya leído (sin él,
                  por la salida estándar, al final)
@@ -15,15 +15,18 @@ Uso:
   --max-commits  cuántos commits de la rama principal se leen como mucho (500): con ellos se sabe qué entró en cada paso
                  a Prod; si no llegan hasta --desde, el repositorio lo dice en «truncado»
   --max-detalle  de cuántos commits desde --desde se leen los archivos como mucho (150)
+  --max-pulls    cuántos pull requests a la rama principal se leen como mucho (2.000), de los más nuevos a los más viejos
 
 Lo que no se pudo leer o se cortó se dice, nunca se calla: cada repositorio lleva «errores» ({lista: motivo}) y «truncado»
 ([listas]), y el seguimiento no se guarda si falta algo (revisión de la 1.27.0, hallazgo 2). Solo se leen los pull
 requests a la rama principal (decisión tecnologia/metodologia-desarrollo#2026-11-18-12). De cada archivo se guarda el
-`patch` solo si es código que el seguimiento compara, y cortado a 4.000 caracteres.
+`patch` solo si es código que el seguimiento compara: cortado a 4.000 caracteres, salvo una migración, que va entera; el
+de un archivo de secretos (.env, .pem, .key, .p12, .pfx) no se guarda, y lleva «patch_quitado». Con --auditoria el JSON
+lleva «"auditoria": true» y ningún «detalle»: no sirve para un seguimiento.
 
 Con un conector de GitHub en lugar de `gh`, la sesión arma el mismo JSON a mano, con esta forma; `pulls`, `commits`,
 `releases` y `tags` van siempre (vacías si no hay), `base` y `merged_at` de cada pull request unido son obligatorios, y lo
-que no se tenga va en «errores»; sin «terminado», el seguimiento no se guarda:
+que no se tenga va en «errores»; sin «terminado», sin «hoy» o sin alguno de «pedidos», el seguimiento no se guarda:
 
   {"leido": "conector", "cuenta": "login", "hoy": "AAAA-MM-DD", "desde": "AAAA-MM-DD", "pedidos": ["org/r"], "terminado": true,
    "repos": [{"repo": "org/r", "rama": "main", "main_sha": "…",
@@ -42,11 +45,11 @@ que no se tenga va en «errores»; sin «terminado», el seguimiento no se guard
 """
 import base64, datetime, json, os, re, subprocess, sys
 
-PAGINAS_PR = 20
 PATCH_MAX = 4000
 MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
 # un secreto no entra al JSON, que la sesión lee (arreglos 1, hallazgo 16)
-SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx)|[^/]*(secret|credential|password)[^/]*)$", re.I)
+# solo archivos de secretos de verdad: una migración o un módulo con «password» en el nombre se compara (arreglos 2, hallazgo 2)
+SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx))$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
@@ -89,7 +92,7 @@ def es_bot(user):
     return user.get("type") == "Bot" or (user.get("login") or "").endswith("[bot]")
 
 
-def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
+def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=2000):
     r = {"repo": nombre, "errores": {}, "truncado": []}
     info, e = gh(f"repos/{nombre}")
     if e:
@@ -98,7 +101,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
     rama = info.get("default_branch") or "main"
     r["rama"] = rama
     # solo los pull requests a la rama principal (decisión -12): los de otras ramas son pasos dentro de un bloque
-    pulls, e, t = paginas(f"repos/{nombre}/pulls?state=all&base={rama}&sort=created&direction=desc", PAGINAS_PR)
+    pulls, e, t = paginas(f"repos/{nombre}/pulls?state=all&base={rama}&sort=created&direction=desc", max(1, (max_pulls + 99) // 100))
     if e:
         r["errores"]["pulls"] = e
     if t:
@@ -120,8 +123,8 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
     r["commits_hasta"] = r["commits"][-1]["date"][:10] if r["commits"] else ""
     if len(r["commits"]) >= max_commits and r["commits_hasta"] > desde:
         r["truncado"].append("commits")
-    r["detalle"] = []
     if not auditoria:
+        r["detalle"] = []
         recientes = [c for c in r["commits"] if c["date"][:10] >= desde]
         if len(recientes) > max_detalle:
             r["truncado"].append("detalle")
@@ -134,7 +137,9 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
             files = []
             for f in d.get("files") or []:
                 x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
-                if f.get("patch") and not SIN_PATCH.search(f.get("filename") or "") and not SECRETO.search(f.get("filename") or ""):
+                if f.get("patch") and SECRETO.search(f.get("filename") or ""):
+                    x["patch_quitado"] = True       # se dice que no se miró, sin guardar el secreto
+                elif f.get("patch") and not SIN_PATCH.search(f.get("filename") or ""):
                     # una migración va entera: sus «create table» del final se comparan con el diseño (arreglos 1, hallazgo 14)
                     tope = 10 ** 6 if MIGRACION.search(f.get("filename") or "") else PATCH_MAX
                     x["patch"] = f["patch"][:tope]
@@ -174,6 +179,11 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
     if auditoria:
         a = {"repo": {k: info.get(k) for k in ("private", "allow_squash_merge", "allow_merge_commit", "allow_rebase_merge",
                                                 "security_and_analysis", "default_branch") if k in info}, "errores": {}}
+        # «protected» de la rama lo ve cualquiera con lectura; el detalle de la protección, solo quien administra, y a
+        # los demás GitHub les da un 404 como a una rama sin proteger (arreglos 2, hallazgo 1)
+        br, e = gh(f"repos/{nombre}/branches/{rama}")
+        if br is not None:
+            a["rama_protegida"] = bool(br.get("protected"))
         prot, e = gh(f"repos/{nombre}/branches/{rama}/protection")
         a["proteccion"] = prot
         if e:
@@ -219,7 +229,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
 
 
 def main(argv):
-    repos, desde, auditoria, max_commits, max_detalle, salida = [], None, False, 500, 150, None
+    repos, desde, auditoria, max_commits, max_detalle, max_pulls, salida = [], None, False, 500, 150, 2000, None
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -235,6 +245,8 @@ def main(argv):
             max_commits = int(argv[i + 1]); i += 2; continue
         if a == "--max-detalle":
             max_detalle = int(argv[i + 1]); i += 2; continue
+        if a == "--max-pulls":
+            max_pulls = int(argv[i + 1]); i += 2; continue
         if a == "--auditoria":
             auditoria = True; i += 1; continue
         repos.append(a.strip().strip("`")); i += 1
@@ -247,6 +259,8 @@ def main(argv):
     # «pedidos» y «terminado»: un JSON cortado a mitad no se da nunca por completo (arreglos 1, hallazgo 1)
     out = {"leido": "gh", "cuenta": (yo or {}).get("login", ""), "hoy": hoy.isoformat(), "desde": desde, "pedidos": repos,
            "terminado": False, "repos": []}
+    if auditoria:
+        out["auditoria"] = True
     orgs = {}
 
     def guardar():
@@ -258,7 +272,7 @@ def main(argv):
             os.replace(tmp, salida)
 
     for nombre in repos:
-        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs))
+        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls))
         guardar()                 # un corte deja lo ya leído, sin «terminado»
     out["terminado"] = True
     guardar()

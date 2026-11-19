@@ -107,11 +107,23 @@ GH = {"leido": "gh", "hoy": HOY, "desde": "2026-11-01", "pedidos": ["acme/app"],
 
 def gh_json(d, completa=True):
     if completa:   # lo que escribe recoger_github.py al terminar
-        d = dict(d, terminado=d.get("terminado", True), pedidos=d.get("pedidos", [r["repo"] for r in d.get("repos", [])]))
+        d = dict(d, terminado=d.get("terminado", True), pedidos=d.get("pedidos", [r["repo"] for r in d.get("repos", [])]), hoy=d.get("hoy", HOY))
     p = pathlib.Path(tempfile.mkdtemp()) / "gh.json"
     p.write_text(json.dumps(d), encoding="utf-8")
     return p
 
+
+def vista(a):
+    """La auditoría solo propone (#2026-11-19-2): {fila: {columna: fila con «estado»}} de lo que trae propuesta, y la
+    lista de lo que no, con «porque»."""
+    co, pr = {}, []
+    for x in a["filas"]:
+        x = dict(x, estado=x["propuesta"], porque=x["evidencia"])
+        if x["propuesta"]:
+            co.setdefault(x["fila"], {})[x["columna"]] = x
+        else:
+            pr.append(x)
+    return dict(a, comprobado=co, preguntar=pr)
 
 print("El seguimiento")
 r = raiz()
@@ -186,7 +198,7 @@ ok(rc != 0 and "no es un proyecto de desarrollo" in (o + e), "se niega y dice po
 
 print("La auditoría")
 rc, o, e = correr("auditoria", r, "ventas/app", "--github", g, "--fecha", HOY)
-a = json.loads(o)
+a = vista(json.loads(o))
 co = a["comprobado"]
 ok(co["R1"]["acme/app"]["estado"] == "cumple", "R1: el ruleset exige pull request sin excepciones y solo squash")
 ok(co["R2"]["acme/app"]["estado"] == "no cumple" and "Do not allow bypassing" in co["R2"]["acme/app"]["evidencia"],
@@ -304,7 +316,7 @@ def sin_admin(x):
     a["rulesets"][0].pop("bypass_actors"); a["proteccion"] = None; a["errores"] = {"proteccion": "HTTP 403", "org": "HTTP 403", "admins": "HTTP 403"}
     a["repo"] = {"private": True, "default_branch": "main"}
 rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_mod(sin_admin), "--fecha", HOY)
-a2 = json.loads(o)
+a2 = vista(json.loads(o))
 pf = {x["fila"] for x in a2["preguntar"]}
 ok("R1" in pf and "R3" in pf and "PL1" in pf and "R1" not in a2["comprobado"] and "R3" not in a2["comprobado"],
    "sin permisos de administración, R1, R3 y PL1 van a preguntar, no a cumple ni a no cumple")
@@ -316,7 +328,7 @@ def dos_orgs(g):
     g["repos"].append(o2)
 g = json.loads(json.dumps(GH)); dos_orgs(g)
 rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_json(g), "--fecha", HOY)
-pl1 = json.loads(o)["comprobado"]["PL1"]["Estado"]
+pl1 = vista(json.loads(o))["comprobado"]["PL1"]["Estado"]
 ok(pl1["estado"] == "no cumple" and "acme" in pl1["evidencia"] and "otra" in pl1["evidencia"], "con dos organizaciones, PL1 no cumple si una no cumple")
 # hallazgo 10: aplicar rechaza filas que no están
 est.write_text(json.dumps({"R9": {"acme/app": "cumple"}}), encoding="utf-8")
@@ -347,7 +359,32 @@ ok("`9999999` en la rama principal sin pull request («commit de la rama del #4�
    "tras una unión sin squash los commits no se esconden: se dice de dónde pueden venir")
 rc, o, d = entrada_de(r11, gh_mod(lambda x: x["releases"][1].update(author="ana")))
 ok("el release v1 lo publicó @ana, que no administra" in o, "un release que publicó quien no administra rompe las reglas")
-ok("cita el seguimiento del 2026-11-03, que no está en el archivo" in o, "el seguimiento citado en «Aprobó:» tiene que existir")
+r14 = raiz(seguimiento="ventas/app/entregables/seguimiento.md")
+(r14 / "ventas/app/entregables/seguimiento.md").write_text(f"---\nestado: vigente\nactualizado: {HOY}\n---\n\n# Seguimiento\n\n## 2026-11-01 · pidió Ana\nnada\n", encoding="utf-8")
+rc, o, d = entrada_de(r14, gh_json(GH))
+ok("cita el seguimiento del 2026-11-03, que no está en el archivo" in o and "| P01 · Tablas | F1 | unida |" in o,
+   "el seguimiento citado en «Aprobó:» tiene que existir, o la pieza no sale entregada")
+rc, o, d = entrada_de(r11, gh_json(GH))
+ok("no está en el archivo" not in o, "sin el seguimiento en la copia, la cita no se da por mala")
+for nombre, g_, que in (("sin «hoy»", gh_json(dict(GH, hoy=""), completa=True), "no dice de qué día"),
+                        ("«hoy» con hora", gh_json(dict(GH, hoy="2026-11-18T10:00:00Z")), "no dice de qué día"),
+                        ("un JSON de auditoría", gh_json(dict(GH, auditoria=True)), "es de una auditoría"),
+                        ("releases con error", gh_mod(lambda x: x.update(errores={"releases": "HTTP 502"})), "releases HTTP 502")):
+    rc, o, d = entrada_de(r11, g_, "--escribir", "--crear")
+    ok(rc == 0 and que in o and d.get("no_escrito"), f"{nombre}: incompleto, no se guarda")
+def migracion_secreta(x):
+    x["detalle"][1]["files"].append({"filename": "migrations/005_add_password_hash.sql", "status": "added", "patch": "+CREATE TABLE claves (id int);"})
+rc, o, d = entrada_de(r11, gh_mod(migracion_secreta))
+ok("la tabla «claves»" in o, "una migración con «password» en el nombre se compara con el diseño")
+ok(d.get("sin_mirar") == 0, "sin_mirar no cuenta lo que nunca se iba a mirar")
+r15 = raiz(); (r15 / "guia.md").unlink()
+est.write_text(json.dumps({"R1": {"acme/app": "cumple"}}), encoding="utf-8")
+rc, o, e = correr("aplicar", r15, "ventas/app", r15 / "ventas/app/entregables/repositorios.md", est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
+ok(rc != 0 and "guia.md" in e, "aplicar sin guia.md en la copia no escribe")
+r16 = raiz(); pp = r16 / "ventas/app/proyecto.md"
+pp.write_text(re.sub(r"(?s)## Desarrollo.*", "## Desarrollo\nRepositorio: acme/app\nConstruyen: Ana\n", pp.read_text(encoding="utf-8")), encoding="utf-8")
+rc, o, e = correr("seguimiento", r16, "ventas/app", "--github", gh_json(GH), "--pidio", "Ana", "--fecha", HOY)
+ok(rc != 0 and "mal escrita" in e, "una sección con las claves mal escritas lo dice, no que no es de desarrollo")
 r12 = raiz(); (r12 / "guia.md").unlink()
 rc, o, d = entrada_de(r12, gh_json(GH), "--escribir", "--crear")
 ok("guia.md" in (d.get("no_escrito") or "") and not (r12 / "ventas/app/entregables/seguimiento.md").exists(), "sin guia.md en la copia, no se escribe")
@@ -357,7 +394,7 @@ ok("«Seguimiento:»" in (d.get("no_escrito") or ""), "sin la línea «Seguimien
 def reglas_sin_leer(x):
     x["auditoria"]["errores"] = {"rulesets": "HTTP 502", "org": "HTTP 403", "admins": "HTTP 403"}
 rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_mod(reglas_sin_leer), "--fecha", HOY)
-a3 = json.loads(o)
+a3 = vista(json.loads(o))
 ok("R1" not in a3["comprobado"] and "R2" not in a3["comprobado"] and any(x["fila"] == "R1" and "502" in x["porque"] for x in a3["preguntar"]),
    "si los rulesets no se leyeron, R1 y R2 se preguntan aunque la protección clásica se vea")
 vistas = {(f, c_) for f, cols in a["comprobado"].items() for c_ in cols} | {(x["fila"], x["columna"]) for x in a["preguntar"]}
@@ -367,6 +404,55 @@ otro = r / "ventas/app/entregables/plan.md"
 est.write_text(json.dumps({"R1": {"acme/app": "cumple"}}), encoding="utf-8")
 rc, o, e = correr("aplicar", r, "ventas/app", otro, est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
 ok(rc != 0 and "no es una de las configuraciones" in e, "aplicar solo escribe en las dos configuraciones de la sección")
+
+print("Los arreglos de la segunda ronda: la auditoría solo propone")
+def audita(g):
+    rc, o, e = correr("auditoria", r, "ventas/app", "--github", g, "--fecha", HOY)
+    return vista(json.loads(o)) if rc == 0 else {"comprobado": {}, "preguntar": [], "avisos": [e]}
+def prop(a_, fila, col="acme/app"):
+    return (a_["comprobado"].get(fila) or {}).get(col, {}).get("estado")
+def sin_rulesets(err):
+    def f(x):
+        x["auditoria"]["rulesets"] = []; x["auditoria"]["proteccion"] = None; x["auditoria"]["errores"] = {"proteccion": err}
+    return f
+a4 = audita(gh_mod(sin_rulesets("gh: Not Found (HTTP 404)")))
+ok(prop(a4, "R1") is None and prop(a4, "R2") is None, "un 404 «Not Found» de la protección no es «sin proteger»: sin propuesta")
+a4 = audita(gh_mod(sin_rulesets("gh: Branch not protected (HTTP 404)")))
+ok(prop(a4, "R1") == "no cumple", "«Branch not protected» sí propone «no cumple»")
+def excluye(x):
+    x["auditoria"]["rulesets"][0]["conditions"]["ref_name"] = {"include": ["~ALL"], "exclude": ["refs/heads/main"]}; x["auditoria"]["proteccion"] = None
+a4 = audita(gh_mod(excluye))
+ok(prop(a4, "R1") is None and any(x["fila"] == "R1" and "excluye" in x["porque"] for x in a4["preguntar"]), "un ruleset con exclusiones no se interpreta: se dice")
+def saltan(x):
+    x["auditoria"]["rulesets"] = []
+    x["auditoria"]["proteccion"] = {"enforce_admins": {"enabled": True}, "required_status_checks": {"contexts": ["pruebas"]},
+                                    "required_pull_request_reviews": {"bypass_pull_request_allowances": {"users": [{"login": "ana"}]}}}
+a4 = audita(gh_mod(saltan))
+ok(prop(a4, "R1") == "no cumple" and "ana" in a4["comprobado"]["R1"]["acme/app"]["evidencia"], "con gente en las excepciones de la protección clásica, R1 propone «no cumple»")
+def solo_nombre(x):
+    x["auditoria"]["repo"]["security_and_analysis"] = {"secret_scanning_push_protection": {"status": "disabled"}}
+a4 = audita(gh_mod(solo_nombre))
+ok(prop(a4, "R3") is None, "una comprobación llamada «secretos» no basta para proponer R3")
+a4 = audita(gh_json(dict(GH, hoy="2026-06-01", terminado=False)))
+ok(a4["avisos"] and not a4["comprobado"], "con el JSON viejo o sin terminar, nada se propone y se avisa")
+a4 = audita(gh_mod(lambda x: x["pulls"].append({"number": 9, "title": "sin pieza", "state": "merged", "author": "ana", "base": "main", "merge_commit": "9" * 40, "merged_at": ""})))
+ok(any("lo leído" in v or "sin fecha" in v for v in a4["avisos"]) and not a4["comprobado"], "un unido sin fecha deja la auditoría sin propuestas")
+def free(g):
+    o1 = g["repos"][0]; o1["auditoria"]["org"] = {"two_factor_requirement_enabled": True, "plan": "free"}; o1["auditoria"]["admins"] = ["beto"]
+    o1["auditoria"]["repo"]["private"] = False
+    g["repos"].append({"repo": "acme/privado", "error": "HTTP 404"})
+g5 = json.loads(json.dumps(GH)); free(g5)
+a4 = audita(gh_json(g5))
+ok(prop(a4, "PL1", "Estado") is None and prop(a4, "PL2", "Estado") is None, "plan Free con un repositorio sin leer, y un solo owner visto: sin propuesta")
+r17 = raiz(); pp = r17 / "ventas/app/proyecto.md"; pp.write_text(pp.read_text(encoding="utf-8").replace("Repositorios: acme/app", "Repositorios: Acme/App"), encoding="utf-8")
+cf = r17 / "ventas/app/entregables/repositorios.md"; cf.write_text(cf.read_text(encoding="utf-8").replace("acme/app", "Acme/App"), encoding="utf-8")
+rc, o, e = correr("auditoria", r17, "ventas/app", "--github", gh_json(GH), "--fecha", HOY)
+a4 = vista(json.loads(o))
+ok(not [x for x in a4["filas"] if "no se leyó" in x["evidencia"]] and all(x["columna"] in ("Acme/App", "Estado") for x in a4["filas"]),
+   "la columna se compara sin mayúsculas y sale con la grafía de la tabla")
+sys.path.insert(0, str(SKILL)); import recoger_github as _rg
+ok(not _rg.SECRETO.search("migrations/005_add_password_hash.sql") and not _rg.SECRETO.search("api/password_reset.py")
+   and _rg.SECRETO.search(".env.production") and _rg.SECRETO.search("certs/x.pem"), "solo los archivos de secretos de verdad pierden su patch")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")

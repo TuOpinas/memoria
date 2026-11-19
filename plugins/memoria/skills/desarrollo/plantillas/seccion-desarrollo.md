@@ -24,7 +24,7 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 - las piezas con su estado;
 - lo que está fuera del plan;
 - lo que no está en el diseño (datos, componentes y conceptos nuevos);
-- lo que rompe las reglas: commits en `main` sin pull request, uniones sin squash, migraciones ya unidas que cambiaron, y cambios al `CLAUDE.md` o a los controles;
+- lo que rompe las reglas: commits en `main` sin pull request, uniones sin squash, migraciones ya unidas que cambiaron, cambios al `CLAUDE.md` o a los controles, pasos a Prod sin sí o con el sí de quien no acepta ni audita, releases que publicó quien no administra, y síes que no citan un seguimiento que exista y sea anterior (esos no entregan nada);
 - los pasos a Prod que aprobó quien construyó.
 
 Quien no tenga el plugin se lo pide a quien audita o a quien construye.
