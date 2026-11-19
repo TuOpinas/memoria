@@ -52,10 +52,12 @@ def kit(r, **lineas):
                  + "".join(f"{k}: {v}\n" for k, v in base.items() if v is not None), encoding="utf-8")
 
 
-def doc(r, ruta, plantilla, actualizado, cambia=None):
+def doc(r, ruta, plantilla, actualizado, cambia=None, fila=None):
     t = (PLANTILLAS / plantilla).read_text(encoding="utf-8").replace("actualizado: AAAA-MM-DD", f"actualizado: {actualizado}")
     for a, b in (cambia or {}).items():
         t = t.replace(a, b)
+    if fila:   # una fila entera de la tabla, por su número, sin depender de cómo la redacta la plantilla
+        t = re.sub(r"^\| " + fila[0] + r" \|.*$", lambda m: fila[1], t, count=1, flags=re.M)
     (r / ruta).parent.mkdir(parents=True, exist_ok=True)
     (r / ruta).write_text(t, encoding="utf-8")
 
@@ -84,11 +86,9 @@ E = "ventas/cuentas/entregables/"
 kit(r, **{"Configuración de plataforma": "operacion/plataforma.md", "Configuración de repositorios": E + "repositorios.md",
           "Diseño": E + "diseno.md", "Plan": E + "plan.md", "Seguimiento": E + "seguimiento.md"})
 doc(r, "operacion/plataforma.md", "configuracion-plataforma.md", hace(40),
-    {"| PL1 | GitHub es de la empresa, pide verificación en dos pasos y su plan permite reglas en repositorios privados | | En GitHub, la organización → Settings → Authentication security y Billing | |":
-     f"| PL1 | GitHub de la empresa | Acme | Settings | cumple · {hace(40)} |"})
+    fila=("PL1", f"| PL1 | GitHub de la empresa | Acme | Settings | cumple · {hace(40)} |"))
 doc(r, E + "repositorios.md", "configuracion-repositorios.md", hace(40),
-    {"[organización/repositorio]": "acme/app", "| R1 | Nada llega a `main` sin pull request, se une con squash y nadie se salta la regla | En GitHub, el repositorio → Settings → Rules: la regla de `main` existe y su lista de excepciones está vacía; en General, solo squash | |":
-     f"| R1 | Nada a main | Rules | cumple · {hace(35)} |"})
+    {"[organización/repositorio]": "acme/app"}, fila=("R1", f"| R1 | Nada a main | Rules | cumple · {hace(35)} |"))
 doc(r, E + "diseno.md", "diseno.md", hace(5), {"| Componente | Qué hace | Dónde vive |": "| Componente | Qué hace | Ruta |"})
 doc(r, E + "plan.md", "plan.md", hace(10))
 (r / E / "seguimiento.md").write_text(f"---\nestado: vigente\nactualizado: {hace(3)}\n---\n\n# Seguimiento\n\n## {hace(3)} · pedido por Ana Prueba\nTodo en orden.\n\n## {hace(20)} · pedido por Ana Prueba\n", encoding="utf-8")
