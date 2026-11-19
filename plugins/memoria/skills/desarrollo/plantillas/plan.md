@@ -27,7 +27,7 @@ Las de fases cerradas se quedan. Un identificador no se reutiliza nunca.
 | P01 · [nombre] | F1 | [Una frase] |
 
 ## Hecha cuando
-Una pieza está hecha cuando pasan sus escenarios. Claude los propone y quien acepta los aprueba antes de que se construya; un escenario aprobado no se cambia sin que lo apruebe otra vez.
+Una pieza está hecha cuando pasan sus escenarios. Claude los propone y quien acepta los aprueba antes de que se construya; un escenario aprobado no se cambia sin que lo apruebe otra vez. Una pieza puramente técnica no tiene escenarios ni verificación: lo dice aquí, «pieza técnica, sin escenarios», y también lo aprueba quien acepta.
 
 ### P01 · [nombre]
 Aprobó: [Nombre Apellido, AAAA-MM-DD]
@@ -43,9 +43,10 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
 
 ## Cómo avanza
 - Se construye por bloques: una o varias piezas en un pull request a la rama principal, unido y desplegado antes del siguiente. Claude propone cómo se agrupan; lo normal es una pieza por pull request.
-- Una sesión aparte, que ve este plan, el diseño y el `CLAUDE.md` del repositorio pero no el código de la aplicación, convierte los escenarios aprobados en pruebas que fallan, con el identificador de su pieza en el nombre, en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Esas pruebas no van en la suite obligatoria hasta que su pieza se une: el pull request de la pieza las añade al comando de la suite, que vive fuera de esa carpeta. El pull request de la pieza no toca la carpeta: CI lo impide.
-- Quien construye une la pieza cuando pasan sus pruebas de aceptación, con su salida en el pull request, y la suite obligatoria sigue en verde, con la revisión de calidad hecha.
-- Antes del sí, una sesión de contexto limpio, en otro modelo, recorre Release (sin Release, la aplicación levantada desde lo unido) contra los escenarios y deja un reporte con evidencia, criterio por criterio. Quien da el sí lo lee, con el seguimiento.
+- Una sesión sin el código del repositorio, que ve este plan, el diseño y el `CLAUDE.md`, convierte los escenarios aprobados en pruebas, con el identificador de su pieza en el nombre, en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Se une en verde cuando CI comprueba que esas pruebas fallan, porque la pieza aún no existe.
+- El pull request de la pieza no toca esa carpeta (CI lo impide) y añade el identificador de la pieza a la lista de piezas activas, fuera de la carpeta: desde ahí sus pruebas son obligatorias. Quien construye lo une con todo en verde y la revisión de calidad hecha.
+- Un pull request que toca las pruebas de aceptación o su workflow lo une, o lo aprueba por escrito, quien acepta.
+- Antes del sí de cada pieza con escenarios, una sesión de contexto limpio, en el modelo que no la construyó, recorre Release contra los escenarios y deja un reporte con evidencia, criterio por criterio (sin Release, la aplicación levantada desde lo unido, con datos de prueba). Quien da el sí lo lee, con el seguimiento.
 - Claude se para y pregunta a quien audita en los puntos de control del `CLAUDE.md`.
 - Al cumplirse «Listo cuando», quien audita y quien acepta deciden si se sigue, se cambia el plan o se para. Si no coinciden, decide quien acepta.
 

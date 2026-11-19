@@ -20,14 +20,15 @@ def ok(c, t):
     fallos += 0 if c else 1
 
 
-def script():
-    """El bloque «run: |» del paso, sin su sangría, y el valor de ACEPTACION de env."""
+def script(paso="Las pruebas de aceptación van en su propio pull request"):
+    """El bloque «run: |» de un paso, sin su sangría, y los valores de env del workflow."""
     texto = YML.read_text(encoding="utf-8")
-    m = re.search(r"^(\s*)run: \|\n((?:\1  .*\n|\s*\n)+)", texto, re.M)
+    i = texto.index("- name: " + paso)
+    m = re.compile(r"^(\s*)run: \|\n((?:\1  .*\n|\s*\n)+)", re.M).search(texto, i)
     sangria = len(m.group(1)) + 2
     cuerpo = "".join(l[sangria:] + "\n" for l in m.group(2).rstrip("\n").split("\n"))
-    acept = re.search(r"^\s*ACEPTACION:\s*(\S+)", texto, re.M).group(1)
-    return cuerpo, acept
+    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1) for k in ("ACEPTACION", "ACTIVAS", "PRUEBA")}
+    return cuerpo, env
 
 
 def git(d, *a):
@@ -65,8 +66,8 @@ def pr(cambios, acept=None, sin_carpeta=False):
             git(d, "mv", ruta, destino)
     git(d, "add", "-A")
     git(d, "commit", "-qm", "cambio")
-    cuerpo, acept_yml = script()
-    env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept if acept is not None else acept_yml,
+    cuerpo, envw = script()
+    env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept if acept is not None else envw["ACEPTACION"],
                RUNNER_TEMP=tempfile.mkdtemp())
     p = subprocess.run(["bash", "-c", cuerpo], cwd=d, env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
@@ -112,6 +113,49 @@ c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("esc
 ok(c == 0, "con la carpeta vacía, también")
 c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True)
 ok(c == 0 and "no hay nada que proteger" in o, "una pieza antes de que haya escenarios pasa, y lo dice")
+
+print("Las piezas activas y los pull requests de escenarios")
+CUERPO2, ENVW = script("Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios")
+
+
+def activas(pruebas, lista, titulo):
+    """pruebas: {pieza: sale con 0 o 1}; lista: el texto de ACTIVAS o None; corre el segundo paso con el título."""
+    d = pathlib.Path(tempfile.mkdtemp())
+    (d / "tests/aceptacion").mkdir(parents=True)
+    for p, rc in pruebas.items():
+        (d / f"tests/aceptacion/{p}.sh").write_text(f"exit {rc}\n", encoding="utf-8")
+    if lista is not None:
+        (d / ".github").mkdir()
+        (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
+    env = dict(os.environ, ACEPTACION="tests/aceptacion", ACTIVAS=ENVW["ACTIVAS"], PRUEBA="sh tests/aceptacion/{pieza}.sh",
+               TITULO=titulo)
+    r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+ok("{pieza}" in ENVW["PRUEBA"] and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y PRUEBA con {pieza}")
+c, o = activas({"P01": 1}, None, "Escenarios · P01")
+ok(c == 0, "un pull request de escenarios se une en verde si sus pruebas fallan")
+c, o = activas({"P01": 0}, None, "Escenarios · P01")
+ok(c == 1 and "ya pasan" in o, "si sus pruebas ya pasan antes de construir la pieza, falla")
+c, o = activas({"P01": 1, "P02": 1}, None, "Escenarios · P01 + P02 · alta y lista")
+ok(c == 0, "uno de varias piezas, también")
+c, o = activas({"P01": 1}, None, "P01 · alta de clientes")
+ok(c == 0, "una pieza que aún no está en la lista no corre sus pruebas")
+c, o = activas({"P01": 0}, "P01\n", "P01 · alta de clientes")
+ok(c == 0, "la pieza que se añade a la lista pasa si sus pruebas pasan")
+c, o = activas({"P01": 1}, "# piezas activas\nP01\n", "P01 · alta de clientes")
+ok(c == 1 and "no pasan" in o, "y falla si no pasan")
+c, o = activas({"P01": 0, "P02": 1}, "P01", "P02 · lista")
+ok(c == 0, "las de otra pieza aún no activa no cuentan")
+c, o = activas({"P01": 0, "P02": 1}, "P01", "Escenarios · P02")
+ok(c == 0, "un pull request de escenarios corre también las activas, y pasa si pasan")
+c, o = activas({"P01": 1}, "P01", "Escenarios · P01")
+ok(c == 1, "cambiar los escenarios de una pieza activa sigue exigiendo que pasen")
+c, o = activas({"P01": 0}, "P01; rm -rf /\n", "P01 · x")
+ok(c == 1 and "no es un identificador" in o, "una línea de la lista que no es un identificador falla, sin correr nada")
+c, o = activas({"P01": 1}, None, "Escenarios · $(touch pwned)")
+ok(c == 1 and "no dice qué pieza" in o, "un título que no es una pieza falla, sin correr nada")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")
