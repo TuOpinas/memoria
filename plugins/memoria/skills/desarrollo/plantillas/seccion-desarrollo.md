@@ -24,7 +24,7 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 - las piezas con su estado;
 - lo que está fuera del plan;
 - lo que no está en el diseño (datos, componentes y conceptos nuevos);
-- lo que rompe las reglas en los pasos a Prod (en la 1.27.0; los commits directos, las uniones sin squash y las migraciones editadas los frena la protección de la rama y los mira la auditoría): pasos a Prod sin sí o con el sí de quien no acepta ni audita, releases que publicó quien no administra, y síes que no citan un seguimiento que exista y sea anterior (esos no entregan nada);
+- lo que rompe las reglas en los controles y los pasos a Prod (en la 1.27.0 no se vigilan los commits directos ni las uniones sin squash, que frena la protección de la rama si R1 y R2 cumplen, ni las migraciones editadas, que mira quien audita en R4): cambios al `CLAUDE.md` o a los controles, pasos a Prod sin sí o con el sí de quien no acepta ni audita, releases que publicó quien no administra, y síes que no citan un seguimiento que exista y sea anterior (esos no entregan nada);
 - los pasos a Prod que aprobó quien construyó.
 
 Quien no tenga el plugin se lo pide a quien audita o a quien construye.

@@ -46,21 +46,27 @@ trae los cambios de cada commit desde «desde»:
                             "admins": ["login"], "errores": {"org": "…"}},
               "errores": {"pulls": "…"}, "truncado": ["commits"]}]}
 """
-import base64, datetime, json, os, re, subprocess, sys
+import base64, datetime, json, os, re, subprocess, sys, time
 
 PATCH_MAX = 4000
 MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
 # lista blanca: se guarda el patch solo del código y el SQL, que es lo que el seguimiento compara; lo demás (configuración,
 # secretos, datos) lleva «patch_quitado», y un secreto con un nombre que nadie previó no entra al JSON (arreglos 5, hallazgo 6)
-CODIGO = re.compile(r"\.(py|ts|tsx|js|jsx|mjs|cjs|go|rb|java|kt|kts|cs|php|rs|swift|scala|ex|exs|sql|prisma)$", re.I)
+CODIGO = re.compile(r"\.(py|ts|tsx|js|jsx|mjs|cjs|go|rb|java|kt|kts|cs|php|rs|swift|scala|ex|exs|sql|prisma|vue|svelte|astro|dart"
+                    r"|c|cc|cpp|h|hpp|m|mm|lua|hs|clj|erl|graphql|gql|proto)$", re.I)
+# y encima, por nombre: código con nombre de configuración o de secretos, y volcados de datos (arreglos 6, hallazgo 4)
+SECRETO_NOMBRE = re.compile(r"(^|/)(wp-config\.php|[^/]*(secret|credential|password|passwd|token|apikey|api_key|vault)[^/]*"
+                            r"|[^/]*(settings|config)/(prod|production|local)[^/]*|[^/]*(settings|config)[-_.](prod|production|local)[^/]*"
+                            r"|environment\.prod[^/]*|\.env[^/]*|[^/]*\b(dump|seed|seeds|backup)[^/]*\.sql)$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
                        r"\.(md|txt|png|jpe?g|gif|svg|pdf|lock|min\.js|map)$", re.I)
 
 
-def gh(path):
-    """(datos, error) de `gh api <path>`."""
+def gh(path, reintento=True):
+    """(datos, error) de `gh api <path>`. Ante un límite de tasa (403 o 429 con «rate limit»), espera un minuto y repite
+    una vez (arreglos 6, hallazgo 12)."""
     try:
         p = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github+json", path], capture_output=True, text=True, timeout=60)
     except FileNotFoundError:
@@ -69,15 +75,20 @@ def gh(path):
         return None, "GitHub no respondió en un minuto"
     if p.returncode != 0:
         msg = (p.stderr or p.stdout or "").strip().splitlines()
-        return None, (msg[-1] if msg else f"gh salió con {p.returncode}")[:300]
+        err = (msg[-1] if msg else f"gh salió con {p.returncode}")[:300]
+        if reintento and ("rate limit" in err.lower() or "429" in err):
+            time.sleep(60)
+            return gh(path, reintento=False)
+        return None, err
     try:
         return json.loads(p.stdout or "null"), None
     except ValueError:
         return None, "GitHub devolvió algo que no es JSON"
 
 
-def paginas(path, n):
-    """(lista, error, truncado): truncado si llenó las n páginas y quedaba más."""
+def paginas(path, n, basta=None):
+    """(lista, error, truncado): truncado si llenó las n páginas y quedaba más. Con «basta», para en cuanto la página
+    leída ya cubre lo que hace falta (arreglos 6, hallazgo 18)."""
     out = []
     sep = "&" if "?" in path else "?"
     for i in range(1, n + 1):
@@ -85,9 +96,14 @@ def paginas(path, n):
         if e:
             return out, e, False
         out += d or []
-        if len(d or []) < 100:
+        if len(d or []) < 100 or (basta and basta(d or [])):
             return out, None, False
     return out, None, True
+
+
+def quitar_patch(fn):
+    """Lo que no es código, y el código con nombre de secretos salvo una migración (cuyas tablas se comparan)."""
+    return not CODIGO.search(fn) or (SECRETO_NOMBRE.search(fn) and not MIGRACION.search(fn))
 
 
 def es_bot(user):
@@ -114,7 +130,10 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                    "author": (p.get("user") or {}).get("login") or "", "bot": es_bot(p.get("user")),
                    "merge_commit": (p.get("merge_commit_sha") or "") if p.get("merged_at") else "",
                    "merged_at": p.get("merged_at") or "", "base": (p.get("base") or {}).get("ref") or rama} for p in pulls]
-    commits, e, _ = paginas(f"repos/{nombre}/commits?sha={rama}", max(1, (max_commits + 99) // 100))
+    # hasta la primera página que llega a un commit anterior a «desde»: con él se ve que la lista cubre la ventana
+    fecha_c = lambda c: (((c.get("commit") or {}).get("committer") or {}).get("date") or "")[:10]
+    commits, e, _ = paginas(f"repos/{nombre}/commits?sha={rama}", max(1, (max_commits + 99) // 100),
+                            basta=lambda pg: any(fecha_c(c) < desde for c in pg))
     if e:
         r["errores"]["commits"] = e
     commits = commits[:max_commits]
@@ -143,7 +162,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
             for f in d.get("files") or []:
                 x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
                 fn_ = f.get("filename") or ""
-                if f.get("patch") and not CODIGO.search(fn_) and not SIN_PATCH.search(fn_):
+                if f.get("patch") and quitar_patch(fn_) and not SIN_PATCH.search(fn_):
                     x["patch_quitado"] = True       # se dice que no se miró, sin guardar lo que no es código
                 elif f.get("patch") and not SIN_PATCH.search(fn_):
                     # una migración va entera: sus «create table» del final se comparan con el diseño (arreglos 1, hallazgo 14)
@@ -154,7 +173,23 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                 elif f.get("status") in ("added", "modified") and "patch" not in f and not SIN_PATCH.search(f.get("filename") or ""):
                     x["sin_patch"] = True          # GitHub no da el patch de un archivo grande
                 files.append(x)
-            if len(d.get("files") or []) >= 300:
+            # un commit grande trae sus archivos de 300 en 300: se piden las páginas siguientes (arreglos 6, hallazgo 12)
+            pag = 2
+            while len(d.get("files") or []) >= 300 * (pag - 1) and pag <= 10:
+                d2, e2 = gh(f"repos/{nombre}/commits/{c['sha']}?page={pag}")
+                if e2 or not (d2 or {}).get("files"):
+                    break
+                for f in d2["files"]:
+                    fn_ = f.get("filename") or ""
+                    x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
+                    if f.get("patch") and not quitar_patch(fn_) and not SIN_PATCH.search(fn_):
+                        x["patch"] = f["patch"][:10 ** 6 if MIGRACION.search(fn_) else PATCH_MAX]
+                    elif f.get("patch"):
+                        x["patch_quitado"] = True
+                    files.append(x)
+                d["files"] = (d.get("files") or []) + d2["files"]
+                pag += 1
+            if len(d.get("files") or []) >= 3000:
                 r["truncado"].append(f"archivos de {c['sha'][:7]}")
             r["detalle"].append({"sha": c["sha"], "files": files})
         if fallos:
@@ -212,6 +247,23 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                 a["errores"]["claude_md"] = "no se pudo leer el contenido"
         elif e:
             a["errores"]["claude_md"] = e
+        # R4: las carpetas de migraciones (del árbol de la rama) y los commits del último mes que las tocan, para que quien
+        # audita lo confirme con lo que se vio (arreglos 6, hallazgo 5)
+        arbol, e = gh(f"repos/{nombre}/git/trees/{rama}?recursive=1")
+        if arbol and isinstance(arbol.get("tree"), list):
+            dirs = sorted({m.group(0).rstrip("/") for t in arbol["tree"] if t.get("type") == "blob"
+                           for m in [re.match(r"^(.*?/)?(migrations?|migraciones|migrate)/", t.get("path") or "")] if m})[:10]
+            a["migraciones"] = {}
+            for dir_ in dirs:
+                cs, e2, _ = paginas(f"repos/{nombre}/commits?sha={rama}&path={dir_}&since={desde}T00:00:00Z", 2)
+                if e2:
+                    a["errores"]["migraciones"] = f"{dir_}: {e2}"
+                a["migraciones"][dir_] = [{"sha": c["sha"][:7], "date": fecha_c(c), "message": ((c.get("commit") or {}).get("message") or "").split("\n", 1)[0][:120]}
+                                          for c in cs]
+            if arbol.get("truncated"):
+                a["errores"]["migraciones"] = "el árbol de la rama vino cortado: puede haber más carpetas de migraciones"
+        elif e:
+            a["errores"]["migraciones"] = e
         org = nombre.split("/")[0]
         if org not in orgs:           # una vez por organización
             o, eo = gh(f"orgs/{org}")

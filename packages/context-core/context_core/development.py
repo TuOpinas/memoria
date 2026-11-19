@@ -729,6 +729,34 @@ def piece_status(plan: Plan, pull_requests: Iterable[PullRequest],
 
 # ── out ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+_ENTRY = re.compile(r"(?m)^(?=## 20\d\d-\d\d-\d\d)")
+_READ = re.compile(r"^Leído\b[^:\n]*:.*[\w.-]+/[\w.-]+ en `[0-9a-f]{7,40}`", re.M)
+
+
+def follow_up_entries(text: str) -> list:
+    """The real entries of a follow-up file, newest first, as dicts with «date», «repos» (lower-case owner/name read),
+    «watched» (its «**Rompe las reglas:**» line, at the start of a line, does not say «sin vigilar») and «design» (its
+    «Comparó:» line includes «diseño»). A real entry has its «Leído:» line with each repository's commit; a hand-written
+    note does not count, and neither does one marked «**Incompleto, no se guarda:**». One rule for the follow-up script
+    and the opening (fixes 5, finding 12; fixes 6, findings 3 and 14)."""
+    body = text or ""
+    if body.startswith("---\n") and "\n---\n" in body[4:]:
+        body = body[body.index("\n---\n", 4) + 5:]
+    out = []
+    for e in _ENTRY.split(body):
+        m = re.match(r"## (20\d\d-\d\d-\d\d)\b", e)
+        read = _READ.search(e)
+        if not m or not read or re.search(r"^\*\*Incompleto, no se guarda:\*\*", e, re.M):
+            continue
+        compared = re.search(r"^Comparó:(.*)$", e, re.M)
+        out.append({"date": m.group(1),
+                    "repos": [x.lower() for x in re.findall(r"([\w.-]+/[\w.-]+) en `[0-9a-f]{7,40}`", read.group(0))],
+                    "watched": bool(re.search(r"^\*\*Rompe las reglas:\*\*", e, re.M))
+                               and not re.search(r"^\*\*Rompe las reglas:\*\* sin (vigilar|comprobar)", e, re.M),
+                    "design": bool(compared and "diseño" in compared.group(1))})
+    return out
+
+
 def as_dict(obj):
     """Any result of this module as plain dicts and lists, for the board's JSON."""
     return dataclasses.asdict(obj) if dataclasses.is_dataclass(obj) else obj
@@ -741,3 +769,4 @@ leer_diseno = read_design
 leer_plan = read_plan
 leer_configuracion = read_configuration
 estado_piezas = piece_status
+entradas_seguimiento = follow_up_entries
