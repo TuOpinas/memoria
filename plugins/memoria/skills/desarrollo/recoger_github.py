@@ -5,7 +5,7 @@ solo corre cuando alguien pide un seguimiento o la auditoría (tecnologia/metodo
 
 Uso:
   recoger_github.py <organización/repositorio>... --salida <archivo.json> [--desde AAAA-MM-DD] [--auditoria]
-                    [--base org/repo=sha …] [--max-commits N] [--max-detalle N] [--max-pulls N] [--max-tags N]
+                    [--max-commits N] [--max-detalle N] [--max-pulls N] [--max-tags N]
                     [--max-releases N]
 
   --salida       dónde deja el JSON; se escribe después de cada repositorio, así que un corte deja lo ya leído (sin él,
@@ -16,26 +16,23 @@ Uso:
   --max-commits  cuántos commits de la rama principal se leen como mucho (500): con ellos se sabe qué entró en cada paso
                  a Prod; si no llegan hasta --desde, el repositorio lo dice en «truncado»
   --max-detalle  de cuántos commits desde --desde se leen los archivos como mucho (150)
-  --base         el commit de la rama principal que leyó el seguimiento anterior, uno por repositorio: los commits se
-                 recorren hasta él, no hasta una fecha (`seguimiento.py desde` da --desde y --base)
   --max-tags, --max-releases  cuántas etiquetas y releases se leen como mucho (500 y 200)
   --max-pulls    cuántos pull requests a la rama principal se leen como mucho (2.000), de los más nuevos a los más viejos
 
 Lo que no se pudo leer o se cortó se dice, nunca se calla: cada repositorio lleva «errores» ({lista: motivo}) y «truncado»
 ([listas]), y el seguimiento no se guarda si falta algo (revisión de la 1.27.0, hallazgo 2). Solo se leen los pull
 requests a la rama principal (decisión tecnologia/metodologia-desarrollo#2026-11-18-12). De cada archivo se guarda el
-`patch` solo si es código que el seguimiento compara: cortado a 4.000 caracteres, salvo una migración, que va entera; el
-de un archivo de secretos (.env, .pem, .key, .jks, .netrc, credentials, id_rsa, secrets/, un *secret*.json…) no se guarda, y
-lleva «patch_quitado»; en una migración, solo el de .env, .pem y .key. Con --auditoria el JSON
+`patch` solo si es código o SQL, que es lo que el seguimiento compara: cortado a 4.000 caracteres, salvo una migración, que
+va entera; el de todo lo demás (configuración, secretos, datos) no se guarda, y lleva «patch_quitado». Con --auditoria el JSON
 lleva «"auditoria": true» y ningún «detalle»: no sirve para un seguimiento.
 
 Con un conector de GitHub en lugar de `gh`, la sesión arma el mismo JSON a mano, con esta forma; `pulls`, `commits`,
 `releases` y `tags` van siempre (vacías si no hay), `base` y `merged_at` de cada pull request unido son obligatorios, y lo
-que no se tenga va en «errores»; sin «terminado», sin «hoy» o sin alguno de «pedidos», el seguimiento no se guarda, ni sin
-el «base» que dio `seguimiento.py desde` cuando hay un seguimiento anterior que vigiló:
+que no se tenga va en «errores»; sin «terminado», sin «hoy» o sin alguno de «pedidos», el seguimiento no se guarda, y «detalle»
+trae los cambios de cada commit desde «desde»:
 
   {"leido": "conector", "cuenta": "login", "hoy": "AAAA-MM-DD", "desde": "AAAA-MM-DD", "pedidos": ["org/r"], "terminado": true,
-   "repos": [{"repo": "org/r", "rama": "main", "main_sha": "…", "base": "sha del seguimiento anterior, si lo hay",
+   "repos": [{"repo": "org/r", "rama": "main", "main_sha": "…",
               "pulls": [{"number": 1, "title": "P01 · …", "state": "open|closed|merged", "author": "login", "bot": false,
                          "base": "main", "merge_commit": "sha", "merged_at": "ISO"}],
               "commits": [{"sha": "…", "parents": 1, "date": "ISO", "message": "primera línea", "author": "login"}],
@@ -53,14 +50,9 @@ import base64, datetime, json, os, re, subprocess, sys
 
 PATCH_MAX = 4000
 MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
-# un secreto no entra al JSON, que la sesión lee (arreglos 1, hallazgo 16)
-# solo archivos de secretos de verdad: una migración o un módulo con «password» en el nombre se compara (arreglos 2, hallazgo 2)
-SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx|jks|keystore|asc)|\.npmrc|\.pypirc|\.netrc|\.git-credentials"
-                     r"|\.htpasswd|kubeconfig|credentials|id_(rsa|dsa|ecdsa|ed25519)[^/]*"
-                     r"|[^/]*(secret|credential|password|service[-_]?account|adminsdk)[^/]*\.(json|ya?ml|toml|ini|cfg|conf|properties|enc)"
-                     r"|[^/]*-key\.json|[^/]*\.tfvars(\.json)?)$|(^|/)secrets?/", re.I)
-# en una migración solo los secretos de verdad pierden el patch: un «0003_rotate_secrets.yaml» se compara (arreglos 4, hallazgo 5)
-SECRETO_EN_MIGRACION = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key))$", re.I)
+# lista blanca: se guarda el patch solo del código y el SQL, que es lo que el seguimiento compara; lo demás (configuración,
+# secretos, datos) lleva «patch_quitado», y un secreto con un nombre que nadie previó no entra al JSON (arreglos 5, hallazgo 6)
+CODIGO = re.compile(r"\.(py|ts|tsx|js|jsx|mjs|cjs|go|rb|java|kt|kts|cs|php|rs|swift|scala|ex|exs|sql|prisma)$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
@@ -103,7 +95,7 @@ def es_bot(user):
     return user.get("type") == "Bot" or (user.get("login") or "").endswith("[bot]")
 
 
-def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=2000, base="", max_tags=500, max_releases=200):
+def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=2000, max_tags=500, max_releases=200):
     r = {"repo": nombre, "errores": {}, "truncado": []}
     info, e = gh(f"repos/{nombre}")
     if e:
@@ -132,22 +124,12 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                      "message": ((c.get("commit") or {}).get("message") or "").split("\n", 1)[0][:200],
                      "author": (c.get("author") or {}).get("login") or ""} for c in commits]
     r["commits_hasta"] = r["commits"][-1]["date"][:10] if r["commits"] else ""
-    # por posición: hasta el commit que leyó el seguimiento anterior; sin él, los de fecha desde «desde», sin cortar en el
-    # primero más viejo, que puede ser un commit hecho hace semanas y subido hoy (arreglos 3, hallazgo 1)
-    pos_base = next((i for i, c in enumerate(r["commits"]) if base and c["sha"].lower().startswith(base.lower())), None)
-    if base:
-        r["base"] = base
-    if base and pos_base is None and len(r["commits"]) >= max_commits:
-        r["truncado"].append("commits")
-    elif base and pos_base is None and r["commits"]:
-        # la base no está en una historia leída entera: se reescribió (arreglos 4, hallazgo 2)
-        r["errores"]["commits"] = f"el commit {base[:7]} del seguimiento anterior ya no está en {rama}: se reescribió la historia"
-    elif not base and len(r["commits"]) >= max_commits and r["commits_hasta"] > desde:
+    # la 1.27.0 lee por fecha: recorrer la historia por posición es de la 1.27.1 (shared-memory/plugin-memoria#2026-11-19-3)
+    if len(r["commits"]) >= max_commits and r["commits_hasta"] > desde:
         r["truncado"].append("commits")
     if not auditoria:
         r["detalle"] = []
-        hasta = max([i for i, c in enumerate(r["commits"]) if c["date"][:10] >= desde], default=-1)
-        recientes = r["commits"][:pos_base] if pos_base is not None else r["commits"][:hasta + 1]
+        recientes = [c for c in r["commits"] if c["date"][:10] >= desde]
         r["commits_ventana"] = len(recientes)
         if len(recientes) > max_detalle:
             r["truncado"].append("detalle")
@@ -161,9 +143,9 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
             for f in d.get("files") or []:
                 x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
                 fn_ = f.get("filename") or ""
-                if f.get("patch") and (SECRETO_EN_MIGRACION if MIGRACION.search(fn_) else SECRETO).search(fn_):
-                    x["patch_quitado"] = True       # se dice que no se miró, sin guardar el secreto
-                elif f.get("patch") and not SIN_PATCH.search(f.get("filename") or ""):
+                if f.get("patch") and not CODIGO.search(fn_) and not SIN_PATCH.search(fn_):
+                    x["patch_quitado"] = True       # se dice que no se miró, sin guardar lo que no es código
+                elif f.get("patch") and not SIN_PATCH.search(fn_):
                     # una migración va entera: sus «create table» del final se comparan con el diseño (arreglos 1, hallazgo 14)
                     tope = 10 ** 6 if MIGRACION.search(f.get("filename") or "") else PATCH_MAX
                     x["patch"] = f["patch"][:tope]
@@ -254,7 +236,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
 
 def main(argv):
     repos, desde, auditoria, max_commits, max_detalle, max_pulls, salida = [], None, False, 500, 150, 2000, None
-    bases, max_tags, max_releases = {}, 500, 200
+    max_tags, max_releases = 500, 200
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -270,12 +252,6 @@ def main(argv):
             max_commits = int(argv[i + 1]); i += 2; continue
         if a == "--max-detalle":
             max_detalle = int(argv[i + 1]); i += 2; continue
-        if a == "--base":
-            k, _, v = argv[i + 1].partition("=")
-            if not re.match(r"^[0-9a-f]{7,40}$", v.lower()):
-                print(f"--base va como org/repo=sha («{argv[i + 1]}»)", file=sys.stderr)
-                return 2
-            bases[k.strip().lower()] = v.lower(); i += 2; continue
         if a == "--max-tags":
             max_tags = int(argv[i + 1]); i += 2; continue
         if a == "--max-releases":
@@ -307,8 +283,7 @@ def main(argv):
             os.replace(tmp, salida)
 
     for nombre in repos:
-        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls,
-                                 bases.get(nombre.lower(), ""), max_tags, max_releases))
+        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls, max_tags, max_releases))
         guardar()                 # un corte deja lo ya leído, sin «terminado»
     out["terminado"] = True
     guardar()

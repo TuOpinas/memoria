@@ -3413,15 +3413,23 @@ if KIT.found:
             m_ = re.search(r"^## .*?\b(20\d\d-\d\d-\d\d)\b", cabecera(_textos["Seguimiento"][1])[1], re.M)
             f_seg = m_.group(1) if m_ and fecha_ok(m_.group(1)) else cabecera(_textos["Seguimiento"][1])[0].get("actualizado", "")
         # el último que vigiló las reglas, si no es el de arriba: el sí y la auditoría se apoyan en ese (arreglos 4, hallazgo 13)
-        f_vig = ""
+        # el mismo criterio que seguimiento.py (entradas): una entrada de verdad tiene su línea «Leído:» con el commit, y vigiló
+        # si su línea «**Rompe las reglas:**» no dice «sin vigilar» (arreglos 5, hallazgo 12)
+        f_vig, hay = "", False
         if "Seguimiento" in _textos:
             for e_ in re.split(r"(?m)^(?=## 20\d\d-\d\d-\d\d)", cabecera(_textos["Seguimiento"][1])[1]):
                 m_ = re.match(r"## (20\d\d-\d\d-\d\d)\b", e_)
-                if m_ and "**Rompe las reglas:**" in e_ and "**Rompe las reglas:** sin vigilar" not in e_:
+                if not m_ or not re.search(r"^Leído\b[^:\n]*:.*[\w.-]+/[\w.-]+ en `[0-9a-f]{7,40}`", e_, re.M):
+                    continue
+                if not hay:
+                    f_seg, hay = m_.group(1), True
+                if re.search(r"^\*\*Rompe las reglas:\*\*", e_, re.M) and not re.search(r"^\*\*Rompe las reglas:\*\* sin vigilar", e_, re.M):
                     f_vig = m_.group(1)
                     break
+            if not hay:
+                f_seg = ""
         avisos.append(f"Desarrollo: el último seguimiento es del {f_seg} (hace {(HOY - datetime.date.fromisoformat(f_seg)).days} días)"
-                      + ("." if f_vig == f_seg else (f"; el último que vigiló las reglas es del {f_vig}." if f_vig else "; ninguno vigiló las reglas entero."))
+                      + ("." if f_vig == f_seg else (f"; el último que vigiló los pasos a Prod es del {f_vig}." if f_vig else "; ninguno vigiló los pasos a Prod entero."))
                       if fecha_ok(f_seg) else "Desarrollo: todavía no hay ningún seguimiento; lo pide cualquiera que lea el proyecto (skill desarrollo).")
     # la auditoría mensual: la línea comprobada hace más tiempo de las dos configuraciones, más de 31 días, o líneas sin
     # comprobar; una sola celda reciente no la apaga (hallazgo 10)
