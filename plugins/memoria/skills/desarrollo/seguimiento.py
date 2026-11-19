@@ -12,10 +12,13 @@ archivos del kit en la memoria. No llama a GitHub ni escribe en GitHub.
       cerrar.py con solo «reemplazos»); si la línea trae una ruta que no está en la copia, no lo crea salvo con --crear
       (cuando la computadora dijo que no existe).
   seguimiento.py auditoria <raíz o copia> <area>/<proyecto> --github <json> [--fecha AAAA-MM-DD]
-      Lo que se comprueba por la API (R1, R2, R3, R4, R6, R7, PL1 y PL2), con su estado y su evidencia; lo que no se pudo
-      ver, para preguntárselo a quien audita, con el motivo; y los pasos a Prod del último mes sin sí, con un sí de quien no
-      acepta ni audita, o que aprobó quien construyó. JSON. Un dato que GitHub no le da a la cuenta va a «preguntar»,
-      nunca se toma por un sí o un no (revisión de la 1.27.0, hallazgo 1).
+      Ningún estado sale solo (shared-memory/plugin-memoria#2026-11-19-2): en «filas», cada fila de las dos
+      configuraciones con lo que GitHub enseñó («evidencia») y, si alcanza, un estado propuesto («propuesta», o null);
+      en «avisos», lo que deja lo leído sin propuestas; en «pasos_a_prod», los del último mes sin sí, con un sí de quien
+      no acepta ni audita, publicados por quien no administra o sin poder verlo, o que aprobó quien construyó. JSON.
+  seguimiento.py desde <raíz o copia> <area>/<proyecto>
+      Con qué leer GitHub para el seguimiento siguiente: «--desde» y un «--base org/repo=sha» por repositorio, del último
+      seguimiento que vigiló las reglas entero. JSON con «args».
   seguimiento.py aplicar <raíz o copia> <area>/<proyecto> <ruta de la configuración> <json de estados> --cuenta <correo>
                  [--fecha AAAA-MM-DD]
       Escribe en una de las dos configuraciones los estados que da el JSON: {"R1": {"org/repo": "cumple"}, "PL1": "no cumple"};
@@ -1143,6 +1146,9 @@ def acotar(lista, n=TOPE):
 
 # ── lo que se lee de la memoria ────────────────────────────────────────────────────────────────────────────────────
 
+NINGUNO = "_sin_seguimientos"   # en textos: «Seguimiento: por crear» y el archivo no existe
+
+
 def ruta_segura(r):
     return bool(r) and not r.startswith(("/", "~")) and ".." not in r.replace("\\", "/").split("/")
 
@@ -1164,23 +1170,40 @@ def kit(raiz, proyecto):
             t = leer(raiz / r)
             if t is not None:
                 textos[k] = (r, t)
+    if sec.paths.get(FOLLOW_UP) == TO_BUILD:
+        # «por crear»: si una sesión sin cerrar ya lo creó, se lee; si no, se sabe que no hay ninguno (arreglos 3, hallazgo 3)
+        r = f"{proyecto}/entregables/seguimiento.md"
+        t = leer(raiz / r)
+        if t is not None:
+            textos[FOLLOW_UP] = (r, t)
+        else:
+            textos[NINGUNO] = True
     return tp, sec, textos
 
 
-def ultimo_seguimiento(texto):
-    """La fecha del último seguimiento que vigiló las reglas entero: uno que dice «sin vigilar» no cuenta, porque el
-    siguiente lee desde aquí y lo de entre medias no lo miraría nadie (arreglos 2, hallazgo 6)."""
+def ultimo_vigilado(texto):
+    """(fecha, {repositorio: sha corto}) del último seguimiento que vigiló las reglas entero: uno que dice «sin vigilar» no
+    cuenta, porque el siguiente lee desde aquí y lo de entre medias no lo miraría nadie (arreglos 2, hallazgo 6). El sha de
+    cada repositorio sale de su línea «Leído»: el siguiente recorre la historia hasta ahí, no hasta una fecha que pone
+    quien hace el commit (arreglos 3, hallazgo 1)."""
     for e in re.split(r"(?m)^(?=## 20\d\d-\d\d-\d\d)", cabecera(texto or "")[1]):
         m = re.match(r"## (20\d\d-\d\d-\d\d)\b", e)
-        if m and "**Rompe las reglas:** sin vigilar" not in e:
-            return m.group(1)
-    return ""
+        if m and "**Rompe las reglas:** sin vigilar" not in e and "Incompleto, no se guarda" not in e:
+            leido = re.search(r"^Leído\b[^:]*:(.*)$", e, re.M)
+            shas = {x.group(1).lower(): x.group(2) for x in re.finditer(r"([\w.-]+/[\w.-]+) en `([0-9a-f]{7,40})`", leido.group(1) if leido else "")}
+            return m.group(1), shas
+    return "", {}
+
+
+def ultimo_seguimiento(texto):
+    return ultimo_vigilado(texto)[0]
 
 
 def fechas_de_seguimiento(textos):
-    """Las fechas de las entradas del seguimiento, o None si el archivo no está en la copia (no se puede comprobar)."""
+    """Las fechas de las entradas del seguimiento; vacío con «por crear» y sin archivo; None si el archivo no está en la
+    copia (no se puede comprobar)."""
     if FOLLOW_UP not in textos:
-        return None
+        return set() if textos.get(NINGUNO) else None
     return {m.group(1) for m in re.finditer(r"^## (20\d\d-\d\d-\d\d)\b", textos[FOLLOW_UP][1], re.M)}
 
 
@@ -1189,7 +1212,7 @@ def cita_valida(paso, seguimientos):
     al release, con un día de margen por la zona horaria (published_at va en UTC)."""
     cita = (paso.get("aprobo") or {}).get("seguimiento") or ""
     if seguimientos is None:
-        return True, ""
+        return None, "el seguimiento no está en la copia: no se pudo comprobar la cita"
     if not cita:
         return False, "no dice sobre qué seguimiento se dio"
     if cita not in seguimientos:
@@ -1295,7 +1318,7 @@ def entregados(gh, sec, seguimientos=None):
     forma = sec.step_to_prod or ""
     out = {}
     for r in gh.get("repos", []):
-        pasos = [p for p in pasos_a_prod(r, forma) if not es_release(forma) or (si_valido(p, sec) and cita_valida(p, seguimientos)[0])]
+        pasos = [p for p in pasos_a_prod(r, forma) if not es_release(forma) or (si_valido(p, sec) and cita_valida(p, seguimientos)[0] is True)]
         pos = historia(r)
         if not pasos:
             continue
@@ -1403,8 +1426,16 @@ def reglas(gh, sec, migraciones_extra=(), seguimientos=None):
         # tras una unión sin squash, los commits de su rama salen también como «sin pull request»: no se esconden, porque un
         # commit directo puede ir entre ellos (arreglos 1, hallazgo 7); se dice que pueden venir de esa unión
         union = None
-        for c in r.get("commits", []):
-            if (c.get("date") or "")[:10] < desde:
+        # por posición en la historia, hasta el commit que leyó el seguimiento anterior («base»); sin él, por fecha pero sin
+        # cortar, porque la fecha la pone quien hace el commit (arreglos 3, hallazgo 1)
+        base = (r.get("base") or "").lower()
+        commits = r.get("commits", [])
+        # sin «base», hasta el último commit con fecha desde «desde»: los de antes en la historia entran aunque su fecha sea vieja
+        hasta = max([i for i, c in enumerate(commits) if (c.get("date") or "")[:10] >= desde], default=-1)
+        for i, c in enumerate(commits):
+            if base and c["sha"].lower().startswith(base):
+                break
+            if not base and i > hasta:
                 break
             if c["sha"] not in unidos:
                 out["sin_pr"].append({"repo": nombre, "commit": corto(c["sha"]), "mensaje": celda(c.get("message", ""))[:80],
@@ -1433,7 +1464,8 @@ def reglas(gh, sec, migraciones_extra=(), seguimientos=None):
                 continue
             if administra is None or not paso.get("autor"):
                 out["publico_sin_ver"].append({"repo": nombre, "tag": celda(paso["tag"]),
-                                               "por": "el release no dice quién lo publicó" if administra is not None else "alguien de «Administra» no tiene @usuario"})
+                                               "por": "el release no dice quién lo publicó" if administra is not None else
+                                                      ("alguien de «Administra» no tiene @usuario" if gente else "la sección no dice quién administra")})
             elif paso["autor"].lower() not in administra:
                 out["publico_otro"].append({"repo": nombre, "tag": celda(paso["tag"]), "autor": celda(paso["autor"])})
             if es_release(forma) and not paso["aprobo"]:
@@ -1447,7 +1479,7 @@ def reglas(gh, sec, migraciones_extra=(), seguimientos=None):
             vale, por = cita_valida(paso, seguimientos)
             if not paso["aprobo"]["seguimiento"] and seguimientos is None:
                 vale, por = False, "no dice sobre qué seguimiento se dio"
-            if not vale:
+            if vale is not True:
                 out["sin_seguimiento"].append({"repo": nombre, "tag": celda(paso["tag"]), "por": por})
             quien_si = persona(sec, paso["aprobo"]["quien"], ("Acepta", "Audita"))
             hasta = pos.get(paso["sha"])
@@ -1467,7 +1499,7 @@ def reglas(gh, sec, migraciones_extra=(), seguimientos=None):
 ESENCIAL = ("pulls", "commits", "releases", "tags")
 
 
-def faltas_de(gh, sec, fecha):
+def faltas_de(gh, sec, fecha, previo=None, hasta_cuando=None):
     """(lo que impide guardar, lo que no se pudo comparar), por repositorio. Impide guardar: un repositorio de la sección que
     no está en el JSON o que no se leyó, un JSON sin «terminado» o de otro día, una lista que falta o que no se leyó entera
     de pull requests o commits, y un pull request unido sin fecha (arreglos 1, hallazgos 1, 2 y 13). Lo demás (los cambios,
@@ -1485,8 +1517,18 @@ def faltas_de(gh, sec, fecha):
     if gh.get("repos") and not re.match(r"^20\d\d-\d\d-\d\d$", hoy):
         # el JSON se lee en UTC: un día de margen con la fecha de la organización (arreglos 2, hallazgo 5)
         impide.append("lo leído de GitHub no dice de qué día es («hoy» como AAAA-MM-DD)")
-    elif hoy and fecha and abs((datetime.date.fromisoformat(hoy) - datetime.date.fromisoformat(fecha)).days) > 1:
-        impide.append(f"lo leído de GitHub es del {hoy}, no de hoy")
+    else:
+        try:
+            if hoy and fecha and abs((datetime.date.fromisoformat(hoy) - datetime.date.fromisoformat(fecha)).days) > 1:
+                impide.append(f"lo leído de GitHub es del {hoy}, no de hoy")
+        except ValueError:   # «2026-13-45» tiene la forma y no es una fecha (arreglos 3, hallazgo 11)
+            impide.append("lo leído de GitHub no dice de qué día es («hoy» como AAAA-MM-DD)")
+    desde = gh.get("desde") or ""
+    # lo leído tiene que empezar donde terminó lo vigilado: el seguimiento anterior que vigiló las reglas, o el mes de la
+    # auditoría (arreglos 3, hallazgos 2 y 4)
+    if gh.get("repos") and hasta_cuando and (not desde or desde > hasta_cuando):
+        impide.append(f"lo leído de GitHub empieza el {desde or '?'}, y hay que leer desde el {hasta_cuando}"
+                      + (" (el último seguimiento que vigiló las reglas)" if previo else ""))
     for r in gh.get("repos", []):
         if r.get("error") or not r.get("main_sha"):
             impide.append(f"{r['repo']}: {r.get('error') or 'sin commits'}")
@@ -1500,7 +1542,7 @@ def faltas_de(gh, sec, fecha):
         # un error en los releases (o en las etiquetas, si «Paso a Prod» no es un release) deja sin saber qué se entregó:
         # impide; un corte de páginas no, porque los más nuevos van primero (arreglos 2, hallazgo 7)
         con_error = ("pulls", "commits", "releases") + (() if es_release(sec.step_to_prod or "") else ("tags",))
-        for k in ("pulls", "commits") + tuple(x for x in con_error if x in (r.get("errores") or {})):
+        for k in dict.fromkeys(("pulls", "commits") + tuple(x for x in con_error if x in (r.get("errores") or {}))):
             if not completo(r, k):
                 impide.append(f"{r['repo']}: {k} " + ((r.get("errores") or {}).get(k) or "cortado"))
         if "detalle" not in r:
@@ -1511,7 +1553,7 @@ def faltas_de(gh, sec, fecha):
     return impide, sin_comparar
 
 
-def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=()):
+def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=(), previo=""):
     plan = leer_plan(textos["Plan"][1]) if "Plan" in textos else None
     diseno = leer_diseno(textos["Diseño"][1]) if "Diseño" in textos else None
     forma = sec.step_to_prod or ""
@@ -1520,7 +1562,7 @@ def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=()):
     lineas = [f"## {fecha} · pidió {celda(pidio)[:80]}"]
     leidos = [r for r in repos if r.get("main_sha")]
     # qué no se leyó entero: nada de eso se da por comprobado (revisión de la 1.27.0, hallazgo 2; arreglos 1, 1 y 2)
-    faltas, sin_comparar = faltas_de(gh, sec, fecha)
+    faltas, sin_comparar = faltas_de(gh, sec, fecha, previo, previo or None)
     datos["parcial"], datos["sin_comparar"] = faltas, sin_comparar
     if not leidos:
         lineas.append("GitHub: no se pudo leer" + (f" ({'; '.join(faltas)})" if faltas else "") + ". Solo va lo que dice la memoria.")
@@ -1535,7 +1577,9 @@ def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=()):
     # las piezas solo necesitan los pull requests; las reglas y el diseño, además, los commits
     pulls_ok = bool(leidos) and not [f for f in faltas if not f.endswith(("commits cortado",)) and ": commits " not in f]
     detalle_ok = bool(leidos) and not faltas and all("detalle" in r and completo(r, "detalle") for r in repos)
-    reglas_ok = detalle_ok and all(completo(r, "releases") and completo(r, "tags") for r in repos)
+    # con «release de GitHub» las etiquetas solo dan el sha de cada release, y los que faltan se piden uno a uno: cortadas,
+    # no impiden vigilar (arreglos 3, hallazgo 7)
+    reglas_ok = detalle_ok and all(completo(r, "releases") and (es_release(sec.step_to_prod or "") or completo(r, "tags")) for r in repos)
     pudo = []
     # paso a Prod
     if sin_forma(forma):
@@ -1613,13 +1657,14 @@ def entrada(fecha, pidio, gh, sec, textos, migraciones_extra=()):
         partes += [f"{x['repo']}: paso a Prod sin sí, el release {x['tag']} (`{x['commit']}`) no tiene «Aprobó:»" for x in rg["prod_sin_si"]]
         partes += [f"{x['repo']}: el release {x['tag']} lo aprobó «{x['quien']}», que no acepta ni audita" for x in rg["si_ajeno"]]
         partes += [f"{x['repo']}: el release {x['tag']} lo publicó @{x['autor']}, que no administra" for x in rg["publico_otro"]]
-        if rg["publico_sin_ver"]:
-            lineas.append("Quién publicó, sin comprobar: " + "; ".join(f"{x['repo']} {x['tag']} ({x['por']})" for x in rg["publico_sin_ver"]) + ".")
+        sin_ver = rg["publico_sin_ver"]
         if len(rg["sin_pr"]) > 10:
             partes.append(f"{len(rg['sin_pr']) - 10} commits más sin pull request")
         lineas += ["", "**Rompe las reglas:** " + ("; ".join(partes) + "." if partes else "nada.")]
         lineas.append("Migraciones vigiladas: las carpetas migrations/, migraciones/ y migrate/, y los archivos numerados de schema/"
                       + (", y " + ", ".join(celda(x) for x in migraciones_extra) if migraciones_extra else "") + ".")
+        if sin_ver:
+            lineas.append("Quién publicó, sin comprobar: " + "; ".join(f"{x['repo']} {x['tag']} ({x['por']})" for x in sin_ver) + ".")
         if rg["sin_seguimiento"]:
             lineas.append("Sí sin seguimiento: " + "; ".join(f"{x['repo']} {x['tag']} ({x['por']})" for x in rg["sin_seguimiento"]) + ".")
         if sin_forma(forma) or not es_release(forma):
@@ -1684,12 +1729,25 @@ def linea_de_la_seccion(tp, clave):
     return None
 
 
+def cmd_desde(a):
+    """Con qué leer GitHub para el seguimiento siguiente: «--desde» y un «--base» por repositorio, del último seguimiento
+    que vigiló las reglas entero (arreglos 3, hallazgo 2)."""
+    tp, sec, textos = kit(a["pos"][0], a["pos"][1].strip("/"))
+    fecha, shas = ultimo_vigilado(textos[FOLLOW_UP][1]) if FOLLOW_UP in textos else ("", {})
+    if FOLLOW_UP not in textos and not textos.get(NINGUNO):
+        raise SystemExit("el seguimiento no está en la copia: tráelo antes")
+    args = ([f"--desde {fecha}"] if fecha else []) + [f"--base {x}={shas[x.lower()]}" for x in sec.repositories if x.lower() in shas]
+    print(json.dumps({"desde": fecha, "base": {x: shas[x.lower()] for x in sec.repositories if x.lower() in shas},
+                      "args": " ".join(args)}, ensure_ascii=False))
+    return 0
+
+
 def cmd_seguimiento(a):
     raiz, proyecto = a["pos"][0], a["pos"][1].strip("/")
     tp, sec, textos = kit(raiz, proyecto)
     gh = json.load(open(a["github"], encoding="utf-8")) if a.get("github") else {"repos": []}
     previo = ultimo_seguimiento(textos[FOLLOW_UP][1]) if FOLLOW_UP in textos else ""
-    texto, datos = entrada(a["fecha"], a.get("pidio") or "?", gh, sec, textos, a.get("migraciones", []))
+    texto, datos = entrada(a["fecha"], a.get("pidio") or "?", gh, sec, textos, a.get("migraciones", []), previo)
     datos["anterior"] = previo
     print(texto)
     if a.get("escribir"):
@@ -1785,6 +1843,10 @@ def _reglas_de_la_rama(au, rama):
                 checks += [c.get("context") for c in (regla.get("parameters") or {}).get("required_status_checks") or []]
                 checks_sin = True if (checks_sin is True or sin_bypass is True) else (None if (checks_sin is None or sin_bypass is None) else False)
                 ev.append(f"ruleset «{rs.get('name')}» exige comprobaciones" + {True: " sin excepciones", False: ", con excepciones", None: ""}[sin_bypass])
+    for k in ("rulesets", "proteccion"):
+        if k not in au and k not in (au.get("errores") or {}):
+            # un JSON armado a mano sin la clave no dice «no hay»: no se leyó (arreglos 3, hallazgo 8)
+            no_ve.append({"rulesets": "los rulesets", "proteccion": "la protección clásica de la rama"}[k] + " (no vienen en lo leído)")
     pro = au.get("proteccion") or {}
     if pro:
         admins = ((pro.get("enforce_admins") or {}).get("enabled")) is True
@@ -1792,7 +1854,9 @@ def _reglas_de_la_rama(au, rama):
             pr = True
             permitidos = (pro["required_pull_request_reviews"] or {}).get("bypass_pull_request_allowances") or {}
             quienes = [x.get("login") or x.get("slug") or x.get("name") or "?" for k in ("users", "teams", "apps") for x in permitidos.get(k) or []]
-            pr_sin = (True if admins else pr_sin) if not quienes else False
+            # sin excepciones si alguna capa lo exige sin excepciones: un ruleset así obliga también a quien la clásica deja
+            # saltar (arreglos 3, hallazgo 17)
+            pr_sin = True if (pr_sin is True or (admins and not quienes)) else (False if quienes or not admins else pr_sin)
             ev.append("la protección clásica exige pull request" + ("" if admins else ", y los administradores se la pueden saltar")
                       + (f"; pueden saltársela {', '.join(quienes)}" if quienes else ""))
         rsc = (pro.get("required_status_checks") or {}).get("contexts") or []
@@ -1819,12 +1883,13 @@ def cmd_auditoria(a):
     poner = lambda fila, col, est, ev: res["filas"].append({"fila": fila, "columna": col, "propuesta": est, "evidencia": ev})
     preguntar = lambda fila, col, porque: res["filas"].append({"fila": fila, "columna": col, "propuesta": None, "evidencia": porque})
     # las puertas del JSON, como en el seguimiento (arreglos 2, hallazgo 3)
-    impide, _ = faltas_de(dict(gh, auditoria=False), sec, fecha)
+    hace31_ = (datetime.date.fromisoformat(fecha) - datetime.timedelta(days=31)).isoformat()
+    impide, _ = faltas_de(dict(gh, auditoria=False), sec, fecha, hasta_cuando=hace31_)
     res["avisos"] = [f for f in impide if ": " not in f or f.split(": ")[0].lower() not in {r.get("repo", "").lower() for r in gh.get("repos", []) if r.get("error")}]
     plan = leer_plan(textos["Plan"][1]) if "Plan" in textos else None
     hace31 = (datetime.date.fromisoformat(fecha) - datetime.timedelta(days=31)).isoformat()
     gh_mes = dict(gh, desde=hace31)
-    orgs = {}
+    orgs, sin_leer_de = {}, {}
     for r in gh.get("repos", []):
         nombre = r["repo"]
         au = r.get("auditoria")
@@ -1832,7 +1897,7 @@ def cmd_auditoria(a):
             for f in ("R1", "R2", "R3", "R4", "R5", "R6", "R7"):
                 preguntar(f, nombre, r.get("error") or "sin datos de la auditoría")
             org = nombre.split("/")[0]
-            orgs.setdefault(org, {"org": None, "admins": None, "errores": {"org": r.get("error") or "sin datos de la auditoría"}, "privado": False, "sin_leer": []})["sin_leer"].append(nombre)
+            sin_leer_de.setdefault(org, []).append(nombre)   # los datos de la organización los pone un repositorio leído
             continue
         rep = au.get("repo") or {}
         pr, pr_sin, metodos, checks, checks_sin, ev, no_ve = _reglas_de_la_rama(au, rep.get("default_branch") or r.get("rama") or "main")
@@ -1884,8 +1949,8 @@ def cmd_auditoria(a):
         preguntar("R4", nombre, ("mira «Rompe las reglas» en los seguimientos del último mes (" + ", ".join(del_mes) + "), y si cubren el mes entero"
                                  if del_mes else "no hay seguimientos del último mes: pide uno desde hace 31 días antes de contestar"))
         if es_release(sec.step_to_prod or "") and completo(r, "commits") and completo(r, "releases") and completo(r, "tags"):
-            rg = reglas(dict(gh_mes, repos=[r]), sec, seguimientos=set(del_mes) | {m.group(1) for m in re.finditer(r"^## (20\d\d-\d\d-\d\d)\b", seg, re.M)})
-            res["pasos_a_prod"][nombre] = {k: acotar(rg[k]) for k in ("prod_sin_si", "si_ajeno", "si_propio", "sin_seguimiento", "publico_otro")}
+            rg = reglas(dict(gh_mes, repos=[r]), sec, seguimientos=fechas_de_seguimiento(textos))
+            res["pasos_a_prod"][nombre] = {k: acotar(rg[k]) for k in ("prod_sin_si", "si_ajeno", "si_propio", "sin_seguimiento", "publico_otro", "publico_sin_ver")}
             hay = sum(len(v) for v in res["pasos_a_prod"][nombre].values())
             preguntar("R5", nombre, "quién puede desplegar en Prod no está en GitHub; " + (f"los pasos a Prod del mes traen {hay} avisos (pasos_a_prod)" if hay else "los pasos a Prod del mes no traen avisos"))
         else:
@@ -1908,10 +1973,13 @@ def cmd_auditoria(a):
         else:
             preguntar("R6", nombre, "sin plan que leer" if plan is None else "no se leyeron enteros los pull requests")
         org = nombre.split("/")[0]
-        o = orgs.setdefault(org, {"org": au.get("org"), "admins": au.get("admins"), "errores": au.get("errores") or {}, "privado": False, "sin_leer": []})
+        o = orgs.setdefault(org, {"org": au.get("org"), "admins": au.get("admins"), "errores": au.get("errores") or {}, "privado": False, "sin_leer": sin_leer_de.setdefault(org, [])})
         o["privado"] = o["privado"] or bool(rep.get("private"))
     # PL1 y PL2 por organización, y juntas: no cumple si alguna no cumple (hallazgo 11)
     pl1, pl2, ev1, ev2, no1, no2 = [], [], [], [], [], []
+    for org, nombres in sin_leer_de.items():
+        orgs.setdefault(org, {"org": None, "admins": None, "privado": False, "sin_leer": nombres,
+                              "errores": {"org": "no se leyó ningún repositorio suyo (" + ", ".join(nombres) + ")"}})
     for org, o in orgs.items():
         d = o["org"] or {}
         if d.get("two_factor_requirement_enabled") is not None and d.get("plan"):
@@ -1958,8 +2026,12 @@ def cmd_auditoria(a):
     for x in res["filas"]:
         x["regla"] = REGLAS.get(x["fila"], "")
         x["columna"] = grafia.get(key(x["columna"]), x["columna"])
-        if res["avisos"] and x["propuesta"]:
-            x["propuesta"], x["evidencia"] = None, x["evidencia"] + "; sin propuesta: " + "; ".join(res["avisos"])
+        # un aviso de un repositorio quita la propuesta a sus filas y a las de la organización; uno global, a todas
+        # (arreglos 3, hallazgo 19)
+        suyos = [v for v in res["avisos"] if x["columna"] == "Estado" or ": " not in v
+                 or key(v.split(": ")[0]) not in {key(r) for r in sec.repositories} or key(v.split(": ")[0]) == key(x["columna"])]
+        if suyos and x["propuesta"]:
+            x["propuesta"], x["evidencia"] = None, x["evidencia"] + "; sin propuesta: " + "; ".join(suyos)
     print(json.dumps(res, ensure_ascii=False, indent=1))
     return 0
 
@@ -1980,9 +2052,19 @@ def cmd_aplicar(a):
     # solo las dos configuraciones de la sección, nunca otro archivo (arreglos 1, hallazgo 11)
     rel = os.path.relpath(os.path.realpath(ruta_conf), os.path.realpath(raiz)).replace(os.sep, "/")
     suyas = {sec.paths.get(k, "") for k in ("Configuración de plataforma", "Configuración de repositorios")} - {"", TO_BUILD}
+    # dentro de la raíz, y en un restringido/ solo si es el del área del proyecto (arreglos 3, hallazgo 9)
+    area = proyecto.split("/")[0]
+    suyas = {x for x in suyas if ruta_segura(x) and not ("/restringido/" in f"/{x}" and not x.startswith(f"{area}/restringido/"))}
     if rel not in suyas:
         raise SystemExit(f"{rel} no es una de las configuraciones de la sección ({', '.join(sorted(suyas)) or 'ninguna'}): no se escribe nada")
-    estados = {k.strip().upper(): v for k, v in json.load(open(ruta_json, encoding="utf-8")).items()}
+    try:
+        crudo = json.load(open(ruta_json, encoding="utf-8"))
+    except ValueError as e:
+        raise SystemExit(f"{ruta_json} no es un JSON: {e}")
+    if not isinstance(crudo, dict) or not all(isinstance(v, str) or (isinstance(v, dict) and all(isinstance(x, str) for x in v.values()))
+                                             for v in crudo.values()):
+        raise SystemExit('los estados van como {"R1": {"org/repo": "cumple"}, "PL1": "no cumple"}: no se escribe nada')
+    estados = {k.strip().upper(): v for k, v in crudo.items()}
     texto = leer(ruta_conf)
     if texto is None:
         raise SystemExit(f"no se pudo leer {ruta_conf}")
@@ -2046,7 +2128,7 @@ def cmd_aplicar(a):
 
 
 def main(argv):
-    if not argv or argv[0] not in ("seguimiento", "auditoria", "aplicar"):
+    if not argv or argv[0] not in ("seguimiento", "auditoria", "aplicar", "desde"):
         print(__doc__, file=sys.stderr)
         return 2
     a = {"pos": [], "migraciones": []}
@@ -2064,11 +2146,11 @@ def main(argv):
     if not re.match(r"^20\d\d-\d\d-\d\d$", a["fecha"]):
         print("--fecha va como AAAA-MM-DD, la de hoy en la zona de la organización (la línea HOY de abrir.py)", file=sys.stderr)
         return 2
-    need = {"seguimiento": 2, "auditoria": 2, "aplicar": 4}[argv[0]]
+    need = {"seguimiento": 2, "auditoria": 2, "aplicar": 4, "desde": 2}[argv[0]]
     if len(a["pos"]) < need:
         print(__doc__, file=sys.stderr)
         return 2
-    return {"seguimiento": cmd_seguimiento, "auditoria": cmd_auditoria, "aplicar": cmd_aplicar}[argv[0]](a)
+    return {"seguimiento": cmd_seguimiento, "auditoria": cmd_auditoria, "aplicar": cmd_aplicar, "desde": cmd_desde}[argv[0]](a)
 
 
 if __name__ == "__main__":

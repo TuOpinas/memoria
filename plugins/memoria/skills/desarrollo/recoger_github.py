@@ -5,7 +5,8 @@ solo corre cuando alguien pide un seguimiento o la auditoría (tecnologia/metodo
 
 Uso:
   recoger_github.py <organización/repositorio>... --salida <archivo.json> [--desde AAAA-MM-DD] [--auditoria]
-                    [--max-commits N] [--max-detalle N] [--max-pulls N]
+                    [--base org/repo=sha …] [--max-commits N] [--max-detalle N] [--max-pulls N] [--max-tags N]
+                    [--max-releases N]
 
   --salida       dónde deja el JSON; se escribe después de cada repositorio, así que un corte deja lo ya leído (sin él,
                  por la salida estándar, al final)
@@ -15,6 +16,9 @@ Uso:
   --max-commits  cuántos commits de la rama principal se leen como mucho (500): con ellos se sabe qué entró en cada paso
                  a Prod; si no llegan hasta --desde, el repositorio lo dice en «truncado»
   --max-detalle  de cuántos commits desde --desde se leen los archivos como mucho (150)
+  --base         el commit de la rama principal que leyó el seguimiento anterior, uno por repositorio: los commits se
+                 recorren hasta él, no hasta una fecha (`seguimiento.py desde` da --desde y --base)
+  --max-tags, --max-releases  cuántas etiquetas y releases se leen como mucho (500 y 200)
   --max-pulls    cuántos pull requests a la rama principal se leen como mucho (2.000), de los más nuevos a los más viejos
 
 Lo que no se pudo leer o se cortó se dice, nunca se calla: cada repositorio lleva «errores» ({lista: motivo}) y «truncado»
@@ -49,7 +53,9 @@ PATCH_MAX = 4000
 MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
 # un secreto no entra al JSON, que la sesión lee (arreglos 1, hallazgo 16)
 # solo archivos de secretos de verdad: una migración o un módulo con «password» en el nombre se compara (arreglos 2, hallazgo 2)
-SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx))$", re.I)
+SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx)|\.npmrc|\.pypirc|id_(rsa|dsa|ecdsa|ed25519)[^/]*"
+                     r"|[^/]*(secret|credential|password|service[-_]?account)[^/]*\.(json|ya?ml|toml|ini|cfg|conf|properties|txt)"
+                     r"|[^/]*\.tfvars(\.json)?)$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
@@ -92,7 +98,7 @@ def es_bot(user):
     return user.get("type") == "Bot" or (user.get("login") or "").endswith("[bot]")
 
 
-def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=2000):
+def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=2000, base="", max_tags=500, max_releases=200):
     r = {"repo": nombre, "errores": {}, "truncado": []}
     info, e = gh(f"repos/{nombre}")
     if e:
@@ -121,11 +127,18 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
                      "message": ((c.get("commit") or {}).get("message") or "").split("\n", 1)[0][:200],
                      "author": (c.get("author") or {}).get("login") or ""} for c in commits]
     r["commits_hasta"] = r["commits"][-1]["date"][:10] if r["commits"] else ""
-    if len(r["commits"]) >= max_commits and r["commits_hasta"] > desde:
+    # por posición: hasta el commit que leyó el seguimiento anterior; sin él, los de fecha desde «desde», sin cortar en el
+    # primero más viejo, que puede ser un commit hecho hace semanas y subido hoy (arreglos 3, hallazgo 1)
+    pos_base = next((i for i, c in enumerate(r["commits"]) if base and c["sha"].lower().startswith(base.lower())), None)
+    if base:
+        r["base"] = base
+    if (base and pos_base is None and len(r["commits"]) >= max_commits) or \
+       (not base and len(r["commits"]) >= max_commits and r["commits_hasta"] > desde):
         r["truncado"].append("commits")
     if not auditoria:
         r["detalle"] = []
-        recientes = [c for c in r["commits"] if c["date"][:10] >= desde]
+        hasta = max([i for i, c in enumerate(r["commits"]) if c["date"][:10] >= desde], default=-1)
+        recientes = r["commits"][:pos_base] if pos_base is not None else r["commits"][:hasta + 1]
         if len(recientes) > max_detalle:
             r["truncado"].append("detalle")
         fallos = []
@@ -154,14 +167,14 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
         if fallos:
             r["errores"]["detalle"] = "; ".join(fallos[:5]) + (f" y {len(fallos) - 5} más" if len(fallos) > 5 else "")
     # las etiquetas traen su commit: con ellas se sabe el de cada release sin una llamada por release (hallazgo 8)
-    tags, e, t = paginas(f"repos/{nombre}/tags", 5)
+    tags, e, t = paginas(f"repos/{nombre}/tags", max(1, (max_tags + 99) // 100))
     if e:
         r["errores"]["tags"] = e
     if t:
         r["truncado"].append("tags")
     r["tags"] = [{"name": x.get("name") or "", "sha": (x.get("commit") or {}).get("sha") or ""} for x in tags]
     sha_de = {x["name"]: x["sha"] for x in r["tags"]}
-    rels, e, t = paginas(f"repos/{nombre}/releases", 2)
+    rels, e, t = paginas(f"repos/{nombre}/releases", max(1, (max_releases + 99) // 100))
     if e:
         r["errores"]["releases"] = e
     if t:
@@ -230,6 +243,7 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls=200
 
 def main(argv):
     repos, desde, auditoria, max_commits, max_detalle, max_pulls, salida = [], None, False, 500, 150, 2000, None
+    bases, max_tags, max_releases = {}, 500, 200
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -245,6 +259,16 @@ def main(argv):
             max_commits = int(argv[i + 1]); i += 2; continue
         if a == "--max-detalle":
             max_detalle = int(argv[i + 1]); i += 2; continue
+        if a == "--base":
+            k, _, v = argv[i + 1].partition("=")
+            if not re.match(r"^[0-9a-f]{7,40}$", v.lower()):
+                print(f"--base va como org/repo=sha («{argv[i + 1]}»)", file=sys.stderr)
+                return 2
+            bases[k.strip().lower()] = v.lower(); i += 2; continue
+        if a == "--max-tags":
+            max_tags = int(argv[i + 1]); i += 2; continue
+        if a == "--max-releases":
+            max_releases = int(argv[i + 1]); i += 2; continue
         if a == "--max-pulls":
             max_pulls = int(argv[i + 1]); i += 2; continue
         if a == "--auditoria":
@@ -272,7 +296,8 @@ def main(argv):
             os.replace(tmp, salida)
 
     for nombre in repos:
-        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls))
+        out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs, max_pulls,
+                                 bases.get(nombre.lower(), ""), max_tags, max_releases))
         guardar()                 # un corte deja lo ya leído, sin «terminado»
     out["terminado"] = True
     guardar()
