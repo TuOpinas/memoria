@@ -171,8 +171,10 @@ def development_section(project_text: str) -> DevSection:
         if k == REPOSITORIES:
             for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):
                 # pegado como enlace de GitHub: se queda con organización/repositorio
-                r = re.sub(r"^(?:https?://)?(?:www\.)?github\.com/", "", r).rstrip("/")
-                r = r[:-4] if r.endswith(".git") else r
+                r = r.strip("<>")
+                g = re.match(r"^(?:https?://(?:www\.)?|git@)?github\.com[/:]([^/\s]+)/([^/\s#?]+)", r, re.I)
+                if g:
+                    r = g.group(1) + "/" + (g.group(2)[:-4] if g.group(2).lower().endswith(".git") else g.group(2))
                 if REPO.match(r):
                     if r.lower() not in (x.lower() for x in out.repositories):
                         out.repositories.append(r)

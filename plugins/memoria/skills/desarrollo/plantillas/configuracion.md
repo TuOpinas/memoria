@@ -18,7 +18,7 @@ En cada estado: `cumple · AAAA-MM-DD`, `no cumple · AAAA-MM-DD`, `no aplica` o
 | PL1 | GitHub es de la empresa, pide verificación en dos pasos y su plan permite reglas en repositorios privados | En GitHub, la organización → Settings → Authentication security y Billing | |
 | PL2 | Dos personas pueden administrar GitHub | En GitHub, la organización → People → filtro Owners | |
 | PL3 | El dominio y la nube están a nombre de la empresa | El titular en el registrador y en la facturación de la nube | |
-| PL4 | Hay un entorno de Release separado de Prod | Los entornos de la nube | |
+| PL4 | Hay un entorno de Release separado de Prod | Los entornos de la nube; con `no aplica`, la verificación corre sobre una vista previa o en local | |
 | PL5 | Los secretos viven en un gestor de secretos, nunca en el código | El gestor tiene las claves | |
 | PL6 | La base de datos se respalda sola y la restauración se ha probado | Los respaldos de la nube y la fecha de la última prueba | |
 | PL7 | Si Prod se cae, avisa a una persona | El servicio de monitoreo y a quién avisa | |
@@ -29,11 +29,11 @@ Una columna por repositorio de la línea «Repositorios:».
 | # | Qué se cumple | Cómo se comprueba | [organización/repositorio] |
 |---|---|---|---|
 | R1 | Nada llega a la rama principal sin pull request, se une con squash y nadie se salta la regla | En GitHub, el repositorio → Settings → Rules: la regla de la rama principal, sin excepciones; en General, solo squash | |
-| R2 | La suite pasa antes de unir, y el pull request de una pieza no cambia sus pruebas de aceptación | En la regla de la rama principal, la suite de «Cómo se prueba» y el check «pruebas de aceptación» (`.github/workflows/pruebas-aceptacion.yml`, con su carpeta puesta) son obligatorios | |
+| R2 | La suite pasa antes de unir, con las pruebas de aceptación de las piezas unidas, y el pull request de una pieza no cambia las suyas | En la regla de la rama principal, la suite de «Cómo se prueba» y el check «pruebas de aceptación» (`.github/workflows/pruebas-aceptacion.yml`, con su carpeta puesta) son obligatorios | |
 | R3 | Ningún secreto entra en el código | En la regla de la rama principal, el control de secretos es obligatorio | |
 | R4 | La base de datos cambia solo con migraciones nuevas, y una unida no se edita | Quien revisa el pull request; sin base de datos, `no aplica` | |
 | R5 | A Prod solo despliega quien administra, y solo lo que tiene el sí, como dice «Paso a Prod» | Quién tiene permiso de desplegar en Prod | |
-| R6 | Cada pull request, salvo los de bots, empieza por el identificador de su pieza, por «Escenarios · » y la pieza, o por «Kit · » si solo cambia el `CLAUDE.md` o el workflow | El apartado «fuera del plan» del último seguimiento | |
+| R6 | Cada pull request, salvo los de bots, empieza por el identificador de su pieza, por «Escenarios · » y la pieza, o por «Kit · » si solo cambia el `CLAUDE.md` o el workflow; una reversión, con el título que le da GitHub | El apartado «fuera del plan» del último seguimiento | |
 | R7 | El `CLAUDE.md` existe y tiene las reglas de la plantilla del kit | El archivo | |
 
-Un cambio al workflow de las pruebas de aceptación va solo en su pull request («Kit · »): si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow, el `CLAUDE.md` o la carpeta de aceptación, para que lo vea quien audita.
+**Al montar** un repositorio, el `CLAUDE.md` y el workflow van en un pull request «Kit · », en cualquier orden con los primeros escenarios: mientras no exista la carpeta de aceptación, el check pasa. Después, un cambio al workflow va en su propio pull request («Kit · »), sin código: si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow, el `CLAUDE.md` o la carpeta de aceptación, para que lo vea quien audita.

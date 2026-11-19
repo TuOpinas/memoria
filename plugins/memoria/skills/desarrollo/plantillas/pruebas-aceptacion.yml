@@ -4,8 +4,9 @@
 #
 # Falla si un mismo pull request cambia las pruebas de aceptación y algo fuera de ellas: los escenarios entran en su
 # propio pull request, que solo toca esa carpeta, y el de la pieza no la toca. Un archivo movido cuenta en los dos sitios.
-# Este archivo también va solo en su pull request: en un pull request corre la versión que trae, así que si cambia junto
-# con otra cosa falla, y el seguimiento lista los que lo cambiaron.
+# Este archivo va en su propio pull request («Kit · »), solo o con el CLAUDE.md y la carpeta: en un pull request corre la
+# versión que trae, así que si cambia junto con código falla, y el seguimiento lista los que lo cambiaron. Mientras la
+# carpeta no exista, pasa: se monta en cualquier orden, y protege desde el primer pull request de escenarios.
 name: pruebas de aceptación
 on:
   pull_request:
@@ -25,21 +26,34 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set -eo pipefail
-          carpeta="${ACEPTACION#./}"; carpeta="${carpeta%/}/"
-          este=".github/workflows/pruebas-aceptacion.yml"
-          if [ "$carpeta" = "/" ] || ! git cat-file -e "$HEAD:${carpeta%/}" 2>/dev/null; then
-            echo "::error::La carpeta de ACEPTACION («$carpeta») no existe en este pull request: ponla igual que «Pruebas de aceptación» del CLAUDE.md."
+          carpeta="$ACEPTACION"
+          while [[ "$carpeta" == ./* ]]; do carpeta="${carpeta#./}"; done
+          carpeta="$(printf '%s' "$carpeta" | tr -s '/')"; carpeta="${carpeta%/}/"
+          este="${GITHUB_WORKFLOW_REF%@*}"; este="${este#*/*/}"
+          [ -n "$este" ] || este=".github/workflows/pruebas-aceptacion.yml"
+          tipo() { git cat-file -t "$1:${carpeta%/}" 2>/dev/null || true; }
+          if [ "$carpeta" = "/" ] || { [ -n "$(tipo "$HEAD")" ] && [ "$(tipo "$HEAD")" != tree ]; }; then
+            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."
             exit 1
           fi
+          if [ -z "$(tipo "$HEAD")" ]; then
+            if [ "$(tipo "$BASE")" = tree ]; then
+              echo "::error::Este pull request quita o mueve la carpeta de las pruebas de aceptación ($carpeta)."
+              exit 1
+            fi
+            echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."
+            exit 0
+          fi
           git -c core.quotepath=off diff --name-only --no-renames -z "$BASE...$HEAD" > "$RUNNER_TEMP/cambios" || exit 1
-          dentro=0; fuera=0; workflow=0
+          dentro=0; fuera=0; kit=0; workflow=0
           while IFS= read -r -d '' f; do
-            if [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1)); else fuera=$((fuera + 1)); fi
-            if [ "$f" = "$este" ]; then workflow=1; fi
+            if [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
+            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1
+            else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
-          echo "Cambian $dentro archivos de $carpeta y $fuera fuera."
-          if [ "$workflow" = 1 ] && [ $((dentro + fuera)) -gt 1 ]; then
-            echo "::error::Este pull request cambia $este junto con otros archivos: va solo en su pull request."
+          echo "Cambian $dentro archivos de $carpeta, $kit del kit y $fuera fuera."
+          if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
+            echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."
             exit 1
           fi
           if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then

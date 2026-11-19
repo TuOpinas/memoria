@@ -12,13 +12,13 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | Diseño y plan | [rutas en la memoria] |
 | Audita | [Nombre Apellido] |
 | Cómo se revisa | [la skill calidad del plugin Memoria, o la que use el equipo] |
-| Cómo se prueba | [comando de la suite obligatoria, que no corre la carpeta de aceptación] |
+| Cómo se prueba | [comando de la suite obligatoria: las pruebas del código y las de aceptación de las piezas ya unidas] |
 | Pruebas de aceptación | [carpeta, la misma que dice .github/workflows/pruebas-aceptacion.yml, y cómo se corren las de una pieza, p. ej. `pytest tests/aceptacion -k P01`] |
 | Migraciones | [carpeta, o «no hay base de datos»] |
 | No se toca | [lo que no se cambia nunca] |
 
 ## Reglas
-1. Una rama por bloque (una o varias piezas) y nunca `main`. El título del pull request empieza por el identificador de la pieza seguido de « · », o por las piezas que lleva («P01 + P02 · »); el de los escenarios de una pieza, por «Escenarios · P01», y el que solo cambia el kit (este archivo o el workflow), por «Kit · ».
+1. Una rama por bloque (una o varias piezas) y nunca `main`. El título del pull request empieza por el identificador de la pieza seguido de « · », o por las piezas que lleva («P01 + P02 · »); el de los escenarios de una pieza, por «Escenarios · P01», y el que solo cambia el kit (este archivo o el workflow), por «Kit · ». Una reversión lleva el título que le da GitHub («Revert "P01 · …"»).
 2. Antes de abrir el pull request, la revisión de calidad, como dice «Cómo se revisa».
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita.
 4. Ningún secreto en el código.
@@ -29,7 +29,9 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
    - la tarea añade una entidad, un componente o un concepto que no está en el diseño, o se sale del plan;
    - el diseño no cubre lo que la tarea necesita, o no puedes leerlo.
 
-**Hecha** quiere decir: pasan las pruebas de aceptación de la pieza, corridas como dice «Pruebas de aceptación», con su salida en el pull request, y la suite de «Cómo se prueba» sigue en verde. Las de aceptación no se tocan en el pull request de la pieza; las de piezas que aún no se construyen fallan, y por eso no van en la suite obligatoria. **Para** también si una prueba falla por una razón que no puedes explicar ni arreglar sin cambiarla, o si los escenarios contradicen el diseño.
+   Si algo es difícil de revertir o se sale del diseño, consulta antes una vez a Fable 5.2 y lleva su respuesta a la pregunta. Si un enfoque falló dos veces, propón pasar la pieza a Fable 5.2.
+
+**Hecha** quiere decir: pasan las pruebas de aceptación de la pieza, corridas como dice «Pruebas de aceptación», con su salida en el pull request, y la suite de «Cómo se prueba» sigue en verde. El pull request de la pieza añade las suyas a esa suite, fuera de la carpeta de aceptación, que no toca; las de piezas que aún no se construyen fallan, y por eso no van en la suite hasta entonces. **Para** también si una prueba falla por una razón que no puedes explicar ni arreglar sin cambiarla, o si los escenarios contradicen el diseño.
 
 **Cada afirmación de avance** («hecho», «pasa», «arreglado») va con la evidencia de una herramienta: la salida de las pruebas, el commit, el enlace.
 

@@ -2905,13 +2905,15 @@ function ayudaArts(){
     </table></div>
     <p class="more">Sumar a alguien como colaborador de un área o de un proyecto lo hace el responsable de esa área.</p>`},
   {g:"Cada día", id:"modelos", t:"Qué modelo usar", h:`
-    <p>El modelo se elige abajo, junto a donde escribes. Para trabajar con la memoria conviene <b>Opus</b> para todo: abrir y cerrar sesión, preguntar cómo va algo, colocar material y el trabajo de cada proyecto.</p>
+    <p>El modelo y su esfuerzo se eligen abajo, junto a donde escribes. Para trabajar con la memoria conviene <b>Opus</b> en esfuerzo medio para todo: abrir y cerrar sesión, preguntar cómo va algo, colocar material y el trabajo de cada proyecto.</p>
     <dl class="hc-def">
       <dt>Opus, por defecto</dt><dd>En la misma apertura de sesión, repetida tres veces con cada modelo, Opus tardó en promedio 40 segundos y Sonnet 57, con los mismos tokens y menos pasos. Opus siguió mejor las reglas del método; Sonnet llegó a dar un dato equivocado en el recuadro de apertura.</dd>
+      <dt>Esfuerzo antes que modelo</dt><dd>Si la respuesta es superficial, se salta un paso o falla en algo difícil, sube el esfuerzo un nivel (de medio a alto) en el mismo modelo y con la misma conversación. Si en alto, con el contexto completo, sigue fallando, cambia a Fable. Si falla porque le falta contexto, ni esfuerzo ni modelo: dale lo que falta.</dd>
+      <dt>Menos esfuerzo</dt><dd>Para lo rutinario, lo repetitivo o lo que se va a revisar después, y cuando tarda de más con un resultado igual de bueno, baja el esfuerzo antes de bajar de modelo. No hace falta pedirle que «piense con cuidado»: eso lo controla el esfuerzo.</dd>
       <dt>Lo más difícil</dt><dd>Para una revisión de calidad a fondo, decisiones de estrategia o de arquitectura y tareas largas de muchos pasos, el modelo más capaz que tengas disponible.</dd>
       <dt>Sonnet y Haiku</dt><dd>Sonnet funciona, pero en la apertura rindió menos; Haiku no se ha probado con el método. El cierre y la puesta al día del tablero no se midieron.</dd>
     </dl>
-    <p class="hc-nota">Si una conversación empezó con otro modelo, se puede cambiar a mitad: conserva todo lo hablado.</p>`},
+    <p class="hc-nota">Si una conversación empezó con otro modelo, se puede cambiar a mitad: conserva todo lo hablado. En un proyecto de desarrollo, el kit elige solo el modelo de algunos pasos (<button type="button" class="lnk" data-help="desarrollo-modelos">Qué modelo hace qué</button>).</p>`},
   {g:"Cada día", id:"telefono", t:"Desde el teléfono", h:`
     <p>Desde el teléfono o la web, sin la carpeta conectada, Claude puede leer la memoria si vive en Google Drive: abrir sesión para ponerte al día, preguntar ${F("¿qué sabemos de…?")} o pedirle al director cómo va un área. La respuesta empieza con «Memoria en solo lectura».</p>
     <dl class="hc-def">
@@ -2931,6 +2933,62 @@ function ayudaArts(){
       <dt>Una carpeta no se deja leer.</dt><dd>Está restringida para tu cuenta. Claude te lo dice y sigue con el resto. Si la necesitas, pide acceso a su responsable.</dd>
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día, con «Sincronizar ahora» o ${F("sincroniza el tablero")}: <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>.</dd>
     </dl>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo", t:"Cómo se construye software con Claude", h:`
+    <p>Claude construye el software; las personas deciden qué se construye y aprueban lo que llega a producción. Nadie del equipo necesita programar ni leer código.</p>
+    <ul class="hc-l">
+      <li><b>Lo que se aprueba son escenarios, no código.</b> Cada pieza del plan termina cuando cumple unos escenarios escritos en lenguaje de negocio («Dado un cliente con saldo pendiente, cuando intenta pagar, entonces…»), que aprueba quien acepta antes de que se construya.</li>
+      <li><b>La calidad se comprueba con el producto funcionando.</b> Antes del sí, una sesión aparte, en otro modelo, recorre la aplicación en el entorno de pruebas (Release) contra esos escenarios y deja un reporte con evidencia.</li>
+      <li><b>Lo que no está en el diseño no entra sin una decisión.</b> El diseño y el plan son la referencia; el seguimiento avisa si lo construido se sale de ellos.</li>
+      <li><b>Nada llega a producción sin un sí escrito</b>, y solo quien administra despliega.</li>
+    </ul>
+    <p class="hc-nota">Estas reglas existen porque un agente que construye y se revisa a sí mismo comparte sus propios supuestos: las pruebas que escribe mirando su código confirman lo que el código hace, no lo que debía hacer.</p>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo-roles", t:"Quién hace qué", h:`
+    <div class="hc-tbl"><table>
+      <thead><tr><th>Rol</th><th>Hace</th></tr></thead>
+      <tbody>
+        <tr><td><b>Acepta</b></td><td>Valida lo funcional del diseño, aprueba los escenarios de cada pieza, lee el reporte de verificación y da el sí</td></tr>
+        <tr><td><b>Audita</b></td><td>Valida el diseño técnico y el plan, decide en los puntos de control y revisa lo delicado: dependencias nuevas, permisos, accesos, pagos, datos personales, cambios de base de datos</td></tr>
+        <tr><td><b>Construye</b></td><td>Construye con Claude, por bloques de una o varias piezas en un pull request, y los une con las pruebas en verde y la revisión hecha</td></tr>
+        <tr><td><b>Administra</b></td><td>Mantiene la configuración y es el único que despliega a producción, solo lo que tiene el sí</td></tr>
+      </tbody>
+    </table></div>
+    <p>Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe una sesión que no ve el código, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual.</p>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo-pieza", t:"El camino de una pieza", h:`
+    <ol class="hc-pasos">
+      <li><b>Escenarios</b><span>Claude propone los escenarios de la pieza, con sus casos de error; quien acepta los aprueba o los corrige. ${F("escribe los escenarios de P03")}</span></li>
+      <li><b>Pruebas aparte</b><span>Una sesión que no ve el código de la aplicación, solo el diseño, los escenarios y las reglas del repositorio, los convierte en pruebas que fallan, en su propio pull request, antes de la pieza.</span></li>
+      <li><b>Construir</b><span>Claude construye la pieza de punta a punta hasta que pasan sus pruebas y las demás siguen en verde. Se para solo si algo es difícil de revertir, se sale del diseño, falla dos veces o el diseño no lo cubre.</span></li>
+      <li><b>Unir</b><span>Con todo en verde y la revisión de calidad hecha, quien construye la une y queda en Release.</span></li>
+      <li><b>Verificar</b><span>Antes del sí, una sesión aparte recorre Release contra los escenarios y deja el reporte. ${F("verifica P03 en Release")}</span></li>
+      <li><b>Seguimiento y sí</b><span>Quien da el sí pide el seguimiento, que compara lo unido con el diseño y el plan, y lo da sobre ese seguimiento y el reporte. ${F("haz el seguimiento")}</span></li>
+      <li><b>Producción</b><span>Quien administra despliega el commit que recibió el sí.</span></li>
+    </ol>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo-montar", t:"Montar un proyecto de desarrollo", h:`
+    <p>Al crear el proyecto, Claude pregunta si construye software. Si sí, escribe en su <code>proyecto.md</code> la sección «Desarrollo» con las rutas de cada pieza del kit y las personas de cada rol, y ofrece crear las demás desde las plantillas. En un proyecto que ya existe, la ofrece con ${F("este proyecto construye software")}.</p>
+    <div class="hc-tbl"><table>
+      <thead><tr><th>Pieza</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td><b>Diseño</b></td><td>Reglas de negocio, componentes, datos, conceptos (con lo que no son) e infraestructura: la referencia con la que se compara lo construido</td></tr>
+        <tr><td><b>Plan</b></td><td>Fases, cada una con lo que permite hacer a quién, y piezas con sus escenarios en «Hecha cuando»</td></tr>
+        <tr><td><b>Configuración</b></td><td>Lo imprescindible de la plataforma y de cada repositorio, comprobado al montar el proyecto</td></tr>
+        <tr><td><b><code>CLAUDE.md</code></b></td><td>En cada repositorio: para qué es, sus trampas y las reglas que Claude cumple</td></tr>
+        <tr><td><b>Seguimiento</b></td><td>Lo escribe Claude cuando alguien lo pide</td></tr>
+      </tbody>
+    </table></div>
+    <p>Mientras falte una pieza, la apertura de sesión lo avisa. El código se construye en una sesión en la nube que recibe el repositorio por GitHub, nunca la carpeta de un clon en tu computadora.</p>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo-criticos", t:"Lo que no se negocia", h:`
+    <ul class="hc-l">
+      <li>Cada pieza tiene escenarios aprobados por quien acepta antes de construirse.</li>
+      <li>El pull request de una pieza no cambia sus pruebas de aceptación: si las toca, el control de GitHub lo bloquea.</li>
+      <li>Nada llega a la rama principal sin pull request, y nadie se salta la regla.</li>
+      <li>La base de datos cambia solo con migraciones nuevas; una ya unida no se edita.</li>
+      <li>Ningún secreto en el código.</li>
+      <li>Nada pasa a producción sin el sí escrito, y solo quien administra despliega.</li>
+      <li>Claude se para y pregunta en lo difícil de revertir, cuando se sale del diseño, cuando algo falla dos veces o cuando el diseño no lo cubre.</li>
+    </ul>`},
+  {g:"Proyectos de desarrollo de software", id:"desarrollo-modelos", t:"Qué modelo hace qué", h:`
+    <p>Trabajas en tu sesión con <b>Opus</b> en esfuerzo medio. El kit elige el modelo de cada paso que lanza por su cuenta: las pruebas de aceptación en Opus, la verificación en Release en Fable (el modelo más capaz, para que no comparta los supuestos de quien construyó) y el seguimiento en Sonnet. Si un enfoque falla dos veces, Claude propone pasar la pieza a Fable.</p>
+    <p class="hc-nota">Si una respuesta sale floja, primero sube el esfuerzo en el mismo modelo (junto al nombre del modelo, abajo); cambia de modelo solo si en esfuerzo alto, con el contexto completo, sigue fallando (<button type="button" class="lnk" data-help="modelos">Qué modelo usar</button>).</p>`},
   {g:"El tablero", id:"tablero", t:"Tu tablero", h:`
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo con ${F("monta el tablero")} (<button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien</button>).</p>
     <dl class="hc-def">

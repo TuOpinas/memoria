@@ -296,7 +296,10 @@ for _nom, _txt in (
         ("una ruta como enlace", _pk.replace("Diseño: otra/area/entregables/diseno.md", "Diseño: [el diseño](otra/area/entregables/diseno.md)")),
         ("un archivo que no es .md", _pk.replace("diseno.md", "diseno.pdf")),
         ("un ejemplo en un bloque de código antes", _pk.replace("## Quién participa", "```\n## Desarrollo\nPlan: ejemplo.md\n```\n\n## Quién participa")),
-        ("dos espacios en el encabezado", _pk.replace("## Desarrollo", "##  Desarrollo"))):
+        ("dos espacios en el encabezado", _pk.replace("## Desarrollo", "##  Desarrollo")),
+        ("un comentario con la clave antes", _pk.replace("Repositorios: acme/app", "<!-- Diseño: x.md -->\nRepositorios: acme/app")),
+        ("saltos de línea \\r", _pk.replace("\n", "\r")),
+        ("un espacio duro en el encabezado", _pk.replace("## Desarrollo", "##\u00a0Desarrollo"))):
     _s = _dev.development_section(_txt)
     _esperado = [v for k, v in _s.paths.items() if v != _dev.TO_BUILD and ".." not in v.split("/")]
     ok(sorted(_em.rutas_del_kit(_txt)) == sorted(_esperado), f"la misma lectura que context_core: {_nom}")

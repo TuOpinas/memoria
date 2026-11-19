@@ -34,13 +34,15 @@ def git(d, *a):
     return subprocess.run(["git", "-C", str(d), *a], capture_output=True, text=True, check=True).stdout.strip()
 
 
-def repo():
+def repo(sin_carpeta=False):
     d = pathlib.Path(tempfile.mkdtemp())
     git(d, "init", "-q", "-b", "main")
     git(d, "config", "user.email", "p@e.test")
     git(d, "config", "user.name", "Prueba")
     for f in ("app/main.py", "tests/aceptacion/test_p01.py", "tests/unit/test_x.py", "pruebas/aceptación/test_p01.py",
               ".github/workflows/pruebas-aceptacion.yml"):
+        if sin_carpeta and f.startswith(("tests/aceptacion/", ".github/")):
+            continue
         (d / f).parent.mkdir(parents=True, exist_ok=True)
         (d / f).write_text("x = 1\n", encoding="utf-8")
     git(d, "add", "-A")
@@ -48,14 +50,16 @@ def repo():
     return d, git(d, "rev-parse", "HEAD")
 
 
-def pr(cambios, acept=None):
+def pr(cambios, acept=None, sin_carpeta=False):
     """Aplica los cambios en una rama y corre el paso; devuelve (código de salida, salida)."""
-    d, base = repo()
+    d, base = repo(sin_carpeta)
     git(d, "checkout", "-qb", "pieza")
     for orden, ruta, destino in cambios:
         if orden == "escribir":
             (d / ruta).parent.mkdir(parents=True, exist_ok=True)
             (d / ruta).write_text("y = 2\n", encoding="utf-8")
+        elif orden == "borrar":
+            git(d, "rm", "-rq", ruta)
         elif orden == "mover":
             (d / destino).parent.mkdir(parents=True, exist_ok=True)
             git(d, "mv", ruta, destino)
@@ -88,15 +92,26 @@ c, o = pr([("escribir", "tests/aceptacion/test_sesión.py", None), ("escribir", 
 ok(c == 0, "y un pull request de escenarios con acentos pasa")
 c, o = pr([("escribir", "app/main.py", None), ("escribir", "pruebas/aceptación/test_p01.py", None)], acept="pruebas/aceptación")
 ok(c == 1, "una carpeta con acento, también")
-for mala in ("tests/acceptance", "./tests/otra", ""):
+for buena in ("./tests/aceptacion", "././tests/aceptacion", "tests/aceptacion//"):
+    c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept=buena)
+    ok(c == 1, f"con ACEPTACION «{buena}», la carpeta se reconoce")
+for mala in ("app/main.py", ""):
     c, o = pr([("escribir", "app/main.py", None)], acept=mala)
-    ok(c == 1 and "no existe" in o, f"con ACEPTACION «{mala}», que no existe, falla y lo dice")
-c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept="./tests/aceptacion")
-ok(c == 1, "con «./» delante, la carpeta se reconoce")
+    ok(c == 1 and "no es una carpeta" in o, f"con ACEPTACION «{mala}», que no es una carpeta, falla y lo dice")
+c, o = pr([("borrar", "tests/aceptacion", None), ("escribir", "app/main.py", None)])
+ok(c == 1 and "quita o mueve" in o, "quitar la carpeta de las pruebas falla")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "app/main.py", None)])
-ok(c == 1 and "va solo en su pull request" in o, "cambiar el workflow junto con código falla")
-c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None)])
-ok(c == 0, "cambiarlo solo pasa")
+ok(c == 1 and "va en su propio pull request" in o, "cambiar el workflow junto con código falla")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)])
+ok(c == 0, "cambiarlo con el CLAUDE.md pasa: es el kit")
+
+print("Montar el kit en un repositorio que aún no tiene pruebas de aceptación")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], sin_carpeta=True)
+ok(c == 0, "el pull request que trae el workflow y el CLAUDE.md pasa")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "tests/aceptacion/.gitkeep", None)], sin_carpeta=True)
+ok(c == 0, "con la carpeta vacía, también")
+c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True)
+ok(c == 0 and "no hay nada que proteger" in o, "una pieza antes de que haya escenarios pasa, y lo dice")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")

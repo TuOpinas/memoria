@@ -203,7 +203,8 @@ def rutas_del_kit(texto_proyecto):
     clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", "".join(
         c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn").replace("\u00a0", " ").lower())).strip()
     dentro, cerca, vistas, out = False, False, set(), []
-    for l in unicodedata.normalize("NFC", texto_proyecto.replace("\r\n", "\n")).split("\n"):
+    texto = texto_proyecto.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
+    for l in unicodedata.normalize("NFC", texto).split("\n"):
         if re.match(r"^\s*(```|~~~)", l):
             cerca = not cerca
         if cerca:
@@ -212,6 +213,8 @@ def rutas_del_kit(texto_proyecto):
             if dentro:
                 break
             dentro = clave(l[3:]) == "desarrollo"
+            continue
+        if re.match(r"^<!--.*-->$", l.strip()):
             continue
         mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip()) if dentro else None
         if not mm or clave(mm.group(1)) not in KIT_RUTAS or clave(mm.group(1)) in vistas:
@@ -269,7 +272,9 @@ def rutas(copia, activo, listado=None):
                     ronda += [f"{activo}/{n}" for n in archivados_del_listado(listado)]
                 # en un proyecto de desarrollo (1.27), los archivos del kit que nombra su sección «Desarrollo», que pueden
                 # vivir fuera del proyecto: abrir.py mira que existan para avisar de la que falta
-                ronda += [r for r in rutas_del_kit(leer(copia / activo / "proyecto.md") or "") if not set(r.split("/")[:-1]) & set(FUERA)]
+                # del propio proyecto, también su taller/ y fuentes/, que abrir.py comprueba; de otros, ni eso ni restringido/
+                ronda += [r for r in rutas_del_kit(leer(copia / activo / "proyecto.md") or "")
+                          if not (set(r.split("/")[:-1]) & ({"restringido"} if r.startswith(activo + "/") else set(FUERA)))]
                 ronda = [r for r in dict.fromkeys(ronda) if ausente(r)]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0

@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': '1cdfd8f23c07e9e4c8144f69118add2c8193a2ef162dd494d90030f2188dc0be',
+    'development': 'b7e0d86fce65426a0c644a9f92412c9d78246329389c46a6d0fd066f1e69eb40',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1711,8 +1711,10 @@ def _context_core():
         '        if k == REPOSITORIES:\n'
         '            for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):\n'
         '                # pegado como enlace de GitHub: se queda con organizaci\xf3n/repositorio\n'
-        '                r = re.sub(r"^(?:https?://)?(?:www\\.)?github\\.com/", "", r).rstrip("/")\n'
-        '                r = r[:-4] if r.endswith(".git") else r\n'
+        '                r = r.strip("<>")\n'
+        '                g = re.match(r"^(?:https?://(?:www\\.)?|git@)?github\\.com[/:]([^/\\s]+)/([^/\\s#?]+)", r, re.I)\n'
+        '                if g:\n'
+        '                    r = g.group(1) + "/" + (g.group(2)[:-4] if g.group(2).lower().endswith(".git") else g.group(2))\n'
         '                if REPO.match(r):\n'
         '                    if r.lower() not in (x.lower() for x in out.repositories):\n'
         '                        out.repositories.append(r)\n'
@@ -2811,6 +2813,8 @@ if KIT.found:
         return (RAIZ / r).is_file()
 
     for m in piezas_faltantes(KIT, _existe):
+        if m.reason == "vacía" and any(f"en {m.key} " in w for w in KIT.warnings):
+            continue           # la línea tiene algo que no se entiende: lo dice el aviso de la sección, no «vacía»
         _faltan.setdefault(m.reason, []).append(m.key + (f" ({m.path})" if m.path else ""))
     _uno = {"sin línea": "no tiene su línea en la sección", "vacía": "tiene la línea vacía",
             "por crear": "está por crear", "no existe": "apunta a un archivo que no existe"}

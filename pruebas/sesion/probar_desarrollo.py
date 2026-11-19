@@ -103,6 +103,11 @@ ok(any("Diseño (ventas/cuentas/taller/no-esta.md) apunta a un archivo que no ex
    "el taller del propio proyecto se comprueba")
 ok(not any("Acepta" in x for x in a), "las personas bien escritas no salen")
 r = raiz()
+kit(r, **{"Repositorios": "acme/app, acme/web"})
+a = del_kit(abrir(r)[1])
+ok(not any("Repositorios" in x and "vacía" in x for x in a) and any("acme/app, acme/web" in x for x in a),
+   "un valor que no se entiende se dice una vez, sin darlo por vacío")
+r = raiz()
 kit(r, **{"Acepta": "por crear", "Configuración de plataforma": "x/y.md", "Configuración de repositorios": "x/y.md",
           "Diseño": "x/y.md", "Plan": "x/y.md"})
 (r / "x").mkdir(); (r / "x/y.md").write_text("---\nestado: borrador\nactualizado: 2026-11-01\n---\n", encoding="utf-8")

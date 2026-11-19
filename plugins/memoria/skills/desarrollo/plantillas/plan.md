@@ -43,9 +43,9 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
 
 ## Cómo avanza
 - Se construye por bloques: una o varias piezas en un pull request a la rama principal, unido y desplegado antes del siguiente. Claude propone cómo se agrupan; lo normal es una pieza por pull request.
-- Una sesión aparte, que ve este plan, el diseño y el `CLAUDE.md` del repositorio pero no el código de la aplicación, convierte los escenarios aprobados en pruebas que fallan, con el identificador de su pieza en el nombre, en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Esas pruebas no van en la suite obligatoria hasta que su pieza se construye. El pull request de la pieza no toca la carpeta: CI lo impide.
+- Una sesión aparte, que ve este plan, el diseño y el `CLAUDE.md` del repositorio pero no el código de la aplicación, convierte los escenarios aprobados en pruebas que fallan, con el identificador de su pieza en el nombre, en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Esas pruebas no van en la suite obligatoria hasta que su pieza se une: el pull request de la pieza las añade al comando de la suite, que vive fuera de esa carpeta. El pull request de la pieza no toca la carpeta: CI lo impide.
 - Quien construye une la pieza cuando pasan sus pruebas de aceptación, con su salida en el pull request, y la suite obligatoria sigue en verde, con la revisión de calidad hecha.
-- Antes del sí, una sesión de contexto limpio recorre Release contra los escenarios y deja un reporte con evidencia, criterio por criterio. Quien da el sí lo lee, con el seguimiento.
+- Antes del sí, una sesión de contexto limpio, en otro modelo, recorre Release (sin Release, la aplicación levantada desde lo unido) contra los escenarios y deja un reporte con evidencia, criterio por criterio. Quien da el sí lo lee, con el seguimiento.
 - Claude se para y pregunta a quien audita en los puntos de control del `CLAUDE.md`.
 - Al cumplirse «Listo cuando», quien audita y quien acepta deciden si se sigue, se cambia el plan o se para. Si no coinciden, decide quien acepta.
 
@@ -54,6 +54,7 @@ Por los pull requests a la rama principal cuyo título empieza por el identifica
 - **Pendiente:** no tiene ninguno abierto ni unido.
 - **En curso:** tiene alguno abierto.
 - **Unida:** todos están unidos (está en Release, si lo hay).
+- **Revertida:** se unió una reversión («Revert "P01 · …"»); vuelve a `en curso` con el siguiente pull request de la pieza, y el seguimiento lo dice.
 - **Entregada:** lo unido ya pasó a Prod con su sí.
 
-Un pull request cerrado sin unir no cuenta, ni los que van a otras ramas, ni los de escenarios («Escenarios · P01») ni los del kit («Kit · »), que el seguimiento lista aparte. Un arreglo lleva el identificador de la pieza que arregla, y una reversión («Revert "P01 · …"») cuenta para su pieza, que vuelve a `en curso`. Los de bots no llevan ninguno; los demás sin pieza salen en el seguimiento como «fuera del plan».
+Un pull request cerrado sin unir no cuenta, ni los que van a otras ramas, ni los de escenarios («Escenarios · P01») ni los del kit («Kit · »), que el seguimiento lista aparte. Un arreglo lleva el identificador de la pieza que arregla. Los de bots no llevan ninguno; los demás sin pieza salen en el seguimiento como «fuera del plan».
