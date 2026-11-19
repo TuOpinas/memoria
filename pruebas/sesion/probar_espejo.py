@@ -284,9 +284,24 @@ ok(_em.anio_de_la_organizacion(_c) == _dt2.datetime.now(_ZI("America/Mexico_City
 print("Los archivos del kit de desarrollo (1.27)")
 _pk = ("# P\n\n## Quién participa\nResponsable: Ana\n\n## Desarrollo\nRepositorios: acme/app\nDiseño: otra/area/entregables/diseno.md\n"
        "- **Plan:** `ventas/x/entregables/plan.md`\nConfiguración de plataforma: por crear\nDISENO: no/vale/dos.md\nSeguimiento: ../fuera.md\n\n## Otra\nPlan: no.md\n")
-ok(_em.rutas_del_kit(_pk) == ["otra/area/entregables/diseno.md", "ventas/x/entregables/plan.md", "no/vale/dos.md"],
-   "trae las rutas de la sección, sin «por crear», sin salir de la raíz y sin lo de otra sección")
+ok(_em.rutas_del_kit(_pk) == ["otra/area/entregables/diseno.md", "ventas/x/entregables/plan.md"],
+   "trae las rutas de la sección, sin «por crear», sin salir de la raíz, sin una clave repetida y sin lo de otra sección")
 ok(_em.rutas_del_kit("# P\n\n## Quién participa\nResponsable: Ana\n") == [], "sin la sección, nada")
+# la misma lectura que context_core (revisión de la 1.27.0, hallazgo 16)
+sys.path.insert(0, str(AQUI.parent.parent / "packages" / "context-core"))
+from context_core.development import development_section as _ds, TO_BUILD as _TB
+_casos = {
+    "mayúsculas": "## DESARROLLO\nPlan: a/plan.md\nDiseño: a/diseno.md\n",
+    "sin acento": "## desarrollo\nDiseno: a/diseno.md\n",
+    "enlace": "## Desarrollo\nPlan: [el plan](a/plan.md)\n",
+    "sin .md": "## Desarrollo\nDiseño: a/diseno.html\n",
+    "valla": "```\n## Desarrollo\nPlan: ejemplo.md\n```\n\n## Otra\nnada\n",
+    "repetida": "## Desarrollo\nPlan: a/uno.md\nPLAN: a/dos.md\n",
+}
+for _n, _t in _casos.items():
+    _sec = _ds("# P\n\n" + _t)
+    _ctx = [v for k, v in _sec.paths.items() if v and v != _TB] if _sec.found else []
+    ok(sorted(_em.rutas_del_kit("# P\n\n" + _t)) == sorted(_ctx), f"espejo lee como context_core: {_n}")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallos.")

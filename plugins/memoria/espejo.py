@@ -194,20 +194,40 @@ def archivados_del_listado(ruta):
 KIT_RUTAS = ("configuracion de plataforma", "configuracion de repositorios", "diseno", "plan", "seguimiento")
 
 
-def rutas_del_kit(texto_proyecto):
-    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». Claves comparadas
-    sin acentos ni mayúsculas, como context_core/development.py, que es la lectura de verdad."""
+def _clave_kit(t):
+    """Como key() de context_core/development.py: NFC o NFD, sin acentos, mayúsculas ni puntuación."""
     import unicodedata
-    clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z ]", " ", "".join(
-        c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn").lower())).strip()
-    m = re.search(r"^## Desarrollo\s*\n(.*?)(?=^## |\Z)", unicodedata.normalize("NFC", texto_proyecto), re.M | re.S)
-    out = []
-    for l in (m.group(1).split("\n") if m else []):
+    t = "".join(c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn").replace("\u00a0", " ").lower()
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", t)).strip()
+
+
+def rutas_del_kit(texto_proyecto):
+    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». La misma lectura que
+    context_core/development.py (development_section), que es la de verdad: el título sin acentos ni mayúsculas, los
+    bloques de código saltados, los enlaces y las marcas quitados; pruebas/sesion/probar_espejo.py compara las dos."""
+    import unicodedata
+    texto = unicodedata.normalize("NFC", (texto_proyecto or "").replace("\r\n", "\n"))
+    dentro, valla, lineas = False, False, []
+    for l in texto.split("\n"):
+        if re.match(r"^\s*(```|~~~)", l):
+            valla = not valla
+        if not valla and l.startswith("## "):
+            if dentro:
+                break
+            dentro = _clave_kit(l[3:]) == "desarrollo"
+            continue
+        if dentro:
+            lineas.append(l)
+    out, vistas = [], set()
+    for l in lineas:
         mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip())
-        if mm and clave(mm.group(1)) in KIT_RUTAS:
-            r = mm.group(2).replace("`", "").replace("**", "").strip().lstrip("/")
-            if r and clave(r) != "por crear" and ".." not in r.split("/") and r.endswith(".md"):
-                out.append(r)
+        if not mm or _clave_kit(mm.group(1)) not in KIT_RUTAS or _clave_kit(mm.group(1)) in vistas:
+            continue
+        vistas.add(_clave_kit(mm.group(1)))
+        r = re.sub(r"\[([^\]]*)\]\(([^)]*)\)", lambda m: m.group(2) or m.group(1), mm.group(2).strip())
+        r = r.replace("`", "").replace("**", "").strip().lstrip("/")
+        if r and _clave_kit(r) != "por crear" and ".." not in r.split("/"):
+            out.append(r)
     return out
 
 

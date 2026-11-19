@@ -101,7 +101,7 @@ REL_CONTRATO="plugins/memoria/skills/convenciones"
 MONTAJE="$PLUGIN_DIR/skills/convenciones/montaje.md"
 REL_MONTAJE="plugins/memoria/skills/convenciones/montaje.md"
 # los scripts que comparan su versión con la «Versión mínima del plugin» de guia.md llevan la suya en ESTE_PLUGIN (1.26)
-CON_VERSION=("$PLUGIN_DIR/skills/sesion/abrir.py" "$PLUGIN_DIR/skills/sesion/cerrar.py" "$PLUGIN_DIR/skills/sesion/migrar_estructura.py" "$PLUGIN_DIR/skills/tablero/aplicar_cambios.py" "$PLUGIN_DIR/skills/tablero/generar_vista.py")
+CON_VERSION=("$PLUGIN_DIR/skills/sesion/abrir.py" "$PLUGIN_DIR/skills/sesion/cerrar.py" "$PLUGIN_DIR/skills/sesion/migrar_estructura.py" "$PLUGIN_DIR/skills/tablero/aplicar_cambios.py" "$PLUGIN_DIR/skills/tablero/generar_vista.py" "$PLUGIN_DIR/skills/desarrollo/seguimiento.py")
 # la versión que pide la estructura actual (la que escribe la migración): un plugin anterior a ella se dejaría a sí mismo en
 # solo lectura en cada raíz que migre (revisión de la 1.26)
 MINIMA_ESTRUCTURA="$(sed -n 's/^STRUCTURE_MINIMUM = "\([0-9.]*\)".*/\1/p' "$PLUGIN_DIR/../../packages/context-core/context_core/minimum.py" 2>/dev/null || true)"

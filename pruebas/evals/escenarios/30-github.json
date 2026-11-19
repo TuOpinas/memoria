@@ -121,5 +121,8 @@
     "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
    }
   }
- ]
+ ],
+ "user": {
+  "login": "ana-prueba"
+ }
 }

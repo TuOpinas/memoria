@@ -79,6 +79,18 @@ class Section(unittest.TestCase):
         self.assertFalse(s.found)
         self.assertEqual(dev.missing_pieces(s, lambda p: False), [])
 
+    def test_a_heading_without_kit_keys_is_not_development(self):
+        # «Desarrollo» is a common heading: without one key of the kit it marks nothing (review of 1.27.0, finding 20)
+        text = "# P\n\n## Quién participa\nResponsable: Ana\n\n## Desarrollo\nEl proyecto avanza por trimestres.\n"
+        self.assertFalse(dev.development_section(text).found)
+        self.assertTrue(dev.development_section(text + "Plan: por crear\n").found)
+
+    def test_github_user_with_underscore_and_dot(self):
+        s = dev.development_section(PROYECTO.replace("@analopez", "@ana_acme").replace("@juanjo-jimenez-alfaro)", "@juanjo.j)"))
+        self.assertEqual(s.roles["Construye"][1].user, "ana_acme")
+        self.assertEqual(s.roles["Audita"][0].user, "juanjo.j")
+        self.assertEqual(s.warnings, [])
+
     def test_unknown_lines_and_duplicates(self):
         s = dev.development_section(PROYECTO + "Prueba: algo\nDiseño: otra/ruta.md\n")
         self.assertEqual(s.unknown, ["Prueba: algo"])
@@ -306,6 +318,19 @@ class Configuration(unittest.TestCase):
         self.assertTrue(any("listo" in w for w in c.warnings))
         self.assertTrue(any("sin fecha" in w for w in c.warnings))
 
+    def test_oldest_and_unchecked(self):
+        c = dev.leer_configuracion(PLATAFORMA)
+        self.assertEqual(c.oldest, "2026-11-10")
+        self.assertEqual(c.unchecked, ["PL5"])
+        r = dev.read_configuration(REPOSITORIOS)
+        self.assertEqual(r.oldest, "2026-11-01")
+
+    def test_empty_changes_section_at_the_end(self):
+        # an empty «Cambios aprobados» used to remove every line break (review of 1.27.0, finding 26)
+        text = PLATAFORMA.split("## Cambios aprobados")[0] + "## Cambios aprobados\n\n"
+        c = dev.read_configuration(text)
+        self.assertEqual((c.kind, len(c.rows)), ("plataforma", 5))
+
     def test_missing(self):
         self.assertIn("sección Cambios aprobados", dev.read_configuration(PLATAFORMA.split("## Cambios")[0]).missing)
         self.assertEqual(dev.read_configuration("# Nada\n\nSin tabla.\n").missing, ["tabla con la columna #"])
@@ -353,6 +378,14 @@ class Status(unittest.TestCase):
                 got, _ = self.status(prs, delivered)
                 for k, v in want.items():
                     self.assertEqual(got[k], v)
+
+    def test_a_revert_merged_last_undoes_the_piece(self):
+        r = dev.estado_piezas(self.PLAN, [self.pr(1, "P01 · a", "merged", merged_at="2026-11-01T10:00:00Z"),
+                                          self.pr(2, 'Revert "P01 · a"', "merged", merged_at="2026-11-05T10:00:00Z")], {self.REPO: [1, 2]})
+        self.assertEqual((r.pieces[0].status, r.pieces[0].reverted), ("en curso", True))
+        r = dev.estado_piezas(self.PLAN, [self.pr(2, 'Revert "P01 · a"', "merged", merged_at="2026-11-05T10:00:00Z"),
+                                          self.pr(3, "P01 · otra vez", "merged", merged_at="2026-11-07T10:00:00Z")], {self.REPO: [2, 3]})
+        self.assertEqual((r.pieces[0].status, r.pieces[0].reverted), ("entregada", False))
 
     def test_outside_plan_and_bots(self):
         _, r = self.status([

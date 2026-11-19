@@ -83,7 +83,7 @@ Quién consume un proyecto lo dicen las líneas `Afecta a:` y `basado_en` que lo
 
 ### Un proyecto de desarrollo (1.27)
 
-Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia es la marca: con ella, la apertura avisa de lo que le falta al kit de desarrollo (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza del kit y quién hace qué, una línea por clave, en este orden:
+Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia, con al menos una de sus claves, es la marca: con ella, la apertura avisa de lo que le falta al kit de desarrollo (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza del kit y quién hace qué, una línea por clave, en este orden:
 
 ```markdown
 ## Desarrollo
@@ -106,7 +106,7 @@ Administra: Nombre Apellido (correo, @usuario)
 - **Los roles**: quien acepta valida lo funcional del diseño, prueba lo unido y da el sí; quien audita valida el diseño técnico y el plan, decide en los puntos de control, da el sí, aprueba los cambios de plataforma y hace la auditoría mensual; quien construye construye con Claude por bloques, de una o varias piezas en un pull request a la rama principal, revisado, unido y desplegado antes del siguiente (tecnologia/metodologia-desarrollo#2026-11-18-12); quien administra mantiene las dos configuraciones y es el único que pasa a Prod, y solo lo que tiene el sí.
 - **Paso a Prod** dice dónde queda escrito ese sí (lo recomendado, `release de GitHub`: un release publicado con la línea «Aprobó: Nombre Apellido, AAAA-MM-DD · seguimiento AAAA-MM-DD»).
 
-La sección la escribe la persona o la skill `nuevo`, nunca el cierre: `Estatus` y `Siguientes pasos` siguen siendo lo único que reescribe. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador, y su estado sale de los pull requests a la rama principal en GitHub (skill `desarrollo`): no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
+La sección la escribe la persona o la skill `nuevo`, nunca el cierre (la skill `desarrollo` solo pone la ruta de `Seguimiento:` cuando decía `por crear`): `Estatus` y `Siguientes pasos` siguen siendo lo único que reescribe. En un proyecto de desarrollo las tareas del código son las **piezas** del plan, con su identificador, y su estado sale de los pull requests a la rama principal en GitHub (skill `desarrollo`): no se copian a `Siguientes pasos`, que se queda para lo que no es código. Las plantillas del kit están en `skills/desarrollo/plantillas/` del plugin.
 
 ### Un proyecto cerrado
 

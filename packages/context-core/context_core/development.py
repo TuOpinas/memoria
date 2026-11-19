@@ -48,7 +48,7 @@ ALL_KEYS = (REPOSITORIES,) + PATH_KEYS + (STEP_TO_PROD,) + ROLE_KEYS
 SEPARATOR = re.compile(r"\s+·\s+")          # « · » between values; a bare «·» inside a name is not a separator
 REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 EMAIL = re.compile(r"^[\w.+'-]+@[\w-]+(?:\.[\w-]+)+$")
-GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))$")
+GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9._-]{0,38}))$")   # «_» for Enterprise Managed Users
 DATE = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
 
 
@@ -201,6 +201,15 @@ def _person(text: str) -> tuple[DevPerson, list]:
     return p, warnings
 
 
+_LINE = re.compile(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$")
+
+
+def _line_key(line: str) -> Optional[str]:
+    """The kit's key a line of the section starts with, in ALL_KEYS spelling, or None."""
+    m = _LINE.match((line or "").strip())
+    return _BY_KEY.get(key(m.group(1))) if m else None
+
+
 def development_section(project_text: str) -> DevSection:
     """The «## Desarrollo» section of a proyecto.md, split in repositories, paths, «Paso a Prod» and the roles with
     their people. Keys compared without accents or case (NFC or NFD alike); people separated by « · » and each one's
@@ -208,6 +217,10 @@ def development_section(project_text: str) -> DevSection:
     sec = _sections(project_text).get(key(SECTION))
     out = DevSection()
     if sec is None:
+        return out
+    # «Desarrollo» is a common heading in Spanish: the section marks a development project only when at least one of its
+    # lines is a key of the kit (review of 1.27.0, finding 20)
+    if not any(_line_key(l) for l in sec[1].split("\n")):
         return out
     out.found = True
     for raw in sec[1].split("\n"):
@@ -514,6 +527,8 @@ class Configuration:
     rows: list = field(default_factory=list)
     changes: list = field(default_factory=list) # «Cambios aprobados», newest first as written
     latest: str = ""                            # the most recent date of any state
+    oldest: str = ""                            # the oldest date of a row that is checked by date («cumple», «no cumple»)
+    unchecked: list = field(default_factory=list)  # «PL3» or «R2 org/repo»: cells with no state yet
     missing: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
 
@@ -538,7 +553,14 @@ def read_configuration(text: str) -> Configuration:
     secs = _sections(body)
     # the main table is the first one whose first column is «#», outside «Cambios aprobados»
     changes_block = secs.get(key("Cambios aprobados"), ("", ""))[1]
-    main = body.replace(changes_block, "") if changes_block else body
+    # cut by position, not by text: an empty section's block is «\n», and replacing it removed every line break
+    # (review of 1.27.0, finding 26)
+    main = body
+    for mm in re.finditer(r"^## (.+)$", body, re.M):
+        if key(mm.group(1)) == key("Cambios aprobados"):
+            nxt = re.search(r"^## ", body[mm.end():], re.M)
+            main = body[:mm.start()] + (body[mm.end() + nxt.start():] if nxt else "")
+            break
     for h, r in _tables(main):
         if key(h[0]) == "":
             header, rows = h, r
@@ -571,6 +593,10 @@ def read_configuration(text: str) -> Configuration:
                     cf.warnings.append(f"{cr.id}, {_clean(header[i])}: «{st['estado']}» sin fecha")
                 if st and st["fecha"] > cf.latest:
                     cf.latest = st["fecha"]
+                if st and st["fecha"] and (not cf.oldest or st["fecha"] < cf.oldest):
+                    cf.oldest = st["fecha"]
+                if st is None or _placeholder([row[i]]):
+                    cf.unchecked.append(cr.id + ("" if cf.kind == "plataforma" else " " + _clean(header[i])))
             cf.rows.append(cr)
     if changes_block or key("Cambios aprobados") in secs:
         h, r = _table(changes_block)
@@ -604,6 +630,7 @@ class PullRequest:
     bot: bool = False                           # GitHub's user type «Bot», or a login ending in «[bot]»
     merge_commit: str = ""
     to_main: bool = True                        # its base is the repository's main branch; the others are steps inside a block
+    merged_at: str = ""                         # ISO; orders a piece's merges, so a revert merged last is seen
 
 
 @dataclass
@@ -611,6 +638,7 @@ class PieceStatus:
     id: str
     status: str                                 # PENDING | IN_PROGRESS | MERGED | DELIVERED
     pull_requests: list = field(default_factory=list)      # «repo#number» that count
+    reverted: bool = False                      # its last merged pull request is a revert: what it delivered is undone
 
 
 @dataclass
@@ -632,6 +660,10 @@ def _pieces_of(title: str) -> list:
     return [x.strip() for x in m.group(1).split("+")] if m else []
 
 
+def _is_revert(title: str) -> bool:
+    return bool(re.match(r'^Revert\s+"', _nfc(title).strip()))
+
+
 def _is_bot(pr: PullRequest) -> bool:
     return pr.bot or pr.author.lower().endswith("[bot]")
 
@@ -645,7 +677,8 @@ def piece_status(plan: Plan, pull_requests: Iterable[PullRequest],
     Only pull requests into the main branch count: those into another branch are steps inside a block (-12). A block's
     pull request counts for every piece its title names. With several pull requests the least advanced decides. A pull
     request closed without merging does not count, and neither do bots'. One without a piece, or naming a piece the plan
-    does not have, is outside the plan."""
+    does not have, is outside the plan. A piece whose last merged pull request is a revert is in progress again, with
+    `reverted`."""
     inside = {r.lower(): {int(n) for n in nums} for r, nums in (delivered or {}).items()}
     by_piece: dict = {p.id.casefold(): [] for p in plan.pieces}
     rep = PieceReport()
@@ -669,7 +702,12 @@ def piece_status(plan: Plan, pull_requests: Iterable[PullRequest],
                     return IN_PROGRESS
                 return DELIVERED if pr.number in inside.get(pr.repo.lower(), ()) else MERGED
             status = min((one(pr) for pr in prs), key=_ORDER.get)
-        rep.pieces.append(PieceStatus(p.id, status, [f"{pr.repo}#{pr.number}" for pr in prs]))
+        # a revert merged after the piece's other merges undoes it: the piece is back in progress (finding 15)
+        merged = sorted((pr for pr in prs if pr.state == "merged"), key=lambda pr: (pr.merged_at, pr.number))
+        reverted = bool(merged) and _is_revert(merged[-1].title)
+        if reverted:
+            status = IN_PROGRESS
+        rep.pieces.append(PieceStatus(p.id, status, [f"{pr.repo}#{pr.number}" for pr in prs], reverted))
     return rep
 
 

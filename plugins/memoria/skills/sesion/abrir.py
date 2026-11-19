@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'fb1c03fd7cf9ee3a3616eea31c7d7e4d6a06bd21211d1119987fdc47526c428a',
+    'development': 'bcfce73cad2ce5ab3069dc778b1a95933bf483db4864dc472797e2be7f1ca49e',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1588,7 +1588,7 @@ def _context_core():
         'SEPARATOR = re.compile(r"\\s+\xb7\\s+")          # \xab \xb7 \xbb between values; a bare \xab\xb7\xbb inside a name is not a separator\n'
         'REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")\n'
         'EMAIL = re.compile(r"^[\\w.+\'-]+@[\\w-]+(?:\\.[\\w-]+)+$")\n'
-        'GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))$")\n'
+        'GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9._-]{0,38}))$")   # \xab_\xbb for Enterprise Managed Users\n'
         'DATE = re.compile(r"\\b(20\\d\\d-\\d\\d-\\d\\d)\\b")\n'
         '\n'
         '\n'
@@ -1741,6 +1741,15 @@ def _context_core():
         '    return p, warnings\n'
         '\n'
         '\n'
+        '_LINE = re.compile(r"^[-*]?\\s*\\**\\s*([^:*]+?)\\s*\\**\\s*:\\s*\\**\\s*(.*)$")\n'
+        '\n'
+        '\n'
+        'def _line_key(line: str) -> Optional[str]:\n'
+        '    """The kit\'s key a line of the section starts with, in ALL_KEYS spelling, or None."""\n'
+        '    m = _LINE.match((line or "").strip())\n'
+        '    return _BY_KEY.get(key(m.group(1))) if m else None\n'
+        '\n'
+        '\n'
         'def development_section(project_text: str) -> DevSection:\n'
         '    """The \xab## Desarrollo\xbb section of a proyecto.md, split in repositories, paths, \xabPaso a Prod\xbb and the roles with\n'
         "    their people. Keys compared without accents or case (NFC or NFD alike); people separated by \xab \xb7 \xbb and each one's\n"
@@ -1748,6 +1757,10 @@ def _context_core():
         '    sec = _sections(project_text).get(key(SECTION))\n'
         '    out = DevSection()\n'
         '    if sec is None:\n'
+        '        return out\n'
+        '    # \xabDesarrollo\xbb is a common heading in Spanish: the section marks a development project only when at least one of its\n'
+        '    # lines is a key of the kit (review of 1.27.0, finding 20)\n'
+        '    if not any(_line_key(l) for l in sec[1].split("\\n")):\n'
         '        return out\n'
         '    out.found = True\n'
         '    for raw in sec[1].split("\\n"):\n'
@@ -2054,6 +2067,8 @@ def _context_core():
         '    rows: list = field(default_factory=list)\n'
         '    changes: list = field(default_factory=list) # \xabCambios aprobados\xbb, newest first as written\n'
         '    latest: str = ""                            # the most recent date of any state\n'
+        '    oldest: str = ""                            # the oldest date of a row that is checked by date (\xabcumple\xbb, \xabno cumple\xbb)\n'
+        '    unchecked: list = field(default_factory=list)  # \xabPL3\xbb or \xabR2 org/repo\xbb: cells with no state yet\n'
         '    missing: list = field(default_factory=list)\n'
         '    warnings: list = field(default_factory=list)\n'
         '\n'
@@ -2078,7 +2093,14 @@ def _context_core():
         '    secs = _sections(body)\n'
         '    # the main table is the first one whose first column is \xab#\xbb, outside \xabCambios aprobados\xbb\n'
         '    changes_block = secs.get(key("Cambios aprobados"), ("", ""))[1]\n'
-        '    main = body.replace(changes_block, "") if changes_block else body\n'
+        "    # cut by position, not by text: an empty section's block is \xab\\n\xbb, and replacing it removed every line break\n"
+        '    # (review of 1.27.0, finding 26)\n'
+        '    main = body\n'
+        '    for mm in re.finditer(r"^## (.+)$", body, re.M):\n'
+        '        if key(mm.group(1)) == key("Cambios aprobados"):\n'
+        '            nxt = re.search(r"^## ", body[mm.end():], re.M)\n'
+        '            main = body[:mm.start()] + (body[mm.end() + nxt.start():] if nxt else "")\n'
+        '            break\n'
         '    for h, r in _tables(main):\n'
         '        if key(h[0]) == "":\n'
         '            header, rows = h, r\n'
@@ -2111,6 +2133,10 @@ def _context_core():
         '                    cf.warnings.append(f"{cr.id}, {_clean(header[i])}: \xab{st[\'estado\']}\xbb sin fecha")\n'
         '                if st and st["fecha"] > cf.latest:\n'
         '                    cf.latest = st["fecha"]\n'
+        '                if st and st["fecha"] and (not cf.oldest or st["fecha"] < cf.oldest):\n'
+        '                    cf.oldest = st["fecha"]\n'
+        '                if st is None or _placeholder([row[i]]):\n'
+        '                    cf.unchecked.append(cr.id + ("" if cf.kind == "plataforma" else " " + _clean(header[i])))\n'
         '            cf.rows.append(cr)\n'
         '    if changes_block or key("Cambios aprobados") in secs:\n'
         '        h, r = _table(changes_block)\n'
@@ -2144,6 +2170,7 @@ def _context_core():
         "    bot: bool = False                           # GitHub's user type \xabBot\xbb, or a login ending in \xab[bot]\xbb\n"
         '    merge_commit: str = ""\n'
         "    to_main: bool = True                        # its base is the repository's main branch; the others are steps inside a block\n"
+        '    merged_at: str = ""                         # ISO; orders a piece\'s merges, so a revert merged last is seen\n'
         '\n'
         '\n'
         '@dataclass\n'
@@ -2151,6 +2178,7 @@ def _context_core():
         '    id: str\n'
         '    status: str                                 # PENDING | IN_PROGRESS | MERGED | DELIVERED\n'
         '    pull_requests: list = field(default_factory=list)      # \xabrepo#number\xbb that count\n'
+        '    reverted: bool = False                      # its last merged pull request is a revert: what it delivered is undone\n'
         '\n'
         '\n'
         '@dataclass\n'
@@ -2172,6 +2200,10 @@ def _context_core():
         '    return [x.strip() for x in m.group(1).split("+")] if m else []\n'
         '\n'
         '\n'
+        'def _is_revert(title: str) -> bool:\n'
+        '    return bool(re.match(r\'^Revert\\s+"\', _nfc(title).strip()))\n'
+        '\n'
+        '\n'
         'def _is_bot(pr: PullRequest) -> bool:\n'
         '    return pr.bot or pr.author.lower().endswith("[bot]")\n'
         '\n'
@@ -2185,7 +2217,8 @@ def _context_core():
         "    Only pull requests into the main branch count: those into another branch are steps inside a block (-12). A block's\n"
         '    pull request counts for every piece its title names. With several pull requests the least advanced decides. A pull\n'
         "    request closed without merging does not count, and neither do bots'. One without a piece, or naming a piece the plan\n"
-        '    does not have, is outside the plan."""\n'
+        '    does not have, is outside the plan. A piece whose last merged pull request is a revert is in progress again, with\n'
+        '    `reverted`."""\n'
         '    inside = {r.lower(): {int(n) for n in nums} for r, nums in (delivered or {}).items()}\n'
         '    by_piece: dict = {p.id.casefold(): [] for p in plan.pieces}\n'
         '    rep = PieceReport()\n'
@@ -2209,7 +2242,12 @@ def _context_core():
         '                    return IN_PROGRESS\n'
         '                return DELIVERED if pr.number in inside.get(pr.repo.lower(), ()) else MERGED\n'
         '            status = min((one(pr) for pr in prs), key=_ORDER.get)\n'
-        '        rep.pieces.append(PieceStatus(p.id, status, [f"{pr.repo}#{pr.number}" for pr in prs]))\n'
+        "        # a revert merged after the piece's other merges undoes it: the piece is back in progress (finding 15)\n"
+        '        merged = sorted((pr for pr in prs if pr.state == "merged"), key=lambda pr: (pr.merged_at, pr.number))\n'
+        '        reverted = bool(merged) and _is_revert(merged[-1].title)\n'
+        '        if reverted:\n'
+        '            status = IN_PROGRESS\n'
+        '        rep.pieces.append(PieceStatus(p.id, status, [f"{pr.repo}#{pr.number}" for pr in prs], reverted))\n'
         '    return rep\n'
         '\n'
         '\n'
@@ -3289,8 +3327,10 @@ if KIT.found:
     _varios = {"sin línea": "no tienen su línea en la sección", "vacía": "tienen la línea vacía",
                "por crear": "están por crear", "no existe": "apuntan a un archivo que no existe"}
     for motivo, claves in _faltan.items():
+        # la frase de las plantillas solo cuando lo que falta tiene plantilla: los repositorios y las personas no (hallazgo 24)
+        con_plantilla = motivo == "por crear" and any(c.split(" (")[0] in CLAVES_KIT and c.split(" (")[0] != SEGUIMIENTO_KIT for c in claves)
         avisos.append(f"Desarrollo: {', '.join(claves)} " + (_varios if len(claves) > 1 else _uno).get(motivo, motivo)
-                      + (". Sus plantillas están en el plugin (skills/desarrollo/plantillas/)." if motivo == "por crear" else "."))
+                      + (". Las plantillas del diseño, el plan y las configuraciones están en el plugin (skills/desarrollo/plantillas/)." if con_plantilla else "."))
     if KIT.unknown:
         avisos.append("Desarrollo: la sección tiene líneas que no reconozco: " + " · ".join("«" + u[:80] + "»" for u in KIT.unknown[:5]) + ".")
     for w in KIT.warnings[:5]:
@@ -3306,13 +3346,21 @@ if KIT.found:
                 _textos[clave] = (r, t_)
                 if not (ACTIVO and r.startswith(ACTIVO + "/entregables/")):
                     _pesos.append(f"{NOMBRE_KIT[clave][3:]} {r} ({kb(tam(ab))})")
-    # lo que falta dentro del diseño, del plan y de las configuraciones: sus secciones y columnas fijas
+    # lo que falta dentro del diseño, del plan y de las configuraciones (sus secciones y columnas fijas), y lo que su
+    # lectura encontró mal: un identificador repetido, dos fases en curso, una relación a nada (hallazgo 14)
+    _leidos = {}
     for clave, leer_ in (("Diseño", leer_diseno), ("Plan", leer_plan), ("Configuración de plataforma", leer_configuracion),
                          ("Configuración de repositorios", leer_configuracion)):
-        if clave in _textos and leer_(_textos[clave][1]).missing:
-            faltan_ = leer_(_textos[clave][1]).missing
+        if clave not in _textos:
+            continue
+        _leidos[clave] = leer_(_textos[clave][1])
+        faltan_ = _leidos[clave].missing
+        if faltan_:
             avisos.append(f"Desarrollo: {re.sub(r'^a el ', 'al ', 'a ' + NOMBRE_KIT[clave])} ({_textos[clave][0]}) le falta {', '.join(faltan_[:6])}"
                           + (f" y {len(faltan_) - 6} más" if len(faltan_) > 6 else "") + ": el plugin lee esos títulos tal cual.")
+        if _leidos[clave].warnings:
+            w_ = _leidos[clave].warnings
+            avisos.append(f"Desarrollo: en {NOMBRE_KIT[clave]}, " + "; ".join(w_[:3]) + (f"; y {len(w_) - 3} más" if len(w_) > 3 else "") + ".")
     # desfasado: el diseño o el plan son anteriores a una decisión de este proyecto que los nombra en «Afecta a»
     for clave in ("Diseño", "Plan"):
         if clave not in _textos:
@@ -3346,16 +3394,21 @@ if KIT.found:
             f_seg = m_.group(1) if m_ and fecha_ok(m_.group(1)) else cabecera(_textos["Seguimiento"][1])[0].get("actualizado", "")
         avisos.append(f"Desarrollo: el último seguimiento es del {f_seg} (hace {(HOY - datetime.date.fromisoformat(f_seg)).days} días)."
                       if fecha_ok(f_seg) else "Desarrollo: todavía no hay ningún seguimiento; lo pide cualquiera que lea el proyecto (skill desarrollo).")
-    # la auditoría mensual: la fecha más reciente de las dos configuraciones, hace más de 31 días
-    confs_ = [leer_configuracion(_textos[c][1]) for c in ("Configuración de plataforma", "Configuración de repositorios") if c in _textos]
+    # la auditoría mensual: la línea comprobada hace más tiempo de las dos configuraciones, más de 31 días, o líneas sin
+    # comprobar; una sola celda reciente no la apaga (hallazgo 10)
+    confs_ = [_leidos[c] for c in ("Configuración de plataforma", "Configuración de repositorios") if c in _leidos]
     if confs_:
-        f_aud = max((c.latest for c in confs_), default="")
+        fechas_ = [c.oldest for c in confs_ if c.oldest]
+        f_aud = min(fechas_) if fechas_ else ""
+        sin_ = [x for c in confs_ for x in c.unchecked]
         auditas = any(p.email and p.email == (CUENTA or "").lower() for p in KIT.roles.get("Audita", []))
-        if not fecha_ok(f_aud) or (HOY - datetime.date.fromisoformat(f_aud)).days > 31:
-            avisos.append(("Desarrollo: toca la auditoría mensual: las configuraciones se comprobaron por última vez el "
-                           f"{f_aud} (hace {(HOY - datetime.date.fromisoformat(f_aud)).days} días)." if fecha_ok(f_aud) else
-                           "Desarrollo: toca la auditoría mensual: las configuraciones no tienen ninguna comprobación con fecha.")
-                          + (" Te toca a ti: auditas este proyecto; va como foco." if auditas else
+        vieja = fecha_ok(f_aud) and (HOY - datetime.date.fromisoformat(f_aud)).days > 31
+        if vieja or sin_ or not fecha_ok(f_aud):
+            partes_ = ([f"la línea comprobada hace más tiempo es del {f_aud} (hace {(HOY - datetime.date.fromisoformat(f_aud)).days} días)"] if vieja else []) \
+                + ([f"{len(sin_)} {'línea sigue' if len(sin_) == 1 else 'líneas siguen'} sin comprobar ({', '.join(sin_[:6])}{'…' if len(sin_) > 6 else ''})"] if sin_ else []) \
+                + (["ninguna línea tiene una comprobación con fecha"] if not fecha_ok(f_aud) and not sin_ else [])
+            avisos.append("Desarrollo: toca la auditoría mensual: " + "; ".join(partes_) + "."
+                          + (" Te toca a ti: auditas este proyecto." if auditas else
                              " La hace quien audita: " + (", ".join(p.name for p in KIT.roles.get("Audita", [])) or "nadie en «Audita»") + "."))
     if _pesos:
         KIT_INV = "kit de desarrollo, fuera de entregables/ del proyecto: " + ", ".join(_pesos) + "."

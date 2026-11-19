@@ -228,7 +228,7 @@ def preparar_plugin(origen, trabajo):
     pj = dest / ".claude-plugin" / "plugin.json"
     pj.write_text(re.sub(r'"version":\s*"[^"]+"', f'"version": "{version}"', pj.read_text(encoding="utf-8")), encoding="utf-8")
     # como release.sh: los scripts que comparan su versión con la mínima de la raíz llevan la de esta copia (1.26)
-    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py"):
+    for s in ("skills/sesion/abrir.py", "skills/sesion/cerrar.py", "skills/sesion/migrar_estructura.py", "skills/tablero/aplicar_cambios.py", "skills/tablero/generar_vista.py", "skills/desarrollo/seguimiento.py"):
         f = dest / s
         f.write_text(re.sub(r'^ESTE_PLUGIN = "[0-9.]+"', f'ESTE_PLUGIN = "{version}"', f.read_text(encoding="utf-8"), count=1, flags=re.M), encoding="utf-8")
     subprocess.run(["bash", str(dest / "build-metodo.sh")], check=True, capture_output=True)
