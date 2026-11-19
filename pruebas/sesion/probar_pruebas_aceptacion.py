@@ -51,10 +51,15 @@ def repo(sin_carpeta=False):
     return d, git(d, "rev-parse", "HEAD")
 
 
-def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None):
+def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0):
     """Aplica los cambios en una rama y corre el primer paso; devuelve (código de salida, salida). lista: el texto de la
     lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama."""
     d, base = repo(sin_carpeta)
+    if base_extra:
+        (d / "tests/aceptacion/datos").mkdir(parents=True, exist_ok=True)
+        for i in range(base_extra):
+            (d / f"tests/aceptacion/datos/caso_{i:04d}.json").write_text("{}", encoding="utf-8")
+        git(d, "add", "-A"); git(d, "commit", "-qm", "muchos"); base = git(d, "rev-parse", "HEAD")
     if lista is not None:
         (d / ".github").mkdir(exist_ok=True)
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
@@ -201,6 +206,22 @@ c, o = pr([("escribir", "app/main.py", None)], lista="P02\n", titulo="P05 · mig
 ok(c == 0, "una pieza técnica, sin pruebas en la carpeta, no necesita la lista")
 c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True, titulo="P01 · alta", main_despues=["tests/aceptacion/test_p02.py"])
 ok(c == 0, "una rama abierta antes de los primeros escenarios no sale como «quita la carpeta»")
+
+print("Lo que abrió la protección de la lista (revisión de sus arreglos)")
+c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · arreglo")
+ok(c == 1 and "quita P01" in o, "un «Escenarios · P01» que cambia código no puede sacar P01 de la lista")
+c, o = pr([("lista", "P02\n", None), ("escribir", "tests/aceptacion/test_p01.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01")
+ok(c == 0, "con el título que pone el agente, «Escenarios · P01», sí la saca")
+c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo='Revert "P01 · alta de clientes"')
+ok(c == 0 and "reversión saca P01" in o, "la reversión de una pieza la saca de la lista, y lo avisa")
+c, o = pr([("lista", "P01\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo='Revert "P01 · alta"')
+ok(c == 1 and "quita P02" in o, "pero no otra")
+c, o = pr([("escribir", "app/main.py", None)], lista="p01\n", titulo="P01 · ajuste")
+ok(c == 0, "la lista y el título se comparan sin mayúsculas")
+c, o = pr([("borrar", ".github/piezas-activas.txt", None), ("escribir", ".github/piezas-activas.txt/P01", None), ("escribir", "app/main.py", None)], lista="P01\n", titulo="P03 · x")
+ok(c == 1, "la lista cambiada por una carpeta falla")
+c, o = pr([("escribir", "app/main.py", None)], lista="", titulo="P01 · alta", base_extra=2500)
+ok(c == 1 and "no está en" in o, "una pieza con pruebas que no se añade falla también con 2.500 archivos en la carpeta")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")

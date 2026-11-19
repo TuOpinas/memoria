@@ -63,13 +63,15 @@ jobs:
             fi
             echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."; exit 0
           fi
-          # las piezas del título: «P01 · …», «P01 + P02 · …» o «Escenarios · P01 · …»
-          escenarios=0; t="$TITULO"
-          if [[ "$t" == "Escenarios · "* ]]; then escenarios=1; t="${t#Escenarios · }"; fi
+          # las piezas del título, en mayúsculas: «P01 · …», «P01 + P02 · …», «Escenarios · P01[ · …]» o la reversión
+          # que pone GitHub, «Revert "P01 · …"»
+          escenarios=0; revert=0; t="$TITULO"
+          if [[ "$t" == "Escenarios · "* ]]; then escenarios=1; t="${t#Escenarios · } · "
+          elif [[ "$t" == 'Revert "'* ]]; then revert=1; t="${t#Revert \"}"; fi
           piezas=" "
           if [[ "$t" == *" · "* ]]; then
             IFS='+' read -r -a ps <<< "${t%% · *}"
-            for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ $ident ]] && piezas="$piezas$p "; done
+            for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ $ident ]] && piezas="$piezas${p^^} "; done
           fi
           # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
@@ -88,19 +90,27 @@ jobs:
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
           fi
           # la lista no pierde ninguna pieza, salvo la que saca su propio pull request de escenarios
-          leer() { git show "$1:$lista" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -v '^$' || true; }
+          es_archivo() { [ "$(git ls-tree "$1" -- "$lista" | awk '{print $1}')" = 100644 ]; }
+          if es_archivo "$COMUN" && ! es_archivo "$HEAD" && git ls-tree "$HEAD" -- "$lista" | grep -q .; then
+            echo "::error::$lista ya no es un archivo normal."; exit 1
+          fi
+          leer() { git show "$1:$lista" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -E '^[A-Za-z]+[0-9]+$' | tr 'a-z' 'A-Z' || true; }
           antes="$(leer "$COMUN")"; ahora=" $(leer "$HEAD" | tr '\n' ' ')"
           for p in $antes; do
             [[ "$ahora" == *" $p "* ]] && continue
-            if [ "$escenarios" = 1 ] && [[ "$piezas" == *" $p "* ]]; then
+            if [ "$escenarios" = 1 ] && [[ "$piezas" == *" $p "* ]] && [ "$fuera" = 0 ] && [ "$dentro" -gt 0 ]; then
               echo "$p sale de la lista mientras se cambian sus escenarios; su próximo pull request la vuelve a añadir."; continue
             fi
-            echo "::error::Este pull request quita $p de $lista: sus pruebas dejarían de contar. Solo la saca el pull request de escenarios de $p («Escenarios · $p · …»)."; exit 1
+            if [ "$revert" = 1 ] && [[ "$piezas" == *" $p "* ]]; then
+              echo "::warning::La reversión saca $p de la lista: sus pruebas dejan de contar hasta que otro pull request de $p la vuelva a añadir."; continue
+            fi
+            echo "::error::Este pull request quita $p de $lista: sus pruebas dejarían de contar. Solo la saca el pull request de escenarios de $p («Escenarios · $p»), que no toca código, o su reversión."; exit 1
           done
           # el pull request de una pieza con pruebas en la carpeta la añade a la lista
-          if [ "$escenarios" = 0 ]; then
+          if [ "$escenarios" = 0 ] && [ "$revert" = 0 ]; then
+            nombres="$(git ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | sed "s|^${carpeta}||")"
             for p in $piezas; do
-              if git ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | grep -qiE "(^|[^A-Za-z0-9])${p}([^0-9]|$)" && [[ "$ahora" != *" $p "* ]]; then
+              if grep -qiE "(^|[^A-Za-z0-9])${p}([^0-9]|$)" <<< "$nombres" && [[ "$ahora" != *" $p "* ]]; then
                 echo "::error::$p tiene pruebas de aceptación en $carpeta y no está en $lista: su pull request la añade. Una pieza técnica, sin escenarios, no tiene pruebas."; exit 1
               fi
             done
@@ -124,7 +134,7 @@ jobs:
               p="${p%%#*}"; p="${p//[[:space:]]/}"
               [ -z "$p" ] && continue
               [[ "$p" =~ $ident ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
-              activas="$activas$p "
+              activas="$activas${p^^} "
             done
             for p in $activas; do
               echo "== $p (activa): sus pruebas tienen que pasar"
@@ -137,6 +147,7 @@ jobs:
             for p in "${piezas[@]}"; do
               p="${p//[[:space:]]/}"
               [[ "$p" =~ $ident ]] || { echo "::error::El título no dice qué pieza («Escenarios · P01»)."; exit 1; }
+              p="${p^^}"
               [[ "$activas" == *" $p "* ]] && continue
               echo "== $p (escenarios): sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
               set +e; correr "$p"; rc=$?; set -e

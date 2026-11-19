@@ -31,7 +31,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 
    Si algo es difícil de revertir o se sale del diseño, consulta antes una vez a Fable 5.2 y lleva su respuesta a la pregunta. Si un enfoque falló dos veces, propón pasar la pieza a Fable 5.2.
 
-**Hecha** quiere decir: pasan las pruebas de aceptación de la pieza y la suite de «Cómo se prueba» sigue en verde. El pull request de la pieza añade su identificador a la lista de piezas activas, y no toca la carpeta de aceptación; desde entonces CI exige que sus pruebas pasen, y ningún pull request la puede quitar de la lista. Una pieza técnica, sin escenarios, no tiene pruebas ni entra en la lista. **Para** también si una prueba falla por una razón que no puedes explicar ni arreglar sin cambiarla, o si los escenarios contradicen el diseño.
+**Hecha** quiere decir: pasan las pruebas de aceptación de la pieza y la suite de «Cómo se prueba» sigue en verde. El pull request de la pieza añade su identificador a la lista de piezas activas, y no toca la carpeta de aceptación; desde entonces CI exige que sus pruebas pasen, y solo la saca de la lista su pull request de escenarios, si cambian, o su reversión. Una pieza técnica, sin escenarios, no tiene pruebas ni entra en la lista. **Para** también si una prueba falla por una razón que no puedes explicar ni arreglar sin cambiarla, o si los escenarios contradicen el diseño.
 
 **Cada afirmación de avance** («hecho», «pasa», «arreglado») va con la evidencia de una herramienta: la salida de las pruebas, el commit, el enlace.
 

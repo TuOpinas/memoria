@@ -24,7 +24,7 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 2. cada pieza del plan con su estado;
 3. lo que está fuera del plan: pull requests sin pieza o con una que el plan no tiene;
 4. lo que lo unido añade y el diseño no tiene: datos, componentes o conceptos nuevos, también con otro nombre;
-5. los pull requests unidos que tocaron las pruebas de aceptación, la lista de piezas activas o su workflow, con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
+5. los pull requests unidos que tocaron las pruebas de aceptación o su workflow, o sacaron una pieza de la lista de piezas activas (y las piezas con pruebas que siguen fuera de ella), con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
 6. los pasos a Prod, con quién dio el sí (si fue quien construyó, se dice como un hecho), los que no tienen sí, y las verificaciones de las piezas unidas desde el anterior.
 
 Quien no tenga el plugin se lo pide a quien audita o a quien construye.
