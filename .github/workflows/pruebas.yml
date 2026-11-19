@@ -63,6 +63,8 @@ jobs:
           python3 packages/context-core/inline.py --check
       - name: Pruebas de sesión
         run: |
+          # pytest, para probar que el workflow de aceptación del kit no lee la configuración de fuera de su carpeta
+          python3 -m pip install -q pytest==8.3.5
           python3 --version
           fallos=0
           for f in pruebas/sesion/probar_*.py; do

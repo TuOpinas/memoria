@@ -437,6 +437,8 @@ Dos líneas: qué se creó, dónde, y de quién es, más el recordatorio de que 
 4. ¿Qué entra y qué no?
 5. ¿Qué material ya existe? Documentos, exports, correos, grabaciones, enlaces
 
+Y una más, en la misma conversación y sin tecnicismos: **¿el proyecto construye software?** (una aplicación, un servidor, un sitio con código propio). Si la respuesta es sí, es un proyecto de desarrollo (1.27, paso 8).
+
 Un proyecto a medio encuadrar es mejor que una conversación sin carpeta.
 
 ## Qué escribo y dónde
@@ -462,9 +464,11 @@ Sesión de: Ana Pérez · plugin <la versión del plugin>
 
 **7. La línea del proyecto en el bloque `Proyectos` de `area.md`**: `` `nombre-del-proyecto/` — qué es ``, sin entregables debajo porque todavía no hay ninguno vigente. Es lo único que se toca de `area.md`.
 
+**8. Si construye software**, la sección `## Desarrollo` al final de `proyecto.md`, después de `Quién participa`, con la forma de `escribir.md` (sección 3, «Un proyecto de desarrollo»): cada ruta con `por crear`, `Paso a Prod: release de GitHub`, y en `Repositorios` y los roles lo que ya se sepa (las personas como `Nombre Apellido (correo, @usuario)`) o `por crear`. Después se ofrece, en una línea, crear el diseño y el plan desde las plantillas del plugin (`skills/desarrollo/plantillas/diseno.md` y `plan.md`) en `entregables/` del proyecto, como borradores con su `aportacion`, y poner sus rutas en la sección. La configuración y el `CLAUDE.md` no se crean aquí: los crea quien administra, desde sus plantillas.
+
 ## Qué respondo al terminar
 
-El nombre de la carpeta creada y el primer siguiente paso. Dos líneas.
+El nombre de la carpeta creada y el primer siguiente paso. Dos líneas; en un proyecto de desarrollo, una más con lo que falta del kit y quién lo crea.
 
 ---
 

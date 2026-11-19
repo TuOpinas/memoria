@@ -18,7 +18,8 @@ lo que se declaró nuevo, y nunca un .md vacío, que pierde su cabecera o que en
       tabla de guia.md; tercera, solo con proyecto: el decisiones.md de cada proyecto del índice de su área (lo único que
       abrir.py lee de los demás) y proyecto.md, decisiones.md y sesiones.md del proyecto activo; cuarta, los archivados de
       este año y del anterior que nombra la línea «Archivado:» de esos registros y, con --listado, todos los archivados del
-      proyecto activo que hay en la computadora (1.23). Lo que no se trajo se vuelve a
+      proyecto activo que hay en la computadora (1.23), y en un proyecto de desarrollo los archivos del kit que nombra su
+      sección «Desarrollo» (1.27). Lo que no se trajo se vuelve a
       pedir, salvo lo apuntado con «falta». En la misma conversación la copia se reutiliza: abrir otro proyecto pide solo lo
       suyo, y guia.md, el area.md y los tres archivos del proyecto que se abre se vuelven a pedir si llegaron hace más de diez
       minutos. (La apertura mínima no pasa por aquí desde la 1.24.9: trae su copia con lo que lista device_list_dir.)
@@ -190,6 +191,42 @@ def archivados_del_listado(ruta):
 
 
 
+KIT_RUTAS = ("configuracion de plataforma", "configuracion de repositorios", "diseno", "plan", "seguimiento")
+
+
+def rutas_del_kit(texto_proyecto):
+    """Las rutas de la sección «## Desarrollo» de un proyecto.md (1.27), las que no dicen «por crear». Lee como
+    context_core/development.py, que es la lectura de verdad y la que usa abrir.py (pruebas/sesion/probar_espejo.py las
+    compara): encabezado y claves sin acentos ni mayúsculas, sin contar lo que va en un bloque de código, la primera vez
+    que aparece cada clave y el destino de un enlace; si no, abrir.py daría por inexistente lo que no se trajo."""
+    import unicodedata
+    clave = lambda t: re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", "".join(
+        c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn").replace("\u00a0", " ").lower())).strip()
+    dentro, cerca, vistas, out = False, False, set(), []
+    texto = texto_proyecto.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
+    for l in unicodedata.normalize("NFC", texto).split("\n"):
+        if re.match(r"^\s*(```|~~~)", l):
+            cerca = not cerca
+        if cerca:
+            continue
+        if l.startswith("## "):
+            if dentro:
+                break
+            dentro = clave(l[3:]) == "desarrollo"
+            continue
+        if re.match(r"^<!--.*-->$", l.strip()):
+            continue
+        mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip()) if dentro else None
+        if not mm or clave(mm.group(1)) not in KIT_RUTAS or clave(mm.group(1)) in vistas:
+            continue
+        vistas.add(clave(mm.group(1)))
+        r = re.sub(r"\[([^\]]*)\]\(([^)]*)\)", lambda x: x.group(2) or x.group(1), mm.group(2).strip())
+        r = r.replace("`", "").replace("**", "").strip().lstrip("/")
+        if r and clave(r) != "por crear" and ".." not in r.split("/") and not r.startswith("~"):
+            out.append(r)
+    return out
+
+
 def rutas(copia, activo, listado=None):
     copia = pathlib.Path(copia)
     faltan = set(estado(copia)["faltan"])
@@ -233,6 +270,11 @@ def rutas(copia, activo, listado=None):
                 # que ya existe y para que sus «Responde a:» cierren cuestionamientos (revisión de la 1.23, segunda vuelta)
                 if listado:
                     ronda += [f"{activo}/{n}" for n in archivados_del_listado(listado)]
+                # en un proyecto de desarrollo (1.27), los archivos del kit que nombra su sección «Desarrollo», que pueden
+                # vivir fuera del proyecto: abrir.py mira que existan para avisar de la que falta
+                # del propio proyecto, también su taller/ y fuentes/, que abrir.py comprueba; de otros, ni eso ni restringido/
+                ronda += [r for r in rutas_del_kit(leer(copia / activo / "proyecto.md") or "")
+                          if not (set(r.split("/")[:-1]) & ({"restringido"} if r.startswith(activo + "/") else set(FUERA)))]
                 ronda = [r for r in dict.fromkeys(ronda) if ausente(r)]
     print("\n".join(ronda) if ronda else "COMPLETA")
     return 0

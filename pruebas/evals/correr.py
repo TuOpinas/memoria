@@ -162,6 +162,14 @@ def aplicar_paso(e, raiz, paso):
             (raiz / r).write_text(cuerpo, encoding="utf-8")
             viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
             os.utime(raiz / r, (viejo, viejo))
+        elif orden == "copiar":                # copiar <archivo de escenarios/> <ruta>: un archivo entero, viejo como el resto (1.27)
+            o, _, r = arg.partition(" ")
+            t = (AQUI / "escenarios" / o).read_text(encoding="utf-8")
+            t = re.sub(r"\{HOY-(\d+)\}", lambda m: (datetime.date.fromisoformat(HOY) - datetime.timedelta(days=int(m.group(1)))).isoformat(), t)
+            (raiz / r).parent.mkdir(parents=True, exist_ok=True)
+            (raiz / r).write_text(t, encoding="utf-8")
+            viejo = time.mktime((2026, 8, 1, 12, 0, 0, 0, 0, -1))
+            os.utime(raiz / r, (viejo, viejo))
         elif orden == "otro-cierre":           # otro-cierre <area>/<proyecto>: otra persona cierra sesión ahora (entrada arriba y un paso nuevo)
             ses = raiz / arg / "sesiones.md"
             t = ses.read_text(encoding="utf-8")
@@ -238,6 +246,23 @@ def sembrar_scripts(plugin, hogar):
             shutil.copy2(plugin / r, d / pathlib.Path(r).name)
 
 
+# ---------- GitHub de mentira (1.27) ----------
+def github_falso(e, cwd):
+    """Con `github: sin-acceso`, un `gh` de mentira (gh_falso.py) delante en el PATH de la conversación y de device_bash,
+    que responde 404 a todo: la skill desarrollo no ve el repositorio, sin red. Sin la clave, nada cambia."""
+    g = (e.get("github") or "").strip()
+    if not g:
+        return {}
+    if g != "sin-acceso":
+        raise SystemExit(f"github: «{g}»: solo vale «sin-acceso»")
+    d = pathlib.Path(cwd) / ".gh-falso"
+    d.mkdir(parents=True, exist_ok=True)
+    gh = d / "gh"
+    gh.write_text(f"#!/bin/sh\nexec {sys.executable} {AQUI / 'gh_falso.py'} \"$@\"\n", encoding="utf-8")
+    gh.chmod(0o755)
+    return {"PATH": f"{d}:{os.environ.get('PATH', '')}", "GH_TOKEN": "falso"}
+
+
 # ---------- la conversación ----------
 async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, TextBlock, ToolResultBlock, ToolUseBlock, UserMessage
@@ -257,7 +282,7 @@ async def conversar(e, disp, plugin, modelo, cwd, transcripcion, tablero=None):
         model=ALIAS.get(modelo, modelo) if modelo else None,
         max_turns=e["max_turnos"],
         cwd=str(cwd),
-        env={"IS_SANDBOX": "1", "TZ": "America/Mexico_City"},
+        env={"IS_SANDBOX": "1", "TZ": "America/Mexico_City", **disp.entorno},
         setting_sources=[],
     )
     turnos, medidas = [], {"tokens_entrada": 0, "tokens_salida": 0, "cache_leida": 0, "cache_escrita": 0, "costo_usd": 0.0, "duracion_s": 0.0, "llamadas": {}}
@@ -973,6 +998,16 @@ def _(ctx, arg):
     return not malos, "ningún comando busca el plugin" if not malos else "; ".join(malos)
 
 
+@comprobacion("sin-comando")
+def _(ctx, arg):
+    """sin-comando <regex>: ningún comando de Bash ni de device_bash casa con la expresión, como una palabra (1.27: la
+    apertura no lee GitHub, «sin-comando gh»)."""
+    malos = [str((h["entrada"] or {}).get("command", ""))[:100] for x in ctx["turnos"] for h in x["herramientas"]
+             if h["nombre"].endswith(("Bash", "device_bash"))
+             and re.search(r"(?<![\w-])(?:" + arg + r")(?![\w-])", str((h["entrada"] or {}).get("command", "")))]
+    return not malos, "ningún comando casa" if not malos else "; ".join(malos)
+
+
 @comprobacion("palabras-maximo")
 def _(ctx, arg):
     """palabras-maximo N[@T]: la respuesta de cada turno (o la del turno T) tiene como mucho N palabras, sin contar el
@@ -1034,6 +1069,7 @@ def correr(e, plugin, version, modelo, salida):
     antes = huellas(raiz)
     antes_textos = {k: (raiz / k).read_text(encoding="utf-8", errors="replace") for k in antes if k.endswith(".md")}
     cwd = trabajo / "conversacion"; cwd.mkdir()
+    disp.entorno = github_falso(e, cwd)   # el mismo gh de mentira en la conversación y en device_bash (1.27)
     transcripcion = salida / f"{e['nombre']}.md"
     transcripcion.write_text(f"# {e['nombre']} · {modelo or 'modelo por defecto'} · plugin {version} · {HOY}\n\n{e['descripcion']}\n", encoding="utf-8")
     # el tablero de mentira (1.24.8), con la cola que trae el escenario
