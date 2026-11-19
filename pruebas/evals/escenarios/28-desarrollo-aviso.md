@@ -28,11 +28,10 @@ comprobar:
   - menciona plan
   - no-menciona-re \bR[1-7]\b|\bPL[1-7]\b
   - solo-escribe-en metodo.md
-  - sin-herramienta mcp__remote-devices__device_commit_files
   - sin-comando gh
   - sin-ingles
 ---
 Un proyecto de desarrollo (1.27): `ventas/cuentas` lleva la sección «Desarrollo», con las configuraciones y el diseño por
 crear, sin la línea «Paso a Prod» y con un plan que apunta a un archivo que no existe. La apertura lo avisa en llano,
 dentro del recuadro de avisos: lo que está por crear, la línea que falta y el plan que no está. Sin leer GitHub, sin
-códigos de regla («R1», «PL2») y sin escribir nada más que `metodo.md`.
+códigos de regla («R1», «PL2») y sin escribir nada más que `metodo.md`, que la apertura pone al día.

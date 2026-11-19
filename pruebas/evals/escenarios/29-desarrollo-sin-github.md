@@ -26,7 +26,7 @@ comprobar:
   - recuadro
   - skill desarrollo 1
   - menciona GitHub
-  - menciona no se pudo|no pude|no tengo acceso|sin acceso|no puedo
+  - menciona no se pudo|no pude|no tengo acceso|sin acceso|no puedo|no dejó|404
   - menciona P01
   - no-existe ventas/cuentas/entregables/seguimiento.md
   - contiene ventas/cuentas/proyecto.md Seguimiento: por crear
