@@ -192,6 +192,7 @@ def archivados_del_listado(ruta):
 
 
 KIT_RUTAS = ("configuracion de plataforma", "configuracion de repositorios", "diseno", "plan", "seguimiento")
+KIT_CLAVES = ("repositorios",) + KIT_RUTAS + ("paso a prod", "acepta", "audita", "construye", "administra")
 
 
 def _clave_kit(t):
@@ -218,6 +219,16 @@ def rutas_del_kit(texto_proyecto):
             continue
         if dentro:
             lineas.append(l)
+    # como context_core: la sección marca un proyecto de desarrollo solo con «Repositorios:» o con dos claves del kit
+    claves = set()
+    for l in lineas:
+        if l.strip().startswith("<!--"):
+            continue
+        mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip())
+        if mm and _clave_kit(mm.group(1)) in KIT_CLAVES:
+            claves.add(_clave_kit(mm.group(1)))
+    if "repositorios" not in claves and len(claves) < 2:
+        return []
     out, vistas = [], set()
     for l in lineas:
         mm = re.match(r"^[-*]?\s*\**\s*([^:*]+?)\s*\**\s*:\s*\**\s*(.*)$", l.strip())

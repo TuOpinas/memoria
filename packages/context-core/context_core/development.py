@@ -171,6 +171,7 @@ class DevSection:
     roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]
     present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling
     to_build: list = field(default_factory=list)           # the keys whose value is «por crear»
+    near_miss: bool = False                                # a «## Desarrollo» that looks like the kit but is not recognised
     unknown: list = field(default_factory=list)            # lines of the section it does not recognise
     warnings: list = field(default_factory=list)
 
@@ -218,9 +219,15 @@ def development_section(project_text: str) -> DevSection:
     out = DevSection()
     if sec is None:
         return out
-    # «Desarrollo» is a common heading in Spanish: the section marks a development project only when at least one of its
-    # lines is a key of the kit (review of 1.27.0, finding 20)
-    if not any(_line_key(l) for l in sec[1].split("\n")):
+    # «Desarrollo» is a common heading in Spanish: the section marks a development project only with «Repositorios:» or
+    # two keys of the kit, comments aside (review of 1.27.0, finding 20, and its fixes, finding 10). One that looks like
+    # the kit and is not recognised is said in `near_miss`, so a misspelt section is not silently invisible.
+    claves = {k for k in (_line_key(l) for l in sec[1].split("\n") if not l.strip().startswith("<!--")) if k}
+    if REPOSITORIES not in claves and len(claves) < 2:
+        # a near miss: a «Clave:» line that is no key of the kit but starts like one («Repositorio:», «Construyen:»)
+        prefijos = {key(k)[:6] for k in ALL_KEYS}
+        out.near_miss = any(m and not _line_key(l) and key(m.group(1))[:6] in prefijos
+                            for l in sec[1].split("\n") for m in [_LINE.match(l.strip())])
         return out
     out.found = True
     for raw in sec[1].split("\n"):
@@ -652,16 +659,25 @@ def _pieces_of(title: str) -> list:
     """The identifiers a pull request's title starts with, followed by « · »: one («P03 · …»), or the pieces of a block
     joined by « + » («P01 + P02 · …», tecnologia/metodologia-desarrollo#2026-11-18-12). A GitHub revert («Revert "P03 ·
     …"») carries its pieces. [] when there is none."""
-    t = _nfc(title).strip()
-    m = re.match(r'^Revert\s+"(.*?)"?$', t)
-    if m:
-        t = m.group(1)
+    t, _ = _unwrap_reverts(title)
     m = re.match(r"^([^\s·+]+(?:\s*\+\s*[^\s·+]+)*)\s+·\s+\S", t)
     return [x.strip() for x in m.group(1).split("+")] if m else []
 
 
+def _unwrap_reverts(title: str) -> tuple:
+    """(the innermost title, how many «Revert "…"» wrap it). Reverting a revert, GitHub's way of putting it back,
+    nests them («Revert "Revert "P01 · a""»)."""
+    t, n = _nfc(title).strip(), 0
+    while True:
+        m = re.match(r'^Revert\s+"(.*)"$', t) or re.match(r'^Revert\s+"(.*)$', t)
+        if not m:
+            return t, n
+        t, n = m.group(1).strip(), n + 1
+
+
 def _is_revert(title: str) -> bool:
-    return bool(re.match(r'^Revert\s+"', _nfc(title).strip()))
+    """An odd number of «Revert» undoes the piece; an even number puts it back (review of 1.27.0, fixes 1, finding 15)."""
+    return _unwrap_reverts(title)[1] % 2 == 1
 
 
 def _is_bot(pr: PullRequest) -> bool:

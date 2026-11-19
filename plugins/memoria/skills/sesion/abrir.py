@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'bcfce73cad2ce5ab3069dc778b1a95933bf483db4864dc472797e2be7f1ca49e',
+    'development': 'd2e6d6af6c5126374b5fff40138d5c18530a12a5285cf3bf8c681472ead87c0b',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1711,6 +1711,7 @@ def _context_core():
         '    roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]\n'
         '    present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling\n'
         '    to_build: list = field(default_factory=list)           # the keys whose value is \xabpor crear\xbb\n'
+        '    near_miss: bool = False                                # a \xab## Desarrollo\xbb that looks like the kit but is not recognised\n'
         '    unknown: list = field(default_factory=list)            # lines of the section it does not recognise\n'
         '    warnings: list = field(default_factory=list)\n'
         '\n'
@@ -1758,9 +1759,15 @@ def _context_core():
         '    out = DevSection()\n'
         '    if sec is None:\n'
         '        return out\n'
-        '    # \xabDesarrollo\xbb is a common heading in Spanish: the section marks a development project only when at least one of its\n'
-        '    # lines is a key of the kit (review of 1.27.0, finding 20)\n'
-        '    if not any(_line_key(l) for l in sec[1].split("\\n")):\n'
+        '    # \xabDesarrollo\xbb is a common heading in Spanish: the section marks a development project only with \xabRepositorios:\xbb or\n'
+        '    # two keys of the kit, comments aside (review of 1.27.0, finding 20, and its fixes, finding 10). One that looks like\n'
+        '    # the kit and is not recognised is said in `near_miss`, so a misspelt section is not silently invisible.\n'
+        '    claves = {k for k in (_line_key(l) for l in sec[1].split("\\n") if not l.strip().startswith("<!--")) if k}\n'
+        '    if REPOSITORIES not in claves and len(claves) < 2:\n'
+        '        # a near miss: a \xabClave:\xbb line that is no key of the kit but starts like one (\xabRepositorio:\xbb, \xabConstruyen:\xbb)\n'
+        '        prefijos = {key(k)[:6] for k in ALL_KEYS}\n'
+        '        out.near_miss = any(m and not _line_key(l) and key(m.group(1))[:6] in prefijos\n'
+        '                            for l in sec[1].split("\\n") for m in [_LINE.match(l.strip())])\n'
         '        return out\n'
         '    out.found = True\n'
         '    for raw in sec[1].split("\\n"):\n'
@@ -2192,16 +2199,25 @@ def _context_core():
         '    """The identifiers a pull request\'s title starts with, followed by \xab \xb7 \xbb: one (\xabP03 \xb7 \u2026\xbb), or the pieces of a block\n'
         '    joined by \xab + \xbb (\xabP01 + P02 \xb7 \u2026\xbb, tecnologia/metodologia-desarrollo#2026-11-18-12). A GitHub revert (\xabRevert "P03 \xb7\n'
         '    \u2026"\xbb) carries its pieces. [] when there is none."""\n'
-        '    t = _nfc(title).strip()\n'
-        '    m = re.match(r\'^Revert\\s+"(.*?)"?$\', t)\n'
-        '    if m:\n'
-        '        t = m.group(1)\n'
+        '    t, _ = _unwrap_reverts(title)\n'
         '    m = re.match(r"^([^\\s\xb7+]+(?:\\s*\\+\\s*[^\\s\xb7+]+)*)\\s+\xb7\\s+\\S", t)\n'
         '    return [x.strip() for x in m.group(1).split("+")] if m else []\n'
         '\n'
         '\n'
+        'def _unwrap_reverts(title: str) -> tuple:\n'
+        '    """(the innermost title, how many \xabRevert "\u2026"\xbb wrap it). Reverting a revert, GitHub\'s way of putting it back,\n'
+        '    nests them (\xabRevert "Revert "P01 \xb7 a""\xbb)."""\n'
+        '    t, n = _nfc(title).strip(), 0\n'
+        '    while True:\n'
+        '        m = re.match(r\'^Revert\\s+"(.*)"$\', t) or re.match(r\'^Revert\\s+"(.*)$\', t)\n'
+        '        if not m:\n'
+        '            return t, n\n'
+        '        t, n = m.group(1).strip(), n + 1\n'
+        '\n'
+        '\n'
         'def _is_revert(title: str) -> bool:\n'
-        '    return bool(re.match(r\'^Revert\\s+"\', _nfc(title).strip()))\n'
+        '    """An odd number of \xabRevert\xbb undoes the piece; an even number puts it back (review of 1.27.0, fixes 1, finding 15)."""\n'
+        '    return _unwrap_reverts(title)[1] % 2 == 1\n'
         '\n'
         '\n'
         'def _is_bot(pr: PullRequest) -> bool:\n'
@@ -3308,6 +3324,10 @@ def ruta_del_kit(r):
     return RAIZ / r, True
 
 
+if not KIT.found and KIT.near_miss:
+    avisos.append("Desarrollo: la sección «Desarrollo» tiene líneas que parecen del kit pero no se reconocen (la clave se escribe "
+                  "«Repositorios:», «Construye:»…, como en skills/desarrollo/plantillas/seccion-desarrollo.md): mientras no se "
+                  "corrija, el proyecto no se trata como de desarrollo.")
 if KIT.found:
     _no_comprobadas, _faltan, _textos, _pesos = [], {}, {}, []
 

@@ -83,7 +83,13 @@ class Section(unittest.TestCase):
         # «Desarrollo» is a common heading: without one key of the kit it marks nothing (review of 1.27.0, finding 20)
         text = "# P\n\n## Quién participa\nResponsable: Ana\n\n## Desarrollo\nEl proyecto avanza por trimestres.\n"
         self.assertFalse(dev.development_section(text).found)
-        self.assertTrue(dev.development_section(text + "Plan: por crear\n").found)
+        self.assertFalse(dev.development_section(text + "Plan: lanzar la campaña en marzo\n").found)
+        self.assertFalse(dev.development_section(text + "Plan: lanzar la campaña en marzo\n").near_miss)
+        self.assertFalse(dev.development_section(text + "<!-- Plan: ruta -->\n<!-- Diseño: ruta -->\n").found)
+        self.assertTrue(dev.development_section(text + "Plan: por crear\nDiseño: por crear\n").found)
+        self.assertTrue(dev.development_section(text + "Repositorios: acme/app\n").found)
+        miss = dev.development_section(text.replace("El proyecto", "Repositorio: acme/app\nConstruyen: Ana\nAudito: Beto\nEl proyecto"))
+        self.assertEqual((miss.found, miss.near_miss), (False, True))
 
     def test_github_user_with_underscore_and_dot(self):
         s = dev.development_section(PROYECTO.replace("@analopez", "@ana_acme").replace("@juanjo-jimenez-alfaro)", "@juanjo.j)"))
@@ -386,6 +392,14 @@ class Status(unittest.TestCase):
         r = dev.estado_piezas(self.PLAN, [self.pr(2, 'Revert "P01 · a"', "merged", merged_at="2026-11-05T10:00:00Z"),
                                           self.pr(3, "P01 · otra vez", "merged", merged_at="2026-11-07T10:00:00Z")], {self.REPO: [2, 3]})
         self.assertEqual((r.pieces[0].status, r.pieces[0].reverted), ("entregada", False))
+
+    def test_reverting_a_revert_puts_the_piece_back(self):
+        r = dev.estado_piezas(self.PLAN, [self.pr(1, "P01 · a", "merged", merged_at="2026-11-01T10:00:00Z"),
+                                          self.pr(2, 'Revert "P01 · a"', "merged", merged_at="2026-11-05T10:00:00Z"),
+                                          self.pr(3, 'Revert "Revert "P01 · a""', "merged", merged_at="2026-11-07T10:00:00Z")], {self.REPO: [1, 2, 3]})
+        self.assertEqual((r.pieces[0].status, r.pieces[0].reverted, r.pieces[0].pull_requests),
+                         ("entregada", False, ["TuOpinas/memoria#1", "TuOpinas/memoria#2", "TuOpinas/memoria#3"]))
+        self.assertEqual(r.outside_plan, [])
 
     def test_outside_plan_and_bots(self):
         _, r = self.status([

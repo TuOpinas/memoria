@@ -28,7 +28,7 @@ Las de fases cerradas se quedan. Un identificador no se reutiliza nunca.
 
 **Estado de una pieza**, desde los pull requests a la rama principal cuyo título empieza por su identificador seguido de « · », o por los identificadores de un bloque unidos con « + » («P01 + P02 · …»); un arreglo o un revert llevan el de su pieza. Los pull requests a otras ramas son pasos dentro de un bloque y no cuentan. Con varios pull requests, manda el menos avanzado:
 - sin pull request unido ni abierto: `pendiente`;
-- alguno abierto: `en curso`;
+- alguno abierto, o una reversión de la pieza unida después de su último pull request: `en curso`;
 - todos unidos: `unida` (en Release, si lo hay);
 - todos dentro del último paso a Prod de su repositorio: `entregada` (si «Paso a Prod» deja un release o una etiqueta).
 

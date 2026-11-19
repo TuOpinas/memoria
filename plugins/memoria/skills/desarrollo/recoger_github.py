@@ -21,10 +21,11 @@ Lo que no se pudo leer o se cortó se dice, nunca se calla: cada repositorio lle
 requests a la rama principal (decisión tecnologia/metodologia-desarrollo#2026-11-18-12). De cada archivo se guarda el
 `patch` solo si es código que el seguimiento compara, y cortado a 4.000 caracteres.
 
-Con un conector de GitHub en lugar de `gh`, la sesión arma el mismo JSON a mano, con esta forma; `base` y `merged_at` de
-cada pull request son obligatorios (sin `base`, el pull request no cuenta), y lo que no se tenga va en «errores»:
+Con un conector de GitHub en lugar de `gh`, la sesión arma el mismo JSON a mano, con esta forma; `pulls`, `commits`,
+`releases` y `tags` van siempre (vacías si no hay), `base` y `merged_at` de cada pull request unido son obligatorios, y lo
+que no se tenga va en «errores»; sin «terminado», el seguimiento no se guarda:
 
-  {"leido": "conector", "cuenta": "login", "hoy": "AAAA-MM-DD", "desde": "AAAA-MM-DD",
+  {"leido": "conector", "cuenta": "login", "hoy": "AAAA-MM-DD", "desde": "AAAA-MM-DD", "pedidos": ["org/r"], "terminado": true,
    "repos": [{"repo": "org/r", "rama": "main", "main_sha": "…",
               "pulls": [{"number": 1, "title": "P01 · …", "state": "open|closed|merged", "author": "login", "bot": false,
                          "base": "main", "merge_commit": "sha", "merged_at": "ISO"}],
@@ -39,10 +40,13 @@ cada pull request son obligatorios (sin `base`, el pull request no cuenta), y lo
                             "admins": ["login"], "errores": {"org": "…"}},
               "errores": {"pulls": "…"}, "truncado": ["commits"]}]}
 """
-import base64, datetime, json, re, subprocess, sys
+import base64, datetime, json, os, re, subprocess, sys
 
 PAGINAS_PR = 20
 PATCH_MAX = 4000
+MIGRACION = re.compile(r"(^|/)(migrations?|migraciones|migrate)/|(^|/)schema/\d", re.I)
+# un secreto no entra al JSON, que la sesión lee (arreglos 1, hallazgo 16)
+SECRETO = re.compile(r"(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx)|[^/]*(secret|credential|password)[^/]*)$", re.I)
 # lo que el seguimiento no compara: no se guarda su patch (dependencias bloqueadas, documentación, pruebas, generados)
 SIN_PATCH = re.compile(r"(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|"
                        r"Gemfile\.lock|composer\.lock)$|^(docs?|tests?|pruebas|spec|__snapshots__|dist|build|vendor)/|"
@@ -130,9 +134,11 @@ def repo(nombre, desde, auditoria, max_commits, max_detalle, orgs):
             files = []
             for f in d.get("files") or []:
                 x = {k: f.get(k) for k in ("filename", "status", "previous_filename") if f.get(k) is not None}
-                if f.get("patch") and not SIN_PATCH.search(f.get("filename") or ""):
-                    x["patch"] = f["patch"][:PATCH_MAX]
-                    if len(f["patch"]) > PATCH_MAX:
+                if f.get("patch") and not SIN_PATCH.search(f.get("filename") or "") and not SECRETO.search(f.get("filename") or ""):
+                    # una migración va entera: sus «create table» del final se comparan con el diseño (arreglos 1, hallazgo 14)
+                    tope = 10 ** 6 if MIGRACION.search(f.get("filename") or "") else PATCH_MAX
+                    x["patch"] = f["patch"][:tope]
+                    if len(f["patch"]) > tope:
                         x["patch_cortado"] = True
                 elif f.get("status") in ("added", "modified") and "patch" not in f and not SIN_PATCH.search(f.get("filename") or ""):
                     x["sin_patch"] = True          # GitHub no da el patch de un archivo grande
@@ -218,7 +224,11 @@ def main(argv):
     while i < len(argv):
         a = argv[i]
         if a == "--desde":
-            desde = argv[i + 1]; i += 2; continue
+            desde = argv[i + 1]; i += 2
+            if not re.match(r"^20\d\d-\d\d-\d\d$", desde):
+                print(f"--desde va como AAAA-MM-DD («{desde}»); sin seguimiento anterior, se omite", file=sys.stderr)
+                return 2
+            continue
         if a == "--salida":
             salida = argv[i + 1]; i += 2; continue
         if a == "--max-commits":
@@ -234,17 +244,24 @@ def main(argv):
     hoy = datetime.date.today()
     desde = desde or (hoy - datetime.timedelta(days=31)).isoformat()
     yo, _ = gh("user")
-    out = {"leido": "gh", "cuenta": (yo or {}).get("login", ""), "hoy": hoy.isoformat(), "desde": desde, "repos": []}
+    # «pedidos» y «terminado»: un JSON cortado a mitad no se da nunca por completo (arreglos 1, hallazgo 1)
+    out = {"leido": "gh", "cuenta": (yo or {}).get("login", ""), "hoy": hoy.isoformat(), "desde": desde, "pedidos": repos,
+           "terminado": False, "repos": []}
     orgs = {}
 
     def guardar():
         if salida:
-            with open(salida, "w", encoding="utf-8") as f:
+            tmp = salida + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, salida)
 
     for nombre in repos:
         out["repos"].append(repo(nombre, desde, auditoria, max_commits, max_detalle, orgs))
-        guardar()                 # un corte deja lo ya leído
+        guardar()                 # un corte deja lo ya leído, sin «terminado»
+    out["terminado"] = True
+    guardar()
     if salida:
         avisos = [f"{r['repo']}: " + "; ".join([r["error"]] if r.get("error") else
                                                 [f"{k}: {v}" for k, v in (r.get("errores") or {}).items()]

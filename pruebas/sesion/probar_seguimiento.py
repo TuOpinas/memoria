@@ -28,6 +28,7 @@ def raiz(seguimiento="por crear", paso="release de GitHub", construye="Ana Prueb
     r = pathlib.Path(tempfile.mkdtemp()) / "raiz"
     e = r / "ventas/app/entregables"
     e.mkdir(parents=True)
+    (r / "guia.md").write_text("# Guía\n", encoding="utf-8")
     (r / "ventas/app/proyecto.md").write_text(f"""---
 estado: vigente
 actualizado: {HOY}
@@ -69,7 +70,7 @@ def c(sha, date, msg, parents=1):
     return {"sha": sha, "parents": parents, "date": date + "T10:00:00Z", "message": msg, "author": "ana"}
 
 
-GH = {"leido": "gh", "hoy": HOY, "desde": "2026-11-01", "repos": [{
+GH = {"leido": "gh", "hoy": HOY, "desde": "2026-11-01", "pedidos": ["acme/app"], "terminado": True, "repos": [{
     "repo": "acme/app", "rama": "main", "main_sha": "f" * 40,
     "pulls": [
         {"number": 1, "title": "P01 · tablas", "state": "merged", "author": "ana", "bot": False, "merge_commit": "a" * 40, "merged_at": "2026-11-02T10:00:00Z", "base": "main"},
@@ -104,7 +105,9 @@ GH = {"leido": "gh", "hoy": HOY, "desde": "2026-11-01", "repos": [{
                   "org": None, "admins": None, "errores": {"org": "HTTP 403", "admins": "HTTP 403"}}}]}
 
 
-def gh_json(d):
+def gh_json(d, completa=True):
+    if completa:   # lo que escribe recoger_github.py al terminar
+        d = dict(d, terminado=d.get("terminado", True), pedidos=d.get("pedidos", [r["repo"] for r in d.get("repos", [])]))
     p = pathlib.Path(tempfile.mkdtemp()) / "gh.json"
     p.write_text(json.dumps(d), encoding="utf-8")
     return p
@@ -142,7 +145,7 @@ rc, o, e = correr("seguimiento", r2, "ventas/app", "--github", g, "--pidio", "Be
 ok("Pasos a Prod que aprobó quien construyó:** ninguno." in o, "Ana aprobó, pero el #1 es de @ana, que es Carla")
 
 print("Escribir: crea el seguimiento, que nace vigente, y la entrada siguiente va arriba")
-rc, o, e = correr("seguimiento", r, "ventas/app", "--github", g, "--pidio", "Beto Prueba", "--fecha", HOY, "--escribir")
+rc, o, e = correr("seguimiento", r, "ventas/app", "--github", g, "--pidio", "Beto Prueba", "--fecha", HOY, "--escribir", "--crear")
 d = json.loads(o.split("=== DATOS\n")[1])
 f = r / "ventas/app/entregables/seguimiento.md"
 ok(rc == 0 and f.is_file() and d["escrito"] == "ventas/app/entregables/seguimiento.md", "crea entregables/seguimiento.md")
@@ -192,8 +195,9 @@ ok(co["R3"]["acme/app"]["estado"] == "cumple", "R3: comprobación de secretos y 
 ok(co["R6"]["acme/app"]["estado"] == "no cumple" and "#4" in co["R6"]["acme/app"]["evidencia"], "R6: un pull request unido sin pieza")
 _pf = {x["fila"] for x in a["preguntar"]}
 ok(_pf >= {"PL1", "PL2", "PL3", "PL7", "R5", "R7"}, "lo que no se pudo, a preguntar: " + ", ".join(sorted(_pf)))
-ok(co["R4"]["acme/app"]["estado"] == "no cumple" and "migración" in co["R4"]["acme/app"]["evidencia"],
-   "R4 desde los seguimientos del mes, que vieron la migración editada")
+ok("R4" not in co and any(x["fila"] == "R4" and "Rompe las reglas" in x["porque"] for x in a["preguntar"]),
+   "R4 no se deduce: se pregunta, señalando los seguimientos del mes")
+ok("R7" not in co and any(x["fila"] == "R7" and "CLAUDE.md" in x["porque"] for x in a["preguntar"]), "R7 tampoco: se pregunta con lo que tiene el CLAUDE.md")
 ok(any(x["fila"] == "PL1" and "403" in x["porque"] for x in a["preguntar"]), "con el motivo")
 ok(a["pasos_a_prod"]["acme/app"]["si_propio"] and a["pasos_a_prod"]["acme/app"]["si_propio"][0]["pr"] == 1, "los síes que alguien se dio a sí mismo")
 ok(co["R2"]["acme/app"]["regla"] == "las pruebas pasan antes de unir" and all(x["regla"] for x in a["preguntar"]),
@@ -288,6 +292,8 @@ pp = r10 / "ventas/app/proyecto.md"
 pp.write_text(pp.read_text(encoding="utf-8").replace("## Quién participa", "## Siguientes pasos\n- Seguimiento: llamar a Beto el lunes\n\n## Quién participa")
               .replace("Seguimiento: por crear", "- **Seguimiento:** por crear"), encoding="utf-8")
 rc, o, d = entrada_de(r10, gh_json(GH), "--escribir")
+ok(d.get("no_escrito") and "--crear" in d["no_escrito"], "«por crear» tampoco se crea sin --crear: pudo crearlo un seguimiento sin cerrar")
+rc, o, d = entrada_de(r10, gh_json(GH), "--escribir", "--crear")
 ok(d.get("reemplazo_proyecto") == {"de": "- **Seguimiento:** por crear", "a": "- **Seguimiento:** ventas/app/entregables/seguimiento.md"},
    "el reemplazo es la línea de la sección, con su forma")
 ok("basado_en: [ventas/app/entregables/plan.md, ventas/app/entregables/diseno.md]" in (r10 / "ventas/app/entregables/seguimiento.md").read_text(encoding="utf-8"),
@@ -319,6 +325,48 @@ ok(rc != 0 and "R9" in e, "una fila que no está se rechaza")
 est.write_text(json.dumps({"R1": {"acme/app": "cumple"}}), encoding="utf-8")
 rc, o, e = correr("aplicar", r, "ventas/app", conf, est, "--cuenta", "ana@ejemplo.test", "--fecha", HOY)
 ok(rc != 0 and "Audita" in e, "solo quien audita escribe los estados")
+
+print("Los arreglos de la primera ronda")
+r11 = raiz()
+for nombre, g_, que in (
+        ("sin «terminado»", gh_json(dict(GH, terminado=False)), "no terminó"),
+        ("un repositorio de la sección que falta", gh_json(dict(GH, repos=[dict(GH["repos"][0], repo="acme/otro")])), "acme/app: no está"),
+        ("de otro día", gh_json(dict(GH, hoy="2026-11-10")), "no de hoy"),
+        ("sin la lista de releases", gh_mod(lambda x: x.pop("releases")), "no trae releases"),
+        ("un pull request unido sin fecha", gh_mod(lambda x: x["pulls"][0].update(merged_at=None)), "sin fecha (#1)")):
+    rc, o, d = entrada_de(r11, g_, "--escribir", "--crear")
+    ok(que in o and d.get("no_escrito") and not (r11 / "ventas/app/entregables/seguimiento.md").exists(), f"{nombre}: incompleto, no se guarda")
+rc, o, d = entrada_de(r11, gh_mod(lambda x: x.update(truncado=["tags"])))
+ok("Sin leer entero, no se compara: acme/app: tags cortado" in o and "Incompleto" not in o, "con las etiquetas cortadas se guarda, y se dice qué no se comparó")
+rc, o, d = entrada_de(r11, gh_mod(lambda x: x["pulls"][0].update(author=None, merge_commit=None, merged_at=None, state="open")))
+ok(rc == 0, "un autor o un commit de unión nulos no rompen la lectura")
+def tras_union(x):
+    x["commits"].insert(3, c("9" * 40, "2026-11-11", "commit de la rama del #4"))
+rc, o, d = entrada_de(r11, gh_mod(tras_union))
+ok("`9999999` en la rama principal sin pull request («commit de la rama del #4»), quizá de la unión sin squash de #4" in o,
+   "tras una unión sin squash los commits no se esconden: se dice de dónde pueden venir")
+rc, o, d = entrada_de(r11, gh_mod(lambda x: x["releases"][1].update(author="ana")))
+ok("el release v1 lo publicó @ana, que no administra" in o, "un release que publicó quien no administra rompe las reglas")
+ok("cita el seguimiento del 2026-11-03, que no está en el archivo" in o, "el seguimiento citado en «Aprobó:» tiene que existir")
+r12 = raiz(); (r12 / "guia.md").unlink()
+rc, o, d = entrada_de(r12, gh_json(GH), "--escribir", "--crear")
+ok("guia.md" in (d.get("no_escrito") or "") and not (r12 / "ventas/app/entregables/seguimiento.md").exists(), "sin guia.md en la copia, no se escribe")
+r13 = raiz(); pp = r13 / "ventas/app/proyecto.md"; pp.write_text(pp.read_text(encoding="utf-8").replace("Seguimiento: por crear\n", ""), encoding="utf-8")
+rc, o, d = entrada_de(r13, gh_json(GH), "--escribir", "--crear")
+ok("«Seguimiento:»" in (d.get("no_escrito") or ""), "sin la línea «Seguimiento:», pide añadirla")
+def reglas_sin_leer(x):
+    x["auditoria"]["errores"] = {"rulesets": "HTTP 502", "org": "HTTP 403", "admins": "HTTP 403"}
+rc, o, e = correr("auditoria", r, "ventas/app", "--github", gh_mod(reglas_sin_leer), "--fecha", HOY)
+a3 = json.loads(o)
+ok("R1" not in a3["comprobado"] and "R2" not in a3["comprobado"] and any(x["fila"] == "R1" and "502" in x["porque"] for x in a3["preguntar"]),
+   "si los rulesets no se leyeron, R1 y R2 se preguntan aunque la protección clásica se vea")
+vistas = {(f, c_) for f, cols in a["comprobado"].items() for c_ in cols} | {(x["fila"], x["columna"]) for x in a["preguntar"]}
+ok({("R%d" % i, "acme/app") for i in range(1, 8)} <= vistas and {("PL%d" % i, "Estado") for i in range(1, 8)} <= vistas,
+   "toda fila de las dos configuraciones sale comprobada o a preguntar")
+otro = r / "ventas/app/entregables/plan.md"
+est.write_text(json.dumps({"R1": {"acme/app": "cumple"}}), encoding="utf-8")
+rc, o, e = correr("aplicar", r, "ventas/app", otro, est, "--cuenta", "beto@ejemplo.test", "--fecha", HOY)
+ok(rc != 0 and "no es una de las configuraciones" in e, "aplicar solo escribe en las dos configuraciones de la sección")
 
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")
