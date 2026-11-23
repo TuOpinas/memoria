@@ -4,8 +4,9 @@ out; no I/O, no network, no clock.
 A project is a development project when its proyecto.md has a «## Desarrollo» section
 (tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the
 design, the plan and the follow-up) and names the people of each role. This module reads the section and says which
-pieces are missing; it reads nothing else. The design and the plan are read by the model, not by code, and the status of
-each piece is applied by the model from the plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).
+pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`
+(1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the
+plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).
 
 The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code
 names things in English; `seccion_desarrollo` and `piezas_faltantes` are aliases of the same functions, at the end.

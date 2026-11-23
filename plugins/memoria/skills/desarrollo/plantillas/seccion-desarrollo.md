@@ -21,7 +21,7 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 
 **Seguimiento** lo escribe Claude cuando alguien lo pide (skill `desarrollo`), y mientras diga `por crear` no cuenta como pieza que falta: el primero se crea en `entregables/seguimiento.md` del proyecto, que nace `vigente`, y pone aquí su ruta. Cada entrada va arriba de la anterior, sin borrarla, y lleva en este orden:
 1. la fecha, quién lo pidió, desde cuándo se leyó y el último commit de la rama principal que se leyó en cada repositorio, y debajo el bloque «en llano» de la fase en curso, copiado del plan;
-2. cada pieza del plan con su estado;
+2. cada pieza del plan con su estado, en una tabla `| Pieza | Estado |` (el tablero la lee de la entrada más reciente, bajo su `## AAAA-MM-DD`);
 3. lo que está fuera del plan: pull requests sin pieza o con una que el plan no tiene;
 4. lo que lo unido añade y el diseño no tiene: datos, componentes o conceptos nuevos, también con otro nombre;
 5. los pull requests unidos que tocaron las pruebas de aceptación o su workflow, o sacaron una pieza de la lista de piezas activas (y las piezas con pruebas que siguen fuera de ella), con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
@@ -37,4 +37,4 @@ Quien no tenga el plugin se lo pide a quien audita o a quien construye.
 - **Construye:** construye con Claude, por bloques de una o varias piezas en un pull request a la rama principal, y lo une con las pruebas en verde y la revisión de calidad hecha.
 - **Administra:** mantiene la configuración y pasa a Prod lo que recibió el sí. Es el único que despliega a Prod; donde unir publica, es quien une el pull request de versión.
 
-Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe una sesión que no ve el código, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual, como un hecho.
+Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe aparte un subagente, antes de que exista el código de la pieza, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual, como un hecho.

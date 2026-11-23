@@ -716,6 +716,33 @@ code{overflow-wrap:anywhere} .area-card,.qh-res,.nc-i .t{min-width:0}
 .ac-m span+span::before{content:" · ";color:var(--muted)}
 .senal{font:600 12px var(--f-mono);color:var(--alert)}
 .tag-t{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:1px 6px;white-space:nowrap}
+/* ---- 1.28.0: la marca y la pestaña Desarrollo ---- */
+.dev-m{font:500 10.5px/1.6 var(--f-mono);color:var(--signal);border:1px solid currentColor;border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:middle;white-space:nowrap;font-weight:500}
+h1 .dev-m{font-size:12px;vertical-align:.35em}
+.dev-flujo{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;counter-reset:paso}
+.dev-flujo li{counter-increment:paso;flex:1 1 160px;background:var(--ground);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;position:relative}
+.dev-flujo li::before{content:counter(paso);font:600 11px var(--f-mono);color:var(--signal);display:block}
+.dev-plan{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.dev-col{flex:0 0 220px;background:var(--ground);border:1px solid var(--rule);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.dev-col>button,.dev-pz{all:unset;cursor:pointer;display:block;border-radius:6px;padding:6px 8px}
+.dev-col>button{font-weight:600}
+.dev-pz{background:var(--surface);border:1px solid var(--rule)}
+.dev-col>button:focus-visible,.dev-pz:focus-visible,.dev-nodo:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.dev-col>button[aria-expanded="true"],.dev-pz[aria-expanded="true"]{box-shadow:inset 0 0 0 2px var(--signal)}
+.dev-pz small{display:block;color:var(--muted);font:500 11px var(--f-mono)}
+.dev-det{margin-top:10px;border-left:3px solid var(--signal);padding:4px 0 4px 12px}
+.dev-det pre{white-space:pre-wrap;font:13px/1.5 var(--f-body);margin:4px 0 8px}
+.dev-dg{overflow-x:auto}
+.dev-svg{width:100%;height:auto;display:block;margin-top:8px}
+.dev-svg .ln{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dev-svg .g{fill:none;stroke:var(--rule);stroke-dasharray:4 3}
+.dev-svg .gt{fill:var(--muted);font:600 11px var(--f-mono)}
+.dev-svg .rt{fill:var(--muted);font:11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px}
+.dev-nodo rect{fill:var(--surface);stroke:var(--ink-soft);stroke-width:1.2}
+.dev-nodo text{fill:var(--ink);font:13px var(--f-body)}
+.dev-nodo{cursor:pointer}
+.dev-nodo[aria-expanded="true"] rect{stroke:var(--signal);stroke-width:2.4}
+.dev-av li{color:var(--warn)}
 .toast-i{font-size:12.5px;color:var(--signal);align-self:center}
 .due-item.resp .t>span:first-child,.due-item.resp>.t{color:var(--muted)}
 .acc-i.np{grid-template-columns:minmax(0,1fr) auto}
@@ -764,7 +791,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.27.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.28.0"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1514,7 +1541,7 @@ function enfoqueProyecto(p){
   return `<section class="due enf"><div class="top"><h2>Por dónde empezar${hq("por-donde-empezar","Por dónde empezar")}</h2></div><ol class="enf-mini"><li><b>${esc(t)}</b><span>${inline(y)}</span><span class="enf-acc"><button type="button" class="chip pri" data-copy="${esc(frase)}">Empezar con Claude</button></span></li></ol></section>`;
 }
 function renderProj(p){
-  tab = TABMAP[tab] || tab; if(!["estatus","quehay","pasos","registro"].includes(tab)) tab = "estatus";
+  tab = TABMAP[tab] || tab; if(!["estatus","quehay","pasos","registro"].concat(p.desarrollo ? ["desarrollo"] : []).includes(tab)) tab = "estatus";
   if(p.restringido){ renderProjOld(p, "resumen"); return; }
   // la cabecera la pinta renderProjOld: aquí solo hace falta en las pestañas que no lo llaman (un cerrado, en Estatus, revisión 1.22.5)
   if(tab==="registro" || (tab==="estatus" && p.cerrado)) renderProjOld(p, "pasos");
@@ -1535,9 +1562,10 @@ function renderProj(p){
     const solo = x=>x===p;
     const tuyo = cuestAbiertos(c=>cuestMio(c) && c.a_proyecto===p.id) + seccionDecidir(solo, false) + seccionCriticas(solo, false, `Todas las tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.`) + seccionAfectan(solo);
     body = (p.escribe===false && CAN ? `<p class="hint">Lo que marques aquí no lo pasa a la carpeta tu puesta al día: este proyecto lo escribe ${esc(nombreCorto(p.dueno||"otra persona"))}. Díselo.</p>` : "") + enfoqueProyecto(p) + (tuyo || `<p class="empty">Nada urgente en este proyecto. Todas sus tareas, en <button type="button" class="lnk" data-tab-go="quehay">Qué hay</button>.</p>`);
-  } else body = registroTab(p);
+  } else if(tab==="desarrollo"){ renderProjOld(p, "cabecera"); body = desarrolloTab(p); }
+  else body = registroTab(p);
   const solo_ = x=>x===p, nP = p.cerrado ? 0 : nAcciones(solo_), nQ = p.cerrado ? 0 : nPonerAlDia(solo_);
-  const tabs = [["estatus","Estatus",""],["pasos","Acciones",nP||""],["registro","Actividad",""],["quehay","Qué hay",nQ||""]];
+  const tabs = [["estatus","Estatus",""],["pasos","Acciones",nP||""],["registro","Actividad",""],["quehay","Qué hay",nQ||""]].concat(p.desarrollo ? [["desarrollo","Desarrollo",""]] : []);
   main.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k,t,n])=>`<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${tab===k}">${t}${n!==""?`<span class="n${k==="quehay"?" warn":""}">${n}</span>`:""}</button>`).join("")}</div>${body}`;
   main.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ tab = b.dataset.tab; REG_FILTRO = "todo"; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); });
   main.querySelectorAll("[data-tab-go]").forEach(b=>b.onclick=()=>{ tab = b.dataset.tabGo; EDIT=null; HECHO=null; history.replaceState(null,"","#p-"+p.id+"-t-"+tab); render(); window.scrollTo({top:0}); });
@@ -2458,16 +2486,16 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 
 // ---- la ficha: una sola forma para área y proyecto ----
 function primerSiguiente(txt){ const m = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*[ \t]*:?[ \t]*([^\n]+)/i); if(m && m[1].trim()) return m[1].trim().split(/(?<=[.;])\s/)[0].replace(/[;,]$/,""); const n = (txt||"").match(/\*\*\s*Siguiente\s*:?\s*\*\*\s*:?\s*\n\s+-\s*([^\n]+)/i); return n ? n[1].trim() : ""; }
-function ficha({nombre, fecha, tit, sig, meta, attrs, vacio}){
+function ficha({nombre, fecha, tit, sig, meta, attrs, vacio, marca}){
   const vieja = !fecha || diasDesde(fecha) > 14;
-  return `<button type="button" class="area-card" ${attrs}><span class="ac-h"><b>${esc(nombre)}</b>${fecha?`<span class="pill ${vieja?"soon":"none"}">${fmtD(fecha)}</span>`:`<span class="pill soon">Sin Estatus</span>`}</span>
+  return `<button type="button" class="area-card" ${attrs}><span class="ac-h"><b>${esc(nombre)}${marca||""}</b>${fecha?`<span class="pill ${vieja?"soon":"none"}">${fmtD(fecha)}</span>`:`<span class="pill soon">Sin Estatus</span>`}</span>
     <span class="ac-t">${tit?inline(tit):`<em>${esc(vacio||"Sin Estatus todavía.")}</em>`}</span>
     ${sig?`<span class="ac-p"><i>Siguiente</i>${inline(sig.length>120?sig.slice(0,117)+"…":sig)}</span>`:""}
     <span class="ac-m">${meta}</span></button>`;
 }
 function fichaProyecto(p){
   const s = sesionesTodas(p)[0], q = s ? quienSes(p,s) : "", t = titEstatus(p), tit = t ? (t.match(/^.+?[.!?](?=\s|$)/)||[t])[0] : "";
-  return ficha({nombre: p.nombre + (p.cerrado?" · cerrado":""), fecha: fechaEstatus(p), tit, sig: p.cerrado ? "" : primerSiguiente(p.en_corto),
+  return ficha({nombre: p.nombre + (p.cerrado?" · cerrado":""), marca: marcaDev(p), fecha: fechaEstatus(p), tit, sig: p.cerrado ? "" : primerSiguiente(p.en_corto),
     meta: pieDe([p]),
     attrs: `data-go-proj="${esc(p.id)}"`});
 }
@@ -2655,6 +2683,69 @@ function traerTextos(pid){
 }
 function conTexto(d, p){ if(!d.texto_aparte) return d; const x = ((TEXTOS[p.id]||{}).decisiones||{})[d.texto_aparte]; return x ? {...d, ...x} : d; }
 const CARGANDO = `<p class="more">Cargando…</p>`;
+// ===================== 1.28.0: la marca y la pestaña Desarrollo de un proyecto que construye software =====================
+// Lo que pinta la pestaña llega en el detalle del proyecto («desarrollo»): lo leyó la puesta al día del diseño, el plan y el
+// último seguimiento. Aquí solo se dibuja; lo que no se pudo leer o no cuadra sale en «Lo que no cuadra».
+const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" title="Proyecto de desarrollo: tiene la pestaña Desarrollo">Desarrollo</span>` : "";
+const DEV_SEL = {};
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dev]"); if(!b) return; const [pid, k] = b.dataset.dev.split("|"); DEV_SEL[pid] = DEV_SEL[pid]===k ? null : k; render();
+  // el detalle sale debajo del tablero o del diagrama: se lleva a la vista, o el clic parece no hacer nada
+  requestAnimationFrame(() => { const d = document.querySelector(".dev-det"); if(d) d.scrollIntoView({block:"nearest", behavior:"smooth"}); }); });
+document.addEventListener("keydown", e => { if(e.key!=="Enter" && e.key!==" ") return; const b = e.target.closest && e.target.closest("g[data-dev]"); if(!b) return; e.preventDefault(); b.dispatchEvent(new MouseEvent("click", {bubbles:true})); });
+function diagrama(pid, nodos, aristas){
+  // nodos: [{id, t, g}] (g, el grupo: una columna por grupo); aristas: [{a, b, t}]. Cajas en columnas, líneas rectas entre centros
+  const grupos = [...new Set(nodos.map(n=>n.g||""))], W = 170, H = 34, GX = 60, GY = 22, PAD = 26;
+  const col = g => grupos.indexOf(g||""), filas = {}, pos = {};
+  // sin grupos, en una rejilla de tres columnas
+  const sinG = grupos.length===1 && !grupos[0], nc = sinG ? Math.min(3, nodos.length) : grupos.length;
+  nodos.forEach((n,i) => { const c = sinG ? i % nc : col(n.g), f = sinG ? Math.floor(i/nc) : (filas[c] = (filas[c]||0) + 1) - 1;
+    pos[n.id] = {x: PAD + c*(W+GX), y: PAD + 18 + f*(H+GY)}; });
+  const nf = Math.max(1, ...Object.values(pos).map(p=>Math.round((p.y-PAD-18)/(H+GY))+1));
+  const ancho = PAD*2 + nc*W + (nc-1)*GX, alto = PAD*2 + 18 + nf*(H+GY) - GY;
+  const c = id => ({x: pos[id].x + W/2, y: pos[id].y + H/2});
+  const sel = DEV_SEL[pid];
+  return `<div class="dev-dg"><svg class="dev-svg" viewBox="0 0 ${ancho} ${alto}" style="max-width:${ancho}px;min-width:${Math.round(ancho*0.7)}px" role="group" aria-label="Diagrama">
+    ${sinG ? "" : grupos.map((g,i)=>`<rect class="g" x="${PAD + i*(W+GX) - 8}" y="${PAD - 8}" width="${W+16}" height="${alto - PAD*2 + 16}" rx="8"/><text class="gt" x="${PAD + i*(W+GX)}" y="${PAD + 6}">${esc(g)}</text>`).join("")}
+    ${aristas.filter(r=>pos[r.a]&&pos[r.b]).map(r=>{ const a = c(r.a), b = c(r.b);
+      // en la misma fila o columna con otra caja en medio, la línea se curva por fuera: recta pasaría por detrás de esa caja
+      const fila = a.y===b.y && Math.abs(a.x-b.x) > W+GX, colu = a.x===b.x && Math.abs(a.y-b.y) > H+GY;
+      const mx = (a.x+b.x)/2 + (colu ? W/2 + 18 : 0), my = (a.y+b.y)/2 - (fila ? H/2 + 18 : 0);
+      const d = fila || colu ? `M${a.x} ${a.y} Q${2*mx-(a.x+b.x)/2} ${2*my-(a.y+b.y)/2} ${b.x} ${b.y}` : `M${a.x} ${a.y} L${b.x} ${b.y}`;
+      return `<path class="ln" d="${d}"/>${r.t?`<text class="rt" x="${mx}" y="${my - 4}" text-anchor="middle">${esc(r.t)}</text>`:""}`; }).join("")}
+    ${nodos.map(n=>{ const k = n.k || ""; return `<g class="dev-nodo" tabindex="0" role="button" data-dev="${esc(pid)}|${esc(k)}" aria-expanded="${sel===k}"><rect x="${pos[n.id].x}" y="${pos[n.id].y}" width="${W}" height="${H}" rx="6"/><text x="${pos[n.id].x + 10}" y="${pos[n.id].y + 22}">${esc(n.t.length>22 ? n.t.slice(0,21)+"…" : n.t)}</text><title>${esc(n.t)}</title></g>`; }).join("")}
+  </svg></div>`;
+}
+function desarrolloTab(p){
+  if(!TEXTOS[p.id]){ traerTextos(p.id); return CARGANDO; }
+  if(sinDetalle(p)) return SIN_DETALLE;
+  const v = TEXTOS[p.id].desarrollo || {}, d = v.diseno || {}, pl = v.plan || {}, f = v.fuentes || {}, sel = DEV_SEL[p.id] || "";
+  const fecha = x => x ? fmtD(x) : "—";
+  const fuentes = `<p class="more">Diseño del ${fecha((f.diseno||{}).actualizado)} · plan del ${fecha((f.plan||{}).actualizado)} · ${f.seguimiento ? `seguimiento del ${fecha(f.seguimiento.fecha)}` : "sin seguimiento todavía"}</p>`;
+  const resumen = v.diseno ? `<section class="card"><h2>Qué es</h2>${d.objetivo?`<p>${inline(d.objetivo)}</p>`:""}
+    ${(d.como_funciona||[]).length?`<h3>Cómo funciona</h3><ol class="dev-flujo">${d.como_funciona.map(x=>`<li>${inline(x)}</li>`).join("")}</ol>`:""}
+    ${(d.reglas||[]).length?`<h3>Reglas</h3><ul>${d.reglas.map(r=>`<li>${inline(r.regla)}${r.excepcion && !/^ninguna$/i.test(r.excepcion)?` <span class="more">· salvo: ${inline(r.excepcion)}</span>`:""}</li>`).join("")}</ul>`:""}</section>` : "";
+  const piezas = {}; (pl.piezas||[]).forEach(x=>piezas[x.id]=x);
+  const det = (() => {
+    if(sel.startsWith("f:")){ const x = (pl.fases||[]).find(y=>y.id===sel.slice(2)); if(!x) return "";
+      return `<div class="dev-det"><h3>${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}</h3>${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p></div>`; }
+    if(sel.startsWith("p:")){ const x = piezas[sel.slice(2)]; if(!x) return "";
+      return `<div class="dev-det"><h3>${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}</h3><p>${inline(x.entrega||"")}</p><p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?(x.escenarios||[]).map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}</div>`; }
+    return "";
+  })();
+  const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan" && !(a.parte==="seguimiento" && !f.seguimiento));   // sin seguimiento ya lo dice la línea de las fechas
+  const avL = xs => xs.length ? `<ul class="dev-av">${xs.map(a=>`<li>${inline(a.texto||"")}</li>`).join("")}</ul>` : "";
+  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" data-dev="${esc(p.id)}|f:${esc(x.id)}" aria-expanded="${sel==="f:"+x.id}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" data-dev="${esc(p.id)}|p:${esc(z.id)}" aria-expanded="${sel==="p:"+z.id}"><small>${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div>${sel.startsWith("f:")||sel.startsWith("p:") ? det : ""}</section>`;
+  const ents = d.entidades || [], conc = {}; (d.conceptos||[]).forEach(x=>conc[x.nombre]=x);
+  let datos = "";
+  if(ents.length){
+    const e = sel.startsWith("e:") ? ents.find(x=>x.nombre===sel.slice(2)) : null;
+    datos = `<section class="card"><h2>Modelo de datos</h2><p class="more">Pulsa una entidad para ver su detalle.</p>${diagrama(p.id, ents.map(x=>({id:x.nombre, t:x.nombre, g:x.grupo||"", k:"e:"+x.nombre})), ents.flatMap(x=>(x.relaciones||[]).map(r=>({a:x.nombre, b:r.con, t:r.tipo}))))}
+      ${e?`<div class="dev-det"><h3>${esc(e.nombre)}</h3>${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([k,val])=>`<dt>${esc(k)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}</div>`:""}</section>`;
+  }
+  const red = (k, tit, xs) => xs && xs.length ? `<section class="card"><h2>${tit}</h2>${diagrama(p.id, xs.map(x=>({id:x.nombre, t:x.nombre, k:k+":"+x.nombre})), xs.flatMap(x=>(x.conecta_con||[]).map(o=>({a:x.nombre, b:o}))))}${(() => { const x = sel.startsWith(k+":") ? xs.find(y=>y.nombre===sel.slice(k.length+1)) : null; return x ? `<div class="dev-det"><h3>${esc(x.nombre)}</h3><p>${inline(x.que_hace||x.para_que||"")}</p><p class="more">${esc(x.donde||"")}${(x.conecta_con||[]).length?` · conecta con ${esc(x.conecta_con.join(", "))}`:""}</p></div>` : ""; })()}</section>` : "";
+  const avisos = avOtros.length ? `<section class="card"><h2>Lo que no cuadra</h2>${avL(avOtros)}</section>` : "";
+  return fuentes + resumen + plan + datos + red("c", "Componentes", d.componentes) + red("i", "Infraestructura", d.infraestructura) + avisos;
+}
 // el detalle no llegó (la base lo rechazó o el lote falló): se dice, en vez de pintar el proyecto como vacío
 const SIN_DETALLE = `<p class="more">No se pudo traer el detalle de este proyecto: sincroniza el tablero.</p>`;
 const sinDetalle = p => !!(TEXTOS[p.id] && TEXTOS[p.id].falta);
@@ -2952,11 +3043,11 @@ function ayudaArts(){
         <tr><td><b>Administra</b></td><td>Mantiene la configuración y es el único que despliega a producción, solo lo que tiene el sí</td></tr>
       </tbody>
     </table></div>
-    <p>Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe una sesión que no ve el código, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual.</p>`},
+    <p>Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe aparte un subagente, antes de que exista el código de la pieza, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual.</p>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo-pieza", t:"El camino de una pieza", h:`
     <ol class="hc-pasos">
       <li><b>Escenarios</b><span>Claude propone los escenarios de la pieza, con sus casos de error; quien acepta los aprueba o los corrige. ${F("escribe los escenarios de P03")}</span></li>
-      <li><b>Pruebas aparte</b><span>Una sesión que no tiene el código, solo el diseño, los escenarios y las reglas del repositorio, los convierte en pruebas, en su propio pull request, antes de la pieza. GitHub comprueba que fallan, porque la pieza aún no existe, y quien acepta lo une o lo aprueba.</span></li>
+      <li><b>Pruebas aparte</b><span>Antes de que exista el código de la pieza, Claude encarga a un subagente, que solo lee lo que le nombra su encargo (los escenarios, las reglas del repositorio y su carpeta de pruebas), convertirlos en pruebas, en su propio pull request. No hace falta abrir otra conversación. GitHub comprueba que fallan, porque la pieza aún no existe, y quien acepta lo une o lo aprueba.</span></li>
       <li><b>Construir</b><span>Claude construye la pieza de punta a punta hasta que pasan sus pruebas y las demás siguen en verde; desde ese pull request, las pruebas de la pieza son obligatorias. Se para solo si algo es difícil de revertir, se sale del diseño, falla dos veces o el diseño no lo cubre.</span></li>
       <li><b>Unir</b><span>Con todo en verde y la revisión de calidad hecha, quien construye la une y queda en Release.</span></li>
       <li><b>Verificar</b><span>Antes del sí, una sesión aparte, en el modelo que no la construyó, recorre Release contra los escenarios y deja el reporte; sin Release, la aplicación levantada desde lo unido, con datos de prueba. ${F("verifica P03 en Release")}</span></li>
@@ -2994,6 +3085,7 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo con ${F("monta el tablero")} (<button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien</button>).</p>
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas, y cada una contesta una pregunta: <b>Estatus</b>, cómo está y qué cambió; <b>Acciones</b>, qué te toca y por dónde empezar; <b>Actividad</b>, qué pasó y quién lo hizo; y <b>Qué hay</b>, qué ha producido el trabajo. En Inicio, la última es <b>Mantenimiento</b>, lo que estorba. Solo Acciones, Mantenimiento en Inicio y Qué hay en área y proyecto llevan un número. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda. En la cabecera de un área o un proyecto, su descripción ocupa dos líneas; «Ver más» la abre entera, con lo que el proyecto deja fuera.</dd>
+      <dt>Desarrollo</dt><dd>Un proyecto que construye software lleva la marca <b>Desarrollo</b> junto a su nombre en el índice, en su área y en su cabecera, y una quinta pestaña con ese nombre. Enseña qué es (el objetivo, cómo funciona en pasos y las reglas), el plan como un tablero con una columna por fase y una tarjeta por pieza con su estado del último seguimiento, el modelo de datos y los diagramas de componentes y de infraestructura. Una fase, una pieza, una entidad o una caja se abren al pulsarlas. Sale del diseño, del plan y del seguimiento del proyecto, con la fecha de cada uno; lo que no se pudo leer del plan sale en su parte, y lo demás que no se pudo leer o no cuadra, al final, en «Lo que no cuadra». Lo explica <button type="button" class="lnk" data-help="desarrollo">Cómo se construye software con Claude</button>.</dd>
       <dt>Estatus</dt><dd>Arriba, <b>Últimos 7 días</b>: sesiones (y en cuántos proyectos), decisiones y documentos publicados de la última semana; sin sesiones, de cuándo es la última. Después, <b>Avanzaron otros</b>: lo que otras personas trabajaron en tus proyectos desde tu última sesión en cada uno, con el tema y los avances de cada sesión y las decisiones que registraron; lo que pasó en proyectos que no son tuyos va plegado. Solo sale lo que ya trajo la última puesta al día. Qué es la organización (el primer párrafo de la guía de la carpeta) sale al pasar el ratón o tocar el icono junto a su nombre (en el teléfono, la línea «Qué es…» bajo la versión). En Inicio sigue una ficha por área con el titular de su Estatus y su primer «Siguiente», y un pie que solo cuenta lo que pide algo: por decidir, vencidas, quién avanzó, y cuántas sesiones hubo esta semana o que no hubo ninguna. En el área, su Estatus entero, que firma su responsable al cerrar sesión, con sus prioridades debajo de «Siguiente» y «Atender» en cada una, y una ficha por proyecto. En el proyecto, su Estatus firmado: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa. Al final, <b>Esperas a</b>: una fila por persona que te debe algo, con «Ya llegó» (una línea opcional; si era una decisión, te pregunta qué se decidió) y «Ya no aplica». Las dos se pueden deshacer hasta que la carpeta las registre.</dd>
       <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de tareas que más avanzan con una sola sesión, con «Empezar con Claude», que copia la frase para pegársela. Después, <b>Te toca decidir</b>: lo que falta decidir en tus proyectos y las tareas que empiezan por decidir, definir o elegir, leído como pregunta y con «Decidir con Claude»; solo lleva señal cuando la decisión bloquea algo («Bloquea 3 tareas», «con Ana Centeno»). Luego, <b>Tareas críticas</b>: las que tienen fecha a dos semanas de hoy, hacia atrás o hacia delante, y además están en «Siguiente», sirven a una prioridad del área o tocan a un cliente; las vencidas primero, de la más vieja a la más nueva. Cada una se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica» ahí mismo. Al final, <b>Decisiones que te afectan</b>: lo que otra persona decidió en otro proyecto y nombra a uno tuyo o a un área entera en la que eres responsable o colaboras (aunque no tengas proyecto en ella), o lo que alguien de la carpeta decidió dentro de uno tuyo, con «Aceptar» y «Cuestionar» (una línea con el porqué y el proyecto desde el que lo registras). Sale hasta que lo aceptas o lo cuestionas, o hasta que pasan 30 días. Las dos se deshacen hasta que una sesión tuya las registra (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>). En el área y el proyecto, Acciones lleva lo mismo filtrado. Su número cuenta solo lo tuyo por hacer o decidir, igual en los tres niveles. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta; si no lo encuentra, te lo dice y no te atribuye nada.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, con el mismo arranque en los tres niveles: el periodo y sus cifras. En Inicio y el área, por área, por proyecto y por persona; en el proyecto, su registro de sesiones y decisiones del periodo, con «Ver anteriores» y «Cuestionar» en cada decisión de otra persona. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
@@ -3440,7 +3532,7 @@ function renderSide(){
   h += areasVis().map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
     return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}${a.legible===false && /^Restringid/.test(noLeido(a,true).pill) ? ` <span class="lock-i" ${tip("Restringida")}>${LOCK}</span>` : ""}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
-      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span>${esc(p.nombre)}</span></button>`).join("")}</div>`;
+      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span>${esc(p.nombre)}${marcaDev(p)}</span></button>`).join("")}</div>`;
   }).join("");
   if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
   const hadFocus = document.activeElement && document.activeElement.id==="side-q", pos = hadFocus ? document.activeElement.selectionStart : 0;
@@ -3477,7 +3569,7 @@ function renderProjOld(p, tab){
   const estBtn = `<button type="button" class="pill est ${est.pill} est-btn" data-corr-est="${esc(p.id)}" aria-expanded="${CORR==="est:"+p.id}" ${tip(est.regla+". "+((EST[est.k]||{}).desc||"")+(CAN?" Pulsa para corregirlo.":""))}>${est.label}${est.corregido?" ⟳":""}</button>${est.riesgo?`<span class="pill est late" ${tip(est.riesgoRegla+". "+RIESGO.desc)}>${RIESGO.label}</span>`:""}`;
   const extra = [!p.cerrado && p.estado_cabecera==="borrador" ? `<span class="pill draft" ${tip("Su objetivo o su alcance siguen en borrador: nadie los ha dado por buenos. Se confirman en una sesión del proyecto.")}>Objetivo y alcance sin confirmar</span>` : "", (()=>{ const nc = CAMBIOS.filter(c=>c.proyecto===p.id).length; return nc ? `<span class="pill soon" ${tip("Marcado en el tablero; lo registra la siguiente sesión del proyecto.")}>${nc} marcado${nc===1?"":"s"} aquí</span>` : ""; })()].join("");
   // el objetivo, en dos líneas con «Ver más»: lo largo empuja las pestañas en el teléfono (1.24)
-  head.innerHTML = `<h1>${esc(p.nombre)}</h1>${cabeceraTexto(p.id, p.objetivo, [{t:"Termina cuando", html:p.terminado ? `<p>${inline(p.terminado)}</p>` : ""}, {t:"Alcance", html:p.alcance ? `<div class="md">${md(p.alcance)}</div>` : ""}])}
+  head.innerHTML = `<h1>${esc(p.nombre)}${marcaDev(p)}</h1>${cabeceraTexto(p.id, p.objetivo, [{t:"Termina cuando", html:p.terminado ? `<p>${inline(p.terminado)}</p>` : ""}, {t:"Alcance", html:p.alcance ? `<div class="md">${md(p.alcance)}</div>` : ""}])}
     <div class="meta"><span class="tags">${estBtn}${hq("estado-proyecto","El estado del proyecto")}${extra}</span><span>Responsable: <b>${esc(persona(p.dueno))}</b></span>${(p.colaboran||[]).length?`<span>Colabora: <b>${p.colaboran.map(esc).join(", ")}</b></span>`:""}<span>Última sesión: <b>${ses}</b>${p.ultima_sesion && hace>1 ? ` (${fmtD(p.ultima_sesion)})` : ""}</span></div>
     ${CORR==="est:"+p.id && CAN ? `<div class="corr-form" style="padding-left:0"><span class="lbl">${esc(est.regla)}. Si no es así, corrígelo; lo registra la siguiente sesión del proyecto:</span>${EST_OPC.map(([v,l])=>`<button type="button" class="chip${est.corregido&&est.k===v?" on":""}" data-corr-est-set="${esc(p.id)}" data-v="${v}">${l}</button>`).join("")}<button type="button" class="chip ghost" data-corr-cancel>✕</button></div>` : ""}`;
   let body = "";

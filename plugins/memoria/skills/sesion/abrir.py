@@ -47,7 +47,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.27.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.28.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):
@@ -336,7 +336,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'b7e0d86fce65426a0c644a9f92412c9d78246329389c46a6d0fd066f1e69eb40',
+    'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1544,8 +1544,9 @@ def _context_core():
         'A project is a development project when its proyecto.md has a \xab## Desarrollo\xbb section\n'
         '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the\n'
         'design, the plan and the follow-up) and names the people of each role. This module reads the section and says which\n'
-        'pieces are missing; it reads nothing else. The design and the plan are read by the model, not by code, and the status of\n'
-        "each piece is applied by the model from the plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
+        'pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`\n'
+        "(1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the\n"
+        "plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
         '\n'
         "The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code\n"
         'names things in English; `seccion_desarrollo` and `piezas_faltantes` are aliases of the same functions, at the end.\n'

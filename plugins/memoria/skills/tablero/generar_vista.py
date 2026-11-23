@@ -2,7 +2,8 @@
 """Genera los documentos de la Vista a partir de una raíz del método Memoria.
 
 Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
-proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
+proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/; de un proyecto de desarrollo,
+además, enteros, el diseño, el plan, el seguimiento y el detalle de los datos que nombra su sección (1.28.0).
 Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
@@ -32,7 +33,7 @@ tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta 
 """
 import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 
-ESTE_PLUGIN = "1.27.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.28.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -51,6 +52,8 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
+    'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
+    'dev_view': 'fab387dd62db411b11dc76f2ebe429352654936032003656fd9b9fe01b9039da',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1251,6 +1254,598 @@ def _context_core():
         '                        "puedes leer y consultar, pero no se escribe nada (ni sesiones, ni decisiones, ni documentos, ni el tablero) "\n'
         '                        f"hasta que lo actualices: {RECETA_ACTUALIZAR}.")\n'
     ),
+    'development': (
+        '"""The development kit (1.27): how the plugin recognises a project that builds software. Pure functions: text in, data\n'
+        'out; no I/O, no network, no clock.\n'
+        '\n'
+        'A project is a development project when its proyecto.md has a \xab## Desarrollo\xbb section\n'
+        '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the\n'
+        'design, the plan and the follow-up) and names the people of each role. This module reads the section and says which\n'
+        'pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`\n'
+        "(1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the\n"
+        "plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
+        '\n'
+        "The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code\n"
+        'names things in English; `seccion_desarrollo` and `piezas_faltantes` are aliases of the same functions, at the end.\n'
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'import unicodedata\n'
+        'from dataclasses import dataclass, field\n'
+        'from typing import Callable\n'
+        '\n'
+        '__all__ = [\n'
+        '    "SECTION", "PATH_KEYS", "ROLE_KEYS", "ALL_KEYS", "TO_BUILD", "DevPerson", "DevSection", "Missing",\n'
+        '    "key", "development_section", "missing_pieces", "seccion_desarrollo", "piezas_faltantes",\n'
+        ']\n'
+        '\n'
+        'SECTION = "Desarrollo"\n'
+        'TO_BUILD = "por crear"\n'
+        '\n'
+        "# the section's keys, as written in the template (plantilla-seccion-desarrollo.md), in their order\n"
+        'REPOSITORIES = "Repositorios"\n'
+        'PLATFORM = "Configuraci\xf3n de plataforma"\n'
+        'REPOSITORY_CONFIG = "Configuraci\xf3n de repositorios"\n'
+        'DESIGN = "Dise\xf1o"\n'
+        'PLAN = "Plan"\n'
+        'FOLLOW_UP = "Seguimiento"\n'
+        'STEP_TO_PROD = "Paso a Prod"\n'
+        'PATH_KEYS = (PLATFORM, REPOSITORY_CONFIG, DESIGN, PLAN, FOLLOW_UP)\n'
+        'ROLE_KEYS = ("Acepta", "Audita", "Construye", "Administra")\n'
+        'ALL_KEYS = (REPOSITORIES,) + PATH_KEYS + (STEP_TO_PROD,) + ROLE_KEYS\n'
+        '\n'
+        'SEPARATOR = re.compile(r"\\s+\xb7\\s+")          # \xab \xb7 \xbb between values; a bare \xab\xb7\xbb inside a name is not a separator\n'
+        'REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")\n'
+        'EMAIL = re.compile(r"^[\\w.+\'-]+@[\\w-]+(?:\\.[\\w-]+)+$")\n'
+        'GITHUB_USER = re.compile(r"^@?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))$")\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 comparing \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        'def key(text: str) -> str:\n'
+        '    """How a key, a heading or a column title compares: NFC or NFD alike, without accents, case, markup or punctuation."""\n'
+        '    t = unicodedata.normalize("NFD", text or "")\n'
+        '    t = "".join(c for c in t if unicodedata.category(c) != "Mn").replace("\xa0", " ").lower()\n'
+        '    return re.sub(r"\\s+", " ", re.sub(r"[^a-z0-9 ]", " ", t)).strip()\n'
+        '\n'
+        '\n'
+        'def _nfc(text: str) -> str:\n'
+        '    return unicodedata.normalize("NFC", (text or "").replace("\\r\\n", "\\n").replace("\\r", "\\n")).replace("\xa0", " ")\n'
+        '\n'
+        '\n'
+        'def _clean(value: str) -> str:\n'
+        '    """A value as written, without the Markdown around it: backticks, bold, a link\'s brackets (its target is kept)."""\n'
+        '    v = value.strip()\n'
+        '    v = re.sub(r"\\[([^\\]]*)\\]\\(([^)]*)\\)", lambda m: m.group(2) or m.group(1), v)\n'
+        '    return v.replace("`", "").replace("**", "").strip()\n'
+        '\n'
+        '\n'
+        'def _is_to_build(value: str) -> bool:\n'
+        '    return key(value) == key(TO_BUILD)\n'
+        '\n'
+        '\n'
+        'def _sections(body: str) -> dict:\n'
+        '    """Every \xab## \xbb section of a text by its key, cut at the next \xab## \xbb (the same cut abrir.py, cerrar.py and\n'
+        '    verificar.sh make). The first of two with the same key wins. Fenced code blocks are skipped, so a \xab## \xbb inside an\n'
+        '    example does not open a section."""\n'
+        '    out: dict = {}\n'
+        '    name, lines, fence = None, [], False\n'
+        '    for line in _nfc(body).split("\\n"):\n'
+        '        if re.match(r"^\\s*(```|~~~)", line):\n'
+        '            fence = not fence\n'
+        '        if not fence and line.startswith("## "):\n'
+        '            if name is not None and key(name) not in out:\n'
+        '                out[key(name)] = (name, "\\n".join(lines))\n'
+        '            name, lines = line[3:].strip(), []\n'
+        '        elif name is not None:\n'
+        '            lines.append(line)\n'
+        '    if name is not None and key(name) not in out:\n'
+        '        out[key(name)] = (name, "\\n".join(lines))\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        '# \u2500\u2500 the \xabDesarrollo\xbb section \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'
+        '\n'
+        '@dataclass\n'
+        'class DevPerson:\n'
+        '    """One person of a role: \xabNombre Apellido (correo, @usuario)\xbb; the GitHub user is left out without an account."""\n'
+        '    name: str\n'
+        '    email: str = ""\n'
+        '    user: str = ""                              # GitHub login, without \xab@\xbb\n'
+        '    raw: str = ""\n'
+        '\n'
+        '\n'
+        '@dataclass\n'
+        'class DevSection:\n'
+        '    """The \xab## Desarrollo\xbb section of a proyecto.md. `found` False means the project is not a development project."""\n'
+        '    found: bool = False\n'
+        '    repositories: list = field(default_factory=list)       # \xaborganizaci\xf3n/repositorio\xbb\n'
+        '    paths: dict = field(default_factory=dict)              # PATH_KEYS -> path from the root, or TO_BUILD\n'
+        '    step_to_prod: str = ""                                 # \xabPaso a Prod\xbb, as written\n'
+        '    roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]\n'
+        '    present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling\n'
+        '    to_build: list = field(default_factory=list)           # the keys whose value is \xabpor crear\xbb\n'
+        '    unknown: list = field(default_factory=list)            # lines of the section it does not recognise\n'
+        '    warnings: list = field(default_factory=list)\n'
+        '\n'
+        '\n'
+        '_BY_KEY = {key(k): k for k in ALL_KEYS}\n'
+        '\n'
+        '\n'
+        'def _person(text: str) -> tuple[DevPerson, list]:\n'
+        '    t = text.strip()\n'
+        '    warnings = []\n'
+        '    m = re.match(r"^(.*?)\\s*\\(([^()]*)\\)\\s*$", t)\n'
+        '    name, inside = (m.group(1), m.group(2)) if m else (t, "")\n'
+        '    p = DevPerson(name=_clean(name), raw=t)\n'
+        '    for item in (x.strip() for x in inside.split(",")):\n'
+        '        if not item:\n'
+        '            continue\n'
+        '        if EMAIL.match(item):\n'
+        '            if p.email:\n'
+        '                warnings.append(f"\xab{t}\xbb: dos correos; se toma el primero")\n'
+        '            else:\n'
+        '                p.email = item.lower()\n'
+        '        elif item.startswith("@") and GITHUB_USER.match(item):\n'
+        '            p.user = GITHUB_USER.match(item).group(1)\n'
+        '        else:\n'
+        '            warnings.append(f"\xab{t}\xbb: \xab{item}\xbb no es un correo ni un usuario de GitHub (@usuario)")\n'
+        '    if not p.name:\n'
+        '        warnings.append(f"\xab{t}\xbb: falta el nombre")\n'
+        '    return p, warnings\n'
+        '\n'
+        '\n'
+        'def development_section(project_text: str) -> DevSection:\n'
+        '    """The \xab## Desarrollo\xbb section of a proyecto.md, split in repositories, paths, \xabPaso a Prod\xbb and the roles with\n'
+        "    their people. Keys compared without accents or case (NFC or NFD alike); people separated by \xab \xb7 \xbb and each one's\n"
+        '    data by commas. What it does not recognise comes back in `unknown`."""\n'
+        '    sec = _sections(project_text).get(key(SECTION))\n'
+        '    out = DevSection()\n'
+        '    if sec is None:\n'
+        '        return out\n'
+        '    out.found = True\n'
+        '    for raw in sec[1].split("\\n"):\n'
+        '        line = raw.strip()\n'
+        '        if not line or re.match(r"^<!--.*-->$", line):\n'
+        '            continue\n'
+        '        m = re.match(r"^[-*]?\\s*\\**\\s*([^:*]+?)\\s*\\**\\s*:\\s*\\**\\s*(.*)$", line)\n'
+        '        k = _BY_KEY.get(key(m.group(1))) if m else None\n'
+        '        if k is None:\n'
+        '            out.unknown.append(line)\n'
+        '            continue\n'
+        '        if k in out.present:\n'
+        '            out.warnings.append(f"\xab{k}\xbb aparece dos veces; vale la primera")\n'
+        '            continue\n'
+        '        out.present.append(k)\n'
+        '        value = _clean(m.group(2))\n'
+        '        if _is_to_build(value):\n'
+        '            out.to_build.append(k)\n'
+        '            if k in PATH_KEYS:\n'
+        '                out.paths[k] = TO_BUILD\n'
+        '            elif k in ROLE_KEYS:\n'
+        '                out.roles[k] = []\n'
+        '            continue\n'
+        '        if k == REPOSITORIES:\n'
+        '            for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):\n'
+        '                # pegado como enlace de GitHub: se queda con organizaci\xf3n/repositorio\n'
+        '                r = r.strip("<>")\n'
+        '                g = re.match(r"^(?:https?://(?:www\\.)?|git@)?github\\.com[/:]([^/\\s]+)/([^/\\s#?]+)", r, re.I)\n'
+        '                if g:\n'
+        '                    r = g.group(1) + "/" + (g.group(2)[:-4] if g.group(2).lower().endswith(".git") else g.group(2))\n'
+        '                if REPO.match(r):\n'
+        '                    if r.lower() not in (x.lower() for x in out.repositories):\n'
+        '                        out.repositories.append(r)\n'
+        '                else:\n'
+        '                    out.warnings.append(f"\xab{r}\xbb en Repositorios no es organizaci\xf3n/repositorio")\n'
+        '        elif k in PATH_KEYS:\n'
+        '            out.paths[k] = value.strip().lstrip("/")\n'
+        '        elif k == STEP_TO_PROD:\n'
+        '            out.step_to_prod = value\n'
+        '        else:\n'
+        '            people = []\n'
+        '            for t in (x for x in SEPARATOR.split(value) if x.strip()):\n'
+        '                p, w = _person(t)\n'
+        '                people.append(p)\n'
+        '                out.warnings += w\n'
+        '            out.roles[k] = people\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        '@dataclass\n'
+        'class Missing:\n'
+        '    """A piece of the kit that is missing: its line, or the file its line points to."""\n'
+        '    key: str                                    # in ALL_KEYS spelling\n'
+        '    reason: str                                 # "sin l\xednea" | "por crear" | "no existe" | "vac\xeda"\n'
+        '    path: str = ""\n'
+        '\n'
+        '\n'
+        'def missing_pieces(section: DevSection, exists: Callable[[str], bool]) -> list:\n'
+        '    """The lines of the section that are missing or point to a file that is not there, with `exists(path)` saying\n'
+        '    whether a path from the root exists. \xabSeguimiento: por crear\xbb does not count: the plugin creates it at the first\n'
+        '    follow-up. Empty for a project without the section."""\n'
+        '    if not section.found:\n'
+        '        return []\n'
+        '    out = []\n'
+        '    for k in ALL_KEYS:\n'
+        '        if k not in section.present:\n'
+        '            out.append(Missing(k, "sin l\xednea"))\n'
+        '        elif k in section.to_build:\n'
+        '            if k != FOLLOW_UP:\n'
+        '                out.append(Missing(k, "por crear"))\n'
+        '        elif k == REPOSITORIES and not section.repositories:\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k in ROLE_KEYS and not section.roles.get(k):\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k == STEP_TO_PROD and not section.step_to_prod:\n'
+        '            out.append(Missing(k, "vac\xeda"))\n'
+        '        elif k in PATH_KEYS:\n'
+        '            v = section.paths.get(k, "")\n'
+        '            if not v:\n'
+        '                out.append(Missing(k, "vac\xeda"))\n'
+        '            elif not exists(v):\n'
+        '                out.append(Missing(k, "no existe", v))\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        "# the Spanish names the plugin's scripts use\n"
+        'seccion_desarrollo = development_section\n'
+        'piezas_faltantes = missing_pieces\n'
+    ),
+    'dev_view': (
+        '"""The board\'s \xabDesarrollo\xbb tab (1.28.0, P05): reads the design, the plan and the newest follow-up entry of a development\n'
+        'project and says what it cannot read or what does not match, instead of failing. Pure functions: text in, data out.\n'
+        "Only the board's generator imports it, so the scripts that open a session do not carry it.\n"
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'from typing import Callable\n'
+        '\n'
+        'from .development import (key, _sections, _nfc, _clean, SEPARATOR, DevSection, DESIGN, PLAN, FOLLOW_UP, TO_BUILD)\n'
+        '\n'
+        '__all__ = ["read_design", "read_plan", "read_follow_up", "design_detail_path", "development_view", "vista_desarrollo"]\n'
+        '\n'
+        '\n'
+        "# \u2500\u2500 the design, the plan and the follow-up, for the board's \xabDesarrollo\xbb tab (1.28.0) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"
+        '\n'
+        'def _header(text: str) -> dict:\n'
+        '    """The \xabkey: value\xbb lines of a front matter, by key (only what the view needs: \xabactualizado\xbb)."""\n'
+        '    m = re.match(r"^---\\n(.*?)\\n---\\n", _nfc(text), re.S)\n'
+        '    out = {}\n'
+        '    for line in (m.group(1).split("\\n") if m else []):\n'
+        '        k, _, v = line.partition(":")\n'
+        '        if v:\n'
+        '            out[key(k)] = v.strip().strip(\'"\')\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        'def _cells(line: str) -> list:\n'
+        '    return [c.strip() for c in line.strip().strip("|").split("|")]\n'
+        '\n'
+        '\n'
+        'def _table(lines: list) -> tuple:\n'
+        '    """The first Markdown table in `lines`: (titles, rows as lists of cells), or ([], []) without one."""\n'
+        '    i = next((n for n, l in enumerate(lines) if l.strip().startswith("|")), None)\n'
+        '    if i is None or i + 1 >= len(lines) or not re.match(r"^\\s*\\|?\\s*:?-{2,}", lines[i + 1]):\n'
+        '        return [], []\n'
+        '    titles, rows = _cells(lines[i]), []\n'
+        '    for l in lines[i + 2:]:\n'
+        '        if not l.strip().startswith("|"):\n'
+        '            break\n'
+        '        rows.append(_cells(l))\n'
+        '    return titles, rows\n'
+        '\n'
+        '\n'
+        'def _columns(titles: list, wanted: list, what: str, warn) -> dict:\n'
+        '    """Where each wanted column is, by key; a missing one is named in a warning and maps to None."""\n'
+        '    at = {key(t): n for n, t in enumerate(titles)}\n'
+        '    out = {}\n'
+        '    for w in wanted:\n'
+        '        out[w] = at.get(key(w))\n'
+        '        if out[w] is None:\n'
+        '            warn(f"a la tabla de \xab{what}\xbb le falta la columna \xab{w}\xbb")\n'
+        '    return out\n'
+        '\n'
+        '\n'
+        'def _cell(row: list, n) -> str:\n'
+        '    return _clean(row[n]) if n is not None and n < len(row) else ""\n'
+        '\n'
+        '\n'
+        'def _list(cell: str) -> list:\n'
+        '    return [x.strip() for x in SEPARATOR.split(cell) if x.strip()]\n'
+        '\n'
+        '\n'
+        'def _split_id(cell: str) -> tuple:\n'
+        '    """\xabP01 \xb7 Lista de productos\xbb -> ("P01", "Lista de productos"); \xabF1\xbb -> ("F1", "")."""\n'
+        '    m = re.match(r"^\\s*([A-Za-z]+\\d+)\\s*(?:[\xb7:\u2014-]\\s*(.*))?$", _clean(cell))\n'
+        '    return (m.group(1).upper(), (m.group(2) or "").strip()) if m else ("", _clean(cell))\n'
+        '\n'
+        '\n'
+        'def _paragraph(body: str) -> str:\n'
+        '    """The first paragraph of a section that is not a table, a list or a comment."""\n'
+        '    out = []\n'
+        '    for l in body.split("\\n"):\n'
+        '        t = l.strip()\n'
+        '        if not t:\n'
+        '            if out:\n'
+        '                break\n'
+        '            continue\n'
+        '        if t.startswith(("|", "<!--", "#")) or re.match(r"^([-*]|\\d+[.)])\\s", t):\n'
+        '            if out:\n'
+        '                break\n'
+        '            continue\n'
+        '        out.append(t)\n'
+        '    return " ".join(out)\n'
+        '\n'
+        '\n'
+        'def design_detail_path(design_text: str) -> str:\n'
+        '    """The path of the line \xabDetalle: ruta\xbb under \xabDatos\xbb, or "" without one."""\n'
+        '    sec = _sections(design_text).get(key("Datos"))\n'
+        '    m = re.search(r"^\\s*\\**\\s*Detalle\\s*\\**\\s*:\\s*\\**\\s*(.+?)\\s*$", sec[1], re.M) if sec else None\n'
+        '    return _clean(m.group(1)).lstrip("/") if m else ""\n'
+        '\n'
+        '\n'
+        '_HOW = (key("C\xf3mo funciona"), key("How it works"))\n'
+        '\n'
+        '\n'
+        'def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:\n'
+        '    """The design as the tab draws it, and its warnings as [(part, text)]. A missing section or column is named and the\n'
+        '    rest is returned; a \xabConecta con\xbb or a relation to something its table lacks is named and left out of the lines."""\n'
+        '    warnings = []\n'
+        '    warn = lambda part: (lambda t: warnings.append((part, t)))\n'
+        '    secs = _sections(text)\n'
+        '\n'
+        '    def section(name, part, aliases=()):\n'
+        '        for k in (key(name),) + tuple(aliases):\n'
+        '            if k in secs:\n'
+        '                return secs[k][1]\n'
+        '        warn(part)(f"al dise\xf1o le falta la secci\xf3n \xab{name}\xbb")\n'
+        '        return None\n'
+        '\n'
+        '    out = {"objetivo": "", "como_funciona": [], "reglas": [], "entidades": [], "conceptos": [], "componentes": [],\n'
+        '           "infraestructura": []}\n'
+        '    body = section("Objetivo", "diseno")\n'
+        '    if body is not None:\n'
+        '        out["objetivo"] = _paragraph(body)\n'
+        '    body = section("C\xf3mo funciona", "diseno", _HOW)\n'
+        '    if body is not None:\n'
+        '        out["como_funciona"] = [m.group(1).strip() for m in re.finditer(r"^\\s*(?:\\d+[.)]|[-*])\\s+(.+)$", body, re.M)]\n'
+        '        if not out["como_funciona"]:\n'
+        '            warn("diseno")("\xabC\xf3mo funciona\xbb no tiene pasos: van como lista numerada")\n'
+        '    body = section("Reglas", "diseno")\n'
+        '    if body is not None:\n'
+        '        t, rows = _table(body.split("\\n"))\n'
+        '        c = _columns(t, ["Regla", "Excepci\xf3n"], "Reglas", warn("diseno"))\n'
+        '        out["reglas"] = [{"regla": _cell(r, c["Regla"]), "excepcion": _cell(r, c["Excepci\xf3n"])} for r in rows]\n'
+        '    for name, part, cols, fields in (\n'
+        '            ("Componentes", "componentes", ["Componente", "Qu\xe9 hace", "D\xf3nde vive", "Conecta con"], ["nombre", "que_hace", "donde"]),\n'
+        '            ("Infraestructura", "infraestructura", ["Pieza", "Para qu\xe9", "D\xf3nde", "Conecta con"], ["nombre", "para_que", "donde"])):\n'
+        '        body = section(name, part)\n'
+        '        if body is None:\n'
+        '            continue\n'
+        '        t, rows = _table(body.split("\\n"))\n'
+        '        c = _columns(t, cols, name, warn(part))\n'
+        '        items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]\n'
+        '        names = {i["nombre"] for i in items}\n'
+        '        for i in items:\n'
+        '            for o in [o for o in i["conecta_con"] if o not in names]:\n'
+        '                warn(part)(f"\xab{i[\'nombre\']}\xbb conecta con \xab{o}\xbb, que no est\xe1 en \xab{name}\xbb")\n'
+        '                i["conecta_con"].remove(o)\n'
+        '        out[part] = items\n'
+        '    body = section("Datos", "datos")\n'
+        '    if body is not None:\n'
+        '        t, rows = _table(body.split("\\n"))\n'
+        '        c = _columns(t, ["Entidad", "Grupo", "Qu\xe9 es", "Se relaciona con"], "Datos", warn("datos"))\n'
+        '        for r in rows:\n'
+        '            rel = []\n'
+        '            for x in (y for y in re.split(r"\\s+\xb7\\s+|,\\s*(?![^()]*\\))", _cell(r, c["Se relaciona con"])) if y.strip()):\n'
+        '                m = re.match(r"^\\s*([^()\\s][^()]*?)\\s*(?:\\(([^)]*)\\))?\\s*$", x)\n'
+        '                if m:\n'
+        '                    rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})\n'
+        '                else:\n'
+        '                    warn("datos")(f"no se entiende la relaci\xf3n \xab{x.strip()}\xbb de \xab{_cell(r, c[\'Entidad\'])}\xbb: va como \xabentidad (tipo)\xbb, separadas por \xab \xb7 \xbb")\n'
+        '            out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,\n'
+        '                                     "que_es": _cell(r, c["Qu\xe9 es"]), "relaciones": rel, "detalle": None, "conceptos": []})\n'
+        '        names = {e["nombre"] for e in out["entidades"]}\n'
+        '        for e in out["entidades"]:\n'
+        '            for x in [x for x in e["relaciones"] if x["con"] not in names]:\n'
+        '                warn("datos")(f"\xab{e[\'nombre\']}\xbb se relaciona con \xab{x[\'con\']}\xbb, que no est\xe1 en \xabDatos\xbb")\n'
+        '                e["relaciones"].remove(x)\n'
+        '    body = section("Conceptos", "diseno")\n'
+        '    if body is not None:\n'
+        '        t, rows = _table(body.split("\\n"))\n'
+        '        c = _columns(t, ["Concepto", "Significa", "No es", "Entidades"], "Conceptos", warn("diseno"))\n'
+        '        out["conceptos"] = [{"nombre": _cell(r, c["Concepto"]), "significa": _cell(r, c["Significa"]), "no_es": _cell(r, c["No es"]),\n'
+        '                             "entidades": [e for e in re.split(r"\\s+\xb7\\s+|,\\s*", _cell(r, c["Entidades"])) if e.strip()]} for r in rows]\n'
+        '    by_name = {key(e["nombre"]): e for e in out["entidades"]}\n'
+        '    for k_ in out["conceptos"]:\n'
+        '        for n in k_["entidades"]:\n'
+        '            if key(n) in by_name:\n'
+        '                by_name[key(n)]["conceptos"].append(k_["nombre"])\n'
+        '            else:\n'
+        '                warn("datos")(f"el concepto \xab{k_[\'nombre\']}\xbb nombra \xab{n}\xbb, que no est\xe1 en \xabDatos\xbb")\n'
+        '    if detail_path:\n'
+        '        if detail_text is None:\n'
+        '            warn("datos")(f"el detalle de los datos ({detail_path}) no se pudo leer")\n'
+        '        else:\n'
+        '            t, rows = _table(_nfc(detail_text).split("\\n"))\n'
+        '            if not t:\n'
+        '                warn("datos")(f"el detalle de los datos ({detail_path}) no tiene una tabla")\n'
+        '            seen = set()\n'
+        '            for r in rows:\n'
+        '                k = key(_cell(r, 0))\n'
+        '                if k in by_name:\n'
+        '                    by_name[k]["detalle"] = {t[n]: _clean(r[n]) for n in range(1, min(len(t), len(r)))}\n'
+        '                    seen.add(k)\n'
+        '                elif k:\n'
+        '                    warn("datos")(f"\xab{_cell(r, 0)}\xbb est\xe1 en el detalle ({detail_path}) y no en \xabDatos\xbb del dise\xf1o")\n'
+        '            for k, e in by_name.items():\n'
+        '                if k not in seen and t:\n'
+        '                    warn("datos")(f"\xab{e[\'nombre\']}\xbb no tiene fila en el detalle ({detail_path})")\n'
+        '    return out, warnings\n'
+        '\n'
+        '\n'
+        '_PLAIN = re.compile(r"^###\\s+([A-Za-z]+\\d+)\\s*[\xb7:\u2014-]?\\s*(?:en llano|in plain words)\\s*$", re.I)\n'
+        '\n'
+        '\n'
+        'def read_plan(text: str) -> tuple:\n'
+        '    """The plan as the tab draws it: its phases in order with their pieces, and each piece with what it delivers, who\n'
+        '    approved its scenarios and the scenarios. Warnings as [(part, text)]."""\n'
+        '    warnings = []\n'
+        '    warn = lambda t: warnings.append(("plan", t))\n'
+        '    secs = _sections(text)\n'
+        '    phases, pieces = [], []\n'
+        '    sec = secs.get(key("Fases"))\n'
+        '    t, rows = _table(sec[1].split("\\n")) if sec else ([], [])\n'
+        '    if not rows:\n'
+        '        warn("la tabla de fases del plan no se pudo leer")\n'
+        '    else:\n'
+        '        c = _columns(t, ["Fase", "Qu\xe9 podr\xe1 hacer qui\xe9n", "Versi\xf3n", "Listo cuando"], "Fases", warn)\n'
+        '        for r in rows:\n'
+        '            fid, name = _split_id(_cell(r, c["Fase"]))\n'
+        '            if not fid:\n'
+        '                warn(f"no se lee el identificador de la fase \xab{_cell(r, c[\'Fase\'])}\xbb: va como \xabF1 \xb7 nombre\xbb")\n'
+        '            phases.append({"id": fid, "nombre": name, "que_podra": _cell(r, c["Qu\xe9 podr\xe1 hacer qui\xe9n"]), "version": _cell(r, c["Versi\xf3n"]),\n'
+        '                           "listo_cuando": _cell(r, c["Listo cuando"]), "en_llano": "", "arregla": [], "piezas": []})\n'
+        '        plain, cur = {}, None\n'
+        '        for l in _nfc(sec[1]).split("\\n"):\n'
+        '            m = _PLAIN.match(l.strip())\n'
+        '            if m:\n'
+        '                cur = plain.setdefault(m.group(1).upper(), [])\n'
+        '            elif l.startswith("### "):\n'
+        '                cur = None\n'
+        '            elif cur is not None:\n'
+        '                cur.append(l)\n'
+        '        for f in phases:\n'
+        '            ls = plain.get(f["id"], [])\n'
+        '            f["en_llano"] = _paragraph("\\n".join(ls))\n'
+        '            pt, pr = _table(ls)\n'
+        '            f["arregla"] = [{"pieza": _cell(r, 0), "que": _cell(r, 1)} for r in pr if len(r) > 1]\n'
+        '    sec = secs.get(key("Piezas"))\n'
+        '    t, rows = _table(sec[1].split("\\n")) if sec else ([], [])\n'
+        '    if not rows:\n'
+        '        warn("la tabla de piezas del plan no se pudo leer")\n'
+        '    else:\n'
+        '        c = _columns(t, ["Pieza", "Fase", "Qu\xe9 entrega"], "Piezas", warn)\n'
+        '        for r in rows:\n'
+        '            pid, name = _split_id(_cell(r, c["Pieza"]))\n'
+        '            if not pid:\n'
+        '                warn(f"no se lee el identificador de la pieza \xab{_cell(r, c[\'Pieza\'])}\xbb: va como \xabP01 \xb7 nombre\xbb")\n'
+        '                continue\n'
+        '            pieces.append({"id": pid, "nombre": name, "fase": _split_id(_cell(r, c["Fase"]))[0], "entrega": _cell(r, c["Qu\xe9 entrega"]),\n'
+        '                           "aprobo": "", "escenarios": [], "estado": None, "fecha_estado": None})\n'
+        '    by_id = {p["id"]: p for p in pieces}\n'
+        '    for f in phases:\n'
+        '        f["piezas"] = [p["id"] for p in pieces if p["fase"] == f["id"]]\n'
+        '    ids = {f["id"] for f in phases}\n'
+        '    for p in pieces:\n'
+        '        if phases and p["fase"] not in ids:\n'
+        '            warn(f"{p[\'id\']} es de la fase \xab{p[\'fase\']}\xbb, que no est\xe1 en \xabFases\xbb: no sale en el tablero")\n'
+        '    sec = secs.get(key("Hecha cuando"))\n'
+        '    cur, scen = None, None\n'
+        '    for l in (_nfc(sec[1]).split("\\n") if sec else []):\n'
+        '        m = re.match(r"^###\\s+([A-Za-z]+\\d+)\\b", l)\n'
+        '        if m:\n'
+        '            cur, scen = by_id.get(m.group(1).upper()), None\n'
+        '            continue\n'
+        '        if cur is None:\n'
+        '            continue\n'
+        '        a = re.match(r"^\\s*\\**\\s*Aprob[o\xf3]\\s*\\**\\s*:\\s*\\**\\s*(.*)$", l)\n'
+        '        b = re.match(r"^\\s*[-*]\\s+\\*\\*(.+?)\\*\\*\\s*(.*)$", l)\n'
+        '        if a and not scen:\n'
+        '            # aprobado es nombre y fecha; \xabpending\xbb o el hueco de la plantilla no aprueban nada\n'
+        '            cur["aprobo"] = _clean(a.group(1)) if re.search(r"\\d{4}-\\d{2}-\\d{2}", a.group(1)) else ""\n'
+        '        elif b:\n'
+        '            scen = {"titulo": b.group(1).strip(), "texto": b.group(2).strip()}\n'
+        '            cur["escenarios"].append(scen)\n'
+        '        elif scen is not None and l.startswith((" ", "\\t")) and l.strip():\n'
+        '            scen["texto"] = (scen["texto"] + "\\n" + l.strip()).strip()\n'
+        '        elif not l.strip():\n'
+        '            continue\n'
+        '        else:\n'
+        '            scen = None\n'
+        '    return {"fases": phases, "piezas": pieces}, warnings\n'
+        '\n'
+        '\n'
+        'def read_follow_up(text: str) -> tuple:\n'
+        '    """The newest entry of a follow-up: (its date, {piece: state}), or ("", {}) without one."""\n'
+        '    entries = []\n'
+        '    for name, body in _sections(text).values():\n'
+        '        m = re.match(r"^(\\d{4}-\\d{2}-\\d{2})\\b", name)\n'
+        '        if m:\n'
+        '            entries.append((m.group(1), body))\n'
+        '    if not entries:\n'
+        '        return "", {}\n'
+        '    date, body = max(entries, key=lambda e: e[0])\n'
+        '    states = {}\n'
+        '    lines = body.split("\\n")   # la entrada sin tabla \xabPieza | Estado\xbb vuelve sin estados, y la vista lo dice\n'
+        '    while lines:\n'
+        '        t, rows = _table(lines)\n'
+        '        if not t:\n'
+        '            break\n'
+        '        c = {key(x): n for n, x in enumerate(t)}\n'
+        '        if key("Pieza") in c and key("Estado") in c:\n'
+        '            for r in rows:\n'
+        '                pid = _split_id(_cell(r, c[key("Pieza")]))[0]\n'
+        '                if pid:\n'
+        '                    states[pid] = _cell(r, c[key("Estado")])\n'
+        '            break\n'
+        '        i = next(n for n, l in enumerate(lines) if l.strip().startswith("|"))\n'
+        '        lines = lines[i + 2 + len(rows):]\n'
+        '    return date, states\n'
+        '\n'
+        '\n'
+        'def development_view(section: DevSection, read: Callable[[str], object]) -> dict:\n'
+        '    """What the \xabDesarrollo\xbb tab draws for a project with the section: the sources with their dates, the design, the plan\n'
+        "    with each piece's state from the newest follow-up entry, and what could not be read or does not match. `read(path)`\n"
+        '    gives the text of a path from the root, or None."""\n'
+        '    view = {"fuentes": {"diseno": None, "plan": None, "seguimiento": None}, "diseno": None, "plan": None, "avisos": []}\n'
+        '    say = lambda part, text: view["avisos"].append({"parte": part, "texto": text})\n'
+        '\n'
+        '    def source(k, part):\n'
+        '        path = section.paths.get(k, "")\n'
+        '        if not path or path == TO_BUILD:\n'
+        '            say(part, f"\xab{k}\xbb est\xe1 por crear" if path == TO_BUILD else f"la secci\xf3n no dice \xab{k}\xbb")\n'
+        '            return "", None\n'
+        '        text = read(path)\n'
+        '        if text is None:\n'
+        '            say(part, f"\xab{k}\xbb ({path}) no se pudo leer")\n'
+        '        return path, text\n'
+        '\n'
+        '    path, text = source(DESIGN, "diseno")\n'
+        '    if text is not None:\n'
+        '        dp = design_detail_path(text)\n'
+        '        view["diseno"], w = read_design(text, read(dp) if dp else None, dp)\n'
+        '        view["avisos"] += [{"parte": p, "texto": t} for p, t in w]\n'
+        '        view["fuentes"]["diseno"] = {"ruta": path, "actualizado": _header(text).get("actualizado")}\n'
+        '    path, text = source(PLAN, "plan")\n'
+        '    if text is not None:\n'
+        '        view["plan"], w = read_plan(text)\n'
+        '        view["avisos"] += [{"parte": p, "texto": t} for p, t in w]\n'
+        '        view["fuentes"]["plan"] = {"ruta": path, "actualizado": _header(text).get("actualizado")}\n'
+        '    path = section.paths.get(FOLLOW_UP, "")\n'
+        '    if not path or path == TO_BUILD:\n'
+        '        say("seguimiento", "a\xfan no hay seguimiento: las piezas salen sin estado")\n'
+        '    else:\n'
+        '        text = read(path)\n'
+        '        date, states = read_follow_up(text) if text is not None else ("", {})\n'
+        '        if text is None:\n'
+        '            say("seguimiento", f"el seguimiento ({path}) no se pudo leer")\n'
+        '        elif not date:\n'
+        '            say("seguimiento", f"el seguimiento ({path}) no tiene ninguna entrada con fecha")\n'
+        '        elif not states:\n'
+        '            say("seguimiento", f"la entrada del {date} del seguimiento no tiene la tabla \xabPieza | Estado\xbb: las piezas salen sin estado")\n'
+        '        else:\n'
+        '            view["fuentes"]["seguimiento"] = {"ruta": path, "fecha": date}\n'
+        '            for p in (view["plan"] or {}).get("piezas", []):\n'
+        '                if p["id"] in states:\n'
+        '                    p["estado"], p["fecha_estado"] = states[p["id"]], date\n'
+        '    return view\n'
+        '\n'
+        '\n'
+        'vista_desarrollo = development_view\n'
+    ),
     }
     for _n in _todo:
         _m = _t.ModuleType("context_core." + _n); _m.__package__ = "context_core"; _m.__fingerprint__ = _fp[_n]
@@ -1266,6 +1861,8 @@ from context_core.compat import (CORREO, PALABRA_COLABORA, LINEA_COLABORA, regis
                                  es_sesion, es_mantenimiento, arreglados, rastro_mantenimiento,
                                  descontado)
 from context_core.minimum import puerta_de_escritura  # noqa: E402
+from context_core.development import seccion_desarrollo, DESIGN, PLAN, FOLLOW_UP  # noqa: E402
+from context_core.dev_view import design_detail_path, vista_desarrollo  # noqa: E402
 # --- fin de quién escribe ---
 RAIZ = pathlib.Path(sys.argv[1])
 # 1.25.3: la carpeta cuelga de $HOME/mnt con el último tramo de su ruta como nombre, o con «<padre>--<tramo>» si otra
@@ -1367,7 +1964,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "3"   # 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "4"   # 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
@@ -2271,6 +2868,41 @@ def motivo_de(p):
         return INV.get("motivos", {}).get(rel(p), "sin-leer")
     return por_que_no(p) or "sin-leer"
 
+def rutas_desarrollo(texto_proyecto):
+    """Lo que lee la pestaña Desarrollo de un proyecto con la sección (1.28.0): el diseño, el plan, el seguimiento y el
+    detalle de los datos que nombra el diseño, como rutas desde la raíz. Solo rutas dentro de la raíz y fuera de
+    fuentes/, taller/ y restringido/, que el tablero no abre."""
+    sec = seccion_desarrollo(texto_proyecto)
+    if not sec.found:
+        return None, []
+    def buena(r):
+        partes = pathlib.PurePosixPath(r).parts
+        return bool(r) and r != "por crear" and not r.startswith("/") and ".." not in partes \
+            and not {"fuentes", "taller", "restringido"} & {x.lower() for x in partes} \
+            and partes[0].lower() != "base" and not any(x.startswith(".") for x in partes)
+    rutas = [r for r in (sec.paths.get(k, "") for k in (DESIGN, PLAN, FOLLOW_UP)) if buena(r)]
+    d = sec.paths.get(DESIGN, "")
+    t = _lee_una_vez(d) if buena(d) else None
+    det = design_detail_path(t) if t else ""
+    if buena(det):
+        rutas.append(det)
+    return sec, rutas
+
+
+def _lee_una_vez(r):
+    if r not in _TEXTOS_DEV:
+        _TEXTOS_DEV[r] = leer(RAIZ / r)
+    return _TEXTOS_DEV[r]
+
+
+def lee_desarrollo(r):
+    """El texto de una ruta de la sección, o None si no se puede leer o el tablero no la abre."""
+    return _lee_una_vez(r) if r in RUTAS_DEV else None
+
+
+RUTAS_DEV, _TEXTOS_DEV = set(), {}
+
+
 def proyectos_de(carpeta, indice):
     """Los proyectos de un área: los de su índice más cualquier carpeta con proyecto.md, en ese orden."""
     if INV is not None:
@@ -2398,6 +3030,9 @@ if INVENTARIO:
                         _si_legible(d / n, suyos)
             except OSError:
                 pass
+            for r_ in rutas_desarrollo(tp)[1]:
+                if rel(RAIZ / r_) not in suyos:
+                    _si_legible(RAIZ / r_, suyos)
             fe = fechas_de_entregables(pc)
             tal = taller_de(pc)
             sub_ = entregables_en_subcarpetas(pc)
@@ -2514,7 +3149,7 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
         if not isinstance(d_, dict) or d_.get("id") != pid:
             faltan.append(pid); continue
         # lo que se partió al detalle (1.19) vuelve a su sitio, para partirlo abajo igual que un proyecto rehecho
-        if any(d_.get(k) for k in ("sesiones_aparte", "estado_aparte", "que_hay_aparte")) or any(x.get("texto_aparte") for x in d_.get("decisiones") or []):
+        if any(d_.get(k) for k in ("sesiones_aparte", "estado_aparte", "que_hay_aparte", "desarrollo")) or any(x.get("texto_aparte") for x in d_.get("decisiones") or []):
             det_ = _de_la_base("detalle", pid)
             if not isinstance(det_, dict):
                 faltan.append(f"detalle/{pid}"); continue
@@ -2528,6 +3163,8 @@ if REUSAR or (INV is not None and INV.get("fuera_reusar")):
                 d_["estado_actual"] = det_.get("estado_actual") or ""
             if d_.pop("que_hay_aparte", None):
                 d_["_que_hay_detalle"] = det_.get("que_hay") or {"piezas": [], "trayectoria": []}
+            if d_.get("desarrollo"):
+                d_["_desarrollo"] = det_.get("desarrollo")
         # fuera lo que sale de cruzarlo con los demás proyectos, que se vuelve a calcular abajo
         for k in ("huella", "cuestionamientos_abiertos"):
             d_.pop(k, None)
@@ -2654,6 +3291,12 @@ for a in areas_guia:
             _l0 = pdoc["en_corto"].strip().split("\n")[0]
             pdoc["estado_resumen"] = re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"^20\d\d-\d\d-\d\d\s*[·:—-]\s*", "", _l0).strip())
         pdoc["cerrado"] = es_cerrado(cuerpo)
+        sec_, rutas_ = rutas_desarrollo(tp)
+        if sec_ is not None:
+            # un proyecto de desarrollo lleva la marca y su pestaña; lo que pinta va al detalle, que se trae al entrar (1.28.0)
+            RUTAS_DEV.update(rutas_)
+            pdoc["desarrollo"] = True
+            pdoc["_desarrollo"] = vista_desarrollo(sec_, lee_desarrollo)
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
@@ -3112,6 +3755,13 @@ for pid, pd in docs["proyectos"].items():
         pd.pop("que_hay_huella", None)
     if qh and (qh["piezas"] or qh["trayectoria"]):
         det["que_hay"] = qh; pd["que_hay_aparte"] = True
+    dv_ = pd.pop("_desarrollo", None)
+    if pd.get("desarrollo"):
+        # lo que pinta la pestaña Desarrollo: en el detalle, y también suelto en desarrollo/<proyecto>.json, fuera del
+        # índice, para leerlo sin el tablero (las pruebas de aceptación de F2)
+        det["desarrollo"] = dv_ or {"fuentes": {}, "diseno": None, "plan": None, "avisos": [{"parte": "diseno", "texto": "no se pudo leer"}]}
+        (OUT / "desarrollo").mkdir(parents=True, exist_ok=True)
+        (OUT / "desarrollo" / f"{pid}.json").write_text(json.dumps(det["desarrollo"], ensure_ascii=False, indent=1), encoding="utf-8")
     if det:
         docs["detalle"][pid] = det
 
