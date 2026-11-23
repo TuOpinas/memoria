@@ -21,6 +21,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P05_lectores import *  # noqa: E402,F401,F403  (la muestra, cómo se corre el generador y lo que dice la muestra: una sola copia)
 
 FIN_COMPONENTES = "\n\n## Datos\n"   # lo que sigue a la tabla de «Componentes»
+FLUJO_DATOS = (DISENO, "\n\nDetalle: ventas/portal/entregables/datos-detalle.md",
+               "\n\n**Flujo:** cliente → pedido → producto\n\nDetalle: ventas/portal/entregables/datos-detalle.md")
 EXTERNOS = {"Tienda web": False, "API": False, "Motor de pagos": True, "Panel interno": False}
 
 
@@ -57,41 +59,29 @@ def recorrido(d, problemas, esperado):
 
 
 def escenarios(inf):
-    # 1 · El recorrido es una fila de flechas: «Flujo: Tienda web → API → Motor de pagos»
+    # 1 · El recorrido es una fila de flechas: «Flujo: Tienda web → API → Motor de pagos». «Datos» tiene su propia
+    #     línea «Flujo:», que no es la de los componentes
     problemas = []
-    d = pestana(*generar(con_externo() + [con_flujo("**Flujo:** Tienda web → API → Motor de pagos")]), problemas)
+    d = pestana(*generar(con_externo() + [con_flujo("**Flujo:** Tienda web → API → Motor de pagos"), FLUJO_DATOS]), problemas)
     if d is not None:
         recorrido(d, problemas, ["Tienda web", "API", "Motor de pagos"])
         cajas(d, problemas)
     inf.escenario("El recorrido es una fila de flechas", problemas)
 
-    # 1b · Añadido: la misma línea sin negrita y con «->», en otro orden
-    problemas = []
-    d = pestana(*generar(con_externo() + [con_flujo("Flujo: Panel interno -> API -> Motor de pagos")]), problemas)
-    if d is not None:
-        recorrido(d, problemas, ["Panel interno", "API", "Motor de pagos"])
-    inf.escenario("El recorrido es una fila de flechas (sin negrita y con «->»)", problemas)
-
-    # 1c · Añadido: sin línea «Flujo:» en «Componentes» no hay recorrido (null)
+    # 2 · Lo externo se distingue: «Motor de pagos» lleva «sí» en «Externo»; los demás, la celda vacía. Sin línea
+    #     «Flujo:» en «Componentes», no hay recorrido (null)
     problemas = []
     d = pestana(*generar(con_externo()), problemas)
     if d is not None:
+        cajas(d, problemas)
         recorrido(d, problemas, None)
-        cajas(d, problemas)
-    inf.escenario("El recorrido es una fila de flechas (sin línea «Flujo:», no hay recorrido)", problemas)
-
-    # 2 · Lo externo se distingue: «Motor de pagos» lleva «sí» en «Externo»; los demás, la celda vacía
-    problemas = []
-    d = pestana(*generar(con_externo()), problemas)
-    if d is not None:
-        cajas(d, problemas)
     inf.escenario("Lo externo se distingue, no solo por el color", problemas)
 
     # 3 · Una conexión a algo desconocido se dice: con la tabla nueva (columna «Externo» y línea «Flujo:»), «Panel
-    #     interno» conecta también con «Buzón», que no está
+    #     interno» conecta también con «Buzón», que no está (la línea, sin negrita y con «->»)
     problemas = []
     d = pestana(*generar(con_externo("API · Motor de pagos · Buzón")
-                         + [con_flujo("**Flujo:** Tienda web → API → Motor de pagos")]), problemas)
+                         + [con_flujo("Flujo: Tienda web -> API -> Motor de pagos")]), problemas)
     if d is not None:
         cajas(d, problemas)
         recorrido(d, problemas, ["Tienda web", "API", "Motor de pagos"])

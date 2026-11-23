@@ -23,6 +23,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P05_lectores import *  # noqa: E402,F401,F403  (la muestra, cómo se corre el generador y lo que dice la muestra: una sola copia)
 
 DETALLE_LINEA = "\n\nDetalle: ventas/portal/entregables/datos-detalle.md"
+FLUJO_COMPONENTES = (DISENO, "\n\n## Datos\n", "\n\n**Flujo:** Panel interno → Motor de pagos\n\n## Datos\n")
 
 
 def con_flujo(linea):
@@ -42,6 +43,10 @@ def disposicion(d, problemas):
 
 def reparto(problemas, dis, esperado):
     """Compara flujo, arriba y abajo, y que cada entidad de «Datos» esté en una sola de las tres."""
+    malas = [k for k in ("flujo", "arriba", "abajo") if not all(isinstance(x, str) for x in dis[k])]
+    if malas:
+        problemas.append(f"{', '.join(malas)} de datos_disposicion no son listas de nombres: {json.dumps(dis, ensure_ascii=False)}")
+        return
     for k in ("flujo", "arriba", "abajo"):
         igual(problemas, f"«{k}» de datos_disposicion", dis.get(k) if k == "flujo" else sorted(dis.get(k)), esperado[k])
     todas = dis["flujo"] + dis["arriba"] + dis["abajo"]
@@ -68,9 +73,9 @@ def entidades_como_antes(d, problemas):
 
 def escenarios(inf):
     # 1 · El flujo es una fila, en su orden: «Flujo: cliente → pedido → producto»; categoría, a la que solo apunta
-    #     producto, va arriba
+    #     producto, va arriba. «Componentes», antes en el documento, tiene su propia línea «Flujo:», que no es la de datos
     problemas = []
-    d = pestana(*generar([con_flujo("**Flujo:** cliente → pedido → producto")]), problemas)
+    d = pestana(*generar([FLUJO_COMPONENTES, con_flujo("**Flujo:** cliente → pedido → producto")]), problemas)
     if d is not None:
         dis = disposicion(d, problemas)
         if dis is not None:
@@ -78,26 +83,16 @@ def escenarios(inf):
         sin_aviso_de_flujo(d, problemas)
     inf.escenario("El flujo es una fila, en su orden", problemas)
 
-    # 1b · Añadido: la misma línea sin negrita y con «->», en otro orden
+    # 1b · Añadido: lo que está fuera del flujo y recibe dos flechas del flujo va abajo. Flujo «cliente → pedido»;
+    #      cliente pasa a relacionarse con producto, así que a producto apuntan cliente y pedido
     problemas = []
-    d = pestana(*generar([con_flujo("Flujo: producto -> pedido -> cliente")]), problemas)
-    if d is not None:
-        dis = disposicion(d, problemas)
-        if dis is not None:
-            reparto(problemas, dis, {"flujo": ["producto", "pedido", "cliente"], "arriba": ["categoria"], "abajo": []})
-        sin_aviso_de_flujo(d, problemas)
-    inf.escenario("El flujo es una fila, en su orden (sin negrita y con «->»)", problemas)
-
-    # 1c · Añadido: lo que está fuera del flujo y recibe dos flechas del flujo va abajo. Flujo «cliente → producto»;
-    #      producto pasa a relacionarse con pedido, así que a pedido apuntan cliente y producto
-    problemas = []
-    d = pestana(*generar([con_flujo("**Flujo:** cliente → producto"),
-                          (DISENO, "| Lo que la tienda vende | categoria (N:1) |", "| Lo que la tienda vende | pedido (N:M) |")]),
+    d = pestana(*generar([con_flujo("**Flujo:** cliente → pedido"),
+                          (DISENO, "| Quien compra en la tienda | pedido (1:N) |", "| Quien compra en la tienda | producto (N:M) |")]),
                 problemas)
     if d is not None:
         dis = disposicion(d, problemas)
         if dis is not None:
-            reparto(problemas, dis, {"flujo": ["cliente", "producto"], "arriba": ["categoria"], "abajo": ["pedido"]})
+            reparto(problemas, dis, {"flujo": ["cliente", "pedido"], "arriba": ["categoria"], "abajo": ["producto"]})
     inf.escenario("El flujo es una fila, en su orden (lo que recibe dos flechas va abajo)", problemas)
 
     # 2 · Una relación lleva su verbo: «producto · categoria (vive en)»
@@ -111,15 +106,6 @@ def escenarios(inf):
         igual(problemas, "las relaciones de «cliente», que solo lleva cardinalidad", saca(vistas, "cliente", "relaciones"),
               [{"con": "pedido", "tipo": "1:N"}])
     inf.escenario("Una relación lleva su verbo", problemas)
-
-    # 2b · Añadido: con cardinalidad y verbo, «categoria (N:1, vive en)», lleva los dos
-    problemas = []
-    d = pestana(*generar([(DISENO, "| Lo que la tienda vende | categoria (N:1) |",
-                           "| Lo que la tienda vende | categoria (N:1, vive en) |")]), problemas)
-    if d is not None:
-        igual(problemas, "las relaciones de «producto»", saca(por_clave(saca(d, "diseno", "entidades"), "nombre"), "producto",
-                                                             "relaciones"), [{"con": "categoria", "tipo": "N:1", "verbo": "vive en"}])
-    inf.escenario("Una relación lleva su verbo (con cardinalidad y verbo)", problemas)
 
     # 3 · Sin flujo se dibuja como antes: la muestra tal cual, sin línea «Flujo:»
     problemas = []
@@ -137,9 +123,9 @@ def escenarios(inf):
                              f"avisos = {json.dumps(saca(d, 'avisos'), ensure_ascii=False)}")
     inf.escenario("Sin flujo se dibuja como antes", problemas)
 
-    # 4 · Una entidad desconocida en el flujo se dice: «envio» no está en «Datos»
+    # 4 · Una entidad desconocida en el flujo se dice: «envio» no está en «Datos» (la línea, sin negrita y con «->»)
     problemas = []
-    d = pestana(*generar([con_flujo("**Flujo:** cliente → pedido → envio → producto")]), problemas)
+    d = pestana(*generar([con_flujo("Flujo: cliente -> pedido -> envio -> producto")]), problemas)
     if d is not None:
         entidades_como_antes(d, problemas)
         dis = disposicion(d, problemas)

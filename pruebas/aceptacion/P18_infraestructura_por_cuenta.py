@@ -33,8 +33,8 @@ FILAS = {   # nombre: (fila, proveedor, cuenta, ambiente)
                      "Nube", "tienda-prod", "producción"),
     "Base de datos": ("| Base de datos | Guarda clientes, pedidos y productos | Nube | tienda-prod | producción | |\n",
                       "Nube", "tienda-prod", "producción"),
-    "Dominio": ("| Dominio | La dirección de la tienda | Registrador | cuenta-tienda | producción | Servidor web |\n",
-                "Registrador", "cuenta-tienda", "producción"),
+    "Dominio": ("| Dominio | La dirección de la tienda | Nube | cuenta-dominios | producción | Servidor web |\n",
+                "Nube", "cuenta-dominios", "producción"),   # el mismo proveedor, otra cuenta: otro contenedor
     "Carpeta de comprobantes": ("| Carpeta de comprobantes | Guarda los comprobantes de pago | Google Drive | Drive de la tienda "
                                 "(del cliente) | producción | |\n", "Google Drive", "Drive de la tienda (del cliente)",
                                 "producción"),
@@ -66,7 +66,8 @@ def piezas(d, problemas, orden, conecta):
 
 
 def escenarios(inf):
-    # 1 · Un contenedor por proveedor y cuenta: «Servidor web» y «Base de datos» comparten Nube y tienda-prod
+    # 1 · Un contenedor por proveedor y cuenta: «Servidor web» y «Base de datos» comparten Nube y tienda-prod;
+    #     «Dominio» está en Nube con otra cuenta, así que va en otro contenedor
     problemas = []
     orden = ["Servidor web", "Base de datos", "Dominio"]
     d = pestana(*generar([tabla_nueva(orden)]), problemas)
@@ -76,7 +77,7 @@ def escenarios(inf):
         if cs is not None:
             igual(problemas, "los contenedores", cs,
                   [{"proveedor": "Nube", "cuenta": "tienda-prod", "ambiente": "producción", "piezas": ["Servidor web", "Base de datos"]},
-                   {"proveedor": "Registrador", "cuenta": "cuenta-tienda", "ambiente": "producción", "piezas": ["Dominio"]}])
+                   {"proveedor": "Nube", "cuenta": "cuenta-dominios", "ambiente": "producción", "piezas": ["Dominio"]}])
         malos = [t for t in avisos(d, "infraestructura") if "Proveedor" in t]
         if malos:
             problemas.append(f"con la tabla nueva, un aviso pide separar por proveedor: {json.dumps(malos, ensure_ascii=False)}")
@@ -115,7 +116,7 @@ def escenarios(inf):
                   [{"proveedor": "Nube", "cuenta": "tienda-prod", "ambiente": "producción", "piezas": ["Servidor web", "Base de datos"]},
                    {"proveedor": "Google Drive", "cuenta": "Drive de la tienda (del cliente)", "ambiente": "producción",
                     "piezas": ["Carpeta de comprobantes"]},
-                   {"proveedor": "Registrador", "cuenta": "cuenta-tienda", "ambiente": "producción", "piezas": ["Dominio"]}])
+                   {"proveedor": "Nube", "cuenta": "cuenta-dominios", "ambiente": "producción", "piezas": ["Dominio"]}])
     inf.escenario("Un servicio externo tiene su propio contenedor", problemas)
 
 
