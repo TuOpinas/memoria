@@ -1,5 +1,7 @@
 # Evals del plugin
 
+Para quien supervisa y no programa, [RESUMEN.md](RESUMEN.md) dice en llano qué comprueba cada escenario; quien añade o cambia uno lo pone al día en el mismo pull request.
+
 Las pruebas de `pruebas/` comprueban los scripts y la página. Los evals comprueban **lo que Claude hace con las skills**: una conversación guionada contra una raíz de prueba, con el plugin cargado y una computadora de mentira, y al final se mira lo que respondió, qué herramientas llamó y qué cambió en la raíz.
 
 Cuestan tokens del plan (cada escenario es una conversación con el modelo: entre 0,5 y 1,5 USD en Opus, 30 a 90 segundos; el 07, sin consola, más), así que corren antes de publicar una versión y cuando se pide, no en cada commit.

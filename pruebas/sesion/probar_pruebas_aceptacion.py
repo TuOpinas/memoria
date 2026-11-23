@@ -27,7 +27,7 @@ def script(paso="Las pruebas de aceptación van en su propio pull request"):
     m = re.compile(r"^(\s*)run: \|\n((?:\1  .*\n|\s*\n)+)", re.M).search(texto, i)
     sangria = len(m.group(1)) + 2
     cuerpo = "".join(l[sangria:] + "\n" for l in m.group(2).rstrip("\n").split("\n"))
-    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"').strip("'") for k in ("ACEPTACION", "ACTIVAS", "PRUEBA", "FALLAN", "PASADAS", "SALTADAS")}
+    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"').strip("'") for k in ("ACEPTACION", "ACTIVAS", "PRUEBA", "FALLAN")}
     return cuerpo, env
 
 
@@ -40,7 +40,7 @@ def repo(sin_carpeta=False):
     git(d, "init", "-q", "-b", "main")
     git(d, "config", "user.email", "p@e.test")
     git(d, "config", "user.name", "Prueba")
-    for f in ("app/main.py", "tests/aceptacion/test_p01.py", "tests/unit/test_x.py", "pruebas/aceptación/test_p01.py",
+    for f in ("app/main.py", "tests/aceptacion/P01_caso.py", "tests/unit/test_x.py", "pruebas/aceptación/P01_caso.py",
               ".github/workflows/pruebas-aceptacion.yml"):
         if sin_carpeta and f.startswith(("tests/aceptacion/", ".github/")):
             continue
@@ -95,27 +95,27 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
 
 
 print("El workflow de las pruebas de aceptación")
-c, o = pr([("escribir", "tests/aceptacion/test_p01.py", None), ("escribir", "tests/aceptacion/test_p02.py", None)])
+c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", "tests/aceptacion/P02_caso.py", None)])
 ok(c == 0, "un pull request que solo toca las pruebas de aceptación pasa")
 c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/unit/test_x.py", None)])
 ok(c == 0, "el de una pieza que no las toca pasa")
-c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)])
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/P01_caso.py", None)])
 ok(c == 1 and "::error::" in o, "uno que cambia las dos cosas falla, con el error en claro")
-c, o = pr([("mover", "tests/aceptacion/test_p01.py", "tests/unit/test_p01.py")])
+c, o = pr([("mover", "tests/aceptacion/P01_caso.py", "tests/unit/P01_caso.py")])
 ok(c == 1, "mover una prueba de aceptación fuera de su carpeta cuenta en los dos sitios y falla")
-c, o = pr([("escribir", "tests/aceptacion-viejas/test_z.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)])
+c, o = pr([("escribir", "tests/aceptacion-viejas/P01_z.py", None), ("escribir", "tests/aceptacion/P01_caso.py", None)])
 ok(c == 1, "una carpeta que solo empieza igual cuenta como fuera")
-c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept="tests/aceptacion/")
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/P01_caso.py", None)], acept="tests/aceptacion/")
 ok(c == 1, "con la barra final en ACEPTACION, igual")
 
-c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_año.py", None)])
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/P01_año.py", None)])
 ok(c == 1, "una prueba con acento en el nombre cuenta como dentro: con código, falla")
-c, o = pr([("escribir", "tests/aceptacion/test_sesión.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)])
+c, o = pr([("escribir", "tests/aceptacion/P01_sesión.py", None), ("escribir", "tests/aceptacion/P01_caso.py", None)])
 ok(c == 0, "y un pull request de escenarios con acentos pasa")
-c, o = pr([("escribir", "app/main.py", None), ("escribir", "pruebas/aceptación/test_p01.py", None)], acept="pruebas/aceptación")
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "pruebas/aceptación/P01_caso.py", None)], acept="pruebas/aceptación")
 ok(c == 1, "una carpeta con acento, también")
 for buena in ("./tests/aceptacion", "././tests/aceptacion", "tests/aceptacion//"):
-    c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/test_p01.py", None)], acept=buena)
+    c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion/P01_caso.py", None)], acept=buena)
     ok(c == 1, f"con ACEPTACION «{buena}», la carpeta se reconoce")
 for mala in ("app/main.py", ""):
     c, o = pr([("escribir", "app/main.py", None)], acept=mala)
@@ -135,59 +135,97 @@ ok(c == 0, "con la carpeta vacía, también")
 c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True)
 ok(c == 0 and "no hay nada que proteger" in o, "una pieza antes de que haya escenarios pasa, y lo dice")
 
+print("El nombre de los archivos y el título (1.27.1)")
+for malo in ("test_P01_extra.py", "P01extra.py", "P02_extra.py", "sub/P01_x.py"):
+    c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", f"tests/aceptacion/{malo}", None)], titulo="Escenarios · P01")
+    ok(c == 1 and malo in o and "«P01_»" in o, f"en «Escenarios · P01», {malo} falla y dice cómo se llama")
+c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", "tests/aceptacion/conftest.py", None), ("escribir", "tests/aceptacion/RESUMEN.md", None)], titulo="Escenarios · P01")
+ok(c == 0, "conftest.py y el resumen entran con los escenarios")
+for titulo in ("P01: alta", "P01 - alta", "p01 alta"):
+    c, o = pr([("escribir", "app/main.py", None)], titulo=titulo)
+    ok(c == 1 and " · »" in o, f"«{titulo}», de una pieza con pruebas, falla y dice cómo empieza el título")
+c, o = pr([("escribir", "app/main.py", None)], titulo="P1: algo")
+ok(c == 0, "el mismo título de una pieza sin pruebas no falla por el título")
+c, o = pr([("escribir", "app/main.py", None)], titulo="Arreglo de un texto")
+ok(c == 0, "un título sin pieza sigue pasando: es «fuera del plan», y lo dice el seguimiento")
+
 print("Las piezas activas y los pull requests de escenarios")
 CUERPO2, ENVW = script("Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios")
 
 
-def activas(pruebas, lista, titulo, prueba="sh tests/aceptacion/{pieza}.sh"):
-    """pruebas: {pieza: código de salida}; lista: el texto de ACTIVAS o None; corre el segundo paso con el título."""
+CUERPOS = {"pasa": "def test_caso():\n    assert True\n", "falla": "def test_caso():\n    assert False\n",
+           "rota": "def test_caso(:\n", "saltada": "import pytest\n\n\ndef test_caso():\n    pytest.skip('luego')\n"}
+
+
+def activas(pruebas, lista, titulo, prueba=None, archivos=None):
+    """pruebas: {pieza: pasa | falla | rota | saltada}, cada una en su archivo «<pieza>_caso.py» (o los de «archivos»,
+    {nombre: resultado}); lista: el texto de ACTIVAS o None; corre el segundo paso con el título, con pytest."""
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
-    for p, rc in pruebas.items():
-        (d / f"tests/aceptacion/{p}.sh").write_text(f"echo '1 {'passed' if rc == 0 else 'failed'} in 0.01s'\nexit {rc}\n", encoding="utf-8")
+    for p, r in pruebas.items():
+        (d / f"tests/aceptacion/{p}_caso.py").write_text(CUERPOS[r], encoding="utf-8")
+    for n, r in (archivos or {}).items():
+        (d / f"tests/aceptacion/{n}").write_text(CUERPOS[r], encoding="utf-8")
     if lista is not None:
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
-    env = dict(os.environ, ACEPTACION="tests/aceptacion", ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba, FALLAN=ENVW["FALLAN"],
-               PASADAS=ENVW["PASADAS"], SALTADAS=ENVW["SALTADAS"], TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp())
+    env = dict(os.environ, ACEPTACION="tests/aceptacion", ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba or ENVW["PRUEBA"], FALLAN=ENVW["FALLAN"],
+               TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
 
-ok("{pieza}" in ENVW["PRUEBA"] and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y PRUEBA con {pieza}")
-c, o = activas({"P01": 1}, None, "Escenarios · P01")
+def errores(o):
+    return "\n".join(l for l in o.splitlines() if "::error::" in l)
+
+
+ok("{archivos}" in ENVW["PRUEBA"] and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y PRUEBA con {archivos}")
+c, o = activas({"P01": "falla"}, None, "Escenarios · P01")
 ok(c == 0, "un pull request de escenarios se une en verde si sus pruebas fallan")
-c, o = activas({"P01": 0}, None, "Escenarios · P01")
+c, o = activas({"P01": "pasa"}, None, "Escenarios · P01")
 ok(c == 1 and "ya pasan" in o, "si sus pruebas ya pasan antes de construir la pieza, falla")
-c, o = activas({"P01": 1, "P02": 1}, None, "Escenarios · P01 + P02 · alta y lista")
+c, o = activas({"P01": "falla", "P02": "falla"}, None, "Escenarios · P01 + P02 · alta y lista")
 ok(c == 0, "uno de varias piezas, también")
-c, o = activas({"P01": 1}, None, "P09 · otra cosa")
+c, o = activas({"P01": "falla"}, None, "P09 · otra cosa")
 ok(c == 0, "una pieza que aún no está en la lista no corre sus pruebas")
-c, o = activas({"P01": 0}, "P01\n", "P01 · alta de clientes")
+c, o = activas({"P01": "pasa"}, "P01\n", "P01 · alta de clientes")
 ok(c == 0, "la pieza que se añade a la lista pasa si sus pruebas pasan")
-c, o = activas({"P01": 1}, "# piezas activas\nP01\n", "P01 · alta de clientes")
+c, o = activas({"P01": "falla"}, "# piezas activas\nP01\n", "P01 · alta de clientes")
 ok(c == 1 and "no pasan" in o, "y falla si no pasan")
-c, o = activas({"P01": 0, "P02": 1}, "P01", "P02 · lista")
+c, o = activas({"P01": "pasa", "P02": "falla"}, "P01", "P02 · lista")
 ok(c == 0, "las de otra pieza aún no activa no cuentan")
-c, o = activas({"P01": 0, "P02": 1}, "P01", "Escenarios · P02")
+c, o = activas({"P01": "pasa", "P02": "falla"}, "P01", "Escenarios · P02")
 ok(c == 0, "un pull request de escenarios corre también las activas, y pasa si pasan")
-c, o = activas({"P01": 1}, "P01", "Escenarios · P01")
+c, o = activas({"P01": "falla"}, "P01", "Escenarios · P01")
 ok(c == 1, "cambiar los escenarios de una pieza activa sigue exigiendo que pasen")
-c, o = activas({"P01": 0}, "P01; rm -rf /\n", "P01 · x")
+c, o = activas({"P01": "pasa"}, "P01; rm -rf /\n", "P01 · x")
 ok(c == 1 and "no es un identificador" in o, "una línea de la lista que no es un identificador falla, sin correr nada")
-c, o = activas({"P01": 1}, None, "Escenarios · $(touch pwned)")
+c, o = activas({"P01": "falla"}, None, "Escenarios · $(touch pwned)")
 ok(c == 1 and "no dice qué pieza" in o, "un título que no es una pieza falla, sin correr nada")
+
+print("Las pruebas de una pieza son sus archivos, y todas las activas corren de una vez (1.27.1)")
+c, o = activas({"P1": "pasa"}, "P1\n", "P9 · x", archivos={"P10_caso.py": "falla", "AP1_caso.py": "falla", "test_P1_otro.py": "falla"})
+ok(c == 0 and "P10_caso" not in o and "AP1_caso" not in o, "P1 no corre las de P10 ni las de un archivo que solo contiene «P1_»")
+c, o = activas({"P1": "falla", "P2": "pasa", "P3": "falla"}, "P1\nP2\nP3\n", "P9 · x")
+e = errores(o)
+ok(c == 1 and " P1," in e and " P3," in e and "P2" not in e and o.count("test session starts") == 1, "una corrida para todas, y el error nombra las que fallan y solo esas")
+c, o = activas({"P1": "saltada", "P2": "pasa"}, "P1\nP2\n", "P9 · x")
+ok(c == 1 and "de P1 no pasaron todas" in errores(o) and "P2" not in errores(o), "una saltada no cuenta como pasada, y se nombra su pieza")
+c, o = activas({"P2": "pasa"}, "P1\nP2\n", "P9 · x")
+ok(c == 1 and "P1 está en la lista" in errores(o), "una pieza activa sin archivos de pruebas falla y dice cómo se llaman")
+c, o = activas({"P1": "rota", "P2": "pasa"}, "P1\nP2\n", "P9 · x")
+ok(c == 1 and " P1," in errores(o) and "P2" not in errores(o), "un archivo que no carga cuenta contra su pieza")
 
 print("«Fallan» quiere decir que fallaron como pruebas (FALLAN)")
 ok(ENVW["FALLAN"] == "1", "la plantilla trae FALLAN, el código de pytest para pruebas fallidas")
-for rc, que in ((5, "sin pruebas de la pieza"), (2, "un error al cargarlas"), (4, "un error de uso")):
-    c, o = activas({"P01": rc}, None, "Escenarios · P01")
-    ok(c == 1 and "no fallaron como pruebas" in o, f"{que} (salida {rc}): falla y lo dice")
-c, o = activas({}, None, "Escenarios · P01", prueba="ejecutor-que-no-existe {pieza}")
+c, o = activas({}, None, "Escenarios · P01")
+ok(c == 1 and "No hay pruebas de P01" in o, "sin pruebas de la pieza: falla y dice cómo se llaman sus archivos")
+c, o = activas({"P01": "rota"}, None, "Escenarios · P01")
+ok(c == 1 and "no fallaron como pruebas" in o, "un error al cargarlas: falla y lo dice")
+c, o = activas({"P01": "falla"}, None, "Escenarios · P01", prueba="ejecutor-que-no-existe {archivos}")
 ok(c == 1 and "no fallaron como pruebas" in o, "el ejecutor sin instalar: falla y lo dice")
-d = pathlib.Path(tempfile.mkdtemp())
-c, o = activas({"P01": 0, "P02": 1}, "P01\nP02\n", "P03 · x", prueba="cat > /dev/null; sh tests/aceptacion/{pieza}.sh")
-ok(c == 1 and "P02" in o, "un comando que lee la entrada estándar no se come la lista")
+c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P03 · x", prueba="cat > /dev/null; " + ENVW["PRUEBA"])
+ok(c == 1 and "P02" in errores(o), "un comando que lee la entrada estándar no se come la lista")
 
 print("La configuración del ejecutor de fuera de la carpeta no pone en verde las pruebas (con pytest de verdad)")
 TRAMPAS = {
@@ -206,7 +244,7 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
     segundo paso con el PRUEBA de la plantilla."""
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
-    (d / "tests/aceptacion/test_p01.py").write_text(f"{cabecera}def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
+    (d / "tests/aceptacion/P01_caso.py").write_text(f"{cabecera}def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
     for ruta, texto in (extra or {}).items():
         (d / ruta).parent.mkdir(parents=True, exist_ok=True)
         (d / ruta).write_text(texto, encoding="utf-8")
@@ -219,7 +257,7 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
     env = dict(os.environ, ACEPTACION=ENVW["ACEPTACION"], ACTIVAS=ENVW["ACTIVAS"], PRUEBA=ENVW["PRUEBA"],
-               FALLAN=ENVW["FALLAN"], PASADAS=ENVW["PASADAS"], SALTADAS=ENVW["SALTADAS"], TITULO=titulo,
+               FALLAN=ENVW["FALLAN"], TITULO=titulo,
                RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
     env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
@@ -274,9 +312,9 @@ c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="
 ok(c == 1 and "quita P01" in o, "quitar una pieza de la lista con código falla")
 c, o = pr([("borrar", ".github/piezas-activas.txt", None), ("escribir", "app/main.py", None)], lista="P01\n", titulo="P03 · x")
 ok(c == 1 and "quita P01" in o, "borrar la lista, también")
-c, o = pr([("lista", "P02\n", None), ("escribir", "tests/aceptacion/test_p01.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · nuevo caso")
+c, o = pr([("lista", "P02\n", None), ("escribir", "tests/aceptacion/P01_caso.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · nuevo caso")
 ok(c == 0 and "sale de la lista" in o, "el pull request de escenarios de P01 la saca mientras cambian sus escenarios")
-c, o = pr([("lista", "P01\n", None), ("escribir", "tests/aceptacion/test_p02.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · x")
+c, o = pr([("lista", "P01\n", None), ("escribir", "tests/aceptacion/P01_caso.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · x")
 ok(c == 1 and "quita P02" in o, "pero no otra pieza")
 c, o = pr([("escribir", "app/main.py", None)], lista="P02\n", titulo="P01 · alta")
 ok(c == 1 and "no está en" in o, "el pull request de una pieza con pruebas en la carpeta que no la añade falla")
@@ -284,13 +322,13 @@ c, o = pr([("escribir", "app/main.py", None), ("lista", "P02\nP01\n", None)], li
 ok(c == 0, "y pasa si la añade")
 c, o = pr([("escribir", "app/main.py", None)], lista="P02\n", titulo="P05 · migrar la base")
 ok(c == 0, "una pieza técnica, sin pruebas en la carpeta, no necesita la lista")
-c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True, titulo="P01 · alta", main_despues=["tests/aceptacion/test_p02.py"])
+c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True, titulo="P01 · alta", main_despues=["tests/aceptacion/P02_caso.py"])
 ok(c == 0, "una rama abierta antes de los primeros escenarios no sale como «quita la carpeta»")
 
 print("Lo que abrió la protección de la lista (revisión de sus arreglos)")
 c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01 · arreglo")
 ok(c == 1 and "quita P01" in o, "un «Escenarios · P01» que cambia código no puede sacar P01 de la lista")
-c, o = pr([("lista", "P02\n", None), ("escribir", "tests/aceptacion/test_p01.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01")
+c, o = pr([("lista", "P02\n", None), ("escribir", "tests/aceptacion/P01_caso.py", None)], lista="P01\nP02\n", titulo="Escenarios · P01")
 ok(c == 0, "con el título que pone el agente, «Escenarios · P01», sí la saca")
 c, o = pr([("lista", "P02\n", None), ("escribir", "app/main.py", None)], lista="P01\nP02\n", titulo='Revert "P01 · alta de clientes"')
 ok(c == 0 and "reversión saca P01" in o, "la reversión de una pieza la saca de la lista, y lo avisa")
