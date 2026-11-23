@@ -55,14 +55,16 @@ jobs:
           COMUN="$(git merge-base "$BASE" "$HEAD")"
           ident='^[A-Za-z]+[0-9]+$'
           # el título: «Kit · …», «Escenarios · P01[ + P02][ · …]», «Revert "…"» o «P01[ + P02] · …»
-          tipo=otro; t="$TITULO"
+          tipo=otro; t="$TITULO"; revierte=0
+          while [[ "$t" == 'Revert "'* ]]; do revierte=1; t="${t#Revert \"}"; t="${t%\"}"; t="${t% (#[0-9]*)}"; done
+          pieza_al_inicio='^[A-Za-z]+[0-9]+[[:space:]]*([+·:,-]|$)'
           if [[ "$t" == "Kit · "* ]]; then tipo=kit
           elif [[ "$t" == "Escenarios · "* ]]; then tipo=escenarios; t="${t#Escenarios · } · "
-          elif [[ "$t" == 'Revert "Escenarios · '* ]]; then tipo=escenarios; t="${t#Revert \"Escenarios · }"; t="${t%%[\"(]*}"; t="${t% · *} · "
-          elif [[ "$t" == 'Revert "'* ]]; then tipo=revert; t="${t#Revert \"}"
-          elif [[ "$t" =~ ^[A-Za-z]+[0-9]+ ]]; then tipo=pieza; fi
+          elif [[ "$t" =~ $pieza_al_inicio ]]; then
+            if [ "$revierte" = 1 ]; then tipo=revert; else tipo=pieza; fi
+          fi
           piezas=" "
-          if [ "$tipo" != kit ] && [ "$tipo" != otro ]; then
+          if [ "$tipo" = escenarios ] || [ "$tipo" = pieza ] || [ "$tipo" = revert ]; then
             if [[ "$t" != *" · "* ]]; then
               echo "::error::El título empieza por una pieza pero no sigue la forma «P01 · …» o «P01 + P02 · …»: «$TITULO»."; exit 1
             fi
@@ -81,13 +83,13 @@ jobs:
             if [[ "$f" == "$ACEPTACION/"* ]]; then
               if [ "$f" = "$ACEPTACION/RESUMEN.md" ] || [[ "$b" =~ ^[A-Za-z]+[0-9]+_.*\.py$ ]]; then echo escenario; else echo ajeno; fi; return
             fi
-            if [[ "$f" == "$ESCENARIOS_EVALS/"* && "$b" =~ ^[0-9]+-[A-Za-z]+[0-9]+-.*\.md$ ]]; then echo escenario; return; fi
+            if [[ "$f" == "$ESCENARIOS_EVALS/"* && "$b" =~ ^[0-9]+-[A-Z]+[0-9]+-. ]]; then echo escenario; return; fi
             echo fuera
           }
           de_pieza() {  # la pieza de un archivo de escenarios, o nada
             local b="${1##*/}"
             if [[ "$1" == "$ACEPTACION/"* ]]; then [[ "$b" =~ ^([A-Za-z]+[0-9]+)_.*\.py$ ]] && echo "${BASH_REMATCH[1]^^}"
-            else [[ "$b" =~ ^[0-9]+-([A-Za-z]+[0-9]+)-.*\.md$ ]] && echo "${BASH_REMATCH[1]^^}"; fi
+            else [[ "$b" =~ ^[0-9]+-([A-Z]+[0-9]+)-. ]] && echo "${BASH_REMATCH[1]}"; fi
             return 0
           }
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
@@ -131,6 +133,8 @@ jobs:
             echo "::error::$ACTIVAS no es un archivo normal."; exit 1
           fi
           leer() { git show "$1:$ACTIVAS" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -E "$ident" | tr 'a-z' 'A-Z' || true; }
+          malas="$(git show "$HEAD:$ACTIVAS" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -vE "^\$|$ident" || true)"
+          [ -z "$malas" ] || { echo "::error::$ACTIVAS tiene líneas que no son un identificador de pieza: $(echo $malas)."; exit 1; }
           antes="$(leer "$COMUN")"; ahora=" $(leer "$HEAD" | tr '\n' ' ')"
           for p in $antes; do
             [[ "$ahora" == *" $p "* ]] && continue
@@ -138,6 +142,7 @@ jobs:
               echo "$p sale de la lista mientras cambian sus escenarios; el próximo pull request de versión la vuelve a añadir."; continue
             fi
             asunto="${TITULO#Revert \"}"; asunto="${asunto%\"}"
+            if [ "$revierte" = 1 ] && [ "$tipo" = escenarios ] && [[ "$piezas" == *" $p "* ]]; then continue; fi
             if [ "$tipo" = revert ] && [[ "$piezas" == *" $p "* ]] && git log --format=%s "$BASE" | grep -qxF -- "$asunto"; then
               echo "::warning::La reversión saca $p de la lista: sus pruebas dejan de contar hasta que otro pull request de $p la vuelva a añadir."; continue
             fi
@@ -145,11 +150,10 @@ jobs:
           done
           # una pieza activa cuyas pruebas cambian sale de la lista en ese mismo pull request
           for p in $tocadas; do
-            if [[ "$ahora" == *" $p "* ]]; then
+            if [[ "$ahora" == *" $p "* ]] && [ "$revierte" = 0 ]; then
               echo "::error::Este pull request cambia las pruebas de $p, que está activa: sácala de $ACTIVAS en este mismo pull request; el próximo de versión la vuelve a añadir cuando las cumpla."; exit 1
             fi
           done
-          echo "${ahora}" > "$RUNNER_TEMP/activas"
           echo "$tipo" > "$RUNNER_TEMP/tipo"; echo "$piezas" > "$RUNNER_TEMP/piezas"; echo "$tocadas" > "$RUNNER_TEMP/tocadas"
       - name: Prepara el entorno
         run: python3 -I -m pip install -q pytest==8.3.5   # las pruebas de P01–P03 corren la plantilla del kit, que usa pytest
@@ -158,10 +162,19 @@ jobs:
           CUERPO: ${{ github.event.pull_request.body }}
         run: |
           set -o pipefail
-          tipo="$(cat "$RUNNER_TEMP/tipo" 2>/dev/null || echo otro)"
-          piezas="$(cat "$RUNNER_TEMP/piezas" 2>/dev/null || echo ' ')"
-          activas="$(cat "$RUNNER_TEMP/activas" 2>/dev/null || echo ' ')"
-          [ -n "${activas// /}" ] || activas=" "
+          for a in tipo piezas tocadas; do [ -f "$RUNNER_TEMP/$a" ] || { echo "::error::Falta lo que deja el paso anterior ($a)."; exit 1; }; done
+          tipo="$(cat "$RUNNER_TEMP/tipo")"; piezas="$(cat "$RUNNER_TEMP/piezas")"
+          # las piezas activas de lo que se va a unir (el checkout), no de la rama: una rama atrasada no esconde una activa
+          activas=" "
+          if [ -e "$ACTIVAS" ] || [ -L "$ACTIVAS" ]; then
+            [ "$(git ls-tree HEAD -- "$ACTIVAS" | awk '{print $1}')" = 100644 ] || { echo "::error::$ACTIVAS no es un archivo normal."; exit 1; }
+            while IFS= read -r p || [ -n "$p" ]; do
+              p="${p%%#*}"; p="${p//[[:space:]]/}"
+              [ -z "$p" ] && continue
+              [[ "$p" =~ ^[A-Za-z]+[0-9]+$ ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
+              [[ "$activas" == *" ${p^^} "* ]] || activas="$activas${p^^} "
+            done < "$ACTIVAS"
+          fi
           # sobre lo que se va a unir (el checkout): cada pieza con pruebas que el título nombra está en la lista
           if [ "$tipo" = pieza ]; then
             for p in $piezas; do
@@ -190,7 +203,7 @@ jobs:
           for p in $piezas; do
             [[ "$activas" == *" $p "* ]] && continue
             evals=()
-            for f in "$ESCENARIOS_EVALS"/*-"$p"-*.md; do [ -e "$f" ] && evals+=("$(basename "$f" .md)"); done
+            for f in "$ESCENARIOS_EVALS"/[0-9]*-"$p"-*.md; do [ -e "$f" ] && evals+=("$(basename "$f" .md)"); done
             if compgen -G "$ACEPTACION/${p}_*.py" > /dev/null; then
               echo "== $p: sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
               set +e; python3 -I "$ACEPTACION/correr.py" "$p" | tee "$RUNNER_TEMP/salida"; rc=$?; set -e
@@ -201,14 +214,15 @@ jobs:
                 echo "::error::Las pruebas de $p tienen que fallar, no saltarse: «$ultima»."; exit 1
               fi
             fi
+            linea="$(printf '%s\n' "$CUERPO" | sed 's/<!--.*-->//g' | sed -n 's/^\**Evals:\**[[:space:]]*//p' | head -n 1 | tr -d '\r')"
             for e in "${evals[@]}"; do
-              if ! printf '%s\n' "$CUERPO" | grep -E '^[-* ]*Evals:' | grep -qw -- "$e"; then
+              if [[ " $linea " != *" $e "* ]]; then
                 echo "::error::La prueba de $p es el eval $e, que corre con la etiqueta «evals»: añade a la descripción la línea «Evals: $e» y comprueba que falla antes de unir."; exit 1
               fi
               echo "::notice::La prueba de $p es el eval $e: corre con la etiqueta «evals» y tiene que fallar antes de unir."
             done
             if ! compgen -G "$ACEPTACION/${p}_*.py" > /dev/null && [ "${#evals[@]}" = 0 ]; then
-              if grep -qE "^$ACEPTACION/${p}_|^$ESCENARIOS_EVALS/[0-9]+-${p}-" <(tr '\0' '\n' < "$RUNNER_TEMP/cambios"); then
+              if grep -qE "^$ACEPTACION/${p}_|^$ESCENARIOS_EVALS/[0-9]+-${p}-" <(tr '\0' '\n' < "$RUNNER_TEMP/cambios" 2>/dev/null); then
                 echo "Los escenarios de $p se retiran."
               else
                 echo "::error::$p no tiene pruebas: ni $ACEPTACION/${p}_*.py ni un eval $ESCENARIOS_EVALS/NN-$p-….md."; exit 1
