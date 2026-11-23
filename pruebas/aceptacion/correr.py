@@ -11,7 +11,7 @@ escenarios.
 
 Sale con 0 si todo pasa; con 1 si alguna prueba falla o se salta; con 2 si una pieza pedida no tiene ningún archivo o un
 script no se pudo ejecutar: no arrancó, salió con otro código (por ejemplo 2, que es como salen las de esta carpeta
-cuando no se pueden montar) o salió con 0, 1 o 77 sin su línea «RESULTADO:», que es lo que pasa con un error de sintaxis
+cuando no se pueden montar), pasó de 10 minutos o salió con 0, 1 o 77 sin su línea «RESULTADO:», que es lo que pasa con un error de sintaxis
 o un import roto. Así una prueba rota no cuenta como una que falla. El 2 manda sobre el 1.
 """
 import pathlib, re, subprocess, sys
@@ -19,6 +19,7 @@ import pathlib, re, subprocess, sys
 AQUI = pathlib.Path(__file__).resolve().parent
 SALTADA = 77
 DICE = {0: "pasa", 1: "falla", SALTADA: "saltada"}
+LIMITE = 600   # segundos por archivo de prueba: uno colgado sale como «no se pudo ejecutar», con su nombre
 
 
 def _fin(pasan, fallan, saltadas, rc):
@@ -49,7 +50,8 @@ def main(args):
             print(f"== {pieza} · {f.name}", flush=True)
             try:
                 r = subprocess.run([sys.executable, "-I", str(f)], cwd=pathlib.Path.cwd(), stdin=subprocess.DEVNULL,
-                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
+                                   timeout=LIMITE)
                 rc = r.returncode
                 sys.stdout.write(r.stdout)
                 lineas = [l.strip() for l in r.stdout.splitlines() if l.strip()]
@@ -61,6 +63,12 @@ def main(args):
             except OSError as e:
                 print(f"   no se pudo ejecutar: {e}")
                 mal = True
+                rotas.append(f.name)
+                continue
+            except subprocess.TimeoutExpired:
+                print(f"   no se pudo ejecutar: pasó de {LIMITE} segundos")
+                mal = True
+                rotas.append(f.name)
                 continue
             if rc == 0:
                 pasan += 1

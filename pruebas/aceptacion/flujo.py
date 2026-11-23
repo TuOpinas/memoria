@@ -7,7 +7,8 @@ la cabeza del pull request, y se corren, en orden, los pasos «run:» del workfl
 cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). El ejecutor es pytest, como en la
 plantilla. Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
-Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «env» y «jobs»; un
+Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «concurrency», «env»
+y «jobs»; un
 solo job con «name», «runs-on», «timeout-minutes» y «steps»; pasos con «name», «uses», «with», «env» y «run: |»; valores
 de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
 «shell:», «defaults:», otro job, otra expresión, un paso que escribe en $GITHUB_ENV o $GITHUB_PATH) la prueba no se monta
@@ -101,7 +102,7 @@ def plantilla():
                 for m in [re.match(r"^" + " " * sangria + r"([^\s#-][^:]*):", l)] if m]
     arriba = claves(0)
     for _, c in arriba:
-        if c not in ("name", "on", "permissions", "env", "jobs"):
+        if c not in ("name", "on", "permissions", "concurrency", "env", "jobs"):
             raise Montaje(f"la plantilla usa «{c}:» arriba, que este arnés no entiende")
     pos = {c: i for i, c in arriba}
     if "on" not in pos or "jobs" not in pos:
@@ -276,13 +277,14 @@ def _expresiones(v, contexto):
     return re.sub(r"\$\{\{\s*([^}]*?)\s*\}\}", una, v)
 
 
-def comprobar(base, cabeza, titulo, extra=None):
+def comprobar(base, cabeza, titulo, extra=None, cuerpo="", autor="persona"):
     """Corre el workflow entero sobre un pull request y devuelve (código de salida, salida). Como en GitHub, se para en el
     primer paso que falla. extra: variables para las pruebas sembradas (p. ej. dónde escriben sus marcas)."""
     env_wf, pasos = plantilla()
     d, sb, sh = repositorio(base, cabeza)
     contexto = {"github.event.pull_request.base.sha": sb, "github.event.pull_request.head.sha": sh,
-                "github.event.pull_request.title": titulo}
+                "github.event.pull_request.title": titulo, "github.event.pull_request.body": cuerpo,
+                "github.event.pull_request.user.login": autor, "github.event.pull_request.number": "1"}
     env = _entorno(d, extra)
     env.update({k: _expresiones(v, contexto) for k, v in env_wf.items()})
     salida = []
