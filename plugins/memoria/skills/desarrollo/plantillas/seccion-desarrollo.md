@@ -37,4 +37,4 @@ Quien no tenga el plugin se lo pide a quien audita o a quien construye.
 - **Construye:** construye con Claude, por bloques de una o varias piezas en un pull request a la rama principal, y lo une con las pruebas en verde y la revisión de calidad hecha.
 - **Administra:** mantiene la configuración y pasa a Prod lo que recibió el sí. Es el único que despliega a Prod; donde unir publica, es quien une el pull request de versión.
 
-Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe una sesión que no ve el código, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual, como un hecho.
+Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe aparte un subagente, antes de que exista el código de la pieza, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual, como un hecho.

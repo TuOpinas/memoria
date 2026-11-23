@@ -2952,11 +2952,11 @@ function ayudaArts(){
         <tr><td><b>Administra</b></td><td>Mantiene la configuración y es el único que despliega a producción, solo lo que tiene el sí</td></tr>
       </tbody>
     </table></div>
-    <p>Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe una sesión que no ve el código, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual.</p>`},
+    <p>Una o dos personas pueden llevar los cuatro roles. El segundo par de ojos lo da el proceso: las pruebas de aceptación las escribe aparte un subagente, antes de que exista el código de la pieza, la verificación la hace otra sesión en otro modelo, y el seguimiento se lee antes del sí. Si quien construye también da el sí, el seguimiento lo dice tal cual.</p>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo-pieza", t:"El camino de una pieza", h:`
     <ol class="hc-pasos">
       <li><b>Escenarios</b><span>Claude propone los escenarios de la pieza, con sus casos de error; quien acepta los aprueba o los corrige. ${F("escribe los escenarios de P03")}</span></li>
-      <li><b>Pruebas aparte</b><span>Una sesión que no tiene el código, solo el diseño, los escenarios y las reglas del repositorio, los convierte en pruebas, en su propio pull request, antes de la pieza. GitHub comprueba que fallan, porque la pieza aún no existe, y quien acepta lo une o lo aprueba.</span></li>
+      <li><b>Pruebas aparte</b><span>Antes de que exista el código de la pieza, Claude encarga a un subagente, que solo ve el diseño, los escenarios y las reglas del repositorio, convertirlos en pruebas, en su propio pull request. No hace falta abrir otra conversación. GitHub comprueba que fallan, porque la pieza aún no existe, y quien acepta lo une o lo aprueba.</span></li>
       <li><b>Construir</b><span>Claude construye la pieza de punta a punta hasta que pasan sus pruebas y las demás siguen en verde; desde ese pull request, las pruebas de la pieza son obligatorias. Se para solo si algo es difícil de revertir, se sale del diseño, falla dos veces o el diseño no lo cubre.</span></li>
       <li><b>Unir</b><span>Con todo en verde y la revisión de calidad hecha, quien construye la une y queda en Release.</span></li>
       <li><b>Verificar</b><span>Antes del sí, una sesión aparte, en el modelo que no la construyó, recorre Release contra los escenarios y deja el reporte; sin Release, la aplicación levantada desde lo unido, con datos de prueba. ${F("verifica P03 en Release")}</span></li>
