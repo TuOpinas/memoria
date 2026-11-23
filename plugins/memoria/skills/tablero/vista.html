@@ -2688,7 +2688,9 @@ const CARGANDO = `<p class="more">Cargando…</p>`;
 // último seguimiento. Aquí solo se dibuja; lo que no se pudo leer o no cuadra sale en «Lo que no cuadra».
 const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" title="Proyecto de desarrollo: tiene la pestaña Desarrollo">Desarrollo</span>` : "";
 const DEV_SEL = {};
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dev]"); if(!b) return; const [pid, k] = b.dataset.dev.split("|"); DEV_SEL[pid] = DEV_SEL[pid]===k ? null : k; render(); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dev]"); if(!b) return; const [pid, k] = b.dataset.dev.split("|"); DEV_SEL[pid] = DEV_SEL[pid]===k ? null : k; render();
+  // el detalle sale debajo del tablero o del diagrama: se lleva a la vista, o el clic parece no hacer nada
+  requestAnimationFrame(() => { const d = document.querySelector(".dev-det"); if(d) d.scrollIntoView({block:"nearest", behavior:"smooth"}); }); });
 document.addEventListener("keydown", e => { if(e.key!=="Enter" && e.key!==" ") return; const b = e.target.closest && e.target.closest("g[data-dev]"); if(!b) return; e.preventDefault(); b.dispatchEvent(new MouseEvent("click", {bubbles:true})); });
 function diagrama(pid, nodos, aristas){
   // nodos: [{id, t, g}] (g, el grupo: una columna por grupo); aristas: [{a, b, t}]. Cajas en columnas, líneas rectas entre centros
@@ -2727,10 +2729,10 @@ function desarrolloTab(p){
     if(sel.startsWith("f:")){ const x = (pl.fases||[]).find(y=>y.id===sel.slice(2)); if(!x) return "";
       return `<div class="dev-det"><h3>${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}</h3>${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p></div>`; }
     if(sel.startsWith("p:")){ const x = piezas[sel.slice(2)]; if(!x) return "";
-      return `<div class="dev-det"><h3>${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}</h3><p>${inline(x.entrega||"")}</p><p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:"Sin estado en el último seguimiento"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?(x.escenarios||[]).map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}</div>`; }
+      return `<div class="dev-det"><h3>${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}</h3><p>${inline(x.entrega||"")}</p><p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?(x.escenarios||[]).map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}</div>`; }
     return "";
   })();
-  const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan");
+  const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan" && !(a.parte==="seguimiento" && !f.seguimiento));   // sin seguimiento ya lo dice la línea de las fechas
   const avL = xs => xs.length ? `<ul class="dev-av">${xs.map(a=>`<li>${inline(a.texto||"")}</li>`).join("")}</ul>` : "";
   const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" data-dev="${esc(p.id)}|f:${esc(x.id)}" aria-expanded="${sel==="f:"+x.id}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" data-dev="${esc(p.id)}|p:${esc(z.id)}" aria-expanded="${sel==="p:"+z.id}"><small>${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div>${sel.startsWith("f:")||sel.startsWith("p:") ? det : ""}</section>`;
   const ents = d.entidades || [], conc = {}; (d.conceptos||[]).forEach(x=>conc[x.nombre]=x);
