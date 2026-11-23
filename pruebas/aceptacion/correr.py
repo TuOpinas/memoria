@@ -11,14 +11,15 @@ escenarios.
 
 Sale con 0 si todo pasa; con 1 si alguna prueba falla o se salta; con 2 si una pieza pedida no tiene ningún archivo o un
 script no se pudo ejecutar: no arrancó, salió con otro código (por ejemplo 2, que es como salen las de esta carpeta
-cuando no se pueden montar) o salió con 0, 1 o 77 sin su línea «RESULTADO:», que es lo que pasa con un error de sintaxis
+cuando no se pueden montar), pasó de 5 minutos o salió con 0, 1 o 77 sin su línea «RESULTADO:», que es lo que pasa con un error de sintaxis
 o un import roto. Así una prueba rota no cuenta como una que falla. El 2 manda sobre el 1.
 """
-import pathlib, re, subprocess, sys
+import os, pathlib, re, signal, subprocess, sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 SALTADA = 77
 DICE = {0: "pasa", 1: "falla", SALTADA: "saltada"}
+LIMITE = 300   # segundos por archivo de prueba: uno colgado sale como «no se pudo ejecutar», con su nombre
 
 
 def _fin(pasan, fallan, saltadas, rc):
@@ -48,11 +49,22 @@ def main(args):
         for f in archivos:
             print(f"== {pieza} · {f.name}", flush=True)
             try:
-                r = subprocess.run([sys.executable, "-I", str(f)], cwd=pathlib.Path.cwd(), stdin=subprocess.DEVNULL,
-                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
-                rc = r.returncode
-                sys.stdout.write(r.stdout)
-                lineas = [l.strip() for l in r.stdout.splitlines() if l.strip()]
+                hijo = subprocess.Popen([sys.executable, "-I", str(f)], cwd=pathlib.Path.cwd(), stdin=subprocess.DEVNULL,
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
+                                        start_new_session=True)
+                try:
+                    salida, _ = hijo.communicate(timeout=LIMITE)
+                except subprocess.TimeoutExpired:
+                    try:   # el grupo entero: también lo que la prueba lanzó
+                        os.killpg(hijo.pid, signal.SIGKILL)
+                    except OSError:
+                        pass
+                    salida, _ = hijo.communicate()
+                    sys.stdout.write(salida or "")
+                    raise
+                rc = hijo.returncode
+                sys.stdout.write(salida)
+                lineas = [l.strip() for l in salida.splitlines() if l.strip()]
                 if rc in DICE and (not lineas or lineas[-1] != "RESULTADO: " + DICE[rc]):
                     print(f"   no se pudo ejecutar (salió con {rc} sin su línea «RESULTADO: {DICE[rc]}»)")
                     mal = True
@@ -61,6 +73,12 @@ def main(args):
             except OSError as e:
                 print(f"   no se pudo ejecutar: {e}")
                 mal = True
+                rotas.append(f.name)
+                continue
+            except subprocess.TimeoutExpired:
+                print(f"   no se pudo ejecutar: pasó de {LIMITE} segundos")
+                mal = True
+                rotas.append(f.name)
                 continue
             if rc == 0:
                 pasan += 1
