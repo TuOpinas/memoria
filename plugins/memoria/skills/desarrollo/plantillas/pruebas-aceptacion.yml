@@ -217,7 +217,7 @@ jobs:
               done
               if [ "$mal" = 0 ] && [ "$sueltas" = 1 ]; then
                 # una prueba que se salta desde el código que importa no lleva su archivo en el resumen
-                echo "::error::Las pruebas de aceptación no pasaron todas: «$ultima». Una prueba saltada o esperada como fallo no cuenta."; mal=1
+                echo "::error::Las pruebas de aceptación no pasaron todas: «$ultima». Una prueba saltada o esperada como fallo no cuenta: busca SKIPPED, XFAIL o XPASS en la salida de arriba para ver cuál es."; mal=1
               fi
               if [ "$mal" = 0 ] && [ "$rc" != 0 ]; then
                 echo "::error::Las pruebas de aceptación no se pudieron correr (el ejecutor salió con $rc). Si es un error al importar o un plugin que falta: no se lee configuración de fuera de la carpeta, y lo que necesiten va en su conftest.py (cabecera de este workflow)."; mal=1
