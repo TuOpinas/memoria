@@ -55,6 +55,8 @@ Lo primero que se lee es la vara de medir, no el material:
 
 Se escribe en tres o cuatro líneas qué tendría que ser cierto si el objetivo se cumple. Contra eso se mide todo lo demás.
 
+**Lo más sencillo que cubre el objetivo** (1.27.1). La vara lleva siempre esta línea: «lo básico para cumplirlo, sin estorbar». Se revisa contra el objetivo, no contra lo que se construyó ni contra una versión perfecta de ello: que algo pueda ser más completo, más fiel o más general no es un hallazgo si el objetivo no lo pide. Cada revisor lo recibe en su encargo y pregunta **qué sobra antes que qué falta**: lo que se puede quitar sin dejar de cumplir el objetivo es un hallazgo, y de los que más pesan.
+
 ## Paso 4 · Revisar por lentes
 
 Cinco lentes, cada una con su pregunta; por defecto corren las que pide el tamaño (paso 1):
@@ -96,6 +98,8 @@ Propuesta: … (qué cambiar, sin cambiarlo)
 ```
 
 **Dónde se guarda.** En `taller/revisiones-de-calidad/` del proyecto que se revisó (o del proyecto que mantiene lo revisado), como `revision-de-calidad-<tema>.md` en `borrador`, con `basado_en` de lo que se leyó: cada revisión es un informe distinto, así que el número de la versión revisada va en el nombre (contrato, sección 6), y juntas en su subcarpeta no llenan el taller (1.23). Las que estén sueltas en `taller/` de antes se mueven ahí la primera vez que se guarda una nueva, sin cambiarles el nombre. Si ya existe uno del mismo tema, se reescribe su cuerpo (una revisión de arreglos no es el mismo tema: va en su propio informe, paso 1): la revisión anterior queda en el historial de la carpeta y lo que importaba de ella ya entró al proyecto. Sus secciones `Medición` y `Lo que se escapó` se conservan, y la medición nueva va encima de la anterior: una por corrida. La auditoría de la carpeta se guarda en el proyecto que su responsable de contexto elija. Antes de guardarlo se comprueba con `comprobar_informe.py`, junto a este archivo (`python3 <directorio de esta skill>/comprobar_informe.py <informe>`, en el contenedor sobre una copia si la consola no tiene el plugin): si dice algo, se arregla antes de guardar. Es lo mismo que mira `release.sh` antes de publicar una versión. El informe se guarda con su medición (paso 7) antes de responder.
+
+**Ante cada hallazgo, tres salidas, en este orden** (1.27.1): quitar lo que lo causa, si el objetivo se cumple sin ello; aceptarlo por escrito, con su porqué, si no lo impide; y solo después arreglarlo. La propuesta de cada hallazgo dice cuál, y un arreglo que añade código o texto dice cuánto. **Se para y se pregunta a la persona antes de arreglar nada** cuando hay más de dos hallazgos que impiden el objetivo, cuando arreglar lo propuesto haría crecer lo revisado más de la mitad, o cuando una ronda de arreglos encuentra más que la anterior: eso dice que la pieza está mal planteada, y lo que toca es replantearla o quitarla, no otra ronda.
 
 **Qué respondo.** Cuántos hallazgos hay por peso, los tres o cuatro primeros en una línea cada uno, dónde quedó el informe y la frase para trabajarlos en una sesión; si alguno impide el objetivo, o en una revisión de arreglos es un riesgo que abrió un arreglo, que al arreglarlo toca su revisión de arreglos («revisa los arreglos de <informe>»). Si la revisión es periódica, se propone la fecha de la siguiente para que la sesión la ponga en los siguientes pasos. Si con este informe hay diez mediciones en el área, sin contar las de arreglos («, arreglos» en `Tipo:`, o `-arreglos-`, `-fixes` o `-round-` en el nombre), fechadas después del `actualizado` de `efectividad-de-las-revisiones.md` (o diez en total, si aún no existe), o la revisión usó un modelo que ninguna medición tenía, se propone leer la efectividad (paso 8). Se cuentan con una búsqueda de líneas (`grep` de `^Fecha:`, `^Tipo:` y `^Modelo:` en los informes del área), sin abrirlos, como se buscan los «Afecta a:» al abrir sesión; la misma búsqueda dice en el paso 2 si un modelo ya tiene revisiones medidas.
 
@@ -148,7 +152,8 @@ Además de las prohibiciones de `convenciones` (anexo `escribir.md`):
 - Dar un hallazgo sin evidencia, o una opinión como si fuera un hallazgo.
 - Empezar sin acordar el alcance, o una revisión a fondo sin haber recomendado el modelo.
 - Guardar un informe sin su medición.
-- Medir contra lo que ya existe en lugar de contra el objetivo.
+- Medir contra lo que ya existe, o contra su versión perfecta, en lugar de contra el objetivo.
+- Proponer más maquinaria donde quitar algo cumple el objetivo.
 
 ## Ejemplo
 

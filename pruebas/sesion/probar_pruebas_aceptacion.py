@@ -146,6 +146,8 @@ for titulo in ("P01: alta", "P01 - alta", "p01 alta"):
     ok(c == 1 and " · »" in o, f"«{titulo}», de una pieza con pruebas, falla y dice cómo empieza el título")
 c, o = pr([("escribir", "app/main.py", None)], titulo="P1: algo")
 ok(c == 0, "el mismo título de una pieza sin pruebas no falla por el título")
+c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion-no/x.py", None)], titulo="P01: alta", main_despues=["tests/aceptacion/P01_canción.py"])
+ok(c == 1 and " · »" in o, "tampoco se cuela si la prueba de la pieza lleva acento en el nombre")
 c, o = pr([("escribir", "app/main.py", None)], titulo="Arreglo de un texto")
 ok(c == 0, "un título sin pieza sigue pasando: es «fuera del plan», y lo dice el seguimiento")
 
@@ -157,7 +159,7 @@ CUERPOS = {"pasa": "def test_caso():\n    assert True\n", "falla": "def test_cas
            "rota": "def test_caso(:\n", "saltada": "import pytest\n\n\ndef test_caso():\n    pytest.skip('luego')\n"}
 
 
-def activas(pruebas, lista, titulo, prueba=None, archivos=None):
+def activas(pruebas, lista, titulo, prueba=None, archivos=None, carpeta="tests/aceptacion"):
     """pruebas: {pieza: pasa | falla | rota | saltada}, cada una en su archivo «<pieza>_caso.py» (o los de «archivos»,
     {nombre: resultado}); lista: el texto de ACTIVAS o None; corre el segundo paso con el título, con pytest."""
     d = pathlib.Path(tempfile.mkdtemp())
@@ -169,7 +171,7 @@ def activas(pruebas, lista, titulo, prueba=None, archivos=None):
     if lista is not None:
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
-    env = dict(os.environ, ACEPTACION="tests/aceptacion", ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba or ENVW["PRUEBA"], FALLAN=ENVW["FALLAN"],
+    env = dict(os.environ, ACEPTACION=carpeta, ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba or ENVW["PRUEBA"], FALLAN=ENVW["FALLAN"],
                TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
@@ -222,6 +224,14 @@ c, o = activas({}, None, "Escenarios · P01")
 ok(c == 1 and "No hay pruebas de P01" in o, "sin pruebas de la pieza: falla y dice cómo se llaman sus archivos")
 c, o = activas({"P01": "rota"}, None, "Escenarios · P01")
 ok(c == 1 and "no fallaron como pruebas" in o, "un error al cargarlas: falla y lo dice")
+for titulo, lista in (("Escenarios · P01", None), ("P9 · x", "P01\n")):
+    c, o = activas({"P01": "pasa" if lista else "falla"}, lista, titulo, archivos={"conftest.py": "rota"})
+    ok(c == 1 and ("no fallaron como pruebas" in o or "no se pudieron correr" in o), f"un conftest.py que no carga (salida 4) en «{titulo}»: falla y lo dice")
+c, o = activas({"P01": "pasa"}, "P01\n", "P9 · x", prueba=ENVW["PRUEBA"] + " --co")
+ok(c == 1 and "Ninguna prueba de aceptación de P01 corrió" in o, "unas pruebas que se recogen y no corren no cuentan como pasadas")
+for carpeta in ("./tests/aceptacion", "tests/aceptacion//"):
+    c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P9 · x", carpeta=carpeta, archivos={"P01_con espacio.py": "pasa"})
+    ok(c == 1 and " P02," in errores(o) and "P01" not in errores(o), f"con ACEPTACION «{carpeta}» y un archivo con espacio, el error nombra solo la que falla")
 c, o = activas({"P01": "falla"}, None, "Escenarios · P01", prueba="ejecutor-que-no-existe {archivos}")
 ok(c == 1 and "no fallaron como pruebas" in o, "el ejecutor sin instalar: falla y lo dice")
 c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P03 · x", prueba="cat > /dev/null; " + ENVW["PRUEBA"])

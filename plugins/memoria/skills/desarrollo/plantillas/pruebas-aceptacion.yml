@@ -27,7 +27,8 @@
 #   corto de pytest, -r): unas pruebas que no corren no cuentan como verdes.
 # - Esto cierra la configuración, no el código: lo que importan las pruebas corre en su proceso y puede hacer trampa (salir
 #   con 0, tocar pytest). Eso lo ven la verificación sobre Release y quien revisa. Está hecho para pytest; con otro
-#   ejecutor, PRUEBA, FALLAN, PASADAS y SALTADAS se cambian por los suyos, y lo que lee de fuera lo revisa quien audita (R2).
+#   ejecutor se cambian PRUEBA y FALLAN y se adapta en el último paso la lectura de su resumen (de_pieza y las saltadas), y lo
+#   que lee de fuera lo revisa quien audita (R2).
 # Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o este workflow; si es otra
 # persona, lo exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
@@ -94,7 +95,7 @@ jobs:
             for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ $ident ]] && piezas="$piezas${p^^} "; done
           fi
           # un título que empieza por una pieza con pruebas y no sigue con « · » no se cuela como «sin pieza»
-          nombres="$(git ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | sed "s|^${carpeta}||")"
+          nombres="$(git -c core.quotepath=off ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | sed "s|^${carpeta}||")"
           tiene_pruebas() { grep -qiE "^$1_[^/]+\.py$" <<< "$nombres"; }
           if [ "$piezas" = " " ] && [ "$escenarios" = 0 ] && [ "$revert" = 0 ] && [[ "$TITULO" =~ ^([A-Za-z]+[0-9]+) ]]; then
             p="${BASH_REMATCH[1]}"
@@ -172,13 +173,13 @@ jobs:
           set -o pipefail
           [ -d "$ACEPTACION" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }
           ident='^[A-Za-z]+[0-9]+$'
-          dir="${ACEPTACION%/}"
+          dir="$ACEPTACION"; while [[ "$dir" == ./* ]]; do dir="${dir#./}"; done; dir="$(printf '%s' "$dir" | tr -s '/')"; dir="${dir%/}"
           dir_re="$(printf '%s' "$dir" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
           # los archivos de una pieza: los que empiezan por ella y «_», sueltos en la carpeta
           archivos_de() { find "$dir" -maxdepth 1 -type f -iname "$1_*.py" | LC_ALL=C sort; }
           correr() { local a; a="$(printf '%q ' "$@")"; local c="${PRUEBA//\{archivos\}/$a}"; bash -c "$c" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; }
           # las líneas del resumen corto que son de una pieza, y cuántas hay de una clase
-          de_pieza() { grep -iE "^(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)( \[[0-9]+\])? ${dir_re}/$1_[^/ :]*\.py" "$RUNNER_TEMP/salida" || true; }
+          de_pieza() { grep -iE "^(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)( \[[0-9]+\])? ${dir_re}/$1_[^/:]*\.py" "$RUNNER_TEMP/salida" || true; }
           cuantas() { grep -cE "^($1)" <<< "$2" || true; }
           activas=" "; todos=(); sin_pruebas=""
           if [ -f "$ACTIVAS" ]; then

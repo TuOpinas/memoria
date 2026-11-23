@@ -6,7 +6,7 @@ Evals:
 <!-- Construyó: el modelo con el que se construyó, p. ej. «Opus 5.5». -->
 Construyó: 
 
-<!-- Aprobó: solo en el pull request de versión, lo escribe quien da el sí antes de unir: «Nombre Apellido, AAAA-MM-DD». -->
+<!-- Aprobó: en el pull request de versión, el sí, que escribe quien lo da antes de unir: «Nombre Apellido, AAAA-MM-DD». En uno de escenarios, la aprobación del plan que se cita: «Nombre Apellido, AAAA-MM-DD, en el plan». En los demás, vacío. -->
 Aprobó: 
 
 <!-- Revisión de calidad: la ruta del informe en la memoria, con su resultado. -->

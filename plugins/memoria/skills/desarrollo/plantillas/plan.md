@@ -64,8 +64,8 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
 Por los pull requests a la rama principal cuyo título empieza por el identificador de la pieza: «P01 · …», o «P01 + P02 · …» si un mismo pull request lleva varias.
 - **Pendiente:** no tiene ninguno abierto ni unido.
 - **En curso:** tiene alguno abierto.
-- **Unida:** todos están unidos (está en Release, si lo hay). Donde unir publica («Paso a Prod» dice que unir el pull request de versión es el paso a Prod), una pieza unida con ese pull request está entregada si su descripción lleva el sí («Aprobó: Nombre Apellido, AAAA-MM-DD»).
+- **Unida:** todos están unidos (está en Release, si lo hay).
 - **Revertida:** se unió una reversión («Revert "P01 · …"»); vuelve a `en curso` con el siguiente pull request de la pieza, y el seguimiento lo dice.
-- **Entregada:** lo unido ya pasó a Prod con su sí.
+- **Entregada:** lo unido ya pasó a Prod con su sí. Donde unir publica («Paso a Prod» dice que unir el pull request de versión es el paso a Prod), el sí es la línea «Aprobó: Nombre Apellido, AAAA-MM-DD» de la descripción de ese pull request.
 
 Un pull request cerrado sin unir no cuenta, ni los que van a otras ramas, ni los de escenarios («Escenarios · P01») ni los del kit («Kit · »), que el seguimiento lista aparte. Un arreglo lleva el identificador de la pieza que arregla. Los de bots no llevan ninguno; los demás sin pieza salen en el seguimiento como «fuera del plan».
