@@ -78,3 +78,56 @@ Su prueba es de otro tipo: el seguimiento lo hace Claude, sin programa, así que
 - El seguro de las saltadas no cubre las pruebas marcadas «se espera que falle», que la comprobación de hoy también rechaza.
 - Si se interrumpe con Ctrl-C a mitad, queda una carpeta temporal sin borrar.
 - Con el bash de serie de un Mac las pruebas no corren: avisan y salen con error.
+
+## Fase F2 · La vista de desarrollo del tablero
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-23, en el plan (fase F2, versión 1.28.0).
+
+**Cómo están planteadas.** Las cuatro piezas se prueban igual. Hay una organización de mentira en `P05_muestra/`: un área «ventas» con dos proyectos, «portal», que construye software (lleva la sección «Desarrollo», con su diseño, su plan, su seguimiento y un documento con el detalle de los datos), y «campaña», que no. Cada prueba la copia a una carpeta temporal, le cambia lo que pide su escenario, genera el tablero sobre ella y lee lo que el tablero prepara para la pestaña Desarrollo del portal. No abre ningún navegador.
+
+Hoy fallan todas las filas, y deben: el tablero todavía no prepara nada para esa pestaña. La columna «La pone en verde» dice qué pieza hace pasar cada fila.
+
+**Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven: que la pestaña dibuje de verdad las columnas, las tarjetas, el flujo de pasos y los diagramas; que un clic abra el detalle de una fase, de una pieza o de una entidad; y que la marca «Desarrollo» se vea en cada sitio del tablero donde sale el proyecto. Las pruebas comprueban que todo eso está preparado con los datos correctos.
+
+### P05 · Lectores y plantilla del diseño
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Se lee un diseño hecho con la plantilla | El diseño del portal, hecho con la plantilla, con «Grupo» en los datos, «Entidades» en los conceptos y «Conecta con» en componentes e infraestructura | Salen el objetivo, los tres pasos de «Cómo funciona», las dos reglas con su excepción, y cada entidad con su grupo y sus relaciones, cada concepto con sus entidades, y cada componente y pieza de infraestructura con lo que conecta | P05 |
+| Se leen un plan y su último seguimiento | El plan con dos fases y tres piezas, y un seguimiento con dos entradas: la de arriba (20 de noviembre) dice el estado de P01 y P02; la de abajo (10 de noviembre), el de las tres | Salen las fases con sus piezas, cada pieza con sus escenarios, y P01 y P02 con el estado y la fecha de la entrada de arriba. P03, que solo sale en la de abajo, no se lleva su estado de ahí | P05 |
+| Una tabla que no se puede leer se nombra, no rompe (sin la columna «Grupo» de «Datos») | Al diseño le falta esa columna | El tablero se genera sin romperse, un aviso nombra «Grupo», y el objetivo, los pasos, las reglas, los conceptos, los componentes y la infraestructura salen enteros | P05 |
+| Una tabla que no se puede leer se nombra, no rompe (sin la sección «Reglas») | Al diseño le falta esa sección | Lo mismo: un aviso nombra «Reglas» y lo demás sale entero, entidades incluidas | P05 |
+
+### P08 · Pestaña Desarrollo: resumen y plan
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| La pestaña muestra el resumen y el plan como tablero | El portal con su sección, diseño, plan y seguimiento | Salen el objetivo, los pasos de «Cómo funciona» en orden y las reglas; el plan, una columna por fase en el orden del plan (F1 con P01 y P02, F2 con P03), cada pieza con el estado del último seguimiento, y la fecha de ese seguimiento | P08, con P05 hecha |
+| Una fase abre su detalle | La misma | Cada fase trae su frase «en llano», qué podrá hacer quién, su versión y su «Listo cuando», tal como los dice el plan | P08, con P05 hecha |
+| Una pieza abre su detalle | La misma | Cada pieza trae qué entrega, sus escenarios (título y su Dado, Cuando y Entonces) y quién los aprobó y cuándo | P08, con P05 hecha |
+| Cada fuente dice su fecha | La misma | Salen la fecha del diseño (15 de noviembre), la del plan (18) y la del seguimiento (20), cada una con el documento del que sale | P08, con P05 hecha |
+| Sin seguimiento el plan se sigue viendo | El proyecto dice «Seguimiento: por crear» y no hay archivo de seguimiento | Salen las fases y las tres piezas, ninguna con estado, y un aviso del seguimiento dice que aún no lo hay | P08, con P05 hecha |
+| Lo que no se puede leer se dice, y lo demás se pinta | La tabla de piezas del plan está escrita como una frase, no como tabla | Un aviso del plan dice que no se pudo leer, y el objetivo, los pasos y las reglas salen enteros | P08, con P05 hecha |
+| Los proyectos de desarrollo llevan una marca | El portal, con la sección, y la campaña, sin ella | El portal lleva la marca «Desarrollo» y tiene pestaña; la campaña no tiene ni marca ni pestaña | P08 |
+
+### P10 · El modelo de datos en la pestaña
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Las entidades se dibujan con sus relaciones | Cuatro entidades en dos grupos (cliente y pedido en «Ventas», producto y categoría en «Catálogo»), con relaciones dentro de un grupo y entre los dos | Cada entidad sale con su grupo, cada relación con su tipo (1:N, N:M…), y cada relación va a una entidad que está | P10, con P05 hecha |
+| Una entidad muestra su detalle y sus conceptos | La línea «Detalle:» del diseño apunta a un documento con una fila para «cliente», y dos conceptos («Pedido» y «Cliente frecuente») la nombran | «cliente» trae los datos de su fila (campos y dónde se guarda) y esos dos conceptos | P10, con P05 hecha |
+| Un desajuste se dice, no se esconde | El diseño tiene una entidad «factura» sin fila en el detalle, y el detalle una fila «envio» que el diseño no tiene | Salen las cinco entidades, y hay dos avisos de los datos: uno nombra «factura» y otro «envio» | P10, con P05 hecha |
+
+### P11 · Componentes e infraestructura en la pestaña
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Cada diagrama muestra qué se conecta con qué | Cuatro componentes y tres piezas de infraestructura, con «Conecta con» lleno | Cada fila sale como una caja con lo que conecta, y cada conexión va a otra caja de la misma tabla | P11, con P05 hecha |
+| Una conexión a algo desconocido se dice | «Panel interno» conecta también con «Buzón», que no está en los componentes, y «Dominio» con «CDN», que no está en la infraestructura | Salen todas las cajas y las conexiones que sí existen; un aviso de los componentes nombra «Buzón» y uno de la infraestructura nombra «CDN» | P11, con P05 hecha |
+
+### Lo que estas pruebas piden de más
+
+1. «Lo nombra» quiere decir que el texto de un aviso trae el nombre tal cual: «Grupo», «Reglas», «factura», «envio», «Buzón», «CDN».
+2. En el escenario del seguimiento con dos entradas, a P03, que solo sale en la de abajo, no se le pide un estado concreto: solo que no se lleve el de esa entrada.
+3. Sin la columna «Grupo», «lo demás» son las otras partes del diseño; no se exige que las entidades salgan.
+4. «Sin romperse» quiere decir que el tablero se genera entero, como hoy: sale bien, no a medias.
