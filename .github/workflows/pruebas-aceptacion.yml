@@ -1,0 +1,144 @@
+# Las pruebas de aceptación de memoria (kit de desarrollo del plugin, 1.27). Es la plantilla del kit adaptada a este
+# repositorio (decisiones shared-memory/plugin-memoria#2026-11-22-3 y -8): las pruebas son scripts con su propio ejecutor
+# (pruebas/aceptacion/correr.py), no pytest, y una pieza que hace el modelo, sin script, se prueba con un eval de
+# pruebas/evals/escenarios/ que no entra en este check (cuesta tokens y no siempre da lo mismo: corre con la etiqueta
+# «evals»).
+#
+# - La zona de las pruebas es pruebas/aceptacion/ y pruebas/evals/. Un pull request no la cambia junto con nada más:
+#   los escenarios entran en su propio pull request («Escenarios · P01»), directo a main, y no publican nada.
+# - Las pruebas de una pieza cuentan desde que su pull request (el de versión, aquí) añade la pieza a ACTIVAS, fuera de
+#   la zona. Ninguno puede quitarla, salvo el de escenarios de esa misma pieza, mientras se cambian, o su reversión.
+#   Una pieza con archivos en pruebas/aceptacion/ que llega a main en un pull request que la nombra tiene que estar en
+#   la lista. Una pieza que solo tiene un eval, o ninguna prueba (técnica), no entra.
+# - Un pull request de escenarios se une en verde si las pruebas de sus piezas no activas fallan como pruebas (correr.py
+#   sale con 1, no con 2). Si la prueba de una pieza es un eval, el check lo dice: se corre con la etiqueta «evals» y
+#   tiene que fallar antes de unir.
+# - Este archivo va en su propio pull request («Kit · »), sin código; en un pull request corre la versión que trae. Lo
+#   une quien acepta (CLAUDE.md, regla 1; configuración, R2).
+# Las acciones van fijadas por commit, con su etiqueta al lado, como en pruebas.yml.
+name: pruebas de aceptación
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+permissions:
+  contents: read
+env:
+  ACEPTACION: pruebas/aceptacion
+  EVALS: pruebas/evals
+  ACTIVAS: .github/piezas-activas.txt
+jobs:
+  aparte:
+    name: pruebas de aceptación
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Las pruebas van en su propio pull request, y la lista de piezas activas no pierde ninguna
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          set -eo pipefail
+          este="${GITHUB_WORKFLOW_REF%@*}"; este="${este#*/*/}"
+          [ -n "$este" ] || este=".github/workflows/pruebas-aceptacion.yml"
+          COMUN="$(git merge-base "$BASE" "$HEAD")"
+          # las piezas del título: «P01 · …», «P01 + P02 · …», «Escenarios · P01[ + P02][ · …]» o «Revert "P01 · …"»
+          escenarios=0; revert=0; t="$TITULO"
+          if [[ "$t" == "Escenarios · "* ]]; then escenarios=1; t="${t#Escenarios · } · "
+          elif [[ "$t" == 'Revert "'* ]]; then revert=1; t="${t#Revert \"}"; fi
+          piezas=" "
+          if [[ "$t" == *" · "* ]]; then
+            IFS='+' read -r -a ps <<< "${t%% · *}"
+            for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ ^[A-Za-z]+[0-9]+$ ]] && piezas="$piezas${p^^} "; done
+          fi
+          git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
+          dentro=0; fuera=0; workflow=0
+          while IFS= read -r -d '' f; do
+            if [[ "$f" == "$ACEPTACION/"* || "$f" == "$EVALS/"* ]]; then dentro=$((dentro + 1))
+            elif [ "$f" = "$ACTIVAS" ]; then :
+            elif [ "$f" = "$este" ]; then workflow=1
+            elif [ "$f" = "CLAUDE.md" ]; then :
+            else fuera=$((fuera + 1)); fi
+          done < "$RUNNER_TEMP/cambios"
+          echo "Cambian $dentro archivos de las pruebas y $fuera de fuera; el workflow: $workflow."
+          if [ "$workflow" = 1 ] && { [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
+            echo "::error::Este pull request cambia $este junto con otra cosa: va en su propio pull request («Kit · »)."; exit 1
+          fi
+          if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then
+            echo "::error::Este pull request cambia las pruebas ($ACEPTACION/ o $EVALS/) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
+          fi
+          if [ "$dentro" -gt 0 ] && [ "$escenarios" = 0 ]; then
+            echo "::error::Este pull request cambia las pruebas y su título no empieza por «Escenarios · <pieza>»."; exit 1
+          fi
+          # la lista no pierde ninguna pieza, salvo la que saca su propio pull request de escenarios o su reversión
+          leer() { git show "$1:$ACTIVAS" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -E '^[A-Za-z]+[0-9]+$' | tr 'a-z' 'A-Z' || true; }
+          antes="$(leer "$COMUN")"; ahora=" $(leer "$HEAD" | tr '\n' ' ')"
+          for p in $antes; do
+            [[ "$ahora" == *" $p "* ]] && continue
+            if [ "$escenarios" = 1 ] && [[ "$piezas" == *" $p "* ]] && [ "$fuera" = 0 ]; then
+              echo "$p sale de la lista mientras se cambian sus escenarios; el próximo pull request de versión la vuelve a añadir."; continue
+            fi
+            if [ "$revert" = 1 ] && [[ "$piezas" == *" $p "* ]]; then
+              echo "::warning::La reversión saca $p de la lista: sus pruebas dejan de contar hasta que otro pull request de $p la vuelva a añadir."; continue
+            fi
+            echo "::error::Este pull request quita $p de $ACTIVAS: sus pruebas dejarían de contar. Solo la saca su pull request de escenarios («Escenarios · $p»), que no toca código, o su reversión."; exit 1
+          done
+          # el pull request de una pieza con pruebas en la carpeta la añade a la lista
+          if [ "$escenarios" = 0 ] && [ "$revert" = 0 ]; then
+            for p in $piezas; do
+              if git ls-tree --name-only "$HEAD" -- "$ACEPTACION/" | sed "s|^$ACEPTACION/||" | grep -q "^${p}_.*\.py$" && [[ "$ahora" != *" $p "* ]]; then
+                echo "::error::$p tiene pruebas de aceptación en $ACEPTACION/ y no está en $ACTIVAS: su pull request la añade."; exit 1
+              fi
+            done
+          fi
+      - name: Prepara el entorno
+        run: python3 -m pip install -q pytest==8.3.5   # las pruebas de P01–P03 corren la plantilla del kit, que usa pytest
+      - name: Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          set -o pipefail
+          [ -f "$ACEPTACION/correr.py" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }
+          activas=" "
+          if [ -f "$ACTIVAS" ]; then
+            while IFS= read -r p || [ -n "$p" ]; do
+              p="${p%%#*}"; p="${p//[[:space:]]/}"
+              [ -z "$p" ] && continue
+              [[ "$p" =~ ^[A-Za-z]+[0-9]+$ ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
+              activas="$activas${p^^} "
+            done < "$ACTIVAS"
+          fi
+          if [ "$activas" != " " ]; then
+            echo "== Piezas activas:$activas: sus pruebas tienen que pasar"
+            set +e; python3 -I "$ACEPTACION/correr.py" $activas; rc=$?; set -e
+            if [ "$rc" != 0 ]; then
+              echo "::error::Las pruebas de aceptación de las piezas activas no pasan (correr.py salió con $rc: 1 es que fallan, 2 que no se pudieron correr)."; exit 1
+            fi
+          fi
+          if [[ "$TITULO" == "Escenarios · "* ]]; then
+            resto="${TITULO#Escenarios · }"; resto="${resto%% · *}"
+            IFS='+' read -r -a piezas <<< "$resto"
+            for p in "${piezas[@]}"; do
+              p="${p//[[:space:]]/}"
+              [[ "$p" =~ ^[A-Za-z]+[0-9]+$ ]] || { echo "::error::El título no dice qué pieza («Escenarios · P01»)."; exit 1; }
+              p="${p^^}"
+              [[ "$activas" == *" $p "* ]] && continue
+              if ls "$ACEPTACION/${p}_"*.py >/dev/null 2>&1; then
+                echo "== $p: sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
+                set +e; python3 -I "$ACEPTACION/correr.py" "$p"; rc=$?; set -e
+                if [ "$rc" = 0 ]; then echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios."; exit 1; fi
+                if [ "$rc" != 1 ]; then echo "::error::Las pruebas de $p no fallaron como pruebas (correr.py salió con $rc): no se pudieron correr."; exit 1; fi
+              elif ls "$EVALS/escenarios/"*"-${p}-"*.md >/dev/null 2>&1; then
+                echo "::notice::La prueba de $p es un eval ($(ls "$EVALS/escenarios/"*"-${p}-"*.md | xargs -n1 basename | tr '\n' ' ')): no corre aquí. Córrelo con la etiqueta «evals» y comprueba que falla antes de unir."
+              else
+                echo "::error::$p no tiene pruebas: ni $ACEPTACION/${p}_*.py ni un eval $EVALS/escenarios/*-${p}-*.md."; exit 1
+              fi
+            done
+          fi
