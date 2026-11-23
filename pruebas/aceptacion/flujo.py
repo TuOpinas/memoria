@@ -7,10 +7,15 @@ la cabeza del pull request, y se corren, en orden, los pasos «run:» del workfl
 cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). El ejecutor es pytest, como en la
 plantilla. Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
+Del workflow se entiende un subconjunto: un solo job, pasos con «name», «uses», «with», «env» y «run: |», valores de una
+línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
+«shell:», otro job, otra expresión) la prueba no se monta (salida 2) en vez de correr algo distinto de lo que correría
+GitHub. Los pasos corren con «bash -eo pipefail», como en GitHub, que pide bash 4 o posterior.
+
 Una prueba que usa este arnés sale con 0 si pasa, con 1 si falla y con 2 si no se pudo montar (sin git, sin pytest, sin
 la plantilla): eso no es que la pieza falte, y correr.py lo cuenta como error.
 """
-import os, pathlib, re, shutil, subprocess, sys, tempfile, traceback
+import atexit, itertools, os, pathlib, re, shutil, subprocess, sys, tempfile, traceback
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 YML = RAIZ / "plugins" / "memoria" / "skills" / "desarrollo" / "plantillas" / "pruebas-aceptacion.yml"
@@ -21,6 +26,22 @@ class Montaje(Exception):
     """La prueba no se pudo montar: sale con 2."""
 
 
+# ---------- temporales: una carpeta por proceso, que se borra al salir ----------
+_TMP = None
+_cuenta = itertools.count(1)
+
+
+def _tmp(nombre, carpeta=False):
+    global _TMP
+    if _TMP is None:
+        _TMP = pathlib.Path(tempfile.mkdtemp(prefix="aceptacion-"))
+        atexit.register(shutil.rmtree, _TMP, True)
+    p = _TMP / f"{nombre}-{next(_cuenta)}"
+    if carpeta:
+        p.mkdir()
+    return p
+
+
 # ---------- leer la plantilla (sin PyYAML) ----------
 def _valor(v):
     v = v.strip()
@@ -28,7 +49,12 @@ def _valor(v):
         q = v[0]
         fin = v.find(q, 1)
         if fin > 0:
+            resto = v[fin + 1:].strip()
+            if resto and not resto.startswith("#"):
+                raise Montaje(f"no se entiende el valor {v!r} de la plantilla (comillas dentro de comillas)")
             return v[1:fin]
+    if v[:1] in ("|", ">"):
+        raise Montaje(f"no se entiende el valor {v!r} de la plantilla (varias líneas)")
     m = re.search(r"\s#", v)
     return (v[:m.start()] if m else v).strip()
 
@@ -62,10 +88,12 @@ def plantilla():
         if l.startswith("env:"):
             env = _mapa(lineas, i + 1, 2)
             break
-    try:
-        i = next(i for i, l in enumerate(lineas) if re.match(r"^\s+steps:\s*$", l))
-    except StopIteration:
+    donde = [i for i, l in enumerate(lineas) if re.match(r"^\s+steps:\s*$", l)]
+    if not donde:
         raise Montaje("la plantilla no tiene «steps:»")
+    if len(donde) > 1:
+        raise Montaje("la plantilla tiene más de un job: este arnés solo entiende uno")
+    i = donde[0]
     j = i + 1
     while j < len(lineas) and not lineas[j].strip():
         j += 1
@@ -87,6 +115,8 @@ def plantilla():
         c = re.match(r"^" + " " * (ind + 2) + r"([a-z-]+):\s*(.*)$", l)
         if actual is not None and c:
             clave, resto = c.group(1), c.group(2)
+            if clave not in ("name", "uses", "with", "env", "run"):
+                raise Montaje(f"el paso «{actual['nombre']}» usa «{clave}:», que este arnés no entiende")
             if clave == "name":
                 actual["nombre"] = _valor(resto)
             elif clave == "env" and not resto.strip():
@@ -103,17 +133,29 @@ def plantilla():
                     actual["run"] = "\n".join(x[sang:] for x in cuerpo) + "\n"
                     k = n
                     continue
+                if resto.strip().startswith(">"):
+                    raise Montaje("un «run: >» de la plantilla no se entiende")
                 actual["run"] = resto + "\n"
         k += 1
     if not any(p["run"] for p in pasos):
         raise Montaje("la plantilla no tiene pasos «run:»")
+    for p in pasos:
+        if p["run"] and "${{" in p["run"]:
+            raise Montaje(f"el paso «{p['nombre']}» usa una expresión de GitHub dentro de «run:», que este arnés no sustituye")
     return env, pasos
 
 
 # ---------- el repositorio del pull request ----------
+def _limpio():
+    """El entorno sin nada que cambie adónde escribe git ni qué configuración lee, ni variables de GitHub o de pytest."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_", "GITHUB_", "PYTEST_"))}
+    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
+    return env
+
+
 def _git(d, *a):
     r = subprocess.run(["git", "-c", "user.name=Prueba", "-c", "user.email=p@e.test", "-c", "commit.gpgsign=false",
-                        "-c", "core.hooksPath=/dev/null", "-C", str(d), *a], capture_output=True, text=True)
+                        "-c", "core.hooksPath=/dev/null", "-C", str(d), *a], capture_output=True, text=True, env=_limpio())
     if r.returncode != 0:
         raise Montaje(f"git {' '.join(a)}: {r.stderr.strip()}")
     return r.stdout.strip()
@@ -135,7 +177,7 @@ def repositorio(base, cabeza):
     workflow de la plantilla en su sitio, como un repositorio que ya montó el kit. Devuelve (carpeta, sha base, sha cabeza)."""
     if not shutil.which("git"):
         raise Montaje("no hay git")
-    d = pathlib.Path(tempfile.mkdtemp(prefix="aceptacion-"))
+    d = _tmp("repo", carpeta=True)
     _git(d, "init", "-q", "-b", "main")
     todo = {WORKFLOW: YML.read_text(encoding="utf-8"), "app/main.py": "x = 1\n"}
     todo.update(base)
@@ -150,18 +192,44 @@ def repositorio(base, cabeza):
     return d, sha_base, _git(d, "rev-parse", "HEAD")
 
 
+_comprobado = False
+
+
+def _requisitos(env):
+    """Lo que los pasos necesitan del entorno, con el mismo PATH con el que corren: si falta, no se monta (2)."""
+    global _comprobado
+    if _comprobado:
+        return
+    if not shutil.which("bash", path=env.get("PATH")):
+        raise Montaje("no hay bash")
+    r = subprocess.run(["bash", "-c", "echo ${BASH_VERSINFO[0]}"], capture_output=True, text=True, env=env)
+    if not r.stdout.strip().isdigit() or int(r.stdout.strip()) < 4:
+        raise Montaje("el bash del PATH es anterior al 4 (macOS trae el 3.2): los pasos del workflow no corren con él")
+    if subprocess.run(["bash", "-c", "python3 -m pytest --version"], capture_output=True, env=env).returncode != 0:
+        raise Montaje("el python3 del PATH no tiene pytest (python3 -m pip install pytest): la plantilla corre las pruebas con él")
+    _comprobado = True
+
+
 def _entorno(d, extra):
-    if subprocess.run([sys.executable, "-m", "pytest", "--version"], capture_output=True).returncode != 0:
-        raise Montaje("pytest no está instalado (python3 -m pip install pytest): la plantilla corre las pruebas con pytest")
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("GITHUB_", "PYTEST_"))}
-    env.update(RUNNER_TEMP=tempfile.mkdtemp(prefix="runner-"),
+    env = _limpio()
+    _requisitos(env)
+    archivos = {}
+    for v in ("GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_STEP_SUMMARY"):
+        archivos[v] = _tmp(v.lower())
+        archivos[v].write_text("", encoding="utf-8")
+    env.update({k: str(v) for k, v in archivos.items()})
+    env.update(RUNNER_TEMP=str(_tmp("runner", carpeta=True)),
                GITHUB_WORKFLOW_REF=f"prueba/repo/{WORKFLOW}@refs/pull/1/merge", GITHUB_WORKSPACE=str(d))
     env.update(extra or {})
     return env
 
 
 def _expresiones(v, contexto):
-    return re.sub(r"\$\{\{\s*([^}]*?)\s*\}\}", lambda m: contexto.get(m.group(1), ""), v)
+    def una(m):
+        if m.group(1) not in contexto:
+            raise Montaje(f"la plantilla usa la expresión «{m.group(1)}», que este arnés no conoce")
+        return contexto[m.group(1)]
+    return re.sub(r"\$\{\{\s*([^}]*?)\s*\}\}", una, v)
 
 
 def comprobar(base, cabeza, titulo, extra=None):
@@ -179,9 +247,9 @@ def comprobar(base, cabeza, titulo, extra=None):
             continue
         e = dict(env)
         e.update({k: _expresiones(v, contexto) for k, v in paso["env"].items()})
-        guion = pathlib.Path(tempfile.mkstemp(suffix=".sh")[1])
+        guion = _tmp("paso.sh")
         guion.write_text(paso["run"], encoding="utf-8")
-        r = subprocess.run(["bash", "--noprofile", "--norc", "-e", str(guion)], cwd=d, env=e, capture_output=True,
+        r = subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail", str(guion)], cwd=d, env=e, capture_output=True,
                            text=True, stdin=subprocess.DEVNULL, timeout=600)
         salida.append(f"--- paso «{paso['nombre']}» (salida {r.returncode})\n{r.stdout}{r.stderr}")
         if r.returncode != 0:
@@ -189,39 +257,31 @@ def comprobar(base, cabeza, titulo, extra=None):
     return 0, "\n".join(salida)
 
 
-def prueba_de_pieza(pieza, archivos, extra=None):
-    """Corre solo el comando de la plantilla para una pieza (PRUEBA, con {pieza} — o {piezas}, si la plantilla lo cambia —
-    puesto a esa pieza) en un repositorio con esos archivos. Devuelve (código de salida, salida)."""
-    env_wf, _ = plantilla()
-    if "PRUEBA" not in env_wf:
-        raise Montaje("la plantilla no tiene PRUEBA")
-    d, _, _ = repositorio(archivos, {})
-    env = _entorno(d, extra)
-    env.update(env_wf)
-    env.update(PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
-    c = env_wf["PRUEBA"].replace("{piezas}", pieza).replace("{pieza}", pieza)
-    r = subprocess.run(["bash", "-c", c], cwd=d, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=600)
-    return r.returncode, r.stdout + r.stderr
-
-
 # ---------- las pruebas sembradas y lo que dejan ----------
 def sembrada(nombre, resultado="pasa", carpeta=None):
     """El texto de un archivo de pruebas de pytest con una prueba que deja su marca («<nombre> <pid>») en $MARCAS y
-    luego pasa, falla o se salta."""
+    luego pasa, falla o se salta. La función no lleva la pieza en su nombre, para que un error que repita el nombre de
+    la prueba no parezca nombrar la pieza. otra(texto) deja solo la función, para sumarla a otro archivo."""
     final = {"pasa": "    assert True\n", "falla": "    assert False, 'falla a propósito'\n",
              "saltada": "    import pytest\n    pytest.skip('saltada a propósito')\n"}[resultado]
-    return ("import os\n\n\ndef test_" + re.sub(r"\W", "_", nombre) + "():\n"
+    return ("import os\n\n\ndef test_caso_" + str(next(_cuenta)) + "():\n"
             f"    with open(os.environ['MARCAS'], 'a', encoding='utf-8') as f:\n"
             f"        f.write('{nombre} ' + str(os.getpid()) + '\\n')\n" + final)
 
 
 def marcas():
     """Un archivo de marcas nuevo: (variables para comprobar(), función que lee [(nombre, pid)])."""
-    f = pathlib.Path(tempfile.mkstemp(prefix="marcas-")[1])
+    f = _tmp("marcas")
+    f.write_text("", encoding="utf-8")
 
     def leer():
         return [tuple(l.split()) for l in f.read_text(encoding="utf-8").splitlines() if l.strip()]
     return {"MARCAS": str(f)}, leer
+
+
+def otra(texto):
+    """La función de una sembrada, sin su «import os», para ponerla en un archivo que ya tiene otra."""
+    return texto.split("\n\n\n", 1)[1]
 
 
 def errores(salida):
@@ -233,6 +293,16 @@ def nombra(lineas, pieza):
     return any(re.search(r"(?<![A-Za-z0-9])" + re.escape(pieza) + r"(?![0-9])", l) for l in lineas)
 
 
+def verde(rc, salida, que="el check"):
+    """Los problemas de un caso que tiene que quedar en verde: salida 0 y ningún error."""
+    problemas = []
+    if rc != 0:
+        problemas.append(f"{que} no quedó en verde (salió con {rc})")
+    if errores(salida):
+        problemas.append(f"{que} dio un error: {errores(salida)[0][:160]}")
+    return problemas
+
+
 def plantilla_activas():
     env_wf, _ = plantilla()
     return env_wf.get("ACEPTACION", "tests/aceptacion").rstrip("/"), env_wf.get("ACTIVAS", ".github/piezas-activas.txt")
@@ -241,10 +311,11 @@ def plantilla_activas():
 # ---------- informar ----------
 class Informe:
     def __init__(self, pieza):
-        self.pieza, self.fallos = pieza, 0
+        self.pieza, self.fallos, self.total = pieza, 0, 0
 
     def escenario(self, titulo, problemas, salida=""):
         """problemas: lista de lo que no se cumple (vacía si el escenario se cumple)."""
+        self.total += 1
         if problemas:
             self.fallos += 1
             print(f"  FALLA {self.pieza} · {titulo}")
@@ -260,7 +331,8 @@ class Informe:
 
 
 def principal(pieza, cuerpo):
-    """Corre cuerpo(informe) y sale con 0, 1 o 2."""
+    """Corre cuerpo(informe) y sale con 0, 1 o 2. La última línea es «RESULTADO: pasa» o «RESULTADO: falla»: correr.py
+    solo cuenta una salida 0 o 1 que la traiga, para que una prueba que no arranca no pase por una que falla."""
     inf = Informe(pieza)
     try:
         cuerpo(inf)
@@ -271,4 +343,8 @@ def principal(pieza, cuerpo):
         print(f"  ERROR {pieza}: la prueba se rompió (es un error de la prueba, no de la pieza):")
         traceback.print_exc(file=sys.stdout)
         sys.exit(2)
+    if not inf.total:
+        print(f"  ERROR {pieza}: la prueba no comprobó ningún escenario")
+        sys.exit(2)
+    print("RESULTADO: " + ("falla" if inf.fallos else "pasa"), flush=True)
     sys.exit(1 if inf.fallos else 0)

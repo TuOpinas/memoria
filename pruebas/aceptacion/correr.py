@@ -5,27 +5,36 @@ Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/correr.py P01
 
 Corre, desde este mismo proceso, cada archivo .py de esta carpeta cuyo nombre empieza exactamente por «<PIEZA>_» (P1 no
 toma P10_…), cada uno con «python3 -I» y desde la raíz del repositorio. Un script sale con 0 si pasa, 1 si falla y 77 si
-se salta. Termina con la lista de piezas que fallaron y, en la última línea, «N pasan · M fallan · K saltadas».
+se salta, y su última línea dice lo mismo: «RESULTADO: pasa», «RESULTADO: falla» o «RESULTADO: saltada». Termina con la
+lista de piezas que fallaron y, en la última línea, «N pasan · M fallan · K saltadas», que cuenta archivos de prueba, no
+escenarios.
 
 Sale con 0 si todo pasa; con 1 si alguna prueba falla o se salta; con 2 si una pieza pedida no tiene ningún archivo o un
-script no se pudo ejecutar (no arrancó, o salió con otro código: por ejemplo 2, que es como salen las de esta carpeta
-cuando no se pueden montar). El 2 manda sobre el 1.
+script no se pudo ejecutar: no arrancó, salió con otro código (por ejemplo 2, que es como salen las de esta carpeta
+cuando no se pueden montar) o salió con 0, 1 o 77 sin su línea «RESULTADO:», que es lo que pasa con un error de sintaxis
+o un import roto. Así una prueba rota no cuenta como una que falla. El 2 manda sobre el 1.
 """
 import pathlib, re, subprocess, sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 SALTADA = 77
+DICE = {0: "pasa", 1: "falla", SALTADA: "saltada"}
+
+
+def _fin(pasan, fallan, saltadas, rc):
+    print(f"{pasan} pasan · {fallan} fallan · {saltadas} saltadas")
+    return rc
 
 
 def main(args):
     if not args:
         print(__doc__.strip().split("\n\n")[1])
-        return 2
+        return _fin(0, 0, 0, 2)
     piezas = []
     for a in args:
         if not re.fullmatch(r"[A-Za-z]+[0-9]+", a):
             print(f"«{a}» no es un identificador de pieza (P01).")
-            return 2
+            return _fin(0, 0, 0, 2)
         if a.upper() not in piezas:
             piezas.append(a.upper())
     pasan = fallan = saltadas = 0
@@ -39,8 +48,15 @@ def main(args):
         for f in archivos:
             print(f"== {pieza} · {f.name}", flush=True)
             try:
-                r = subprocess.run([sys.executable, "-I", str(f)], cwd=pathlib.Path.cwd(), stdin=subprocess.DEVNULL)
+                r = subprocess.run([sys.executable, "-I", str(f)], cwd=pathlib.Path.cwd(), stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
                 rc = r.returncode
+                sys.stdout.write(r.stdout)
+                lineas = [l.strip() for l in r.stdout.splitlines() if l.strip()]
+                if rc in DICE and (not lineas or lineas[-1] != "RESULTADO: " + DICE[rc]):
+                    print(f"   no se pudo ejecutar (salió con {rc} sin su línea «RESULTADO: {DICE[rc]}»)")
+                    mal = True
+                    continue
             except OSError as e:
                 print(f"   no se pudo ejecutar: {e}")
                 mal = True
@@ -65,10 +81,7 @@ def main(args):
     print("Piezas que fallan: " + (", ".join(piezas_fallan) if piezas_fallan else "ninguna"))
     if piezas_saltadas:
         print("Piezas con pruebas saltadas: " + ", ".join(piezas_saltadas))
-    print(f"{pasan} pasan · {fallan} fallan · {saltadas} saltadas")
-    if mal:
-        return 2
-    return 1 if (fallan or saltadas) else 0
+    return _fin(pasan, fallan, saltadas, 2 if mal else 1 if (fallan or saltadas) else 0)
 
 
 if __name__ == "__main__":

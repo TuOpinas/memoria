@@ -1,56 +1,66 @@
 # Pruebas de aceptación · resumen para quien acepta
 
-Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-22, en el plan (fase F1, versión 1.27.1). Este resumen está escrito a mano; desde la pieza P09 lo genera `correr.py` desde la ficha de cada prueba y el check comprueba que coincide.
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-22, en el plan (fase F1, versión 1.27.1). Este resumen está escrito a mano; desde la pieza P09 se genera desde las propias pruebas.
 
 ## Qué buscan
 
-Que el check de pruebas de aceptación que el kit entrega a cada proyecto (la plantilla `pruebas-aceptacion.yml`) elija bien las pruebas de cada pieza, las corra de una vez y no deje pasar nombres o títulos mal puestos; y que el seguimiento compruebe la aprobación que cita un pull request.
+El kit entrega a cada proyecto una comprobación automática que GitHub corre en cada pull request (aquí, «la comprobación»). Estas pruebas buscan que esa comprobación elija bien las pruebas de cada pieza, las corra todas de una vez y no deje pasar archivos o títulos mal puestos.
 
 ## Cómo están planteadas
 
-- **P01 a P03** montan un repositorio de mentira con un pull request de mentira (archivos, lista de piezas activas y título) y corren sobre él los pasos reales de la plantilla, como lo haría GitHub. Las pruebas «sembradas» dentro de ese repositorio dejan una marca al correr: así se sabe cuáles corrieron y en qué proceso.
-- **P04** es un escenario de evals: el seguimiento lo hace el modelo, sin script, así que se prueba con una sesión real de Claude sobre un GitHub falso. No entra en el check obligatorio y todavía no corre: falta el modo de pull requests falsos del arnés, que llega con «Kit · ».
-- Hoy todas fallan, y deben: las piezas aún no existen.
+Cada prueba arma un repositorio de mentira con un pull request de mentira, corre sobre él la comprobación tal como la entrega el kit y mira qué pasó: si quedó en verde o en rojo, qué pruebas corrieron y qué dijeron sus mensajes de error.
 
-## P01 · Selección exacta de la pieza · `P01_seleccion_exacta.py`
+Cada fila de abajo lleva el título tal como lo imprime la prueba al correr, para poder casar un «FALLA» con su fila. Las filas marcadas **Añadido** no están en los escenarios aprobados: son casos de control, y se aprueban con este resumen.
 
-| Escenario | Cómo se monta | Qué hace | Resultado esperado |
+Hoy fallan todas las filas menos una, y deben: las piezas aún no existen. La columna «La pone en verde» dice qué pieza hace pasar cada fila.
+
+## P01 · Selección exacta de la pieza
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Solo corren las pruebas de la pieza | P1 y P10 activas, con `P1_alta.py` y `P10_baja.py` | Corre las pruebas de P1 | Corre `P1_alta.py` y no `P10_baja.py` |
-| El fallo nombra a su pieza | P1 y P10 activas; la prueba de P1 falla y la de P10 pasa | Corre el check en un pull request de código | Falla, la prueba de P1 llegó a correr, el error nombra a P1 y no a P10 |
-| *Añadido:* el caso al revés | Lo mismo, con la de P10 fallando | Corre el check | Falla y nombra a P10, no a P1 |
+| Solo corren las pruebas de la pieza | P1 está activa y su prueba pasa. P10 tiene una prueba en la carpeta, que falla, y todavía no está activa | Corre la prueba de P1 y no la de P10; la comprobación queda en verde | P01 |
+| El fallo nombra a su pieza (falla P1, pasa P10) | P1 y P10 activas; la prueba de P1 falla | Queda en rojo, y el error nombra a P1 y no a P10 | P01 |
+| **Añadido:** El fallo nombra a su pieza (falla P10, pasa P1) | Lo mismo, al revés | Queda en rojo, y el error nombra a P10 y no a P1 | P01 |
+| **Añadido:** Con todas las pruebas pasando, el check queda en verde | P1 y P10 activas; las dos pasan | Corren las dos y queda en verde | P01 |
 
-## P02 · Una sola corrida · `P02_una_corrida.py`
+**Cambia un escenario aprobado, y pide tu aprobación.** El primero decía «P1 y P10 activas; al correr P1, solo corre la de P1». Con la pieza P02 todas las activas corren juntas, así que «correr solo P1» deja de existir. La prueba lo plantea así: P10 tiene pruebas pero aún no está activa, y no debe correr.
 
-| Escenario | Cómo se monta | Qué hace | Resultado esperado |
+## P02 · Una sola corrida
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Una corrida prueba todas las piezas activas | P1, P2 y P3 activas; fallan P1 y P3, pasa P2 | Corre el check | Corren las tres en un solo proceso; falla y nombra a P1 y a P3, no a P2 |
-| Una prueba saltada no cuenta como pasada | P1 y P2 activas; P1 tiene una prueba que pasa y otra saltada | Corre el check | Falla y nombra a P1, no a P2 |
-| *Añadido:* el caso al revés | La saltada está en P2 | Corre el check | Falla y nombra a P2, no a P1 |
+| Una corrida prueba todas las piezas activas | P1, P2 y P3 activas; fallan P1 y P3. P4 tiene una prueba que falla y no está activa | Corren las tres en una sola corrida y no la de P4; queda en rojo, y el error nombra a P1 y a P3 | P02 |
+| Una prueba saltada no cuenta como pasada (la saltada es de P1) | P1 y P2 activas; P1 tiene una prueba que pasa y otra que se salta | Queda en rojo y el error nombra a P1, no a P2 | P01 |
+| **Añadido:** Una prueba saltada no cuenta como pasada (la saltada es de P2) | Lo mismo, al revés | Queda en rojo y el error nombra a P2, no a P1 | P01 |
+| **Añadido:** Con todas las pruebas pasando, una sola corrida y el check en verde | P1, P2 y P3 activas y pasando; P4 falla y no está activa | Corren las tres en una sola corrida, no la de P4, y queda en verde | P02 |
 
-## P03 · «Tiene pruebas» por el nombre del archivo · `P03_nombre_y_titulo.py`
+Las dos filas de la prueba saltada son un seguro: la comprobación de hoy ya rechaza las saltadas, y pasan en cuanto P01 está hecha. Están para que P02 no lo rompa.
 
-| Escenario | Cómo se monta | Qué hace | Resultado esperado |
+## P03 · «Tiene pruebas» por el nombre del archivo
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| El archivo de una prueba empieza por su pieza | Un pull request «Escenarios · P1» con `test_P1_alta.py`, con `P1alta.py` y con `alta_P1.py` (tres casos) | Corre el check | Falla y el error dice que el archivo tiene que empezar por «P1_» |
-| Un título mal escrito no se cuela | P01 tiene pruebas; un pull request de código titulado «P01: alta» | Corre el check | Falla y el error dice que el título empieza por «P01 · » |
+| El archivo de una prueba empieza por su pieza (tres casos) | Un pull request «Escenarios · P1» trae `P1_alta.py`, bien nombrado, y otro archivo mal nombrado: `test_P1_extra.py`, `P1extra.py` o `extra_P1.py` | Queda en rojo, y el error nombra el archivo malo y dice que empieza por «P1_» | P03 |
+| **Añadido:** Un pull request de escenarios bien nombrado queda en verde | «Escenarios · P1» solo con `P1_alta.py`, que falla porque la pieza no existe | Queda en verde | P01 |
+| Un título mal escrito no se cuela («P01: alta») | P01 tiene pruebas; un pull request de código se titula «P01: alta» | Queda en rojo y el error dice que el título empieza «P01 · » | P03 |
+| **Añadido:** Un título mal escrito no se cuela («P07: alta») | Lo mismo con P07, para que el mensaje no lleve «P01» fijo | Queda en rojo y el error dice «P07 · » | P03 |
+| **Añadido:** Un título así, de una pieza sin pruebas, no falla por el título | P09 no tiene pruebas; el pull request se titula «P09: algo» | Queda en verde. Es la única fila que hoy ya pasa | — |
+| **Añadido:** El pull request de la pieza, bien titulado, queda en verde | «P01 · alta» añade P01 a la lista de activas, y su prueba pasa | Queda en verde | P01 |
 
-## P04 · La aprobación citada se comprueba · `pruebas/evals/escenarios/30-P04-aprobacion-citada.md`
+## Lo que las pruebas piden de más
 
-| Escenario | Cómo se monta | Qué hace | Resultado esperado |
-|---|---|---|---|
-| Una cita que coincide con el plan cuenta | Quien acepta no tiene GitHub; el #11 toca las pruebas y cita su «Aprobó:» tal como está en el plan | Pide el seguimiento | El #11 sale como aprobado por quien acepta |
-| Una cita que falta o no coincide se señala | El #12 no cita nada; el #13 cita a otra persona | Pide el seguimiento | Dice «sin aprobación de quien acepta» |
+Además de las filas «Añadido», las pruebas exigen cuatro cosas que tus escenarios no dicen con esas palabras:
 
-Límite de P04: con las comprobaciones que hoy tiene el arnés de evals se puede pedir que la frase aparezca y que el #11 no la lleve, pero no que la lleven en concreto el #12 y el #13.
+1. El nombre de la pieza que falla tiene que ir en un mensaje de error de la comprobación, no en cualquier parte de la salida.
+2. Ningún mensaje de error puede nombrar a una pieza cuyas pruebas pasan. Un error como «Falla P1 (activas: P1, P2, P3)» no vale.
+3. «Una sola corrida» se comprueba viendo que todas las pruebas corrieron en el mismo proceso.
+4. El error de un archivo mal nombrado tiene que traer el nombre del archivo y el prefijo «P1_» tal cual.
+
+## P04 no está en este pull request
+
+Su prueba es de otro tipo: el seguimiento lo hace Claude, sin programa, así que se prueba con una sesión real. Su escenario se retiró de aquí porque todavía no puede correr y no comprobaba la cita que no coincide con el plan. Vuelve en su propio pull request, con pull requests ya unidos, que es lo que mira el seguimiento.
 
 ## Lo que no es una prueba
 
-- `correr.py`: el ejecutor. Corre los archivos que empiezan exactamente por la pieza y «_» y termina con «N pasan · M fallan · K saltadas». Sale con 0 si todo pasa, con 1 si algo falla o se salta y con 2 si no se pudo correr.
-- `flujo.py`: el arnés que monta el repositorio de mentira y corre los pasos de la plantilla.
-
-## Para tener presente al aprobar
-
-- Los casos «al revés» de P01 y P02 no están en los escenarios aprobados. Se añadieron porque sin ellos la plantilla de hoy cumple «falla y nombra a P1» por accidente.
-- La segunda prueba de P01 y las de P02 dependen de P03: usan archivos `P1_….py`, que la plantilla de hoy no recoge.
-- Si P02 quita el comando «por pieza», el primer escenario de P01 hay que releerlo.
+- `correr.py` corre las pruebas de las piezas que se le piden. Su última línea, «N pasan · M fallan · K saltadas», cuenta archivos de prueba, no filas de este resumen. Una prueba que no arranca cuenta como error, no como fallo.
+- `flujo.py` arma el repositorio de mentira y corre la comprobación. Entiende una parte de lo que GitHub admite; ante lo que no entiende, se detiene con un error en vez de correr otra cosa.
