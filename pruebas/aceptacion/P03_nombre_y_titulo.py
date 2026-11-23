@@ -24,7 +24,7 @@ def escenarios(inf):
 
     # 1 · El archivo de una prueba empieza por su pieza: «Escenarios · P1» trae un archivo bien nombrado, que falla
     #     como debe, y otro mal nombrado
-    for malo in ("test_P1_extra.py", "P1extra.py", "extra_P1.py"):
+    for malo in ("test_P1_extra.py", "P1extra.py", "extra_P1.py", "P2_extra.py"):
         extra, _ = flujo.marcas()
         cabeza = {f"{acept}/P1_alta.py": flujo.sembrada("P1_alta", "falla"),
                   f"{acept}/{malo}": flujo.sembrada("extra", "falla")}
@@ -37,29 +37,33 @@ def escenarios(inf):
             problemas.append(f"ningún error nombra a {malo} y dice que tiene que empezar por «P1_»")
         inf.escenario(f"El archivo de una prueba empieza por su pieza ({malo})", problemas, salida if problemas else "")
 
-    # 1 bis · Control: «Escenarios · P1» con su archivo bien nombrado, que falla porque la pieza no existe, queda en verde
+    # 1 bis · Control: «Escenarios · P1» con su archivo bien nombrado, que falla porque la pieza no existe, y el
+    #         conftest.py de la carpeta, que no es de ninguna pieza, queda en verde
     extra, leer = flujo.marcas()
-    rc, salida = flujo.comprobar({}, {f"{acept}/P1_alta.py": flujo.sembrada("P1_alta", "falla")}, "Escenarios · P1", extra)
+    cabeza = {f"{acept}/P1_alta.py": flujo.sembrada("P1_alta", "falla"), f"{acept}/conftest.py": "# lo que las pruebas comparten\n"}
+    rc, salida = flujo.comprobar({}, cabeza, "Escenarios · P1", extra)
     problemas = ([] if "P1_alta" in {n for n, _ in leer()} else ["P1_alta.py no corrió"]) + flujo.verde(rc, salida)
     inf.escenario("Un pull request de escenarios bien nombrado queda en verde", problemas, salida if problemas else "")
 
     # 2 · Un título mal escrito no se cuela: la pieza tiene pruebas y el título no empieza por «<pieza> · »
-    for pieza in ("P01", "P07"):
+    for pieza, titulo in (("P01", "P01: alta"), ("P07", "P07: alta"), ("P01", "P01 - alta")):
         extra, _ = flujo.marcas()
         base = {f"{acept}/{pieza}_alta.py": flujo.sembrada(f"{pieza}_alta", "falla")}
-        rc, salida = flujo.comprobar(base, CODIGO, f"{pieza}: alta", extra)
+        rc, salida = flujo.comprobar(base, CODIGO, titulo, extra)
         err = flujo.errores(salida)
         problemas = []
         if rc == 0:
-            problemas.append(f"el check pasó con el título «{pieza}: alta»")
+            problemas.append(f"el check pasó con el título «{titulo}»")
         if not any(f"{pieza} · " in l for l in err):
             problemas.append(f"ningún error dice que el título tiene que empezar «{pieza} · »")
-        inf.escenario(f"Un título mal escrito no se cuela («{pieza}: alta»)", problemas, salida if problemas else "")
+        inf.escenario(f"Un título mal escrito no se cuela («{titulo}»)", problemas, salida if problemas else "")
 
-    # 2 bis · Control: el mismo título mal escrito, de una pieza que no tiene pruebas, no falla por el título
+    # 2 bis · Control: el mismo título mal escrito, de una pieza que no tiene pruebas, no falla por el título. P1 no
+    #         tiene ningún archivo «P1_…»; sí los hay de P10 y uno de P01 que lleva «P1» en el nombre
     extra, _ = flujo.marcas()
-    base = {f"{acept}/P01_alta.py": flujo.sembrada("P01_alta", "falla")}
-    rc, salida = flujo.comprobar(base, CODIGO, "P09: algo", extra)
+    base = {f"{acept}/P10_baja.py": flujo.sembrada("P10_baja", "falla"),
+            f"{acept}/P01_usa_P1.py": flujo.sembrada("P01_usa_P1", "falla")}
+    rc, salida = flujo.comprobar(base, CODIGO, "P1: algo", extra)
     inf.escenario("Un título así, de una pieza sin pruebas, no falla por el título", flujo.verde(rc, salida),
                   salida if rc else "")
 

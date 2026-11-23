@@ -7,15 +7,19 @@ la cabeza del pull request, y se corren, en orden, los pasos «run:» del workfl
 cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). El ejecutor es pytest, como en la
 plantilla. Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
-Del workflow se entiende un subconjunto: un solo job, pasos con «name», «uses», «with», «env» y «run: |», valores de una
-línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
-«shell:», otro job, otra expresión) la prueba no se monta (salida 2) en vez de correr algo distinto de lo que correría
-GitHub. Los pasos corren con «bash -eo pipefail», como en GitHub, que pide bash 4 o posterior.
+Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «env» y «jobs»; un
+solo job con «name», «runs-on», «timeout-minutes» y «steps»; pasos con «name», «uses», «with», «env» y «run: |»; valores
+de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
+«shell:», «defaults:», otro job, otra expresión, un paso que escribe en $GITHUB_ENV o $GITHUB_PATH) la prueba no se monta
+(salida 2) en vez de correr algo distinto de lo que correría GitHub. Los pasos corren con «bash -e», que es lo que usa
+GitHub cuando el paso no dice «shell:» (sin pipefail: si lo necesita, el paso lo pone), y la plantilla pide bash 4 o
+posterior. El entorno de los pasos se arma desde cero (PATH, HOME, idioma y carpeta temporal), para que el color de la
+terminal, PYTHONPATH o la configuración de git de quien corre no cambien el resultado.
 
 Una prueba que usa este arnés sale con 0 si pasa, con 1 si falla y con 2 si no se pudo montar (sin git, sin pytest, sin
 la plantilla): eso no es que la pieza falte, y correr.py lo cuenta como error.
 """
-import atexit, itertools, os, pathlib, re, shutil, subprocess, sys, tempfile, traceback
+import atexit, itertools, os, pathlib, re, shutil, signal, subprocess, sys, tempfile, traceback
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 YML = RAIZ / "plugins" / "memoria" / "skills" / "desarrollo" / "plantillas" / "pruebas-aceptacion.yml"
@@ -36,6 +40,10 @@ def _tmp(nombre, carpeta=False):
     if _TMP is None:
         _TMP = pathlib.Path(tempfile.mkdtemp(prefix="aceptacion-"))
         atexit.register(shutil.rmtree, _TMP, True)
+        try:   # que un SIGTERM también pase por atexit
+            signal.signal(signal.SIGTERM, lambda *_: sys.exit(2))
+        except (ValueError, OSError):
+            pass
     p = _TMP / f"{nombre}-{next(_cuenta)}"
     if carpeta:
         p.mkdir()
@@ -88,6 +96,28 @@ def plantilla():
         if l.startswith("env:"):
             env = _mapa(lineas, i + 1, 2)
             break
+    def claves(sangria, desde=0, hasta=None):
+        return [(i, m.group(1)) for i, l in enumerate(lineas[desde:hasta], desde)
+                for m in [re.match(r"^" + " " * sangria + r"([^\s#-][^:]*):", l)] if m]
+    arriba = claves(0)
+    for _, c in arriba:
+        if c not in ("name", "on", "permissions", "env", "jobs"):
+            raise Montaje(f"la plantilla usa «{c}:» arriba, que este arnés no entiende")
+    pos = {c: i for i, c in arriba}
+    if "on" not in pos or "jobs" not in pos:
+        raise Montaje("la plantilla no tiene «on:» o «jobs:»")
+    fin_on = min([i for i, _ in arriba if i > pos["on"]] or [len(lineas)])
+    en_on = [c for _, c in claves(2, pos["on"] + 1, fin_on)]
+    if en_on != ["pull_request"]:
+        raise Montaje(f"«on:» tiene que ser solo «pull_request» (tiene {', '.join(en_on) or 'otra forma'})")
+    for _, c in claves(4, pos["on"] + 1, fin_on):
+        if c != "types":
+            raise Montaje(f"«on: pull_request» usa «{c}:», que este arnés no entiende")
+    if len(claves(2, pos["jobs"] + 1)) != 1:
+        raise Montaje("la plantilla tiene más de un job: este arnés solo entiende uno")
+    for _, c in claves(4, pos["jobs"] + 1):
+        if c not in ("name", "runs-on", "timeout-minutes", "steps"):
+            raise Montaje(f"el job usa «{c}:», que este arnés no entiende")
     donde = [i for i, l in enumerate(lineas) if re.match(r"^\s+steps:\s*$", l)]
     if not donde:
         raise Montaje("la plantilla no tiene «steps:»")
@@ -113,13 +143,17 @@ def plantilla():
             l = " " * (ind + 2) + l[ind + 2:]
             lineas[k] = l
         c = re.match(r"^" + " " * (ind + 2) + r"([a-z-]+):\s*(.*)$", l)
+        if l.strip() and not l.lstrip().startswith("#") and (len(l) - len(l.lstrip())) == ind + 2 and not c:
+            raise Montaje(f"no se entiende esta línea de un paso de la plantilla: {l.strip()[:60]}")
         if actual is not None and c:
             clave, resto = c.group(1), c.group(2)
             if clave not in ("name", "uses", "with", "env", "run"):
                 raise Montaje(f"el paso «{actual['nombre']}» usa «{clave}:», que este arnés no entiende")
             if clave == "name":
                 actual["nombre"] = _valor(resto)
-            elif clave == "env" and not resto.strip():
+            elif clave == "env":
+                if resto.strip():
+                    raise Montaje(f"el paso «{actual['nombre']}» trae su «env:» en una línea, que este arnés no entiende")
                 actual["env"] = _mapa(lineas, k + 1, ind + 4)
             elif clave == "run":
                 if resto.strip().startswith("|"):
@@ -142,20 +176,25 @@ def plantilla():
     for p in pasos:
         if p["run"] and "${{" in p["run"]:
             raise Montaje(f"el paso «{p['nombre']}» usa una expresión de GitHub dentro de «run:», que este arnés no sustituye")
+        if p["run"] and re.search(r"GITHUB_(ENV|PATH)\b", p["run"]):
+            raise Montaje(f"el paso «{p['nombre']}» escribe en $GITHUB_ENV o $GITHUB_PATH, que este arnés no aplica")
     return env, pasos
 
 
 # ---------- el repositorio del pull request ----------
 def _limpio():
-    """El entorno sin nada que cambie adónde escribe git ni qué configuración lee, ni variables de GitHub o de pytest."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_", "GITHUB_", "PYTEST_"))}
-    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
+    """Un entorno armado desde cero: solo dónde están los programas, la carpeta personal, el idioma y la carpeta
+    temporal. Nada de git, de GitHub, de pytest ni de Python de quien corre, y git sin configuración de fuera."""
+    env = {k: v for k, v in os.environ.items()
+           if k in ("PATH", "HOME", "LANG", "TMPDIR", "SYSTEMROOT") or k.startswith("LC_")}
+    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", XDG_CONFIG_HOME=str(_tmp("xdg", carpeta=True)))
     return env
 
 
 def _git(d, *a):
     r = subprocess.run(["git", "-c", "user.name=Prueba", "-c", "user.email=p@e.test", "-c", "commit.gpgsign=false",
-                        "-c", "core.hooksPath=/dev/null", "-C", str(d), *a], capture_output=True, text=True, env=_limpio())
+                        "-c", "core.hooksPath=/dev/null", "-c", "core.excludesFile=/dev/null", "-c", "core.attributesFile=/dev/null",
+                        "-C", str(d), *a], capture_output=True, text=True, errors="replace", env=_limpio())
     if r.returncode != 0:
         raise Montaje(f"git {' '.join(a)}: {r.stderr.strip()}")
     return r.stdout.strip()
@@ -189,7 +228,12 @@ def repositorio(base, cabeza):
     _escribir(d, cabeza)
     _git(d, "add", "-A")
     _git(d, "commit", "-qm", "cambio", "--allow-empty")
-    return d, sha_base, _git(d, "rev-parse", "HEAD")
+    sha_cabeza = _git(d, "rev-parse", "HEAD")
+    # como deja el repositorio actions/checkout en un pull request: HEAD suelto y sin ramas locales
+    _git(d, "checkout", "-q", "--detach")
+    _git(d, "update-ref", "refs/remotes/origin/main", sha_base)
+    _git(d, "branch", "-qD", "main", "pull-request")
+    return d, sha_base, sha_cabeza
 
 
 _comprobado = False
@@ -249,8 +293,8 @@ def comprobar(base, cabeza, titulo, extra=None):
         e.update({k: _expresiones(v, contexto) for k, v in paso["env"].items()})
         guion = _tmp("paso.sh")
         guion.write_text(paso["run"], encoding="utf-8")
-        r = subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail", str(guion)], cwd=d, env=e, capture_output=True,
-                           text=True, stdin=subprocess.DEVNULL, timeout=600)
+        r = subprocess.run(["bash", "--noprofile", "--norc", "-e", str(guion)], cwd=d, env=e, capture_output=True,
+                           text=True, errors="replace", stdin=subprocess.DEVNULL, timeout=600)
         salida.append(f"--- paso «{paso['nombre']}» (salida {r.returncode})\n{r.stdout}{r.stderr}")
         if r.returncode != 0:
             return r.returncode, "\n".join(salida)
@@ -258,13 +302,14 @@ def comprobar(base, cabeza, titulo, extra=None):
 
 
 # ---------- las pruebas sembradas y lo que dejan ----------
-def sembrada(nombre, resultado="pasa", carpeta=None):
+def sembrada(nombre, resultado="pasa", funcion=None):
     """El texto de un archivo de pruebas de pytest con una prueba que deja su marca («<nombre> <pid>») en $MARCAS y
     luego pasa, falla o se salta. La función no lleva la pieza en su nombre, para que un error que repita el nombre de
-    la prueba no parezca nombrar la pieza. otra(texto) deja solo la función, para sumarla a otro archivo."""
+    la prueba no parezca nombrar la pieza, salvo que se pida una con «funcion». otra(texto) deja solo la función, para
+    sumarla a otro archivo."""
     final = {"pasa": "    assert True\n", "falla": "    assert False, 'falla a propósito'\n",
              "saltada": "    import pytest\n    pytest.skip('saltada a propósito')\n"}[resultado]
-    return ("import os\n\n\ndef test_caso_" + str(next(_cuenta)) + "():\n"
+    return ("import os\n\n\ndef " + (funcion or "test_caso_" + str(next(_cuenta))) + "():\n"
             f"    with open(os.environ['MARCAS'], 'a', encoding='utf-8') as f:\n"
             f"        f.write('{nombre} ' + str(os.getpid()) + '\\n')\n" + final)
 
@@ -285,8 +330,8 @@ def otra(texto):
 
 
 def errores(salida):
-    """Las líneas de error del workflow (::error::)."""
-    return [l for l in salida.splitlines() if "::error::" in l]
+    """Las líneas de error del workflow: «::error::…» o «::error title=…::…»."""
+    return [l for l in salida.splitlines() if re.search(r"::error( [^:]*)?::", l)]
 
 
 def nombra(lineas, pieza):

@@ -38,7 +38,7 @@ def main(args):
         if a.upper() not in piezas:
             piezas.append(a.upper())
     pasan = fallan = saltadas = 0
-    mal, piezas_fallan, piezas_saltadas = False, [], []
+    mal, piezas_fallan, piezas_saltadas, rotas = False, [], [], []
     for pieza in piezas:
         archivos = sorted(p for p in AQUI.iterdir() if p.is_file() and p.suffix == ".py" and p.name.startswith(pieza + "_"))
         if not archivos:
@@ -56,6 +56,7 @@ def main(args):
                 if rc in DICE and (not lineas or lineas[-1] != "RESULTADO: " + DICE[rc]):
                     print(f"   no se pudo ejecutar (salió con {rc} sin su línea «RESULTADO: {DICE[rc]}»)")
                     mal = True
+                    rotas.append(f.name)
                     continue
             except OSError as e:
                 print(f"   no se pudo ejecutar: {e}")
@@ -76,11 +77,14 @@ def main(args):
                     piezas_saltadas.append(pieza)
             else:
                 mal = True
+                rotas.append(f.name)
                 print(f"   no se pudo ejecutar (salió con {rc})")
     print()
     print("Piezas que fallan: " + (", ".join(piezas_fallan) if piezas_fallan else "ninguna"))
     if piezas_saltadas:
         print("Piezas con pruebas saltadas: " + ", ".join(piezas_saltadas))
+    if rotas:
+        print("No se pudieron ejecutar: " + ", ".join(rotas))
     return _fin(pasan, fallan, saltadas, 2 if mal else 1 if (fallan or saltadas) else 0)
 
 

@@ -22,11 +22,14 @@ CODIGO = {"app/main.py": "x = 2\n"}
 def escenarios(inf):
     acept, activas = flujo.plantilla_activas()
 
-    # 1 · Solo P1 está activa; P10 tiene su prueba en la carpeta, que falla, y no cuenta todavía
+    # 1 · Solo P1 está activa; P10 y AP1 tienen su prueba en la carpeta, que falla, y no cuentan todavía. La de P10
+    #     lleva «P1_» en el nombre de su función: elegir por lo que contiene el nombre, y no por cómo empieza el archivo,
+    #     la tomaría
     extra, leer = flujo.marcas()
     base = {activas: "P1\n",
             f"{acept}/P1_alta.py": flujo.sembrada("P1_alta", "pasa"),
-            f"{acept}/P10_baja.py": flujo.sembrada("P10_baja", "falla")}
+            f"{acept}/P10_baja.py": flujo.sembrada("P10_baja", "falla", funcion="test_P1_copia"),
+            f"{acept}/AP1_otra.py": flujo.sembrada("AP1_otra", "falla")}
     rc, salida = flujo.comprobar(base, CODIGO, "P9 · otra cosa", extra)
     corrieron = {n for n, _ in leer()}
     problemas = []
@@ -34,6 +37,8 @@ def escenarios(inf):
         problemas.append("P1_alta.py no corrió")
     if "P10_baja" in corrieron:
         problemas.append("P10_baja.py corrió: las pruebas de P1 tomaron también las de P10")
+    if "AP1_otra" in corrieron:
+        problemas.append("AP1_otra.py corrió: las pruebas de P1 tomaron las de otra pieza cuyo nombre contiene «P1_»")
     problemas += flujo.verde(rc, salida)
     inf.escenario("Solo corren las pruebas de la pieza", problemas, salida if problemas else "")
 
