@@ -19,6 +19,15 @@ Cambiar una fase o el alcance pide una decisión. Añadir, partir o detallar pie
 
 Estado: `cerrada`, `en curso` (solo una) o `pendiente`.
 
+### F1 en llano
+[Una frase: qué mejora esta fase para quien usa el producto, sin jerga.]
+
+| Pieza | Qué arregla |
+|---|---|
+| P01 | [En llano, lo que cambia para la persona] |
+
+Un bloque así por fase, escrito al planearla.
+
 ## Piezas
 Las de fases cerradas se quedan. Un identificador no se reutiliza nunca.
 
@@ -43,7 +52,7 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
 
 ## Cómo avanza
 - Se construye por bloques: una o varias piezas en un pull request a la rama principal, unido y desplegado antes del siguiente. Claude propone cómo se agrupan; lo normal es una pieza por pull request.
-- Una sesión sin el código del repositorio, que ve este plan, el diseño y el `CLAUDE.md`, convierte los escenarios aprobados en pruebas, con el identificador de su pieza en el nombre, en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Se une en verde cuando CI comprueba que esas pruebas fallan, porque la pieza aún no existe.
+- Una sesión sin el código del repositorio, que ve este plan, el diseño y el `CLAUDE.md`, convierte los escenarios aprobados en pruebas, en archivos que empiezan por el identificador de su pieza y «_» (`P01_acceso.py`), en su propio pull request («Escenarios · P01»), que solo toca la carpeta de pruebas de aceptación. Se une en verde cuando CI comprueba que esas pruebas fallan, porque la pieza aún no existe.
 - El pull request de la pieza no toca esa carpeta (CI lo impide) y añade el identificador de la pieza a la lista de piezas activas, fuera de la carpeta: desde ahí sus pruebas son obligatorias, y CI no deja quitarla de la lista. Una pieza técnica no entra en la lista. Quien construye lo une con todo en verde y la revisión de calidad hecha.
 - **Cambiar los escenarios de una pieza ya activa**, con la nueva aprobación de quien acepta: su pull request de escenarios («Escenarios · P01») cambia las pruebas y, si la pieza aún no las cumple, la saca de la lista, sin tocar código; el siguiente pull request de la pieza la vuelve a añadir cuando las cumple. Solo él y una reversión de la pieza pueden sacarla.
 - Un pull request que toca las pruebas de aceptación o su workflow, o saca una pieza de la lista, lo une, o lo aprueba por escrito, quien acepta. Sin cuenta de GitHub, quien acepta aprueba los escenarios en este plan, y quien une el pull request cita en él esa aprobación («Aprobó: Nombre Apellido, AAAA-MM-DD, en el plan»).
@@ -57,6 +66,6 @@ Por los pull requests a la rama principal cuyo título empieza por el identifica
 - **En curso:** tiene alguno abierto.
 - **Unida:** todos están unidos (está en Release, si lo hay).
 - **Revertida:** se unió una reversión («Revert "P01 · …"»); vuelve a `en curso` con el siguiente pull request de la pieza, y el seguimiento lo dice.
-- **Entregada:** lo unido ya pasó a Prod con su sí.
+- **Entregada:** lo unido ya pasó a Prod con su sí. Donde unir publica («Paso a Prod» dice que unir el pull request de versión es el paso a Prod), una pieza unida con él ya está entregada, y el sí es la línea «Aprobó: Nombre Apellido, AAAA-MM-DD» de su descripción.
 
 Un pull request cerrado sin unir no cuenta, ni los que van a otras ramas, ni los de escenarios («Escenarios · P01») ni los del kit («Kit · »), que el seguimiento lista aparte. Un arreglo lleva el identificador de la pieza que arregla. Los de bots no llevan ninguno; los demás sin pieza salen en el seguimiento como «fuera del plan».

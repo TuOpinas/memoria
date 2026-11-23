@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.27.0 · huella 3989d59 · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.27.1 · huella 049deeb · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -822,6 +822,17 @@ Los siete patrones de abajo arreglan la frase. Estas ocho reglas arreglan el doc
 6. **La consecuencia va pegada a la acción.** El "si esto no ocurre, pasa aquello" debajo de su acción, no en una lista de riesgos al final que el lector ya no relaciona.
 7. **Lo hecho antes de lo pendiente**, cuando el lector decide sobre el trabajo de otros.
 8. **Sin preámbulo de sección.** Título y contenido. Las frases que presentan lo que viene se borran.
+
+## Al pedir una aprobación
+
+Quien aprueba no tiene delante lo que Claude tiene: si no entiende qué aprueba, dirá que sí para avanzar y algo se estropeará. Cada cosa que se le pide aprobar, en la conversación o en un documento, lleva esto, en este orden:
+
+1. **Su nombre en palabras**, con el identificador solo entre paréntesis: «Cuándo una pieza cuenta como entregada (P13)», no «P13».
+2. **Una o dos frases de contexto**: qué es y para qué sirve.
+3. **Qué dice o hace hoy y qué diría o haría después**; si es un texto, las dos frases tal cual.
+4. **Qué pasa con el sí y qué con el no**, en una frase.
+
+Cada punto se contesta por separado, y no lleva siglas ni etiquetas que el mismo mensaje no haya explicado. Vale también cuando la persona pide respuestas breves: se acorta lo de alrededor.
 
 ## Siete patrones a evitar
 

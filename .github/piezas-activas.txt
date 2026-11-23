@@ -1,0 +1,4 @@
+# Piezas cuyas pruebas de aceptación ya cuentan (una por línea). La añade el pull request de versión que la entrega.
+P01
+P02
+P03

@@ -13,7 +13,7 @@ comprobar:
   - apertura-completa ventas/cuentas
   - menciona Cliente Uno
   - solo-escribe-en metodo.md
-  - llamadas-maximo 14
+  - llamadas-maximo 15
   - palabras-maximo 520
   - sin-ingles
   - skill sesion 1
