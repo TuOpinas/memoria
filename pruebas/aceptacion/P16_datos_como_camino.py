@@ -11,7 +11,7 @@
   model opens, Entonces the rest is drawn and the tab names it.
 
 Por la entrada de F2: el generador del tablero sobre la raíz de muestra de P05_lectores.py, y lo que escribe en
-desarrollo/ventas--portal.json: diseno.entidades[].relaciones ({"con", "tipo", "verbo"}) y diseno.datos_disposicion
+desarrollo/ventas--portal.json: diseno.entidades[].relaciones ({"con", "tipo"}, con «verbo» solo si lo lleva) y diseno.datos_disposicion
 ({"flujo", "arriba", "abajo"}, o null sin línea «Flujo:»). El dibujo (la fila, las líneas, el verbo sobre la línea) queda
 para la verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P16_datos_como_camino.py (0 pasa, 1 falla, 2 no se montó).
@@ -57,14 +57,13 @@ def sin_aviso_de_flujo(d, problemas):
 
 
 def entidades_como_antes(d, problemas):
-    """Las cuatro entidades con su grupo, y cada relación con la entidad y el tipo de la muestra."""
+    """Las cuatro entidades con su grupo, y cada relación exactamente como en 1.28.0 ({"con", "tipo"}, sin «verbo»)."""
     vistas = por_clave(saca(d, "diseno", "entidades"), "nombre")
     igual(problemas, "las entidades", sorted(vistas), sorted(ENTIDADES))
     for nombre, (grupo, relaciones) in ENTIDADES.items():
         e = vistas.get(nombre, {})
         igual(problemas, f"el grupo de «{nombre}»", e.get("grupo"), grupo)
-        igual(problemas, f"las relaciones de «{nombre}» (entidad y tipo)",
-              [{"con": saca(r, "con"), "tipo": saca(r, "tipo")} for r in e.get("relaciones") or []], relaciones)
+        igual(problemas, f"las relaciones de «{nombre}»", e.get("relaciones"), relaciones)
 
 
 def escenarios(inf):
@@ -109,9 +108,18 @@ def escenarios(inf):
         vistas = por_clave(saca(d, "diseno", "entidades"), "nombre")
         igual(problemas, "las relaciones de «producto»", saca(vistas, "producto", "relaciones"),
               [{"con": "categoria", "tipo": "", "verbo": "vive en"}])
-        igual(problemas, "las relaciones de «cliente», que lleva cardinalidad", saca(vistas, "cliente", "relaciones"),
-              [{"con": "pedido", "tipo": "1:N", "verbo": ""}])
+        igual(problemas, "las relaciones de «cliente», que solo lleva cardinalidad", saca(vistas, "cliente", "relaciones"),
+              [{"con": "pedido", "tipo": "1:N"}])
     inf.escenario("Una relación lleva su verbo", problemas)
+
+    # 2b · Añadido: con cardinalidad y verbo, «categoria (N:1, vive en)», lleva los dos
+    problemas = []
+    d = pestana(*generar([(DISENO, "| Lo que la tienda vende | categoria (N:1) |",
+                           "| Lo que la tienda vende | categoria (N:1, vive en) |")]), problemas)
+    if d is not None:
+        igual(problemas, "las relaciones de «producto»", saca(por_clave(saca(d, "diseno", "entidades"), "nombre"), "producto",
+                                                             "relaciones"), [{"con": "categoria", "tipo": "N:1", "verbo": "vive en"}])
+    inf.escenario("Una relación lleva su verbo (con cardinalidad y verbo)", problemas)
 
     # 3 · Sin flujo se dibuja como antes: la muestra tal cual, sin línea «Flujo:»
     problemas = []

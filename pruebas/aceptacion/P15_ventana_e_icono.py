@@ -11,8 +11,8 @@
   with the text «Proyecto de desarrollo» for screen readers and as its tooltip, not the word.
 
 Es una pieza de pantalla. La prueba lee la página del tablero (plugins/memoria/skills/tablero/vista.html) como texto, sin
-abrirla, y comprueba solo lo que se ve así: que tiene un elemento <dialog, el texto «Proyecto de desarrollo» y el texto
-«Sin detalle». El clic, el foco que entra y vuelve, Esc, el clic fuera y que el icono se vea quedan para la verificación:
+abrirla, y comprueba solo lo que se ve así: que tiene un elemento <dialog, el atributo aria-label="Proyecto de desarrollo"
+(el de la marca) y el texto «Sin detalle». El clic, el foco que entra y vuelve, Esc, el clic fuera y que el icono se vea quedan para la verificación:
 lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P15_ventana_e_icono.py (0 pasa, 1 falla, 2 no se montó).
 """
@@ -23,7 +23,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P05_lectores import *  # noqa: E402,F401,F403  (REPO, flujo: una sola copia)
 
 VISTA = REPO / "plugins" / "memoria" / "skills" / "tablero" / "vista.html"
-VENTANA, MARCA, NADA = "<dialog", "Proyecto de desarrollo", "Sin detalle"
+VENTANA, MARCA, NADA = "<dialog", 'aria-label="Proyecto de desarrollo"', "Sin detalle"
 
 
 def pagina():
@@ -56,9 +56,9 @@ def escenarios(inf):
     tiene(texto, NADA, "un elemento sin detalle abriría la ventana vacía", problemas)
     inf.escenario("Lo que no tiene nada que mostrar se dice", problemas)
 
-    # 4 · La marca es un icono con el texto «Proyecto de desarrollo»
+    # 4 · La marca es un icono con el texto «Proyecto de desarrollo» para lectores de pantalla: el atributo literal
     problemas = []
-    tiene(pagina(), MARCA, "el icono no lleva su texto para lectores de pantalla y como aviso al pasar", problemas)
+    tiene(pagina(), MARCA, "el icono no lleva su texto para lectores de pantalla", problemas)
     inf.escenario("La marca es un icono", problemas)
 
 

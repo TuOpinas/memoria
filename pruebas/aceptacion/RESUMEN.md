@@ -140,9 +140,9 @@ Hoy fallan todas las filas, y deben: el tablero todavía no prepara nada para es
 
 Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-23, en el plan (fase F4, versión 1.29.0).
 
-**Cómo están planteadas.** P16, P17 y P18 se prueban como las de F2: la misma organización de mentira (el portal, con su diseño), a la que cada prueba le cambia lo que pide su escenario (una línea «Flujo:», la columna «Externo», las columnas Proveedor, Cuenta y Ambiente), genera el tablero y lee lo que prepara para la pestaña Desarrollo. No abre ningún navegador. P15 es de pantalla: su prueba lee la página del tablero como texto, sin abrirla, y solo mira que tenga una ventana (`<dialog`), el texto «Proyecto de desarrollo» y el texto «Sin detalle».
+**Cómo están planteadas.** P16, P17 y P18 se prueban como las de F2: la misma organización de mentira (el portal, con su diseño), a la que cada prueba le cambia lo que pide su escenario (una línea «Flujo:», la columna «Externo», las columnas Proveedor, Cuenta y Ambiente), genera el tablero y lee lo que prepara para la pestaña Desarrollo. No abre ningún navegador. P15 es de pantalla: su prueba lee la página del tablero como texto, sin abrirla, y solo mira que tenga una ventana (`<dialog`), la marca con `aria-label="Proyecto de desarrollo"` y el texto «Sin detalle».
 
-Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tablero todavía no prepara nada de esto. La columna «La pone en verde» dice qué pieza hace pasar cada fila.
+Hoy fallan todas las filas, y deben: el tablero todavía no prepara nada de esto. La columna «La pone en verde» dice qué pieza hace pasar cada fila.
 
 **Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven: el dibujo de las tres vistas (la fila del flujo con lo de arriba y lo de abajo, la fila de flechas de los componentes, los contenedores con su etiqueta, el verbo sobre cada línea); que lo externo se distinga por algo más que el color; que la ventana se abra al pulsar, con el foco dentro; que Esc y el clic fuera la cierren y el foco vuelva a lo pulsado; que un elemento sin detalle diga «Sin detalle» en la ventana; y que la marca se vea como icono, con su texto para lectores de pantalla y al pasar el ratón, y sin la palabra.
 
@@ -153,7 +153,7 @@ Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tabl
 | Una pieza se abre en una ventana | La página del tablero | Tiene una ventana (`<dialog`) | P15 |
 | La ventana se cierra y devuelve el foco | La misma | Lo mismo: sin abrirla solo se ve que la ventana existe | P15 |
 | Lo que no tiene nada que mostrar se dice | La misma | Tiene la ventana y el texto «Sin detalle» | P15 |
-| La marca es un icono | La misma | Tiene el texto «Proyecto de desarrollo». **Hoy ya pasa**: la marca «Desarrollo» de la 1.28.0 lleva ese texto en su aviso al pasar el ratón, así que esta fila no distingue el icono de la palabra; eso lo ve la verificación | — |
+| La marca es un icono | La misma | Tiene, tal cual, `aria-label="Proyecto de desarrollo"`: el texto del icono para lectores de pantalla. La marca de la 1.28.0 lleva ese texto solo dentro de su aviso al pasar el ratón, que no cuenta | P15 |
 
 ### P16 · El modelo de datos como camino
 
@@ -162,7 +162,8 @@ Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tabl
 | El flujo es una fila, en su orden | Debajo de la tabla de «Datos», «**Flujo:** cliente → pedido → producto» | El flujo sale como cliente, pedido, producto, en ese orden; categoría, a la que solo apunta producto, va arriba, y nada abajo. **Añadido:** cada entidad está en uno solo de los tres sitios, y ningún aviso pide la línea «Flujo:» | P16, con P05 hecha |
 | **Añadido:** El flujo es una fila, en su orden (sin negrita y con «->») | «Flujo: producto -> pedido -> cliente» | El flujo sale en ese orden | P16, con P05 hecha |
 | **Añadido:** El flujo es una fila, en su orden (lo que recibe dos flechas va abajo) | «Flujo: cliente → producto», y producto pasa a relacionarse con pedido: a pedido apuntan cliente y producto | Pedido va abajo, categoría arriba | P16, con P05 hecha |
-| Una relación lleva su verbo | La relación de producto con categoría se escribe «categoria (vive en)» | Esa relación lleva el verbo «vive en» y el tipo vacío. **Añadido:** la de cliente con pedido sigue con su tipo «1:N» y el verbo vacío | P16, con P05 hecha |
+| Una relación lleva su verbo | La relación de producto con categoría se escribe «categoria (vive en)» | Esa relación lleva el verbo «vive en» y el tipo vacío. **Añadido:** la de cliente con pedido sigue exactamente como en la 1.28.0, con su tipo «1:N» y sin verbo | P16, con P05 hecha |
+| **Añadido:** Una relación lleva su verbo (con cardinalidad y verbo) | La relación se escribe «categoria (N:1, vive en)» | Lleva los dos: tipo «N:1» y verbo «vive en» | P16, con P05 hecha |
 | Sin flujo se dibuja como antes | La muestra tal cual, sin línea «Flujo:» | Las entidades salen con su grupo y sus relaciones como en la 1.28.0, no hay disposición en fila, y un aviso de los datos dice que falta «Flujo:» | P16, con P05 hecha |
 | Una entidad desconocida en el flujo se dice | «**Flujo:** cliente → pedido → envio → producto», y «envio» no está en «Datos» | Las entidades salen enteras, el flujo queda cliente, pedido, producto, y un aviso de los datos nombra «envio» | P16, con P05 hecha |
 
@@ -187,8 +188,8 @@ Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tabl
 ### Cómo se leyó lo que el escenario no precisa
 
 1. «En una fila, en su orden» quiere decir la lista del flujo en el orden de la línea; las entidades de fuera del flujo van arriba o abajo como dice el contrato de la fase: abajo, las que reciben dos o más relaciones escritas en filas del flujo.
-2. Una relación con cardinalidad lleva el verbo vacío, y una con verbo, el tipo vacío.
-3. «Dibujado como en 1.28.0» quiere decir las entidades con su grupo y sus relaciones (entidad y tipo), sin disposición en fila.
+2. Una relación con solo cardinalidad sigue igual que en la 1.28.0, sin verbo (así no cambian P05 ni P10); una con solo verbo lleva el tipo vacío; una con las dos lleva las dos.
+3. «Dibujado como en 1.28.0» quiere decir las entidades con su grupo y sus relaciones exactamente como entonces, sin disposición en fila.
 4. «Lo nombra» y «dice qué añadir» quieren decir que el texto de un aviso trae «envio», «Buzón», «Flujo:» o «Proveedor» tal cual.
 5. La columna «Externo» va antes de «Conecta con»; «sí» es externo y la celda vacía, propio.
 6. En el escenario de la conexión desconocida de P17, «lo demás» es lo de la 1.29.0: las cajas, lo externo y el recorrido. El aviso de «Buzón» ya sale hoy (lo pide P11); la fila falla por lo demás.
@@ -198,4 +199,4 @@ Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tabl
 ### Lo que queda sabido
 
 - Si dos filas comparten proveedor y cuenta pero no ambiente, el contrato no dice qué ambiente lleva el contenedor: la muestra usa un solo ambiente.
-- Del icono de P15, la prueba solo puede ver el texto «Proyecto de desarrollo», que la marca de hoy ya lleva; que sea icono y no palabra lo ve la verificación.
+- Del icono de P15, la prueba solo ve el atributo `aria-label="Proyecto de desarrollo"` escrito tal cual en la página; que sea icono y no palabra, y que el texto salga también al pasar el ratón, lo ve la verificación.
