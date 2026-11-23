@@ -135,3 +135,67 @@ Hoy fallan todas las filas, y deben: el tablero todavía no prepara nada para es
 6. Cada relación se espera en la entidad donde el diseño la escribe, una sola vez, no repetida en la otra.
 7. En un desajuste de datos se piden dos avisos, uno por cada cosa que no cuadra.
 8. Con el plan entero no puede haber ningún aviso del plan: así el aviso de «no se pudo leer» no vale si sale siempre.
+
+## Fase F4 · Los diagramas como camino, y el detalle en una ventana
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-23, en el plan (fase F4, versión 1.29.0).
+
+**Cómo están planteadas.** P16, P17 y P18 se prueban como las de F2: la misma organización de mentira (el portal, con su diseño), a la que cada prueba le cambia lo que pide su escenario (una línea «Flujo:», la columna «Externo», las columnas Proveedor, Cuenta y Ambiente), genera el tablero y lee lo que prepara para la pestaña Desarrollo. No abre ningún navegador. P15 es de pantalla: su prueba lee la página del tablero como texto, sin abrirla, y solo mira que tenga una ventana (`<dialog`), el texto «Proyecto de desarrollo» y el texto «Sin detalle».
+
+Hoy fallan todas las filas menos una, «La marca es un icono», y deben: el tablero todavía no prepara nada de esto. La columna «La pone en verde» dice qué pieza hace pasar cada fila.
+
+**Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven: el dibujo de las tres vistas (la fila del flujo con lo de arriba y lo de abajo, la fila de flechas de los componentes, los contenedores con su etiqueta, el verbo sobre cada línea); que lo externo se distinga por algo más que el color; que la ventana se abra al pulsar, con el foco dentro; que Esc y el clic fuera la cierren y el foco vuelva a lo pulsado; que un elemento sin detalle diga «Sin detalle» en la ventana; y que la marca se vea como icono, con su texto para lectores de pantalla y al pasar el ratón, y sin la palabra.
+
+### P15 · El detalle en una ventana, y el icono
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Una pieza se abre en una ventana | La página del tablero | Tiene una ventana (`<dialog`) | P15 |
+| La ventana se cierra y devuelve el foco | La misma | Lo mismo: sin abrirla solo se ve que la ventana existe | P15 |
+| Lo que no tiene nada que mostrar se dice | La misma | Tiene la ventana y el texto «Sin detalle» | P15 |
+| La marca es un icono | La misma | Tiene el texto «Proyecto de desarrollo». **Hoy ya pasa**: la marca «Desarrollo» de la 1.28.0 lleva ese texto en su aviso al pasar el ratón, así que esta fila no distingue el icono de la palabra; eso lo ve la verificación | — |
+
+### P16 · El modelo de datos como camino
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| El flujo es una fila, en su orden | Debajo de la tabla de «Datos», «**Flujo:** cliente → pedido → producto» | El flujo sale como cliente, pedido, producto, en ese orden; categoría, a la que solo apunta producto, va arriba, y nada abajo. **Añadido:** cada entidad está en uno solo de los tres sitios, y ningún aviso pide la línea «Flujo:» | P16, con P05 hecha |
+| **Añadido:** El flujo es una fila, en su orden (sin negrita y con «->») | «Flujo: producto -> pedido -> cliente» | El flujo sale en ese orden | P16, con P05 hecha |
+| **Añadido:** El flujo es una fila, en su orden (lo que recibe dos flechas va abajo) | «Flujo: cliente → producto», y producto pasa a relacionarse con pedido: a pedido apuntan cliente y producto | Pedido va abajo, categoría arriba | P16, con P05 hecha |
+| Una relación lleva su verbo | La relación de producto con categoría se escribe «categoria (vive en)» | Esa relación lleva el verbo «vive en» y el tipo vacío. **Añadido:** la de cliente con pedido sigue con su tipo «1:N» y el verbo vacío | P16, con P05 hecha |
+| Sin flujo se dibuja como antes | La muestra tal cual, sin línea «Flujo:» | Las entidades salen con su grupo y sus relaciones como en la 1.28.0, no hay disposición en fila, y un aviso de los datos dice que falta «Flujo:» | P16, con P05 hecha |
+| Una entidad desconocida en el flujo se dice | «**Flujo:** cliente → pedido → envio → producto», y «envio» no está en «Datos» | Las entidades salen enteras, el flujo queda cliente, pedido, producto, y un aviso de los datos nombra «envio» | P16, con P05 hecha |
+
+### P17 · Los componentes como recorrido
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| El recorrido es una fila de flechas | La tabla de «Componentes» con la columna «Externo» y, debajo, «**Flujo:** Tienda web → API → Motor de pagos» | El recorrido sale como Tienda web, API, Motor de pagos, en ese orden, y las cuatro cajas con lo que conectan | P17, con P05 hecha |
+| **Añadido:** El recorrido es una fila de flechas (sin negrita y con «->») | «Flujo: Panel interno -> API -> Motor de pagos» | El recorrido sale en ese orden | P17, con P05 hecha |
+| **Añadido:** El recorrido es una fila de flechas (sin línea «Flujo:», no hay recorrido) | La tabla con «Externo» y sin línea «Flujo:» | No hay recorrido, y las cajas salen enteras | P17, con P05 hecha |
+| Lo externo se distingue, no solo por el color | «Motor de pagos» lleva «sí» en «Externo»; los demás, la celda vacía | Motor de pagos sale como externo y los otros tres como propios | P17, con P05 hecha |
+| Una conexión a algo desconocido se dice | La tabla nueva (con «Externo» y «Flujo:»), y «Panel interno» conecta también con «Buzón», que no está | Un aviso de los componentes nombra «Buzón», y lo demás sale entero: las cajas, lo que es externo y el recorrido | P17, con P05 hecha |
+
+### P18 · La infraestructura por proveedor y cuenta
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Un contenedor por proveedor y cuenta | La tabla de «Infraestructura» con Proveedor, Cuenta y Ambiente: servidor web y base de datos en Nube, cuenta tienda-prod; dominio en Registrador | Dos contenedores, en ese orden: Nube · tienda-prod · producción con las dos piezas, y Registrador con el dominio. Cada pieza lleva su proveedor, cuenta y ambiente. **Añadido:** ningún aviso pide separar por proveedor | P18, con P05 hecha |
+| La columna vieja se sigue dibujando | La muestra tal cual, con la columna «Dónde» | Una caja por fila con lo que conecta, sin contenedores, y un aviso de la infraestructura nombra «Proveedor» | P18, con P05 hecha |
+| Un servicio externo tiene su propio contenedor | Una fila más, «Carpeta de comprobantes», en Google Drive con la cuenta del cliente, puesta entre las dos filas de Nube | Sale en un contenedor para ella sola, entre el de Nube (que sigue con sus dos piezas) y el de Registrador | P18, con P05 hecha |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. «En una fila, en su orden» quiere decir la lista del flujo en el orden de la línea; las entidades de fuera del flujo van arriba o abajo como dice el contrato de la fase: abajo, las que reciben dos o más relaciones escritas en filas del flujo.
+2. Una relación con cardinalidad lleva el verbo vacío, y una con verbo, el tipo vacío.
+3. «Dibujado como en 1.28.0» quiere decir las entidades con su grupo y sus relaciones (entidad y tipo), sin disposición en fila.
+4. «Lo nombra» y «dice qué añadir» quieren decir que el texto de un aviso trae «envio», «Buzón», «Flujo:» o «Proveedor» tal cual.
+5. La columna «Externo» va antes de «Conecta con»; «sí» es externo y la celda vacía, propio.
+6. En el escenario de la conexión desconocida de P17, «lo demás» es lo de la 1.29.0: las cajas, lo externo y el recorrido. El aviso de «Buzón» ya sale hoy (lo pide P11); la fila falla por lo demás.
+7. Los dos contenedores de P18 se comparan por proveedor, cuenta, ambiente y piezas, en el orden en que aparecen; si traen más datos, no se miran.
+8. El servicio externo se reconoce por tener otro proveedor y otra cuenta: el contrato no tiene una marca de «del cliente».
+
+### Lo que queda sabido
+
+- Si dos filas comparten proveedor y cuenta pero no ambiente, el contrato no dice qué ambiente lleva el contenedor: la muestra usa un solo ambiente.
+- Del icono de P15, la prueba solo puede ver el texto «Proyecto de desarrollo», que la marca de hoy ya lleva; que sea icono y no palabra lo ve la verificación.
