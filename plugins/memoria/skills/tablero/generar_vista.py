@@ -2,7 +2,8 @@
 """Genera los documentos de la Vista a partir de una raíz del método Memoria.
 
 Lee solo la superficie pública: guia.md, cada area.md y, de cada proyecto,
-proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/.
+proyecto.md, decisiones.md, sesiones.md y las cabeceras de entregables/; de un proyecto de desarrollo,
+además, enteros, el diseño, el plan, el seguimiento y el detalle de los datos que nombra su sección (1.28.0).
 Nunca abre fuentes/, taller/, restringido/ ni base/ (salvo base/premisas.md, que es de toda la organización): de fuentes/ y taller/ solo mira las fechas
 de modificación, para el aviso de trabajo sin sesión.
 
@@ -51,7 +52,8 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'bbc4ced17c5b6bbd04b1aad9fb9e0bc103c11c3c6d3b51b3a32b6040a512f0cf',
+    'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
+    'dev_view': 'ab9ca6b4a08151f1c85ff3a83e54c9ba94cd1e3d0654238e97a462dde5dc9b76',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1259,10 +1261,9 @@ def _context_core():
         'A project is a development project when its proyecto.md has a \xab## Desarrollo\xbb section\n'
         '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the\n'
         'design, the plan and the follow-up) and names the people of each role. This module reads the section and says which\n'
-        "pieces are missing. Since 1.28.0 it also reads the design, the plan and the last follow-up entry for the board's\n"
-        '\xabDesarrollo\xbb tab (shared-memory/plugin-memoria#2026-11-22-5, P05): `development_view` turns them into what the tab draws,\n'
-        'and names what it cannot read instead of failing. The status of each piece in GitHub is still applied by the model from\n'
-        "the plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2); the view only shows what the last follow-up wrote.\n"
+        'pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`\n'
+        "(1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the\n"
+        "plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
         '\n'
         "The keys of the method's files are Spanish and are compared as the decisions say: NFC, without accents or case. The code\n"
         'names things in English; `seccion_desarrollo` and `piezas_faltantes` are aliases of the same functions, at the end.\n'
@@ -1277,7 +1278,6 @@ def _context_core():
         '__all__ = [\n'
         '    "SECTION", "PATH_KEYS", "ROLE_KEYS", "ALL_KEYS", "TO_BUILD", "DevPerson", "DevSection", "Missing",\n'
         '    "key", "development_section", "missing_pieces", "seccion_desarrollo", "piezas_faltantes",\n'
-        '    "read_design", "read_plan", "read_follow_up", "design_detail_path", "development_view", "vista_desarrollo",\n'
         ']\n'
         '\n'
         'SECTION = "Desarrollo"\n'
@@ -1488,6 +1488,25 @@ def _context_core():
         '    return out\n'
         '\n'
         '\n'
+        "# the Spanish names the plugin's scripts use\n"
+        'seccion_desarrollo = development_section\n'
+        'piezas_faltantes = missing_pieces\n'
+    ),
+    'dev_view': (
+        '"""The board\'s \xabDesarrollo\xbb tab (1.28.0, P05): reads the design, the plan and the newest follow-up entry of a development\n'
+        'project and says what it cannot read or what does not match, instead of failing. Pure functions: text in, data out.\n'
+        "Only the board's generator imports it, so the scripts that open a session do not carry it.\n"
+        '"""\n'
+        'from __future__ import annotations\n'
+        '\n'
+        'import re\n'
+        'from typing import Callable\n'
+        '\n'
+        'from .development import (key, _sections, _nfc, _clean, SEPARATOR, DevSection, DESIGN, PLAN, FOLLOW_UP, TO_BUILD)\n'
+        '\n'
+        '__all__ = ["read_design", "read_plan", "read_follow_up", "design_detail_path", "development_view", "vista_desarrollo"]\n'
+        '\n'
+        '\n'
         "# \u2500\u2500 the design, the plan and the follow-up, for the board's \xabDesarrollo\xbb tab (1.28.0) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"
         '\n'
         'def _header(text: str) -> dict:\n'
@@ -1563,7 +1582,7 @@ def _context_core():
         'def design_detail_path(design_text: str) -> str:\n'
         '    """The path of the line \xabDetalle: ruta\xbb under \xabDatos\xbb, or "" without one."""\n'
         '    sec = _sections(design_text).get(key("Datos"))\n'
-        '    m = re.search(r"^\\s*Detalle\\s*:\\s*(.+?)\\s*$", sec[1], re.M) if sec else None\n'
+        '    m = re.search(r"^\\s*\\**\\s*Detalle\\s*\\**\\s*:\\s*\\**\\s*(.+?)\\s*$", sec[1], re.M) if sec else None\n'
         '    return _clean(m.group(1)).lstrip("/") if m else ""\n'
         '\n'
         '\n'
@@ -1591,7 +1610,9 @@ def _context_core():
         '        out["objetivo"] = _paragraph(body)\n'
         '    body = section("C\xf3mo funciona", "diseno", _HOW)\n'
         '    if body is not None:\n'
-        '        out["como_funciona"] = [m.group(1).strip() for m in re.finditer(r"^\\s*\\d+[.)]\\s+(.+)$", body, re.M)]\n'
+        '        out["como_funciona"] = [m.group(1).strip() for m in re.finditer(r"^\\s*(?:\\d+[.)]|[-*])\\s+(.+)$", body, re.M)]\n'
+        '        if not out["como_funciona"]:\n'
+        '            warn("diseno")("\xabC\xf3mo funciona\xbb no tiene pasos: van como lista numerada")\n'
         '    body = section("Reglas", "diseno")\n'
         '    if body is not None:\n'
         '        t, rows = _table(body.split("\\n"))\n'
@@ -1618,10 +1639,12 @@ def _context_core():
         '        c = _columns(t, ["Entidad", "Grupo", "Qu\xe9 es", "Se relaciona con"], "Datos", warn("datos"))\n'
         '        for r in rows:\n'
         '            rel = []\n'
-        '            for x in re.split(r"\\s+\xb7\\s+|,\\s*", _cell(r, c["Se relaciona con"])):\n'
-        '                m = re.match(r"^\\s*([^()]+?)\\s*(?:\\(([^)]*)\\))?\\s*$", x)\n'
-        '                if m and m.group(1):\n'
+        '            for x in (y for y in re.split(r"\\s+\xb7\\s+|,\\s*(?![^()]*\\))", _cell(r, c["Se relaciona con"])) if y.strip()):\n'
+        '                m = re.match(r"^\\s*([^()\\s][^()]*?)\\s*(?:\\(([^)]*)\\))?\\s*$", x)\n'
+        '                if m and " " not in m.group(1).strip():\n'
         '                    rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})\n'
+        '                else:\n'
+        '                    warn("datos")(f"no se entiende la relaci\xf3n \xab{x.strip()}\xbb de \xab{_cell(r, c[\'Entidad\'])}\xbb: va como \xabentidad (tipo)\xbb, separadas por \xab \xb7 \xbb")\n'
         '            out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,\n'
         '                                     "que_es": _cell(r, c["Qu\xe9 es"]), "relaciones": rel, "detalle": None, "conceptos": []})\n'
         '        names = {e["nombre"] for e in out["entidades"]}\n'
@@ -1634,12 +1657,14 @@ def _context_core():
         '        t, rows = _table(body.split("\\n"))\n'
         '        c = _columns(t, ["Concepto", "Significa", "No es", "Entidades"], "Conceptos", warn("diseno"))\n'
         '        out["conceptos"] = [{"nombre": _cell(r, c["Concepto"]), "significa": _cell(r, c["Significa"]), "no_es": _cell(r, c["No es"]),\n'
-        '                             "entidades": _list(_cell(r, c["Entidades"]))} for r in rows]\n'
+        '                             "entidades": [e for e in re.split(r"\\s+\xb7\\s+|,\\s*", _cell(r, c["Entidades"])) if e.strip()]} for r in rows]\n'
         '    by_name = {key(e["nombre"]): e for e in out["entidades"]}\n'
         '    for k_ in out["conceptos"]:\n'
         '        for n in k_["entidades"]:\n'
         '            if key(n) in by_name:\n'
         '                by_name[key(n)]["conceptos"].append(k_["nombre"])\n'
+        '            else:\n'
+        '                warn("datos")(f"el concepto \xab{k_[\'nombre\']}\xbb nombra \xab{n}\xbb, que no est\xe1 en \xabDatos\xbb")\n'
         '    if detail_path:\n'
         '        if detail_text is None:\n'
         '            warn("datos")(f"el detalle de los datos ({detail_path}) no se pudo leer")\n'
@@ -1661,7 +1686,7 @@ def _context_core():
         '    return out, warnings\n'
         '\n'
         '\n'
-        '_PLAIN = re.compile(r"^###\\s+([A-Za-z]+\\d+)\\s+(?:en llano|in plain words)\\s*$", re.I)\n'
+        '_PLAIN = re.compile(r"^###\\s+([A-Za-z]+\\d+)\\s*[\xb7:\u2014-]?\\s*(?:en llano|in plain words)\\s*$", re.I)\n'
         '\n'
         '\n'
         'def read_plan(text: str) -> tuple:\n'
@@ -1679,6 +1704,8 @@ def _context_core():
         '        c = _columns(t, ["Fase", "Qu\xe9 podr\xe1 hacer qui\xe9n", "Versi\xf3n", "Listo cuando"], "Fases", warn)\n'
         '        for r in rows:\n'
         '            fid, name = _split_id(_cell(r, c["Fase"]))\n'
+        '            if not fid:\n'
+        '                warn(f"no se lee el identificador de la fase \xab{_cell(r, c[\'Fase\'])}\xbb: va como \xabF1 \xb7 nombre\xbb")\n'
         '            phases.append({"id": fid, "nombre": name, "que_podra": _cell(r, c["Qu\xe9 podr\xe1 hacer qui\xe9n"]), "version": _cell(r, c["Versi\xf3n"]),\n'
         '                           "listo_cuando": _cell(r, c["Listo cuando"]), "en_llano": "", "arregla": [], "piezas": []})\n'
         '        plain, cur = {}, None\n'
@@ -1703,11 +1730,18 @@ def _context_core():
         '        c = _columns(t, ["Pieza", "Fase", "Qu\xe9 entrega"], "Piezas", warn)\n'
         '        for r in rows:\n'
         '            pid, name = _split_id(_cell(r, c["Pieza"]))\n'
+        '            if not pid:\n'
+        '                warn(f"no se lee el identificador de la pieza \xab{_cell(r, c[\'Pieza\'])}\xbb: va como \xabP01 \xb7 nombre\xbb")\n'
+        '                continue\n'
         '            pieces.append({"id": pid, "nombre": name, "fase": _split_id(_cell(r, c["Fase"]))[0], "entrega": _cell(r, c["Qu\xe9 entrega"]),\n'
         '                           "aprobo": "", "escenarios": [], "estado": None, "fecha_estado": None})\n'
         '    by_id = {p["id"]: p for p in pieces}\n'
         '    for f in phases:\n'
         '        f["piezas"] = [p["id"] for p in pieces if p["fase"] == f["id"]]\n'
+        '    ids = {f["id"] for f in phases}\n'
+        '    for p in pieces:\n'
+        '        if phases and p["fase"] not in ids:\n'
+        '            warn(f"{p[\'id\']} es de la fase \xab{p[\'fase\']}\xbb, que no est\xe1 en \xabFases\xbb: no sale en el tablero")\n'
         '    sec = secs.get(key("Hecha cuando"))\n'
         '    cur, scen = None, None\n'
         '    for l in (_nfc(sec[1]).split("\\n") if sec else []):\n'
@@ -1717,10 +1751,11 @@ def _context_core():
         '            continue\n'
         '        if cur is None:\n'
         '            continue\n'
-        '        a = re.match(r"^\\s*Aprob[o\xf3]\\s*:\\s*(.*)$", l)\n'
+        '        a = re.match(r"^\\s*\\**\\s*Aprob[o\xf3]\\s*\\**\\s*:\\s*\\**\\s*(.*)$", l)\n'
         '        b = re.match(r"^\\s*[-*]\\s+\\*\\*(.+?)\\*\\*\\s*(.*)$", l)\n'
         '        if a and not scen:\n'
-        '            cur["aprobo"] = _clean(a.group(1))\n'
+        '            # aprobado es nombre y fecha; \xabpending\xbb o el hueco de la plantilla no aprueban nada\n'
+        '            cur["aprobo"] = _clean(a.group(1)) if re.search(r"\\d{4}-\\d{2}-\\d{2}", a.group(1)) else ""\n'
         '        elif b:\n'
         '            scen = {"titulo": b.group(1).strip(), "texto": b.group(2).strip()}\n'
         '            cur["escenarios"].append(scen)\n'
@@ -1744,7 +1779,7 @@ def _context_core():
         '        return "", {}\n'
         '    date, body = max(entries, key=lambda e: e[0])\n'
         '    states = {}\n'
-        '    lines = body.split("\\n")\n'
+        '    lines = body.split("\\n")   # la entrada sin tabla \xabPieza | Estado\xbb vuelve sin estados, y la vista lo dice\n'
         '    while lines:\n'
         '        t, rows = _table(lines)\n'
         '        if not t:\n'
@@ -1799,6 +1834,8 @@ def _context_core():
         '            say("seguimiento", f"el seguimiento ({path}) no se pudo leer")\n'
         '        elif not date:\n'
         '            say("seguimiento", f"el seguimiento ({path}) no tiene ninguna entrada con fecha")\n'
+        '        elif not states:\n'
+        '            say("seguimiento", f"la entrada del {date} del seguimiento no tiene la tabla \xabPieza | Estado\xbb: las piezas salen sin estado")\n'
         '        else:\n'
         '            view["fuentes"]["seguimiento"] = {"ruta": path, "fecha": date}\n'
         '            for p in (view["plan"] or {}).get("piezas", []):\n'
@@ -1807,9 +1844,6 @@ def _context_core():
         '    return view\n'
         '\n'
         '\n'
-        "# the Spanish names the plugin's scripts use\n"
-        'seccion_desarrollo = development_section\n'
-        'piezas_faltantes = missing_pieces\n'
         'vista_desarrollo = development_view\n'
     ),
     }
@@ -1827,7 +1861,8 @@ from context_core.compat import (CORREO, PALABRA_COLABORA, LINEA_COLABORA, regis
                                  es_sesion, es_mantenimiento, arreglados, rastro_mantenimiento,
                                  descontado)
 from context_core.minimum import puerta_de_escritura  # noqa: E402
-from context_core.development import seccion_desarrollo, design_detail_path, vista_desarrollo, DESIGN, PLAN, FOLLOW_UP  # noqa: E402
+from context_core.development import seccion_desarrollo, DESIGN, PLAN, FOLLOW_UP  # noqa: E402
+from context_core.dev_view import design_detail_path, vista_desarrollo  # noqa: E402
 # --- fin de quién escribe ---
 RAIZ = pathlib.Path(sys.argv[1])
 # 1.25.3: la carpeta cuelga de $HOME/mnt con el último tramo de su ruta como nombre, o con «<padre>--<tramo>» si otra
@@ -2843,24 +2878,29 @@ def rutas_desarrollo(texto_proyecto):
     def buena(r):
         partes = pathlib.PurePosixPath(r).parts
         return bool(r) and r != "por crear" and not r.startswith("/") and ".." not in partes \
-            and not {"fuentes", "taller", "restringido"} & set(partes)
+            and not {"fuentes", "taller", "restringido"} & {x.lower() for x in partes} \
+            and partes[0].lower() != "base" and not any(x.startswith(".") for x in partes)
     rutas = [r for r in (sec.paths.get(k, "") for k in (DESIGN, PLAN, FOLLOW_UP)) if buena(r)]
     d = sec.paths.get(DESIGN, "")
-    t = leer(RAIZ / d) if buena(d) else None
+    t = _lee_una_vez(d) if buena(d) else None
     det = design_detail_path(t) if t else ""
     if buena(det):
         rutas.append(det)
     return sec, rutas
 
 
+def _lee_una_vez(r):
+    if r not in _TEXTOS_DEV:
+        _TEXTOS_DEV[r] = leer(RAIZ / r)
+    return _TEXTOS_DEV[r]
+
+
 def lee_desarrollo(r):
     """El texto de una ruta de la sección, o None si no se puede leer o el tablero no la abre."""
-    if r not in RUTAS_DEV:
-        return None
-    return leer(RAIZ / r)
+    return _lee_una_vez(r) if r in RUTAS_DEV else None
 
 
-RUTAS_DEV = set()
+RUTAS_DEV, _TEXTOS_DEV = set(), {}
 
 
 def proyectos_de(carpeta, indice):
