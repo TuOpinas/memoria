@@ -146,7 +146,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             rel = []
             for x in (y for y in re.split(r"\s+·\s+|,\s*(?![^()]*\))", _cell(r, c["Se relaciona con"])) if y.strip()):
                 m = re.match(r"^\s*([^()\s][^()]*?)\s*(?:\(([^)]*)\))?\s*$", x)
-                if m and " " not in m.group(1).strip():
+                if m:
                     rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})
                 else:
                     warn("datos")(f"no se entiende la relación «{x.strip()}» de «{_cell(r, c['Entidad'])}»: va como «entidad (tipo)», separadas por « · »")

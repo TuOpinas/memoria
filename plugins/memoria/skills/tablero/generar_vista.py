@@ -53,7 +53,7 @@ def _context_core():
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
     'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
-    'dev_view': 'ab9ca6b4a08151f1c85ff3a83e54c9ba94cd1e3d0654238e97a462dde5dc9b76',
+    'dev_view': 'fab387dd62db411b11dc76f2ebe429352654936032003656fd9b9fe01b9039da',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1641,7 +1641,7 @@ def _context_core():
         '            rel = []\n'
         '            for x in (y for y in re.split(r"\\s+\xb7\\s+|,\\s*(?![^()]*\\))", _cell(r, c["Se relaciona con"])) if y.strip()):\n'
         '                m = re.match(r"^\\s*([^()\\s][^()]*?)\\s*(?:\\(([^)]*)\\))?\\s*$", x)\n'
-        '                if m and " " not in m.group(1).strip():\n'
+        '                if m:\n'
         '                    rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})\n'
         '                else:\n'
         '                    warn("datos")(f"no se entiende la relaci\xf3n \xab{x.strip()}\xbb de \xab{_cell(r, c[\'Entidad\'])}\xbb: va como \xabentidad (tipo)\xbb, separadas por \xab \xb7 \xbb")\n'
