@@ -740,7 +740,7 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-dg{overflow-x:auto}
 .dev-svg{width:100%;height:auto;display:block;margin-top:8px}
 .dev-svg .ln{stroke:var(--muted);stroke-width:1.4;fill:none}
-.dev-svg .g{fill:none;stroke:var(--rule);stroke-dasharray:4 3}
+.dev-svg .g{fill:none;stroke:var(--muted);stroke-dasharray:4 3}
 .dev-svg .gt{fill:var(--muted);font:600 11px var(--f-mono)}
 .dev-svg .rt{fill:var(--muted);font:11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px}
 .dev-nodo rect{fill:var(--surface);stroke:var(--ink-soft);stroke-width:1.2}
@@ -2738,7 +2738,9 @@ function devDetalle(p, k){
     const rel = (e.relaciones||[]).map(x=>`<li>${esc(x.verbo||x.tipo||"se relaciona con")} <b>${esc(x.con)}</b>${x.verbo&&x.tipo?` <span class="more">(${esc(x.tipo)})</span>`:""}</li>`).join("");
     return `${t(esc(e.nombre))}${e.grupo?`<p class="more">${esc(e.grupo)}</p>`:""}${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${rel?`<h4>Relaciones</h4><ul>${rel}</ul>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([kk,val])=>`<dt>${esc(kk)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:e.que_es||rel?"":`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}`; }
   if(tipo==="c" || tipo==="i"){ const x = (tipo==="c" ? d.componentes : d.infraestructura || []).find(y=>y.nombre===id); if(!x) return "";
-    return `${t(esc(x.nombre))}${x.externo?`<p class="more">Externo</p>`:""}<p>${inline(x.que_hace||x.para_que||"")}</p>${x.proveedor!==undefined?`<dl><dt>Proveedor</dt><dd>${esc(x.proveedor||"—")}</dd><dt>Cuenta</dt><dd>${esc(x.cuenta||"—")}</dd><dt>Ambiente</dt><dd>${esc(x.ambiente||"—")}</dd></dl>`:x.donde?`<p class="more">${esc(x.donde)}</p>`:""}${(x.conecta_con||[]).length?`<p class="more">Conecta con ${esc(x.conecta_con.join(", "))}</p>`:""}`; }
+    const cuerpo = `${x.externo?`<p class="more">Externo</p>`:""}${x.que_hace||x.para_que?`<p>${inline(x.que_hace||x.para_que)}</p>`:""}${x.proveedor!==undefined && (x.proveedor||x.cuenta||x.ambiente)?`<dl><dt>Proveedor</dt><dd>${esc(x.proveedor||"—")}</dd><dt>Cuenta</dt><dd>${esc(x.cuenta||"—")}</dd><dt>Ambiente</dt><dd>${esc(x.ambiente||"—")}</dd></dl>`:x.donde?`<p class="more">${esc(x.donde)}</p>`:""}${(x.conecta_con||[]).length?`<p class="more">Conecta con ${esc(x.conecta_con.join(", "))}</p>`:""}`;
+    // lo que solo tiene nombre lo dice, como una entidad sin nada (P15)
+    return t(esc(x.nombre)) + (cuerpo || `<p class="more">Sin detalle.</p>`); }
   return "";
 }
 // 1.29.0 (P16–P18): un dibujo en filas, con flechas que paran en el borde de la caja y, si se dan, contenedores
