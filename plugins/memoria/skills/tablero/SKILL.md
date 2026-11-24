@@ -17,7 +17,7 @@ Cinco reglas que no cambian:
 
 ## Qué muestra
 
-Un solo tablero por persona y raíz: todo lo que lee su cuenta; lo que no lee sale con su nombre y su responsable. Inicio, cada área y cada proyecto tienen cuatro pestañas, **Estatus · Acciones · Actividad · Qué hay** (en Inicio la última es **Mantenimiento**; un proyecto de desarrollo lleva una quinta, **Desarrollo**, y su marca), y la Ayuda de la página («Ayuda» en el índice, y el «?» de cada bloque) explica cada una: para contar qué muestra, se lee de ahí y no se repite aquí. «Tarea» es la palabra de la página para cada línea de «Siguientes pasos».
+Un solo tablero por persona y raíz: todo lo que lee su cuenta; lo que no lee sale con su nombre y su responsable. Inicio, cada área y cada proyecto tienen cuatro pestañas, **Estatus · Acciones · Actividad · Qué hay** (en Inicio la última es **Mantenimiento**; un proyecto de desarrollo lleva una quinta, **Desarrollo**, y un icono de código como marca), y la Ayuda de la página («Ayuda» en el índice, y el «?» de cada bloque) explica cada una: para contar qué muestra, se lee de ahí y no se repite aquí. «Tarea» es la palabra de la página para cada línea de «Siguientes pasos».
 
 En la carpeta de la skill: `vista.html` (la página), los scripts (`generar_vista.py`, `plan_subida.py`, `datos.py`, `aplicar_cambios.py`, `barrido.py`), los anexos de la puesta al día (`cola.md`, `regenerar.md` y `juicio.md`) `tarea-prompt.md` (el prompt de la tarea) y `tarea.md`, que solo redirige las tareas con el prompt de antes de la 1.24.9. Los pasos de la puesta al día son la skill `tarea-tablero`, que carga la tarea programada; en una sesión se leen de `../tarea-tablero/SKILL.md` desde este directorio. Nada de esto se copia a la raíz.
 

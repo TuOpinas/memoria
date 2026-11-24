@@ -92,6 +92,26 @@ def design_detail_path(design_text: str) -> str:
 
 
 _HOW = (key("Cómo funciona"), key("How it works"))
+_CARD = re.compile(r"^\s*(?:[0-9]+|[NnMm])\s*:\s*(?:[0-9]+|[NnMm])\s*$")
+
+
+def _flow(body: str) -> list:
+    """The names of a line «Flujo: A → B → C» of a section (1.29.0), in order, or None without one."""
+    m = re.search(r"^\s*\**\s*Flujo\s*\**\s*:\s*\**\s*(.+?)\s*$", body, re.M)
+    if not m:
+        return None
+    return [x.strip() for x in re.split(r"\s*(?:→|->)\s*", _clean(m.group(1))) if x.strip()]
+
+
+def _known(flow, names: list, what: str, warn) -> list:
+    """The flow's names that its table has, in order; the others are named in a warning."""
+    out = []
+    for n in flow:
+        if n in names:
+            out.append(n)
+        else:
+            warn(f"«Flujo:» de «{what}» nombra «{n}», que no está en la tabla")
+    return out
 
 
 def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
@@ -109,7 +129,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         return None
 
     out = {"objetivo": "", "como_funciona": [], "reglas": [], "entidades": [], "conceptos": [], "componentes": [],
-           "infraestructura": []}
+           "infraestructura": [], "datos_disposicion": None}
     body = section("Objetivo", "diseno")
     if body is not None:
         out["objetivo"] = _paragraph(body)
@@ -123,6 +143,8 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         t, rows = _table(body.split("\n"))
         c = _columns(t, ["Regla", "Excepción"], "Reglas", warn("diseno"))
         out["reglas"] = [{"regla": _cell(r, c["Regla"]), "excepcion": _cell(r, c["Excepción"])} for r in rows]
+    out["componentes_flujo"] = None
+    out["infraestructura_contenedores"] = None
     for name, part, cols, fields in (
             ("Componentes", "componentes", ["Componente", "Qué hace", "Dónde vive", "Conecta con"], ["nombre", "que_hace", "donde"]),
             ("Infraestructura", "infraestructura", ["Pieza", "Para qué", "Dónde", "Conecta con"], ["nombre", "para_que", "donde"])):
@@ -130,14 +152,47 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         if body is None:
             continue
         t, rows = _table(body.split("\n"))
+        keys = {key(x) for x in t}
+        by_account = part == "infraestructura" and key("Proveedor") in keys
+        if by_account:
+            # 1.29.0 (P18): «Dónde» parted into Proveedor, Cuenta and Ambiente
+            cols = ["Pieza", "Para qué", "Proveedor", "Cuenta", "Ambiente", "Conecta con"]
         c = _columns(t, cols, name, warn(part))
-        items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]
+        if by_account:
+            items = [{"nombre": _cell(r, c["Pieza"]), "para_que": _cell(r, c["Para qué"]), "proveedor": _cell(r, c["Proveedor"]),
+                      "cuenta": _cell(r, c["Cuenta"]), "ambiente": _cell(r, c["Ambiente"]),
+                      "donde": " · ".join(x for x in (_cell(r, c["Proveedor"]), _cell(r, c["Cuenta"]), _cell(r, c["Ambiente"])) if x),
+                      "conecta_con": _list(_cell(r, c["Conecta con"]))} for r in rows]
+        else:
+            items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]
+        if part == "componentes":
+            # 1.29.0 (P17): an optional «Externo» column
+            ext = {key(x): n for n, x in enumerate(t)}.get(key("Externo"))
+            for i, r in zip(items, rows):
+                i["externo"] = bool(re.match(r"^\s*(s[ií]|yes|x)\s*$", _cell(r, ext), re.I))
         names = {i["nombre"] for i in items}
         for i in items:
             for o in [o for o in i["conecta_con"] if o not in names]:
                 warn(part)(f"«{i['nombre']}» conecta con «{o}», que no está en «{name}»")
                 i["conecta_con"].remove(o)
         out[part] = items
+        if part == "componentes":
+            f = _flow(body)
+            if f is not None:
+                out["componentes_flujo"] = _known(f, [i["nombre"] for i in items], name, warn(part))
+        elif by_account:
+            boxes = {}
+            for i in items:
+                k = (i["proveedor"], i["cuenta"])
+                if k not in boxes:
+                    boxes[k] = {"proveedor": i["proveedor"], "cuenta": i["cuenta"], "ambiente": i["ambiente"], "piezas": []}
+                boxes[k]["piezas"].append(i["nombre"])
+                if i["ambiente"] and i["ambiente"] not in boxes[k]["ambiente"].split(" · "):
+                    boxes[k]["ambiente"] = " · ".join(x for x in (boxes[k]["ambiente"], i["ambiente"]) if x)
+            out["infraestructura_contenedores"] = list(boxes.values())
+        elif items:
+            warn(part)("«Infraestructura» lleva «Dónde» en una columna: pártela en «Proveedor», «Cuenta» y «Ambiente» "
+                       "para que cada proveedor y cuenta se dibuje como un contenedor")
     body = section("Datos", "datos")
     if body is not None:
         t, rows = _table(body.split("\n"))
@@ -147,7 +202,14 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             for x in (y for y in re.split(r"\s+·\s+|,\s*(?![^()]*\))", _cell(r, c["Se relaciona con"])) if y.strip()):
                 m = re.match(r"^\s*([^()\s][^()]*?)\s*(?:\(([^)]*)\))?\s*$", x)
                 if m:
-                    rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})
+                    # 1.29.0 (P16): a cardinality is the type; anything else between brackets is the relation's verb
+                    inside = (m.group(2) or "").strip()
+                    card = [y.strip() for y in inside.split(",") if _CARD.match(y)]
+                    verb = [y.strip() for y in inside.split(",") if y.strip() and not _CARD.match(y)]
+                    r_ = {"con": m.group(1).strip(), "tipo": ", ".join(card)}
+                    if verb:
+                        r_["verbo"] = ", ".join(verb)
+                    rel.append(r_)
                 else:
                     warn("datos")(f"no se entiende la relación «{x.strip()}» de «{_cell(r, c['Entidad'])}»: va como «entidad (tipo)», separadas por « · »")
             out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,
@@ -157,6 +219,22 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             for x in [x for x in e["relaciones"] if x["con"] not in names]:
                 warn("datos")(f"«{e['nombre']}» se relaciona con «{x['con']}», que no está en «Datos»")
                 e["relaciones"].remove(x)
+        # 1.29.0 (P16): the flow's entities in one row; the one two or more of them point to, below; the rest, above
+        f = _flow(body)
+        if f is None:
+            if out["entidades"]:
+                warn("datos")("«Datos» no tiene línea «Flujo:»: añade «Flujo: A → B → C» con las entidades por las que pasa "
+                              "un cambio, y el modelo se dibuja como un camino")
+        else:
+            flow = _known(f, [e["nombre"] for e in out["entidades"]], "Datos", warn("datos"))
+            pointed = {}
+            for e in out["entidades"]:
+                if e["nombre"] in flow:
+                    for x in {x["con"] for x in e["relaciones"]}:
+                        pointed[x] = pointed.get(x, 0) + 1
+            rest = [e["nombre"] for e in out["entidades"] if e["nombre"] not in flow]
+            out["datos_disposicion"] = {"flujo": flow, "arriba": [n for n in rest if pointed.get(n, 0) < 2],
+                                        "abajo": [n for n in rest if pointed.get(n, 0) >= 2]}
     body = section("Conceptos", "diseno")
     if body is not None:
         t, rows = _table(body.split("\n"))
