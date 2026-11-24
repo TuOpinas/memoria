@@ -26,10 +26,12 @@ Estado: `cerrada`, `en curso` (solo una) o `pendiente`.
 |---|---|
 | P01 | [En llano, lo que cambia para la persona] |
 
+Horas: [las de sus piezas] de construcción y [las de escenarios, revisión y verificación], con IA. Espera a [persona]: [qué].
+
 Un bloque así por fase, escrito al planearla.
 
 ## Piezas
-Las de fases cerradas se quedan. Un identificador no se reutiliza nunca. «Horas» y «Para antes» son opcionales: las horas de sesión con IA de cada pieza (el tablero las suma por fase), y lo que Claude pregunta antes de construirla, si se para en ella; las comprobaciones de siempre (los escenarios, la revisión, la verificación y el sí) no se escriben ahí.
+Las de fases cerradas se quedan. Un identificador no se reutiliza nunca. «Horas» y «Para antes» son opcionales: las horas de sesión con IA de cada pieza, vacía si no se estiman (el tablero suma por fase las que hay), y lo que Claude pregunta antes de construirla, si se para en ella; las comprobaciones de siempre (los escenarios, la revisión, la verificación y el sí) no se escriben ahí.
 
 | Pieza | Fase | Qué entrega | Horas | Para antes |
 |---|---|---|---|---|

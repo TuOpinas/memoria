@@ -756,18 +756,15 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-ley span{display:inline-flex;align-items:center;gap:6px}
 .dev-ley i{display:inline-block;width:16px;height:11px;border:1.2px solid var(--ink-soft);border-radius:3px;background:var(--surface)}
 .dev-ley i.ext{border-style:dashed}
+.dev-ley i.r-destino{border-width:2.4px;border-color:var(--ink)}
+.dev-svg .rtb{fill:var(--surface)}
 .dev-nota{margin-top:4px}
 .dev-pz .h{float:right;font:500 11px var(--f-mono);color:var(--muted)}
 .dev-para{display:inline-block;margin-left:6px;font:600 10.5px var(--f-mono);color:var(--signal);border:1px solid currentColor;border-radius:4px;padding:0 4px}
 .dev-nodo rect{fill:var(--surface);stroke:var(--ink-soft);stroke-width:1.2}
-.dev-nodo text{fill:var(--ink);font:13px var(--f-body)}
 .dev-nodo{cursor:pointer}
 .dev-nodo:hover rect{stroke:var(--signal)}
 .dev-svg .pt{fill:none;stroke:var(--muted);stroke-width:1.5}
-.dev-svg .ln.fl{stroke:var(--ink-soft);stroke-width:2.2}
-.dev-svg .g2{font-weight:400}
-.dev-nodo.ext rect{stroke-dasharray:5 3;fill:var(--ground)}
-.dev-nodo .ex{fill:var(--muted);font:11px var(--f-mono)}
 .dev-av li{color:var(--warn)}
 .toast-i{font-size:12.5px;color:var(--signal);align-self:center}
 .due-item.resp .t>span:first-child,.due-item.resp>.t{color:var(--muted)}
@@ -2722,6 +2719,8 @@ const CARGANDO = `<p class="more">Cargando…</p>`;
 // último seguimiento. Aquí solo se dibuja; lo que no se pudo leer o no cuadra sale en «Lo que no cuadra».
 // 1.29.0 (P15): la marca es un icono, y el detalle de lo que se pulsa se abre en una ventana (<dialog>)
 const ICONO_DEV = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5 1.5 8 5 11.5M11 4.5 14.5 8 11 11.5M9.2 3 6.8 13"/></svg>`;
+// las horas de una pieza o de una fase (P22), con coma decimal; "" si no las hay
+const hDev = h => h===null || h===undefined ? "" : `${String(h).replace(".", ",")} h`;
 // 1.29.1 (P15): el tooltip propio del tablero, que sale al pasar, al enfocar y al tocar, no el del navegador
 const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" role="img" aria-label="Proyecto de desarrollo" data-tip="Proyecto de desarrollo" tabindex="0">${ICONO_DEV}</span>` : "";
 let DEV_ABRIO = null, DEV_CLAVE = "", DEV_ABAJO = null;
@@ -2754,11 +2753,12 @@ function devDetalle(p, k){
   const v = (TEXTOS[p.id]||{}).desarrollo || {}, d = v.diseno || {}, pl = v.plan || {}, f = v.fuentes || {};
   const fecha = x => x ? fmtD(x) : "—", t = s => `<h3 id="dev-dlg-t">${s}</h3>`;
   const [tipo, ...r] = k.split(":"), id = r.join(":");
-  const horas = h => h===null || h===undefined ? "" : `${String(h).replace(".", ",")} h`;
+  const horas = hDev;
   // 1.29.1 (P19): el papel de la caja en su dibujo, en palabras, y su «En corto»
-  const papel = x => `${x.en_corto?`<p><i>${inline(x.en_corto)}</i></p>`:""}${x.rol?`<p class="more">En el dibujo: ${esc(ROL_PALABRA[x.rol]||x.rol)}</p>`:""}`;
+  const enLaBase = n => ((d.datos_disposicion||{}).flujo||[]).length && (d.datos_disposicion.abajo||[]).includes(n);
+  const papel = x => `${x.en_corto?`<p><i>${inline(x.en_corto)}</i></p>`:""}${x.rol?`<p class="more">En el dibujo: ${tipo==="e" && enLaBase(x.nombre) ? "la base que comparte el flujo" : esc(ROL_PALABRA[x.rol]||x.rol)}</p>`:""}`;
   if(tipo==="f"){ const x = (pl.fases||[]).find(y=>y.id===id); if(!x) return "";
-    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")}${x.horas!==null && x.horas!==undefined?` · <b>Horas:</b> ${horas(x.horas)} con IA`:""} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p>`; }
+    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")}${x.horas!==null && x.horas!==undefined?` · <b>Horas de sus piezas:</b> ${horas(x.horas)} con IA`:""} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p>`; }
   if(tipo==="p"){ const x = (pl.piezas||[]).find(y=>y.id===id); if(!x) return "";
     return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}<p>${inline(x.entrega||"")}</p>${x.horas!==null && x.horas!==undefined?`<p><b>Horas:</b> ${horas(x.horas)} de sesión con IA</p>`:""}${x.para_antes?`<p><b>Antes de construirla, se pregunta:</b> ${inline(x.para_antes)}</p>`:""}<p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?x.escenarios.map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}`; }
   if(tipo==="e"){ const e = (d.entidades||[]).find(x=>x.nombre===id); if(!e) return ""; const conc = {}; (d.conceptos||[]).forEach(x=>conc[x.nombre]=x);
@@ -2784,9 +2784,11 @@ function tzPartir(texto, n, max){
   // en líneas de hasta n letras, por palabras, como mucho max; lo que no cabe se corta con «…» en la última
   texto = String(texto || "").replace(/\s+/g, " ").trim(); if(!texto) return [];
   const palabras = texto.split(" "), lineas = []; let cur = "";
+  // un nombre de código sin espacios se parte tras «_», «-», «.» o «/» antes que a media palabra
+  const corta = p => { const m = p.slice(0, n).search(/[_./-][^_./-]*$/); return m > n / 3 ? m + 1 : n; };
   for(let i = 0; i < palabras.length; i++){
     let p = palabras[i];
-    while(p.length > n){ if(cur){ lineas.push(cur); cur = ""; } lineas.push(p.slice(0, n)); p = p.slice(n); }
+    while(p.length > n){ if(cur){ lineas.push(cur); cur = ""; } const k = corta(p); lineas.push(p.slice(0, k)); p = p.slice(k); }
     if(!cur) cur = p; else if((cur + " " + p).length <= n) cur += " " + p; else { lineas.push(cur); cur = p; }
   }
   if(cur) lineas.push(cur);
@@ -2805,12 +2807,15 @@ function tzCajas(items, k){
   cs.forEach(c => { c.w = TZ.W; c.h = h; });
   return cs;
 }
-function tzRejilla(cajas, celdas, y0){
+const tzAnchoVerbo = t => Math.ceil(String(t).length * TZ.PXV * TZ.ANCHO_LETRA) + 10;
+// el pasillo entre columnas: el de siempre, o lo que pide el verbo más largo, para que quepa en su propia línea
+const tzPasillo = aristas => Math.max(TZ.GX, tzArriba(Math.max(0, ...aristas.filter(r => r.t).map(r => tzAnchoVerbo(r.t))) + 30, TZ.PASO));
+function tzRejilla(cajas, celdas, y0, gx){
   // celdas: {id: [fila, columna]}; la columna puede ser media; cada fila y columna a su paso de la rejilla
-  const h = cajas.length ? cajas[0].h : 40, por = {};
+  const h = cajas.length ? cajas[0].h : 40, por = {}, g = gx || TZ.GX;
   cajas.forEach(c => por[c.id] = c);
   for(const [id, [f, col]] of Object.entries(celdas)){ const c = por[id]; if(!c) continue;
-    c.x = TZ.PAD + tzArriba(col * (TZ.W + TZ.GX), TZ.PASO); c.y = y0 + f * (h + TZ.GY); }
+    c.x = TZ.PAD + tzArriba(col * (TZ.W + g), TZ.PASO); c.y = y0 + f * (h + TZ.GY); }
 }
 function tzFilas(filas, entera){
   // filas de arriba abajo, cada una centrada; partidas si pasan de POR_FILA, salvo la del índice «entera» (el flujo)
@@ -2872,7 +2877,7 @@ function tzRutas(cajas, aristas, obst, ancho, alto){
     // la cola: [coste estimado, coste, nodo, dirección]; un montículo binario
     const H = [], push = e => { H.push(e); let i = H.length - 1; while(i > 0){ const q = (i - 1) >> 1; if(H[q][0] <= H[i][0]) break; [H[q], H[i]] = [H[i], H[q]]; i = q; } };
     const pop = () => { const t = H[0], e = H.pop(); if(H.length){ H[0] = e; let i = 0; for(;;){ const l = 2 * i + 1, rr = l + 1; let m = i; if(l < H.length && H[l][0] < H[m][0]) m = l; if(rr < H.length && H[rr][0] < H[m][0]) m = rr; if(m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return t; };
-    const bx = (b.x + b.w / 2) / P, by = (b.y + b.h / 2) / P, est = (i, j) => Math.abs(i - bx) + Math.abs(j - by);
+    const bx = (b.x + b.w / 2) / P, by = (b.y + b.h / 2) / P, est = (i, j) => Math.max(0, Math.abs(i - bx) - b.w / 2 / P - 1) + Math.max(0, Math.abs(j - by) - b.h / 2 / P - 1);
     const mejor = new Float64Array(nx * ny * 4).fill(Infinity), de = new Int32Array(nx * ny * 4).fill(-1), inicio = {};
     for(const p of ini){ const n = (p.j * nx + p.i) * 4 + p.d, c0 = 1 + p.off * 0.15 + (puertosUsados[r.a + "|" + p.bx + "|" + p.by] ? 30 : 0);
       if(c0 < mejor[n]){ mejor[n] = c0; inicio[n] = p; push([c0 + est(p.i, p.j), c0, n]); } }
@@ -2912,8 +2917,11 @@ const tzSolapa = (p, q) => p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h
 function tzVerbos(rutas, cajas, obst, ancho, alto){
   // cada verbo en un tramo de su línea donde no pisa ninguna caja ni otro verbo; primero los tramos horizontales largos
   const puestos = [], duros = cajas.map(c => ({x: c.x - 2, y: c.y - 2, w: c.w + 4, h: c.h + 4})).concat(obst);
-  for(const r of rutas){ if(!r.t) continue;
-    const w = Math.ceil(String(r.t).length * TZ.PXV * TZ.ANCHO_LETRA) + 10, h = 18, cand = [];
+  // los tramos de cada línea, para que un verbo fuera de la suya no se ponga encima de la de otra
+  const tramos = rutas.flatMap((r, n) => r.puntos.slice(1).map((q, k) => { const p = r.puntos[k];
+    return {n, x: Math.min(p[0], q[0]) - 1, y: Math.min(p[1], q[1]) - 1, w: Math.abs(q[0] - p[0]) + 2, h: Math.abs(q[1] - p[1]) + 2}; }));
+  rutas.forEach((r, n) => { if(!r.t) return;
+    const w = tzAnchoVerbo(r.t), h = 18, cand = [];
     for(let k = 0; k < r.puntos.length - 1; k++){ const [x1, y1] = r.puntos[k], [x2, y2] = r.puntos[k + 1], lar = Math.abs(x2 - x1) + Math.abs(y2 - y1);
       if(y1 === y2){ const lo = Math.min(x1, x2), mid = (x1 + x2) / 2; for(let x = lo; x <= lo + lar; x += 5) cand.push({x: x - w / 2, y: y1 - h / 2, s: Math.abs(x - mid) + (lar < w + 10 ? 400 : 0)}); }
       else { const lo = Math.min(y1, y2), mid = (y1 + y2) / 2; for(let y = lo; y <= lo + lar; y += 5){ cand.push({x: x1 + 5, y: y - h / 2, s: 150 + Math.abs(y - mid)}); cand.push({x: x1 - 5 - w, y: y - h / 2, s: 170 + Math.abs(y - mid)}); } }
@@ -2921,12 +2929,14 @@ function tzVerbos(rutas, cajas, obst, ancho, alto){
     // si ningún tramo tiene sitio, cerca de la línea, cada vez un poco más lejos
     for(let k = 0; k < r.puntos.length - 1; k++){ const [x1, y1] = r.puntos[k], [x2, y2] = r.puntos[k + 1];
       for(let t = 0; t <= 1; t += 0.25){ const cx = x1 + (x2 - x1) * t, cy = y1 + (y2 - y1) * t;
-        for(let dd = 10; dd <= 80; dd += 10) for(const [ox, oy] of [[0, -dd], [0, dd], [dd, 0], [-dd, 0]]) cand.push({x: cx + ox - (ox < 0 ? w : ox > 0 ? 0 : w / 2), y: cy + oy - h / 2, s: 1000 + dd * 10}); } }
+        for(let dd = 10; dd <= 80; dd += 10) for(const [ox, oy] of [[0, -dd], [0, dd], [dd, 0], [-dd, 0]]) cand.push({x: cx + ox - (ox < 0 ? w : ox > 0 ? 0 : w / 2), y: cy + oy - h / 2, s: 1000 + dd * 10, fuera: true}); } }
     cand.sort((p, q) => p.s - q.s);
-    let sitio = cand.find(c => { const q = {x: c.x, y: c.y, w, h}; return q.x >= 0 && q.y >= 0 && q.x + w <= ancho && q.y + h <= alto && !duros.some(o => tzSolapa(q, o)) && !puestos.some(o => tzSolapa(q, o)); });
+    const libre = (c, ajenas) => { const q = {x: c.x, y: c.y, w, h}; return q.x >= 0 && q.y >= 0 && q.x + w <= ancho && q.y + h <= alto && !duros.some(o => tzSolapa(q, o)) && !puestos.some(o => tzSolapa(q, o)) && (!ajenas || !tramos.some(t => t.n !== n && tzSolapa(q, t))); };
+    // fuera de su línea, primero donde no pisa otra; si no hay, lo más cerca posible
+    let sitio = cand.find(c => !c.fuera && libre(c, false)) || cand.find(c => c.fuera && libre(c, true)) || cand.find(c => libre(c, false));
     if(!sitio) sitio = cand[0] || {x: 0, y: 0};
     puestos.push({a: r.a, b: r.b, t: r.t, x: sitio.x, y: sitio.y, w, h});
-  }
+  });
   return puestos;
 }
 function tzMontar(cajas, aristas, contenedores, banda, nota){
@@ -2955,11 +2965,11 @@ function tzDatos(d){
   const cajas = tzCajas(ents, "e:"), ds = d.datos_disposicion;
   // lo que va a la base, o sale de ella, no se dibuja: lo dice la ventana de cada entidad (P20)
   const enBase = new Set(ds && (ds.flujo || []).length ? ds.abajo || [] : []);
-  const aristas = ents.flatMap(x => (x.relaciones || []).filter(r => !r.base && !enBase.has(r.con) && !enBase.has(x.nombre)).map(r => ({a: x.nombre, b: r.con, t: r.verbo || r.tipo})));
+  const aristas = ents.flatMap(x => (x.relaciones || []).filter(r => !enBase.has(r.con) && !enBase.has(x.nombre)).map(r => ({a: x.nombre, b: r.con, t: r.verbo || r.tipo})));
   if(!(ds && (ds.flujo || []).length)) return tzMontar(cajas, aristas, tzGrupos(cajas, ents), null, "");
   // arriba lo que acompaña, en medio el flujo en una fila, y debajo, en una banda sin líneas, la base que comparten
   const celdas = tzFilas([ds.arriba || [], ds.flujo], 1);
-  tzRejilla(cajas, celdas, TZ.PAD);
+  tzRejilla(cajas, celdas, TZ.PAD, tzPasillo(aristas));
   const base = (ds.abajo || []).filter(n => cajas.some(c => c.id === n));
   let banda = null, nota = "";
   if(base.length){
@@ -2969,7 +2979,7 @@ function tzDatos(d){
     base.forEach((n, i) => { const c = cajas.find(z => z.id === n); c.x = x0 + i * (TZ.W + TZ.GX); c.y = fondo + 20; });
     const bc = cajas.filter(c => base.includes(c.id)), bx = Math.min(izq, x0) - 20, bw = Math.max(der, x0 + anchoBase) + 20 - bx;
     banda = {x: bx, y: fondo, w: bw, h: bc[0].h + 40, ids: base};
-    nota = `${base.join(", ")} ${base.length > 1 ? "son la base que comparten" : "es la base que comparte"} el flujo: sus relaciones no se dibujan y están en la ventana de cada entidad.`;
+    nota = `${base.join(", ")} ${base.length > 1 ? "son la base que comparte" : "es la base que comparte"} el flujo: sus relaciones no se dibujan y están en la ventana de cada entidad.`;
   }
   return tzMontar(cajas, aristas, [], banda, nota);
 }
@@ -2998,8 +3008,9 @@ function trazarDesarrollo(d){
 // <<< trazado
 // el dibujo de una sección, desde su geometría: cajas con su color por papel, líneas en ángulo recto, verbos en un
 // tramo libre y, debajo, la leyenda; nada se escala, y un dibujo más ancho que la página se desplaza de lado (P21)
-const ROL_PALABRA = {flujo: "en el flujo", destino: "destino: le llegan líneas y no sale ninguna", resto: "lo demás"};
+const ROL_PALABRA = Object.fromEntries(Object.entries(TZ_ROLES).map(([k, v]) => [k, v.charAt(0).toLowerCase() + v.slice(1)]));
 let DEV_DIB = 0;
+const DEV_TRAZO = new WeakMap();
 function dibujoDe(pid, g, flechas){
   if(!g) return "";
   const mk = "dev-fl-" + (++DEV_DIB), punta = flechas ? ` marker-end="url(#${mk})"` : "";
@@ -3010,10 +3021,10 @@ function dibujoDe(pid, g, flechas){
   return `<div class="dev-dg"><svg class="dev-svg" width="${g.ancho}" height="${g.alto}" viewBox="0 0 ${g.ancho} ${g.alto}" role="group" aria-label="Diagrama">
     ${flechas?`<defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="pt" d="M1 1L9 5L1 9"/></marker></defs>`:""}
     ${g.banda?`<rect class="banda" x="${g.banda.x}" y="${g.banda.y}" width="${g.banda.w}" height="${g.banda.h}" rx="10"/><text class="gt" x="${g.banda.x + 10}" y="${g.banda.y + 15}">Base que comparten</text>`:""}
-    ${g.contenedores.map(c=>`<rect class="g" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8"/>${texto(c.rotulo, c.x + 8, c.y + 18, "gt", 16)}<title>${esc(c.titulo)}</title>`).join("")}
+    ${g.contenedores.map(c=>`<g><title>${esc(c.titulo)}</title><rect class="g" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8"/>${texto(c.rotulo, c.x + 8, c.y + 18, "gt", 16)}</g>`).join("")}
     ${g.lineas.map(l=>`<path class="ln${l.f?" fl":""}" d="M${l.puntos.map(q=>q.join(" ")).join(" L")}"${punta}/>`).join("")}
     ${g.cajas.map(caja).join("")}
-    ${g.verbos.map(v=>`<text class="rt" x="${v.x + v.w/2}" y="${v.y + v.h/2 + 4.5}" text-anchor="middle">${esc(v.t)}</text>`).join("")}
+    ${g.verbos.map(v=>`<rect class="rtb" x="${v.x + 3}" y="${v.y + 2}" width="${v.w - 6}" height="${v.h - 4}" rx="3"/><text class="rt" x="${v.x + v.w/2}" y="${v.y + v.h/2 + 4.5}" text-anchor="middle">${esc(v.t)}</text>`).join("")}
   </svg></div>${leyenda}${g.nota?`<p class="more dev-nota">${esc(g.nota)}</p>`:""}`;
 }
 function desarrolloTab(p){
@@ -3028,8 +3039,9 @@ function desarrolloTab(p){
   const piezas = {}; (pl.piezas||[]).forEach(x=>piezas[x.id]=x);
   const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan" && !(a.parte==="seguimiento" && !f.seguimiento));   // sin seguimiento ya lo dice la línea de las fechas
   const avL = xs => xs.length ? `<ul class="dev-av">${xs.map(a=>`<li>${inline(a.texto||"")}</li>`).join("")}</ul>` : "";
-  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" aria-haspopup="dialog" data-dev="${esc(p.id)}|f:${esc(x.id)}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}${x.horas!==null && x.horas!==undefined?` · ${esc(String(x.horas).replace(".", ","))} h`:""}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" aria-haspopup="dialog" data-dev="${esc(p.id)}|p:${esc(z.id)}"><small>${z.horas!==null && z.horas!==undefined?`<span class="h">${esc(String(z.horas).replace(".", ","))} h</span>`:""}${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}${z.para_antes?`<span class="dev-para" role="img" aria-label="Para y pregunta antes de construirla">para</span>`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div></section>`;
-  const tz = trazarDesarrollo(d);
+  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" aria-haspopup="dialog" data-dev="${esc(p.id)}|f:${esc(x.id)}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}${hDev(x.horas)?` · ${hDev(x.horas)} en piezas`:""}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" aria-haspopup="dialog" data-dev="${esc(p.id)}|p:${esc(z.id)}"><small>${hDev(z.horas)?`<span class="h">${hDev(z.horas)}</span>`:""}${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}${z.para_antes?`<span class="dev-para" role="img" aria-label="Para y pregunta antes de construirla" ${tip("Claude para y pregunta antes de construirla: "+z.para_antes)}>para</span>`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div></section>`;
+  // la geometría, una vez por diseño: repintar la pestaña no la vuelve a calcular
+  let tz = DEV_TRAZO.get(d); if(!tz){ tz = trazarDesarrollo(d); DEV_TRAZO.set(d, tz); }
   const seccion = (g, titulo, que, flechas) => g ? `<section class="card"><h2>${titulo}</h2><p class="more">Pulsa ${que} para ver su detalle.</p>${dibujoDe(p.id, g, flechas)}</section>` : "";
   const ds = d.datos_disposicion, fl = d.componentes_flujo || [], cs = d.infraestructura_contenedores;
   // sin las líneas de 1.29.0 se dibuja como en 1.28.0: sin sentido en las líneas, y «Lo que no cuadra» dice qué añadir

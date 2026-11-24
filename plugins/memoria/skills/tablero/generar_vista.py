@@ -53,7 +53,7 @@ def _context_core():
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
     'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
-    'dev_view': '2345a4ea61bceee70adea6b5747f7b273b2c81d4ae23236ee60ef350e9fce64a',
+    'dev_view': 'e49685a3114d465b37d95ffd9e6787dc0343668cbdefde1dd6bbf47e0558b00d',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1557,6 +1557,19 @@ def _context_core():
         '    return {key(t): n for n, t in enumerate(titles)}.get(key(name))\n'
         '\n'
         '\n'
+        'def _unique(items: list, what: str, warn) -> list:\n'
+        '    """The rows of a table with a name seen once (1.29.1): a repeated name is warned and only its first row is kept,\n'
+        '    because the drawing places one box per name."""\n'
+        '    seen, out = set(), []\n'
+        '    for i in items:\n'
+        '        if i["nombre"] in seen:\n'
+        '            warn(f"\xab{i[\'nombre\']}\xbb est\xe1 dos veces en \xab{what}\xbb: se dibuja la primera fila")\n'
+        '            continue\n'
+        '        seen.add(i["nombre"])\n'
+        '        out.append(i)\n'
+        '    return out\n'
+        '\n'
+        '\n'
         'def _roles(names: list, edges: list, flow, outside=()) -> dict:\n'
         '    """Each box\'s role in its drawing (1.29.1, P19): \xabflujo\xbb, \xabdestino\xbb or \xabresto\xbb. `edges` are the drawn lines (a, b);\n'
         "    `flow` the names of the section's \xabFlujo:\xbb line, or None without one; `outside` what always goes with the rest (what\n"
@@ -1698,9 +1711,10 @@ def _context_core():
         '            i["en_corto"] = _cell(r, short)\n'
         '        if part == "componentes":\n'
         '            # 1.29.0 (P17): an optional \xabExterno\xbb column\n'
-        '            ext = {key(x): n for n, x in enumerate(t)}.get(key("Externo"))\n'
+        '            ext = _optional(t, "Externo")\n'
         '            for i, r in zip(items, rows):\n'
         '                i["externo"] = bool(re.match(r"^\\s*(s[i\xed]|yes|x|\u2713|externo)\\b", _cell(r, ext), re.I))\n'
+        '        items = _unique(items, name, warn(part))\n'
         '        names = {i["nombre"] for i in items}\n'
         '        for i in items:\n'
         '            for o in [o for o in i["conecta_con"] if o not in names]:\n'
@@ -1729,7 +1743,7 @@ def _context_core():
         '                       "para que cada proveedor y cuenta se dibuje como un contenedor")\n'
         '    comps, fl = out["componentes"], out["componentes_flujo"]\n'
         '    edges = [(i["nombre"], o) for i in comps for o in i["conecta_con"]] + list(zip(fl or [], (fl or [])[1:]))\n'
-        '    roles = _roles([i["nombre"] for i in comps], edges, fl, {i["nombre"] for i in comps if i.get("externo")})\n'
+        '    roles = _roles([i["nombre"] for i in comps], edges, fl or None, {i["nombre"] for i in comps if i.get("externo")})\n'
         '    for i in comps:\n'
         '        i["rol"] = roles[i["nombre"]]\n'
         '    infra = out["infraestructura"]\n'
@@ -1760,8 +1774,11 @@ def _context_core():
         '            out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,\n'
         '                                     "que_es": _cell(r, c["Qu\xe9 es"]), "en_corto": _cell(r, short), "relaciones": rel,\n'
         '                                     "detalle": None, "conceptos": []})\n'
+        '        out["entidades"] = _unique(out["entidades"], "Datos", warn("datos"))\n'
         '        names = {e["nombre"] for e in out["entidades"]}\n'
         '        for e in out["entidades"]:\n'
+        '            if any(x["con"] == e["nombre"] for x in e["relaciones"]):\n'
+        '                warn("datos")(f"\xab{e[\'nombre\']}\xbb se relaciona consigo misma: esa relaci\xf3n no se dibuja y est\xe1 en su ventana")\n'
         '            for x in [x for x in e["relaciones"] if x["con"] not in names]:\n'
         '                warn("datos")(f"\xab{e[\'nombre\']}\xbb se relaciona con \xab{x[\'con\']}\xbb, que no est\xe1 en \xabDatos\xbb")\n'
         '                e["relaciones"].remove(x)\n'
@@ -1792,7 +1809,7 @@ def _context_core():
         '        roles = _roles([e["nombre"] for e in out["entidades"]],\n'
         '                       [(e["nombre"], x["con"]) for e in out["entidades"] for x in e["relaciones"]\n'
         '                        if not x.get("base") and e["nombre"] not in base],\n'
-        '                       dis["flujo"] if dis else None, base)\n'
+        '                       (dis["flujo"] or None) if dis else None, base)\n'
         '        for e in out["entidades"]:\n'
         '            e["rol"] = roles[e["nombre"]]\n'
         '    body = section("Conceptos", "diseno")\n'

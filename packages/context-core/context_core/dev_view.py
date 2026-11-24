@@ -62,6 +62,19 @@ def _optional(titles: list, name: str):
     return {key(t): n for n, t in enumerate(titles)}.get(key(name))
 
 
+def _unique(items: list, what: str, warn) -> list:
+    """The rows of a table with a name seen once (1.29.1): a repeated name is warned and only its first row is kept,
+    because the drawing places one box per name."""
+    seen, out = set(), []
+    for i in items:
+        if i["nombre"] in seen:
+            warn(f"«{i['nombre']}» está dos veces en «{what}»: se dibuja la primera fila")
+            continue
+        seen.add(i["nombre"])
+        out.append(i)
+    return out
+
+
 def _roles(names: list, edges: list, flow, outside=()) -> dict:
     """Each box's role in its drawing (1.29.1, P19): «flujo», «destino» or «resto». `edges` are the drawn lines (a, b);
     `flow` the names of the section's «Flujo:» line, or None without one; `outside` what always goes with the rest (what
@@ -203,9 +216,10 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             i["en_corto"] = _cell(r, short)
         if part == "componentes":
             # 1.29.0 (P17): an optional «Externo» column
-            ext = {key(x): n for n, x in enumerate(t)}.get(key("Externo"))
+            ext = _optional(t, "Externo")
             for i, r in zip(items, rows):
                 i["externo"] = bool(re.match(r"^\s*(s[ií]|yes|x|✓|externo)\b", _cell(r, ext), re.I))
+        items = _unique(items, name, warn(part))
         names = {i["nombre"] for i in items}
         for i in items:
             for o in [o for o in i["conecta_con"] if o not in names]:
@@ -234,7 +248,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
                        "para que cada proveedor y cuenta se dibuje como un contenedor")
     comps, fl = out["componentes"], out["componentes_flujo"]
     edges = [(i["nombre"], o) for i in comps for o in i["conecta_con"]] + list(zip(fl or [], (fl or [])[1:]))
-    roles = _roles([i["nombre"] for i in comps], edges, fl, {i["nombre"] for i in comps if i.get("externo")})
+    roles = _roles([i["nombre"] for i in comps], edges, fl or None, {i["nombre"] for i in comps if i.get("externo")})
     for i in comps:
         i["rol"] = roles[i["nombre"]]
     infra = out["infraestructura"]
@@ -265,8 +279,11 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,
                                      "que_es": _cell(r, c["Qué es"]), "en_corto": _cell(r, short), "relaciones": rel,
                                      "detalle": None, "conceptos": []})
+        out["entidades"] = _unique(out["entidades"], "Datos", warn("datos"))
         names = {e["nombre"] for e in out["entidades"]}
         for e in out["entidades"]:
+            if any(x["con"] == e["nombre"] for x in e["relaciones"]):
+                warn("datos")(f"«{e['nombre']}» se relaciona consigo misma: esa relación no se dibuja y está en su ventana")
             for x in [x for x in e["relaciones"] if x["con"] not in names]:
                 warn("datos")(f"«{e['nombre']}» se relaciona con «{x['con']}», que no está en «Datos»")
                 e["relaciones"].remove(x)
@@ -297,7 +314,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         roles = _roles([e["nombre"] for e in out["entidades"]],
                        [(e["nombre"], x["con"]) for e in out["entidades"] for x in e["relaciones"]
                         if not x.get("base") and e["nombre"] not in base],
-                       dis["flujo"] if dis else None, base)
+                       (dis["flujo"] or None) if dis else None, base)
         for e in out["entidades"]:
             e["rol"] = roles[e["nombre"]]
     body = section("Conceptos", "diseno")
