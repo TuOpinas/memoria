@@ -46,12 +46,10 @@ def abrir(proyecto, cambios=()):
         if texto.count(viejo) != 1:
             raise flujo.Montaje(f"{ruta} de la muestra no tiene una sola vez «{viejo.strip()[:60]}»")
         p.write_text(texto.replace(viejo, nuevo), encoding="utf-8")
-    try:
-        r = subprocess.run([sys.executable, "-I", str(ABRIR), str(raiz), proyecto, "--cuenta", CUENTA], cwd=str(REPO),
-                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                           errors="replace", timeout=120)
-    except subprocess.TimeoutExpired:
-        return None, "pasó de 120 segundos"
+    # sin tope propio: lo pone correr.py, que corta la corrida entera y la da por no corrida (2), no por fallada
+    r = subprocess.run([sys.executable, "-I", str(ABRIR), str(raiz), proyecto, "--cuenta", CUENTA], cwd=str(REPO),
+                       stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                       errors="replace")
     return r.returncode, r.stdout
 
 
@@ -139,14 +137,16 @@ def escenarios(inf):
     # 3 · En otros proyectos no se dice nada: la campaña, sin «## Desarrollo». Que haya RESPUESTA con pasos, para que no
     #     pase por no decir nada de nada
     problemas = []
-    texto = respuesta(*abrir(CAMPANA), problemas)
+    rc, salida = abrir(CAMPANA)
+    texto = respuesta(rc, salida, problemas)
     if texto is not None:
         if not pasos(texto):
             problemas.append("la RESPUESTA de la campaña no tiene pasos numerados: no hay apertura que juzgar")
-        for f in ("repositorio", "con escritura"):
-            if f in texto.lower():
-                problemas.append(f"la RESPUESTA de la campaña, que no tiene «Desarrollo», dice «{f}»: "
-                                 f"{json.dumps(texto, ensure_ascii=False)}")
+        # la apertura entera, no solo la RESPUESTA: el escenario dice que no dice nada
+        for l in salida.splitlines():
+            for f in ("repositorio", "con escritura"):
+                if f in l.lower():
+                    problemas.append(f"la apertura de la campaña, que no tiene «Desarrollo», dice «{f}»: {l.strip()[:200]}")
     inf.escenario("En otros proyectos no se dice nada", problemas)
 
 

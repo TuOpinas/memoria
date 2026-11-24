@@ -221,7 +221,7 @@ La fila de dos repositorios sale del contrato de la pieza, no de un escenario ap
 1. «Lo que responde la apertura» es su sección «=== RESPUESTA», hasta la siguiente «=== » o el final; un paso va desde su «1. » hasta el siguiente número, aunque ocupe varias líneas.
 2. Los nombres de los repositorios se buscan tal cual, con sus mayúsculas; «con escritura», «antes de trabajar», «una línea», «motivo» y «sigue» se buscan sin distinguir mayúsculas («Con escritura» también vale).
 3. «Se dice en una línea con el motivo, y se sigue» se comprueba en el mismo paso que nombra los repositorios, no en otro.
-4. En la campaña, «nada sobre repositorios» se mira en toda la sección «RESPUESTA», no en el resto de la apertura (que ya imprime el proyecto tal cual). **Añadido:** se pide que haya pasos, para que la fila no pase porque la apertura no diga nada de nada.
+4. En la campaña, «nada sobre repositorios» se mira en toda la apertura, no solo en lo que pide responder. **Añadido:** se pide que haya pasos, para que la fila no pase porque la apertura no diga nada de nada.
 
 ### Lo que queda sabido
 
