@@ -120,6 +120,28 @@ c, o = abrir(r, cuenta="beto@ejemplo.test")
 ok(re.search(r"=== CUENTA EN EL PROYECTO\nbeto@ejemplo.test: (?!colabora en este proyecto)", o) is not None,
    "Beto, que solo está en «Audita», no pasa a colaborar en el proyecto")
 
+print("Los repositorios se conectan al abrir (1.29.1, P23)")
+
+
+def paso_repos(o):
+    m = re.search(r"=== RESPUESTA[^\n]*\n(.*?)(?=\n=== |\Z)", o, re.S)
+    return [l for l in (m.group(1) if m else "").split("\n") if "Conecta con escritura" in l]
+
+
+r = raiz()
+c, o = abrir(r)
+ok(c == 0 and not paso_repos(o), "sin la sección, la RESPUESTA no pide conectar nada")
+kit(r, **{"Repositorios": "https://github.com/acme/app.git · acme/web"})
+c, o = abrir(r)
+p_ = paso_repos(o)
+ok(c == 0 and len(p_) == 1 and "(acme/app · acme/web)" in p_[0], "un paso, con cada repositorio como organización/repositorio, también el pegado como enlace")
+ok(p_ and "en remoto" in p_[0] and "una línea" in p_[0] and "motivo" in p_[0], "dice que el desarrollo es remoto y cómo decir el que no se pudo conectar")
+r = raiz()
+kit(r, **{"Repositorios": "por crear"})
+ok(not paso_repos(abrir(r)[1]), "con «Repositorios: por crear», nada que conectar")
+c, o = abrir(r, "ventas/cuentas", "beto@ejemplo.test")
+ok(c == 0, "abre igual con otra cuenta")
+
 print()
 print("Todo bien." if not fallos else f"{fallos} fallo(s).")
 sys.exit(1 if fallos else 0)
