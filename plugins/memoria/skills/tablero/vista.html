@@ -234,6 +234,8 @@ body{margin:0;padding-inline:0;padding-block:0}
 .side-i[aria-current="page"]{background:var(--signal-dim);color:var(--signal)}
 .side-i[aria-current="page"] span{color:var(--signal)}
 .side-i:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
+.side-nombre{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-i .dev-m{flex-shrink:0;margin-left:0}
 .side-n{font:600 11px var(--f-mono);background:var(--rule-soft);color:var(--ink-soft);border-radius:999px;padding:2px 7px}
 .side-n.late,.side-i[aria-current="page"] .side-n.late{background:var(--alert);color:var(--on-alert)}
 .side-arch{padding:10px 8px 0}
@@ -738,20 +740,31 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-col>button:focus-visible,.dev-pz:focus-visible,.dev-nodo:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .dev-pz small{display:block;color:var(--muted);font:500 11px var(--f-mono)}
 .dev-dg{overflow-x:auto}
-.dev-svg{width:100%;height:auto;display:block;margin-top:8px}
+.dev-svg{display:block;margin-top:8px;max-width:none}
 .dev-svg .ln{stroke:var(--muted);stroke-width:1.4;fill:none}
 .dev-svg .g{fill:none;stroke:var(--muted);stroke-dasharray:4 3}
-.dev-svg .gt{fill:var(--muted);font:600 11px var(--f-mono)}
-.dev-svg .rt{fill:var(--muted);font:11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px}
+.dev-svg .gt{fill:var(--muted);font:600 13px var(--f-mono)}
+.dev-svg .rt{fill:var(--ink-soft);font:13px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:5px}
+.dev-svg .banda{fill:var(--ground);stroke:var(--rule)}
+.dev-svg .nm{fill:var(--ink);font:600 14px var(--f-body)}
+.dev-svg .ec{fill:var(--ink-soft);font:13px var(--f-body)}
+.dev-svg .ln.fl{stroke:var(--signal);stroke-width:2}
+.dev-nodo.r-flujo rect,.dev-ley .r-flujo{fill:var(--signal-dim);background:var(--signal-dim);stroke:var(--signal);border-color:var(--signal)}
+.dev-nodo.r-destino rect,.dev-ley .r-destino{fill:var(--ground);background:var(--ground);stroke:var(--ink);border-color:var(--ink);stroke-width:2}
+.dev-nodo.ext rect{stroke-dasharray:5 3}
+.dev-ley{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 0;font-size:13px;color:var(--ink-soft)}
+.dev-ley span{display:inline-flex;align-items:center;gap:6px}
+.dev-ley i{display:inline-block;width:16px;height:11px;border:1.2px solid var(--ink-soft);border-radius:3px;background:var(--surface)}
+.dev-ley i.ext{border-style:dashed}
+.dev-ley i.r-destino{border-width:2.4px;border-color:var(--ink)}
+.dev-svg .rtb{fill:var(--surface)}
+.dev-nota{margin-top:4px}
+.dev-pz .h{float:right;font:500 11px var(--f-mono);color:var(--muted)}
+.dev-para{display:inline-block;margin-left:6px;font:600 10.5px var(--f-mono);color:var(--signal);border:1px solid currentColor;border-radius:4px;padding:0 4px}
 .dev-nodo rect{fill:var(--surface);stroke:var(--ink-soft);stroke-width:1.2}
-.dev-nodo text{fill:var(--ink);font:13px var(--f-body)}
 .dev-nodo{cursor:pointer}
 .dev-nodo:hover rect{stroke:var(--signal)}
 .dev-svg .pt{fill:none;stroke:var(--muted);stroke-width:1.5}
-.dev-svg .ln.fl{stroke:var(--ink-soft);stroke-width:2.2}
-.dev-svg .g2{font-weight:400}
-.dev-nodo.ext rect{stroke-dasharray:5 3;fill:var(--ground)}
-.dev-nodo .ex{fill:var(--muted);font:11px var(--f-mono)}
 .dev-av li{color:var(--warn)}
 .toast-i{font-size:12.5px;color:var(--signal);align-self:center}
 .due-item.resp .t>span:first-child,.due-item.resp>.t{color:var(--muted)}
@@ -802,7 +815,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.29.0"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.29.1"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -941,7 +954,7 @@ function parseHash(fijar = true){
   if(h==="ayuda" || h.startsWith("ayuda-")) return {lvl:"ayuda", id: h.slice(6) || "empezar"};
   return {lvl:"root"};
 }
-function go(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: PROY_DE[NTAB] || "estatus"}; if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus";   // la pestaña elegida se conserva al bajar o pasar de un proyecto a otro
+function go(v){ if(v && v.lvl==="proj" && !v.tab) v = {...v, tab: pestanaAlCambiar(PROY_DE[NTAB] || "estatus", byId[v.id])}; if(v && v.lvl==="root") INI_TAB = RAIZ_DE[NTAB] || "estatus";   // la pestaña elegida se conserva al bajar o pasar de un proyecto a otro
   const antes = view.lvl; view = v; EDIT = null; HECHO = null; PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; if(v.lvl==="proj") tab = v.tab || (antes==="proj" ? tab : "resumen"); const h = v.lvl==="area" ? "a-"+v.id : v.lvl==="proj" ? "p-"+v.id+"-t-"+tab : v.lvl==="pend" ? "pendientes" : v.lvl==="dec" ? "decisiones" : v.lvl==="ent" ? "entregables" : v.lvl==="ayuda" ? "ayuda-"+(v.id||"empezar") : v.lvl==="buscar" ? "" : ""; SIDE_OPEN = false; document.body.classList.remove("side-open"); if(("#"+h) !== location.hash && !(h==="" && !location.hash)) history.pushState(null,"","#"+h); render(); window.scrollTo({top:0}); }
 window.addEventListener("popstate", ()=>{ PRIO_OPEN = null; MT_OPEN = null; ENT_OPEN = null; view = parseHash(false); render(); });
 document.addEventListener("click", e => {
@@ -2486,7 +2499,14 @@ function actPorProyectoArea(ev, ps){
 let NTAB = "estatus";
 const setNTAB = k => { NTAB = k; };
 const RAIZ_DE = {estatus:"estatus", acciones:"acciones", actividad:"actividad", quehay:"mant"}, DE_RAIZ = {estatus:"estatus", acciones:"acciones", actividad:"actividad", mant:"quehay"};
-const PROY_DE = {estatus:"estatus", acciones:"pasos", actividad:"registro", quehay:"quehay"}, DE_PROY = {estatus:"estatus", pasos:"acciones", registro:"actividad", quehay:"quehay"};
+// >>> pestaña (1.29.1, P25): con qué pestaña se abre el proyecto que se elige, según la que está abierta; sin DOM
+const PROY_DE = {estatus:"estatus", acciones:"pasos", actividad:"registro", quehay:"quehay", desarrollo:"desarrollo"}, DE_PROY = {estatus:"estatus", pasos:"acciones", registro:"actividad", quehay:"quehay", desarrollo:"desarrollo"};
+function pestanaAlCambiar(abierta, destino){
+  // la pestaña Desarrollo se queda al pasar a otro proyecto de desarrollo; a uno que no lo es, se abre en Estatus
+  const t = PROY_DE[DE_PROY[abierta] || abierta] || "estatus";
+  return t === "desarrollo" && !(destino && destino.desarrollo) ? "estatus" : t;
+}
+// <<< pestaña
 INI_TAB = RAIZ_DE[NTAB] || "estatus";
 // al pulsar una pestaña en cualquier nivel, se recuerda la pregunta, no la pestaña
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-ini],.tab[data-tab],[data-atab]"); if(!b) return;
@@ -2699,7 +2719,10 @@ const CARGANDO = `<p class="more">Cargando…</p>`;
 // último seguimiento. Aquí solo se dibuja; lo que no se pudo leer o no cuadra sale en «Lo que no cuadra».
 // 1.29.0 (P15): la marca es un icono, y el detalle de lo que se pulsa se abre en una ventana (<dialog>)
 const ICONO_DEV = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5 1.5 8 5 11.5M11 4.5 14.5 8 11 11.5M9.2 3 6.8 13"/></svg>`;
-const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" role="img" aria-label="Proyecto de desarrollo" title="Proyecto de desarrollo">${ICONO_DEV}</span>` : "";
+// las horas de una pieza o de una fase (P22), con coma decimal; "" si no las hay
+const hDev = h => h===null || h===undefined ? "" : `${String(h).replace(".", ",")} h`;
+// 1.29.1 (P15): el tooltip propio del tablero, que sale al pasar, al enfocar y al tocar, no el del navegador
+const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" role="img" aria-label="Proyecto de desarrollo" data-tip="Proyecto de desarrollo" tabindex="0">${ICONO_DEV}</span>` : "";
 let DEV_ABRIO = null, DEV_CLAVE = "", DEV_ABAJO = null;
 const devDialogo = () => document.getElementById("dev-dlg");
 (() => { const d = devDialogo(); if(!d) return;
@@ -2730,104 +2753,279 @@ function devDetalle(p, k){
   const v = (TEXTOS[p.id]||{}).desarrollo || {}, d = v.diseno || {}, pl = v.plan || {}, f = v.fuentes || {};
   const fecha = x => x ? fmtD(x) : "—", t = s => `<h3 id="dev-dlg-t">${s}</h3>`;
   const [tipo, ...r] = k.split(":"), id = r.join(":");
+  const horas = hDev;
+  // 1.29.1 (P19): el papel de la caja en su dibujo, en palabras, y su «En corto»
+  const enLaBase = n => ((d.datos_disposicion||{}).flujo||[]).length && (d.datos_disposicion.abajo||[]).includes(n);
+  const papel = x => `${x.en_corto?`<p><i>${inline(x.en_corto)}</i></p>`:""}${x.rol?`<p class="more">En el dibujo: ${tipo==="e" && enLaBase(x.nombre) ? "la base que comparte el flujo" : esc(ROL_PALABRA[x.rol]||x.rol)}</p>`:""}`;
   if(tipo==="f"){ const x = (pl.fases||[]).find(y=>y.id===id); if(!x) return "";
-    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p>`; }
+    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}${x.en_llano?`<p>${inline(x.en_llano)}</p>`:""}${(x.arregla||[]).length?`<ul>${x.arregla.map(a=>`<li><b>${esc(a.pieza)}</b> ${inline(a.que)}</li>`).join("")}</ul>`:""}<p><b>Qué podrá hacer quién:</b> ${inline(x.que_podra||"—")}</p><p><b>Versión:</b> ${esc(x.version||"—")}${x.horas!==null && x.horas!==undefined?` · <b>Horas de sus piezas:</b> ${horas(x.horas)} con IA`:""} · <b>Listo cuando:</b> ${inline(x.listo_cuando||"—")}</p>`; }
   if(tipo==="p"){ const x = (pl.piezas||[]).find(y=>y.id===id); if(!x) return "";
-    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}<p>${inline(x.entrega||"")}</p><p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?x.escenarios.map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}`; }
+    return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}<p>${inline(x.entrega||"")}</p>${x.horas!==null && x.horas!==undefined?`<p><b>Horas:</b> ${horas(x.horas)} de sesión con IA</p>`:""}${x.para_antes?`<p><b>Antes de construirla, se pregunta:</b> ${inline(x.para_antes)}</p>`:""}<p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?x.escenarios.map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}`; }
   if(tipo==="e"){ const e = (d.entidades||[]).find(x=>x.nombre===id); if(!e) return ""; const conc = {}; (d.conceptos||[]).forEach(x=>conc[x.nombre]=x);
-    const rel = (e.relaciones||[]).map(x=>`<li>${esc(x.verbo||x.tipo||"se relaciona con")} <b>${esc(x.con)}</b>${x.verbo&&x.tipo?` <span class="more">(${esc(x.tipo)})</span>`:""}</li>`).join("");
-    return `${t(esc(e.nombre))}${e.grupo?`<p class="more">${esc(e.grupo)}</p>`:""}${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${rel?`<h4>Relaciones</h4><ul>${rel}</ul>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([kk,val])=>`<dt>${esc(kk)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:e.que_es||rel?"":`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}`; }
+    // 1.29.1 (P20): las relaciones con la base no tienen línea en el dibujo; aquí se dicen todas
+    const base = new Set(((d.datos_disposicion||{}).flujo||[]).length ? d.datos_disposicion.abajo||[] : []);
+    const rel = (e.relaciones||[]).map(x=>`<li>${esc(x.verbo||x.tipo||"se relaciona con")} <b>${esc(x.con)}</b>${x.verbo&&x.tipo?` <span class="more">(${esc(x.tipo)})</span>`:""}${x.base || base.has(e.nombre)?` <span class="more">· con la base, sin línea en el dibujo</span>`:""}</li>`).join("");
+    return `${t(esc(e.nombre))}${e.grupo?`<p class="more">${esc(e.grupo)}</p>`:""}${papel(e)}${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${rel?`<h4>Relaciones</h4><ul>${rel}</ul>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([kk,val])=>`<dt>${esc(kk)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:e.que_es||rel?"":`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}`; }
   if(tipo==="c" || tipo==="i"){ const x = (tipo==="c" ? d.componentes : d.infraestructura || []).find(y=>y.nombre===id); if(!x) return "";
     const cuerpo = `${x.externo?`<p class="more">Externo</p>`:""}${x.que_hace||x.para_que?`<p>${inline(x.que_hace||x.para_que)}</p>`:""}${x.proveedor!==undefined && (x.proveedor||x.cuenta||x.ambiente)?`<dl><dt>Proveedor</dt><dd>${esc(x.proveedor||"—")}</dd><dt>Cuenta</dt><dd>${esc(x.cuenta||"—")}</dd><dt>Ambiente</dt><dd>${esc(x.ambiente||"—")}</dd></dl>`:x.donde?`<p class="more">${esc(x.donde)}</p>`:""}${(x.conecta_con||[]).length?`<p class="more">Conecta con ${esc(x.conecta_con.join(", "))}</p>`:""}`;
     // lo que solo tiene nombre lo dice, como una entidad sin nada (P15)
-    return t(esc(x.nombre)) + (cuerpo || `<p class="more">Sin detalle.</p>`); }
+    return t(esc(x.nombre)) + ((cuerpo || x.en_corto) ? papel(x) + cuerpo : `<p class="more">Sin detalle.</p>${papel(x)}`); }
   return "";
 }
-// 1.29.0 (P16–P18): un dibujo en filas, con flechas que paran en el borde de la caja y, si se dan, contenedores
-const DW = 170, DH = 38, DGX = 56, DGY = 64, DPAD = 26;
-function borde(a, b){ // el punto del borde de la caja centrada en a por el que sale la línea hacia b
-  const dx = b.x - a.x, dy = b.y - a.y; if(!dx && !dy) return a;
-  const s = Math.min(dx ? (DW/2)/Math.abs(dx) : Infinity, dy ? (DH/2)/Math.abs(dy) : Infinity);
-  return {x: a.x + dx*s, y: a.y + dy*s};
+// >>> trazado (1.29.1, P19–P21): de un diseño a la geometría de sus tres dibujos, sin DOM ni nada de fuera de este bloque
+// Lo corre la página para dibujar y lo corren las pruebas de aceptación con node: una sola copia. Todo en píxeles del
+// dibujo, sin escalar: cajas en una rejilla con pasillos, líneas en ángulo recto que rodean las cajas, el verbo en un
+// tramo libre, rótulos partidos en dos líneas y la letra nunca por debajo de 13 px.
+const TZ = {W: 200, PAD: 40, GX: 80, GY: 80, CI: 20, GI: 30, PASO: 10, PXN: 14, PXC: 13, PXV: 13, PXR: 13, ANCHO_LETRA: 0.58, POR_FILA: 5, POR_FILA_CAJAS: 3};
+const TZ_ROLES = {flujo: "En el flujo", destino: "Destino: le llegan líneas y no sale ninguna", resto: "Lo demás"};
+const tzLetras = (px, ancho) => Math.max(4, Math.floor(ancho / (px * TZ.ANCHO_LETRA)));
+const tzArriba = (v, m) => Math.ceil(v / m) * m;
+function tzPartir(texto, n, max){
+  // en líneas de hasta n letras, por palabras, como mucho max; lo que no cabe se corta con «…» en la última
+  texto = String(texto || "").replace(/\s+/g, " ").trim(); if(!texto) return [];
+  const palabras = texto.split(" "), lineas = []; let cur = "";
+  // un nombre de código sin espacios se parte tras «_», «-», «.» o «/» antes que a media palabra
+  const corta = p => { const m = p.slice(0, n).search(/[_./-][^_./-]*$/); return m > n / 3 ? m + 1 : n; };
+  for(let i = 0; i < palabras.length; i++){
+    let p = palabras[i];
+    while(p.length > n){ if(cur){ lineas.push(cur); cur = ""; } const k = corta(p); lineas.push(p.slice(0, k)); p = p.slice(k); }
+    if(!cur) cur = p; else if((cur + " " + p).length <= n) cur += " " + p; else { lineas.push(cur); cur = p; }
+  }
+  if(cur) lineas.push(cur);
+  if(lineas.length <= max) return lineas;
+  const out = lineas.slice(0, max); let u = out[max - 1];
+  if(u.length >= n) u = u.slice(0, n - 1);
+  out[max - 1] = u.replace(/\s+$/, "") + "…";
+  return out;
 }
-let DEV_DIB = 0;
-function dibujo(pid, pos, nodos, aristas, cajas, ancho, alto, flechas){
-  // pos: {id: {x, y}} esquina de cada caja; nodos: [{id, t, k, ext}]; aristas: [{a, b, t}]; cajas: [{x, y, w, h, t}]
-  const c = id => ({x: pos[id].x + DW/2, y: pos[id].y + DH/2});
-  // otra caja entre dos de la misma fila o columna: la línea recta pasaría por detrás de ella
-  const enMedio = (ca, cb) => Object.values(pos).some(q => { const m = {x: q.x + DW/2, y: q.y + DH/2};
-    return ca.x===cb.x ? m.x===ca.x && m.y > Math.min(ca.y,cb.y) && m.y < Math.max(ca.y,cb.y) : m.y===ca.y && m.x > Math.min(ca.x,cb.x) && m.x < Math.max(ca.x,cb.x); });
-  const mk = "dev-fl-" + (++DEV_DIB), punta = flechas ? ` marker-end="url(#${mk})"` : "", verbos = [];
-  return `<div class="dev-dg"><svg class="dev-svg" viewBox="0 0 ${ancho} ${alto}" style="max-width:${ancho}px;min-width:${Math.round(ancho*0.7)}px" role="group" aria-label="Diagrama">
-    ${flechas?`<defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="pt" d="M1 1L9 5L1 9"/></marker></defs>`:""}
-    ${(cajas||[]).map(g=>{ const n = Math.floor((g.w - 16)/6.7), corta = s => s.length>n ? s.slice(0,n-1)+"…" : s;
-      // el rótulo en dos líneas: proveedor y cuenta, y debajo el ambiente
-      return `<rect class="g" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="8"/><text class="gt" x="${g.x + 8}" y="${g.y + 15}">${esc(corta(g.t))}<title>${esc([g.t, g.t2].filter(Boolean).join(" · "))}</title></text>${g.t2?`<text class="gt g2" x="${g.x + 8}" y="${g.y + 29}">${esc(corta(g.t2))}</text>`:""}`; }).join("")}
-    ${aristas.filter(r=>pos[r.a]&&pos[r.b]&&r.a!==r.b).map(r=>{ const ca = c(r.a), cb = c(r.b);
-      // en la misma columna con una caja en medio, la línea sale por la derecha y se curva: recta pasaría por detrás
-      if(ca.x===cb.x && enMedio(ca, cb)){ const a = {x: ca.x + DW/2, y: ca.y}, b = {x: cb.x + DW/2, y: cb.y}, q = ca.x + DW/2 + 34;
-        if(r.t) verbos.push(`<text class="rt" x="${q + 2}" y="${(a.y+b.y)/2}">${esc(r.t)}</text>`);
-        return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} C${q} ${a.y} ${q} ${b.y} ${b.x} ${b.y}"${punta}/>`; }
-      // en la misma fila con una caja en medio, la línea sale por arriba y se curva
-      if(ca.y===cb.y && enMedio(ca, cb)){ const a = {x: ca.x, y: ca.y - DH/2}, b = {x: cb.x, y: cb.y - DH/2}, q = ca.y - DH/2 - 30;
-        if(r.t) verbos.push(`<text class="rt" x="${(a.x+b.x)/2}" y="${q + 4}" text-anchor="middle">${esc(r.t)}</text>`);
-        return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} C${a.x} ${q} ${b.x} ${q} ${b.x} ${b.y}"${punta}/>`; }
-      const a = borde(ca, cb), b = borde(cb, ca), mx = a.x + (b.x-a.x)*0.27, my = a.y + (b.y-a.y)*0.27;
-      // el verbo va cerca de quien apunta, no en el medio, donde se cruzan las líneas entre dos filas
-      if(r.t) verbos.push(`<text class="rt" x="${mx}" y="${my - 4}" text-anchor="middle">${esc(r.t)}</text>`);
-      return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} L${b.x} ${b.y}"${punta}/>`; }).join("")}
-    ${nodos.filter(n=>pos[n.id]).map(n=>{ const q = pos[n.id]; return `<g class="dev-nodo${n.ext?" ext":""}" tabindex="0" role="button" aria-haspopup="dialog" data-dev="${esc(pid)}|${esc(n.k)}"><rect x="${q.x}" y="${q.y}" width="${DW}" height="${DH}" rx="6"/><text x="${q.x + 10}" y="${q.y + (n.ext ? 16 : 24)}">${esc(n.t.length>22 ? n.t.slice(0,21)+"…" : n.t)}</text>${n.ext?`<text class="ex" x="${q.x + 10}" y="${q.y + 31}">externo</text>`:""}<title>${esc(n.t)}${n.ext?" · externo":""}</title></g>`; }).join("")}
-    ${verbos.join("")}
-  </svg></div>`;
+function tzCajas(items, k){
+  // las cajas de una sección, con su texto partido y una altura común
+  const cs = items.map(x => ({id: x.nombre, rol: x.rol || "resto", externo: !!x.externo, titulo: x.nombre || "", corto_entero: x.en_corto || "",
+    nombre: tzPartir(x.nombre, tzLetras(TZ.PXN, TZ.W - 20), 2), corto: tzPartir(x.en_corto, tzLetras(TZ.PXC, TZ.W - 20), 2), k: k + x.nombre}));
+  const nn = Math.max(1, ...cs.map(c => c.nombre.length)), nc = Math.max(0, ...cs.map(c => c.corto.length));
+  const h = tzArriba(14 + nn * 18 + nc * 17 + 8, TZ.PASO);
+  cs.forEach(c => { c.w = TZ.W; c.h = h; });
+  return cs;
 }
-const POR_FILA = 5;
-function enFilas(pid, filas, nodos, aristas, flechas, entera){
-  // filas: listas de ids, de arriba abajo; cada una centrada, y partida si pasa de POR_FILA cajas, salvo la del índice
-  // «entera» (el flujo), que es una fila aunque haya que desplazarse
-  filas = filas.flatMap((f, n) => { if(!f.length) return []; if(n===entera) return [f]; const out = []; for(let i = 0; i < f.length; i += POR_FILA) out.push(f.slice(i, i+POR_FILA)); return out; });
-  return enRejilla(pid, Object.fromEntries(filas.flatMap((f, i) => { const x0 = (Math.max(...filas.map(g=>g.length)) - f.length)/2; return f.map((id, j) => [id, [i, x0 + j]]); })), nodos, aristas, flechas);
+const tzAnchoVerbo = t => Math.ceil(String(t).length * TZ.PXV * TZ.ANCHO_LETRA) + 10;
+// el pasillo entre columnas: el de siempre, o lo que pide el verbo más largo, para que quepa en su propia línea
+const tzPasillo = aristas => Math.max(TZ.GX, tzArriba(Math.max(0, ...aristas.filter(r => r.t).map(r => tzAnchoVerbo(r.t))) + 30, TZ.PASO));
+function tzRejilla(cajas, celdas, y0, gx){
+  // celdas: {id: [fila, columna]}; la columna puede ser media; cada fila y columna a su paso de la rejilla
+  const h = cajas.length ? cajas[0].h : 40, por = {}, g = gx || TZ.GX;
+  cajas.forEach(c => por[c.id] = c);
+  for(const [id, [f, col]] of Object.entries(celdas)){ const c = por[id]; if(!c) continue;
+    c.x = TZ.PAD + tzArriba(col * (TZ.W + g), TZ.PASO); c.y = y0 + f * (h + TZ.GY); }
 }
-function enRejilla(pid, celdas, nodos, aristas, flechas){
-  // celdas: {id: [fila, columna]} (la columna puede ser media); el dibujo ocupa lo que ocupan las celdas
-  const vs = Object.values(celdas); if(!vs.length) return "";
-  const nf = Math.max(...vs.map(v=>v[0])) + 1, nc = Math.max(...vs.map(v=>v[1])) + 1, pos = {};
-  for(const [id, [f, c]] of Object.entries(celdas)) pos[id] = {x: DPAD + c*(DW+DGX), y: DPAD + 34 + f*(DH+DGY)};
-  return dibujo(pid, pos, nodos, aristas, [], DPAD*2 + nc*DW + (nc-1)*DGX, DPAD*2 + 34 + nf*DH + (nf-1)*DGY, flechas);
+function tzFilas(filas, entera){
+  // filas de arriba abajo, cada una centrada; partidas si pasan de POR_FILA, salvo la del índice «entera» (el flujo)
+  filas = filas.flatMap((f, n) => { if(!f.length) return []; if(n === entera) return [f]; const out = []; for(let i = 0; i < f.length; i += TZ.POR_FILA) out.push(f.slice(i, i + TZ.POR_FILA)); return out; });
+  const ancho = Math.max(0, ...filas.map(f => f.length)), celdas = {};
+  filas.forEach((f, i) => { const x0 = (ancho - f.length) / 2; f.forEach((id, j) => celdas[id] = [i, x0 + j]); });
+  return celdas;
 }
-function colgados(flujo, todos, aristas){
-  // el recorrido en la fila de arriba; cada componente que no está en él, debajo del primero del recorrido con el que se
-  // conecta (en cualquier sentido), y si esa columna ya está ocupada, en la fila siguiente; sin conexión, al final
+function tzColgados(flujo, todos, aristas){
+  // el recorrido en la fila de arriba; lo demás debajo del primero del recorrido con el que se conecta
   const celdas = {}, ocupada = new Set();
   flujo.forEach((id, j) => celdas[id] = [0, j]);
   let libre = 0;
-  for(const id of todos.filter(n=>!flujo.includes(n))){
-    const vec = aristas.filter(r=>r.a===id || r.b===id).map(r=>r.a===id ? r.b : r.a).find(n=>celdas[n]!==undefined);
-    // en la fila de debajo, lo más cerca posible de su vecino; si no cabe, una fila más abajo
-    const ancho = Math.max(flujo.length, POR_FILA), ancla = vec!==undefined ? celdas[vec][1] : (libre++ % ancho);
+  for(const id of todos.filter(n => !flujo.includes(n))){
+    const vec = aristas.filter(r => r.a === id || r.b === id).map(r => r.a === id ? r.b : r.a).find(n => celdas[n] !== undefined);
+    const ancho = Math.max(flujo.length, TZ.POR_FILA), ancla = vec !== undefined ? celdas[vec][1] : (libre++ % ancho);
     let sitio = null;
-    for(let f = 1; !sitio; f++) for(const d of [0, 1, -1, 2, -2, 3, -3]){ const c = ancla + d; if(c >= 0 && c < ancho && !ocupada.has(f+"|"+c)){ sitio = [f, c]; break; } }
+    for(let f = 1; !sitio; f++) for(const d of [0, 1, -1, 2, -2, 3, -3]){ const c = ancla + d; if(c >= 0 && c < ancho && !ocupada.has(f + "|" + c)){ sitio = [f, c]; break; } }
     ocupada.add(sitio.join("|")); celdas[id] = sitio;
   }
   return celdas;
 }
-function enCajas(pid, grupos, nodos, aristas, flechas){
-  // grupos: [{t, ids}]; cada grupo es un contenedor con sus cajas una debajo de otra; tres contenedores por fila
-  const POR = 3, GW = DW + 60, pos = {}, cajas = [], CAB = grupos.some(g=>g.t2) ? 40 : 26;
-  const alturas = grupos.map(g => CAB + g.ids.length*(DH+14) + 6);
-  let y = DPAD;
-  for(let i = 0; i < grupos.length; i += POR){
-    const fila = grupos.slice(i, i+POR), h = Math.max(...alturas.slice(i, i+POR));
-    fila.forEach((g, j) => { const x = DPAD + j*(GW + DGX); cajas.push({x, y, w: GW, h, t: g.t, t2: g.t2}); g.ids.forEach((id, n) => pos[id] = {x: x + 16, y: y + CAB + n*(DH+14)}); });
-    y += h + DGY/2;
+function tzContenedores(cajas, grupos){
+  // cada grupo es un contenedor con sus cajas una debajo de otra; POR_FILA_CAJAS contenedores por fila
+  const por = {}; cajas.forEach(c => por[c.id] = c);
+  const GW = TZ.W + 2 * TZ.CI, letras = tzLetras(TZ.PXR, GW - 16), h = cajas.length ? cajas[0].h : 40, out = [];
+  let y = TZ.PAD;
+  for(let i = 0; i < grupos.length; i += TZ.POR_FILA_CAJAS){
+    const fila = grupos.slice(i, i + TZ.POR_FILA_CAJAS).map(g => ({...g, rotulo: tzPartir(g.titulo, letras, 2)}));
+    const cab = Math.max(...fila.map(g => tzArriba(10 + g.rotulo.length * 16 + 4, TZ.PASO)));
+    const alto = Math.max(...fila.map(g => cab + g.ids.length * (h + TZ.GI) - TZ.GI + TZ.CI));
+    fila.forEach((g, j) => { const x = TZ.PAD + j * (GW + TZ.GX);
+      out.push({x, y, w: GW, h: alto, rotulo: g.rotulo, titulo: g.titulo, cab});
+      g.ids.forEach((id, n) => { const c = por[id]; if(c){ c.x = x + TZ.CI; c.y = y + cab + n * (h + TZ.GI); } }); });
+    y += alto + TZ.GY;
   }
-  const nc = Math.min(POR, grupos.length) || 1, ancho = DPAD*2 + nc*GW + (nc-1)*DGX;
-  return dibujo(pid, pos, nodos, aristas, cajas, ancho, y - DGY/2 + DPAD, flechas);
+  return out;
 }
-function diagrama(pid, nodos, aristas){
-  // 1.28.0: cajas en columnas por grupo (n.g) y líneas sin sentido; queda para un diseño sin las líneas de 1.29.0
-  const grupos = [...new Set(nodos.map(n=>n.g||""))], sinG = grupos.length===1 && !grupos[0];
-  if(sinG){ const filas = []; nodos.forEach((n,i)=>{ (filas[Math.floor(i/3)] = filas[Math.floor(i/3)] || []).push(n.id); }); return enFilas(pid, filas, nodos, aristas, false); }
-  return enCajas(pid, grupos.map(g=>({t: g, ids: nodos.filter(n=>(n.g||"")===g).map(n=>n.id)})), nodos, aristas, false);
+// ── el camino de una línea: A* en una rejilla de PASO px, con giros caros y sin pasar por dentro de ninguna caja ──
+function tzRutas(cajas, aristas, obst, ancho, alto){
+  const P = TZ.PASO, nx = Math.floor(ancho / P) + 1, ny = Math.floor(alto / P) + 1, M = 4;
+  const libre = new Uint8Array(nx * ny).fill(1), uso = new Uint8Array(nx * ny);   // uso: 1 horizontal, 2 vertical
+  const tapa = r => { for(let i = Math.max(0, Math.ceil((r.x - M) / P)); i < nx && i * P < r.x + r.w + M; i++) for(let j = Math.max(0, Math.ceil((r.y - M) / P)); j < ny && j * P < r.y + r.h + M; j++) if(i * P > r.x - M && j * P > r.y - M) libre[j * nx + i] = 0; };
+  cajas.forEach(tapa); obst.forEach(tapa);
+  const por = {}; cajas.forEach(c => por[c.id] = c);
+  const DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], puertosUsados = {};
+  function puertos(c){
+    // los nodos de la rejilla justo fuera de cada lado, con el punto del borde del que salen y la dirección hacia fuera
+    const out = [], mx = c.x + c.w / 2, my = c.y + c.h / 2;
+    for(let y = tzArriba(c.y + 10, P); y <= c.y + c.h - 10; y += P){ out.push({i: (c.x + c.w + P) / P, j: y / P, bx: c.x + c.w, by: y, d: 0, off: Math.abs(y - my)}); out.push({i: (c.x - P) / P, j: y / P, bx: c.x, by: y, d: 2, off: Math.abs(y - my)}); }
+    for(let x = tzArriba(c.x + 20, P); x <= c.x + c.w - 20; x += P){ out.push({i: x / P, j: (c.y + c.h + P) / P, bx: x, by: c.y + c.h, d: 1, off: Math.abs(x - mx) * 0.6}); out.push({i: x / P, j: (c.y - P) / P, bx: x, by: c.y, d: 3, off: Math.abs(x - mx) * 0.6}); }
+    return out.filter(p => p.i >= 0 && p.j >= 0 && p.i < nx && p.j < ny && Number.isInteger(p.i) && Number.isInteger(p.j) && libre[p.j * nx + p.i]);
+  }
+  const rutas = [];
+  for(const r of aristas){
+    const a = por[r.a], b = por[r.b]; if(!a || !b || a === b) continue;
+    const ini = puertos(a), fin = puertos(b), meta = new Map();
+    fin.forEach(p => { const k = p.j * nx + p.i; const c0 = p.off * 0.15 + (puertosUsados[r.b + "|" + p.bx + "|" + p.by] ? 30 : 0); if(!meta.has(k) || meta.get(k).c > c0) meta.set(k, {p, c: c0}); });
+    // la cola: [coste estimado, coste, nodo, dirección]; un montículo binario
+    const H = [], push = e => { H.push(e); let i = H.length - 1; while(i > 0){ const q = (i - 1) >> 1; if(H[q][0] <= H[i][0]) break; [H[q], H[i]] = [H[i], H[q]]; i = q; } };
+    const pop = () => { const t = H[0], e = H.pop(); if(H.length){ H[0] = e; let i = 0; for(;;){ const l = 2 * i + 1, rr = l + 1; let m = i; if(l < H.length && H[l][0] < H[m][0]) m = l; if(rr < H.length && H[rr][0] < H[m][0]) m = rr; if(m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return t; };
+    const bx = (b.x + b.w / 2) / P, by = (b.y + b.h / 2) / P, est = (i, j) => Math.max(0, Math.abs(i - bx) - b.w / 2 / P - 1) + Math.max(0, Math.abs(j - by) - b.h / 2 / P - 1);
+    const mejor = new Float64Array(nx * ny * 4).fill(Infinity), de = new Int32Array(nx * ny * 4).fill(-1), inicio = {};
+    for(const p of ini){ const n = (p.j * nx + p.i) * 4 + p.d, c0 = 1 + p.off * 0.15 + (puertosUsados[r.a + "|" + p.bx + "|" + p.by] ? 30 : 0);
+      if(c0 < mejor[n]){ mejor[n] = c0; inicio[n] = p; push([c0 + est(p.i, p.j), c0, n]); } }
+    let llegada = -1, mejorFin = Infinity;
+    while(H.length){
+      const [f, g, n] = pop(); if(g > mejor[n]) continue; if(f >= mejorFin) break;
+      const cel = n >> 2, d = n & 3, i = cel % nx, j = (cel - i) / nx;
+      const m = meta.get(cel);
+      if(m){ const entra = (m.p.d + 2) % 4, tot = g + m.c + (d === entra ? 0 : 6) + 1; if(tot < mejorFin){ mejorFin = tot; llegada = n; } }
+      for(let nd = 0; nd < 4; nd++){
+        if(nd === (d + 2) % 4) continue;
+        const ii = i + DIR[nd][0], jj = j + DIR[nd][1]; if(ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue;
+        const cc = jj * nx + ii; if(!libre[cc]) continue;
+        const u = uso[cc], o = nd % 2 ? 2 : 1;
+        const coste = g + 1 + (nd === d ? 0 : 6) + (u & o ? 10 : u ? 2 : 0);
+        const nn = cc * 4 + nd; if(coste < mejor[nn]){ mejor[nn] = coste; de[nn] = n; push([coste + est(ii, jj), coste, nn]); }
+      }
+    }
+    if(llegada < 0){ rutas.push({a: r.a, b: r.b, t: r.t, f: r.f, puntos: [[a.x + a.w / 2, a.y + a.h / 2], [b.x + b.w / 2, b.y + b.h / 2]], sin_camino: true}); continue; }
+    const nodos = []; for(let n = llegada; n >= 0; n = de[n]){ nodos.push(n); if(inicio[n] && de[n] < 0) break; }
+    nodos.reverse();
+    const p0 = inicio[nodos[0]], pf = meta.get(llegada >> 2).p;
+    puertosUsados[r.a + "|" + p0.bx + "|" + p0.by] = 1; puertosUsados[r.b + "|" + pf.bx + "|" + pf.by] = 1;
+    const pts = [[p0.bx, p0.by]];
+    nodos.forEach((n, k) => { const cel = n >> 2, i = cel % nx, j = (cel - i) / nx; pts.push([i * P, j * P]);
+      const prev = k ? nodos[k - 1] >> 2 : -1; if(prev >= 0){ const pi = prev % nx; uso[cel] |= pi === i ? 2 : 1; uso[prev] |= pi === i ? 2 : 1; } });
+    pts.push([pf.bx, pf.by]);
+    // sin los puntos de en medio de un tramo recto
+    const lim = [pts[0]];
+    for(let k = 1; k < pts.length - 1; k++){ const [x0, y0] = lim[lim.length - 1], [x1, y1] = pts[k], [x2, y2] = pts[k + 1]; if(!((x0 === x1 && x1 === x2) || (y0 === y1 && y1 === y2))) lim.push(pts[k]); }
+    lim.push(pts[pts.length - 1]);
+    rutas.push({a: r.a, b: r.b, t: r.t, f: r.f, puntos: lim});
+  }
+  return rutas;
+}
+const tzSolapa = (p, q) => p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h;
+function tzVerbos(rutas, cajas, obst, ancho, alto){
+  // cada verbo en un tramo de su línea donde no pisa ninguna caja ni otro verbo; primero los tramos horizontales largos
+  const puestos = [], duros = cajas.map(c => ({x: c.x - 2, y: c.y - 2, w: c.w + 4, h: c.h + 4})).concat(obst);
+  // los tramos de cada línea, para que un verbo fuera de la suya no se ponga encima de la de otra
+  const tramos = rutas.flatMap((r, n) => r.puntos.slice(1).map((q, k) => { const p = r.puntos[k];
+    return {n, x: Math.min(p[0], q[0]) - 1, y: Math.min(p[1], q[1]) - 1, w: Math.abs(q[0] - p[0]) + 2, h: Math.abs(q[1] - p[1]) + 2}; }));
+  rutas.forEach((r, n) => { if(!r.t) return;
+    const w = tzAnchoVerbo(r.t), h = 18, cand = [];
+    for(let k = 0; k < r.puntos.length - 1; k++){ const [x1, y1] = r.puntos[k], [x2, y2] = r.puntos[k + 1], lar = Math.abs(x2 - x1) + Math.abs(y2 - y1);
+      if(y1 === y2){ const lo = Math.min(x1, x2), mid = (x1 + x2) / 2; for(let x = lo; x <= lo + lar; x += 5) cand.push({x: x - w / 2, y: y1 - h / 2, s: Math.abs(x - mid) + (lar < w + 10 ? 400 : 0)}); }
+      else { const lo = Math.min(y1, y2), mid = (y1 + y2) / 2; for(let y = lo; y <= lo + lar; y += 5){ cand.push({x: x1 + 5, y: y - h / 2, s: 150 + Math.abs(y - mid)}); cand.push({x: x1 - 5 - w, y: y - h / 2, s: 170 + Math.abs(y - mid)}); } }
+    }
+    // si ningún tramo tiene sitio, cerca de la línea, cada vez un poco más lejos
+    for(let k = 0; k < r.puntos.length - 1; k++){ const [x1, y1] = r.puntos[k], [x2, y2] = r.puntos[k + 1];
+      for(let t = 0; t <= 1; t += 0.25){ const cx = x1 + (x2 - x1) * t, cy = y1 + (y2 - y1) * t;
+        for(let dd = 10; dd <= 80; dd += 10) for(const [ox, oy] of [[0, -dd], [0, dd], [dd, 0], [-dd, 0]]) cand.push({x: cx + ox - (ox < 0 ? w : ox > 0 ? 0 : w / 2), y: cy + oy - h / 2, s: 1000 + dd * 10, fuera: true}); } }
+    cand.sort((p, q) => p.s - q.s);
+    const libre = (c, ajenas) => { const q = {x: c.x, y: c.y, w, h}; return q.x >= 0 && q.y >= 0 && q.x + w <= ancho && q.y + h <= alto && !duros.some(o => tzSolapa(q, o)) && !puestos.some(o => tzSolapa(q, o)) && (!ajenas || !tramos.some(t => t.n !== n && tzSolapa(q, t))); };
+    // fuera de su línea, primero donde no pisa otra; si no hay, lo más cerca posible
+    let sitio = cand.find(c => !c.fuera && libre(c, false)) || cand.find(c => c.fuera && libre(c, true)) || cand.find(c => libre(c, false));
+    if(!sitio) sitio = cand[0] || {x: 0, y: 0};
+    puestos.push({a: r.a, b: r.b, t: r.t, x: sitio.x, y: sitio.y, w, h});
+  });
+  return puestos;
+}
+function tzMontar(cajas, aristas, contenedores, banda, nota){
+  // el tamaño del dibujo, las líneas y los verbos, una vez puestas las cajas
+  const todo = cajas.concat(contenedores, banda ? [banda] : []);
+  const ancho = Math.max(TZ.W, ...todo.map(c => c.x + c.w)) + TZ.PAD, alto = Math.max(40, ...todo.map(c => c.y + c.h)) + TZ.PAD;
+  // el rótulo de cada contenedor no lo cruza ninguna línea ni lo tapa un verbo
+  const obst = contenedores.map(g => ({x: g.x, y: g.y, w: g.w, h: g.cab - 6}));
+  const rutas = tzRutas(cajas, aristas, obst, ancho, alto), verbos = tzVerbos(rutas, cajas, obst, ancho, alto);
+  const roles = [...new Set(cajas.map(c => c.rol))].filter(r => TZ_ROLES[r]);
+  return {ancho, alto, px_min: Math.min(TZ.PXN, TZ.PXC, TZ.PXV, TZ.PXR),
+    cajas: cajas.map(c => ({id: c.id, x: c.x, y: c.y, w: c.w, h: c.h, rol: c.rol, externo: c.externo, nombre: c.nombre, corto: c.corto, titulo: c.titulo, corto_entero: c.corto_entero, k: c.k})),
+    contenedores: contenedores.map(g => ({x: g.x, y: g.y, w: g.w, h: g.h, rotulo: g.rotulo, titulo: g.titulo})),
+    banda: banda || null, lineas: rutas.map(r => ({a: r.a, b: r.b, puntos: r.puntos, f: !!r.f})), verbos,
+    leyenda: roles.length > 1 ? ["flujo", "destino", "resto"].filter(r => roles.includes(r)).map(r => ({rol: r, texto: TZ_ROLES[r]})) : [],
+    nota: nota || ""};
+}
+function tzGrupos(cajas, items){
+  // 1.28.0, para un diseño sin las líneas de 1.29.0: un contenedor por grupo, o filas de tres sin grupos
+  const grupos = [...new Set(items.map(x => x.grupo || ""))];
+  if(grupos.length === 1 && !grupos[0]){ const celdas = {}; items.forEach((x, i) => celdas[x.nombre] = [Math.floor(i / 3), i % 3]); tzRejilla(cajas, celdas, TZ.PAD); return []; }
+  return tzContenedores(cajas, grupos.map(g => ({titulo: g || "Sin grupo", ids: items.filter(x => (x.grupo || "") === g).map(x => x.nombre)})));
+}
+function tzDatos(d){
+  const ents = d.entidades || []; if(!ents.length) return null;
+  const cajas = tzCajas(ents, "e:"), ds = d.datos_disposicion;
+  // lo que va a la base, o sale de ella, no se dibuja: lo dice la ventana de cada entidad (P20)
+  const enBase = new Set(ds && (ds.flujo || []).length ? ds.abajo || [] : []);
+  const aristas = ents.flatMap(x => (x.relaciones || []).filter(r => !enBase.has(r.con) && !enBase.has(x.nombre)).map(r => ({a: x.nombre, b: r.con, t: r.verbo || r.tipo})));
+  if(!(ds && (ds.flujo || []).length)) return tzMontar(cajas, aristas, tzGrupos(cajas, ents), null, "");
+  // arriba lo que acompaña, en medio el flujo en una fila, y debajo, en una banda sin líneas, la base que comparten
+  const celdas = tzFilas([ds.arriba || [], ds.flujo], 1);
+  tzRejilla(cajas, celdas, TZ.PAD, tzPasillo(aristas));
+  const base = (ds.abajo || []).filter(n => cajas.some(c => c.id === n));
+  let banda = null, nota = "";
+  if(base.length){
+    const arriba = cajas.filter(c => !base.includes(c.id)), fondo = Math.max(...arriba.map(c => c.y + c.h)) + TZ.GY;
+    const izq = Math.min(...arriba.map(c => c.x)), der = Math.max(...arriba.map(c => c.x + c.w));
+    const anchoBase = base.length * TZ.W + (base.length - 1) * TZ.GX, x0 = Math.max(TZ.PAD + 20, tzArriba(izq + (der - izq - anchoBase) / 2, TZ.PASO));
+    base.forEach((n, i) => { const c = cajas.find(z => z.id === n); c.x = x0 + i * (TZ.W + TZ.GX); c.y = fondo + 20; });
+    const bc = cajas.filter(c => base.includes(c.id)), bx = Math.min(izq, x0) - 20, bw = Math.max(der, x0 + anchoBase) + 20 - bx;
+    banda = {x: bx, y: fondo, w: bw, h: bc[0].h + 40, ids: base};
+    nota = `${base.join(", ")} ${base.length > 1 ? "son la base que comparte" : "es la base que comparte"} el flujo: sus relaciones no se dibujan y están en la ventana de cada entidad.`;
+  }
+  return tzMontar(cajas, aristas, [], banda, nota);
+}
+function tzComponentes(d){
+  const comps = d.componentes || []; if(!comps.length) return null;
+  const cajas = tzCajas(comps, "c:"), aristas = comps.flatMap(x => (x.conecta_con || []).map(o => ({a: x.nombre, b: o})));
+  const fl = d.componentes_flujo || [];
+  // el recorrido lleva su flecha entre cada par seguido, aunque «Conecta con» no la escriba
+  fl.slice(1).forEach((b, i) => { const a = fl[i], x = aristas.find(r => r.a === a && r.b === b); if(x) x.f = true; else aristas.push({a, b, f: true}); });
+  if(!fl.length) return tzMontar(cajas, aristas, tzGrupos(cajas, comps), null, "");
+  tzRejilla(cajas, tzColgados(fl, comps.map(x => x.nombre), aristas), TZ.PAD);
+  return tzMontar(cajas, aristas, [], null, "");
+}
+function tzInfraestructura(d){
+  const inf = d.infraestructura || []; if(!inf.length) return null;
+  const cajas = tzCajas(inf, "i:"), aristas = inf.flatMap(x => (x.conecta_con || []).map(o => ({a: x.nombre, b: o})));
+  const cs = d.infraestructura_contenedores;
+  if(!(cs && cs.length)) return tzMontar(cajas, aristas, tzGrupos(cajas, inf), null, "");
+  const grupos = cs.map(c => ({titulo: [c.proveedor, c.cuenta, c.ambiente].filter(Boolean).join(" · ") || "Sin proveedor", ids: c.piezas || []}));
+  return tzMontar(cajas, aristas, tzContenedores(cajas, grupos), null, "");
+}
+function trazarDesarrollo(d){
+  d = d || {};
+  return {datos: tzDatos(d), componentes: tzComponentes(d), infraestructura: tzInfraestructura(d)};
+}
+// <<< trazado
+// el dibujo de una sección, desde su geometría: cajas con su color por papel, líneas en ángulo recto, verbos en un
+// tramo libre y, debajo, la leyenda; nada se escala, y un dibujo más ancho que la página se desplaza de lado (P21)
+const ROL_PALABRA = Object.fromEntries(Object.entries(TZ_ROLES).map(([k, v]) => [k, v.charAt(0).toLowerCase() + v.slice(1)]));
+let DEV_DIB = 0;
+const DEV_TRAZO = new WeakMap();
+function dibujoDe(pid, g, flechas){
+  if(!g) return "";
+  const mk = "dev-fl-" + (++DEV_DIB), punta = flechas ? ` marker-end="url(#${mk})"` : "";
+  const texto = (lineas, x, y, cls, alto) => lineas.map((l, i) => `<text class="${cls}" x="${x}" y="${y + i*alto}">${esc(l)}</text>`).join("");
+  const caja = c => `<g class="dev-nodo r-${esc(c.rol||"resto")}${c.externo?" ext":""}" tabindex="0" role="button" aria-haspopup="dialog" data-dev="${esc(pid)}|${esc(c.k)}"><rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="6"/>${texto(c.nombre, c.x + 10, c.y + 22, "nm", 18)}${texto(c.corto, c.x + 10, c.y + 22 + c.nombre.length*18 + 2, "ec", 17)}<title>${esc(c.titulo)}${c.corto_entero?` — ${esc(c.corto_entero)}`:""}${c.externo?" · externo":""} · ${esc(ROL_PALABRA[c.rol]||"")}</title></g>`;
+  const ext = g.cajas.some(c=>c.externo);
+  const leyenda = g.leyenda.length || ext ? `<p class="dev-ley">${g.leyenda.map(l=>`<span><i class="r-${esc(l.rol)}"></i>${esc(l.texto)}</span>`).join("")}${ext?`<span><i class="ext"></i>Borde discontinuo: externo</span>`:""}</p>` : "";
+  return `<div class="dev-dg"><svg class="dev-svg" width="${g.ancho}" height="${g.alto}" viewBox="0 0 ${g.ancho} ${g.alto}" role="group" aria-label="Diagrama">
+    ${flechas?`<defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="pt" d="M1 1L9 5L1 9"/></marker></defs>`:""}
+    ${g.banda?`<rect class="banda" x="${g.banda.x}" y="${g.banda.y}" width="${g.banda.w}" height="${g.banda.h}" rx="10"/><text class="gt" x="${g.banda.x + 10}" y="${g.banda.y + 15}">Base que comparten</text>`:""}
+    ${g.contenedores.map(c=>`<g><title>${esc(c.titulo)}</title><rect class="g" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8"/>${texto(c.rotulo, c.x + 8, c.y + 18, "gt", 16)}</g>`).join("")}
+    ${g.lineas.map(l=>`<path class="ln${l.f?" fl":""}" d="M${l.puntos.map(q=>q.join(" ")).join(" L")}"${punta}/>`).join("")}
+    ${g.cajas.map(caja).join("")}
+    ${g.verbos.map(v=>`<rect class="rtb" x="${v.x + 3}" y="${v.y + 2}" width="${v.w - 6}" height="${v.h - 4}" rx="3"/><text class="rt" x="${v.x + v.w/2}" y="${v.y + v.h/2 + 4.5}" text-anchor="middle">${esc(v.t)}</text>`).join("")}
+  </svg></div>${leyenda}${g.nota?`<p class="more dev-nota">${esc(g.nota)}</p>`:""}`;
 }
 function desarrolloTab(p){
   if(!TEXTOS[p.id]){ traerTextos(p.id); return CARGANDO; }
@@ -2841,36 +3039,15 @@ function desarrolloTab(p){
   const piezas = {}; (pl.piezas||[]).forEach(x=>piezas[x.id]=x);
   const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan" && !(a.parte==="seguimiento" && !f.seguimiento));   // sin seguimiento ya lo dice la línea de las fechas
   const avL = xs => xs.length ? `<ul class="dev-av">${xs.map(a=>`<li>${inline(a.texto||"")}</li>`).join("")}</ul>` : "";
-  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" aria-haspopup="dialog" data-dev="${esc(p.id)}|f:${esc(x.id)}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" aria-haspopup="dialog" data-dev="${esc(p.id)}|p:${esc(z.id)}"><small>${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div></section>`;
-  const ents = d.entidades || [];
-  let datos = "";
-  if(ents.length){
-    const nodos = ents.map(x=>({id:x.nombre, t:x.nombre, g:x.grupo||"", k:"e:"+x.nombre})), aristas = ents.flatMap(x=>(x.relaciones||[]).map(r=>({a:x.nombre, b:r.con, t:r.verbo||r.tipo})));
-    const ds = d.datos_disposicion;
-    // con «Flujo:», un camino: arriba lo que firma o acompaña, en medio el flujo, abajo donde vive; sin él, como en 1.28.0
-    const dg = ds && (ds.flujo||[]).length ? enFilas(p.id, [ds.arriba||[], ds.flujo, ds.abajo||[]], nodos, aristas, true, 1) : diagrama(p.id, nodos, aristas);
-    datos = `<section class="card"><h2>Modelo de datos</h2><p class="more">Pulsa una entidad para ver su detalle.</p>${dg}</section>`;
-  }
-  const comps = d.componentes || [];
-  let componentes = "";
-  if(comps.length){
-    const nodos = comps.map(x=>({id:x.nombre, t:x.nombre, k:"c:"+x.nombre, ext:!!x.externo})), aristas = comps.flatMap(x=>(x.conecta_con||[]).map(o=>({a:x.nombre, b:o})));
-    const fl = d.componentes_flujo || [];
-    // el recorrido lleva su flecha entre cada par seguido, aunque «Conecta con» no la escriba; más marcada que las demás
-    fl.slice(1).forEach((b, i) => { const a = fl[i], x = aristas.find(r=>r.a===a && r.b===b); if(x) x.f = true; else aristas.push({a, b, f: true}); });
-    // con «Flujo:», el recorrido de una llamada en una fila; lo demás, debajo de aquello del recorrido con lo que se conecta
-    const dg = fl.length ? enRejilla(p.id, colgados(fl, comps.map(x=>x.nombre), aristas), nodos, aristas, true) : diagrama(p.id, nodos, aristas);
-    componentes = `<section class="card"><h2>Componentes</h2><p class="more">Pulsa un componente para ver su detalle.</p>${dg}</section>`;
-  }
-  const inf = d.infraestructura || [];
-  let infra = "";
-  if(inf.length){
-    const nodos = inf.map(x=>({id:x.nombre, t:x.nombre, k:"i:"+x.nombre})), aristas = inf.flatMap(x=>(x.conecta_con||[]).map(o=>({a:x.nombre, b:o})));
-    const cs = d.infraestructura_contenedores;
-    // por proveedor y cuenta, cada uno un contenedor con sus piezas; con «Dónde» de antes, como en 1.28.0
-    const dg = cs && cs.length ? enCajas(p.id, cs.map(c=>({t:[c.proveedor, c.cuenta].filter(Boolean).join(" · ") || "Sin proveedor", t2:c.ambiente||"", ids:c.piezas||[]})), nodos, aristas, true) : diagrama(p.id, nodos, aristas);
-    infra = `<section class="card"><h2>Infraestructura</h2><p class="more">Pulsa una pieza para ver su detalle.</p>${dg}</section>`;
-  }
+  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>`<div class="dev-col"><button type="button" aria-haspopup="dialog" data-dev="${esc(p.id)}|f:${esc(x.id)}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}${hDev(x.horas)?` · ${hDev(x.horas)} en piezas`:""}</small></button>${(x.piezas||[]).map(i=>piezas[i]).filter(Boolean).map(z=>`<button type="button" class="dev-pz" aria-haspopup="dialog" data-dev="${esc(p.id)}|p:${esc(z.id)}"><small>${hDev(z.horas)?`<span class="h">${hDev(z.horas)}</span>`:""}${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}${z.para_antes?`<span class="dev-para" role="img" aria-label="Para y pregunta antes de construirla" ${tip("Claude para y pregunta antes de construirla: "+z.para_antes)}>para</span>`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`).join("")}</div>`).join("")}</div></section>`;
+  // la geometría, una vez por diseño: repintar la pestaña no la vuelve a calcular
+  let tz = DEV_TRAZO.get(d); if(!tz){ tz = trazarDesarrollo(d); DEV_TRAZO.set(d, tz); }
+  const seccion = (g, titulo, que, flechas) => g ? `<section class="card"><h2>${titulo}</h2><p class="more">Pulsa ${que} para ver su detalle.</p>${dibujoDe(p.id, g, flechas)}</section>` : "";
+  const ds = d.datos_disposicion, fl = d.componentes_flujo || [], cs = d.infraestructura_contenedores;
+  // sin las líneas de 1.29.0 se dibuja como en 1.28.0: sin sentido en las líneas, y «Lo que no cuadra» dice qué añadir
+  const datos = seccion(tz.datos, "Modelo de datos", "una entidad", !!(ds && (ds.flujo||[]).length));
+  const componentes = seccion(tz.componentes, "Componentes", "un componente", !!fl.length);
+  const infra = seccion(tz.infraestructura, "Infraestructura", "una pieza", !!(cs && cs.length));
   const avisos = avOtros.length ? `<section class="card"><h2>Lo que no cuadra</h2>${avL(avOtros)}</section>` : "";
   return fuentes + resumen + plan + datos + componentes + infra + avisos;
 }
@@ -3213,7 +3390,7 @@ function ayudaArts(){
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo con ${F("monta el tablero")} (<button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien</button>).</p>
     <dl class="hc-def">
       <dt>Tres niveles, la misma forma</dt><dd>Inicio, cada área y cada proyecto tienen cuatro pestañas, y cada una contesta una pregunta: <b>Estatus</b>, cómo está y qué cambió; <b>Acciones</b>, qué te toca y por dónde empezar; <b>Actividad</b>, qué pasó y quién lo hizo; y <b>Qué hay</b>, qué ha producido el trabajo. En Inicio, la última es <b>Mantenimiento</b>, lo que estorba. Solo Acciones, Mantenimiento en Inicio y Qué hay en área y proyecto llevan un número. La pestaña que eliges se queda al pasar a otra área o a otro proyecto, también desde el índice de la izquierda. En la cabecera de un área o un proyecto, su descripción ocupa dos líneas; «Ver más» la abre entera, con lo que el proyecto deja fuera.</dd>
-      <dt>Desarrollo</dt><dd>Un proyecto que construye software lleva un icono de código (<b>&lt;/&gt;</b>) junto a su nombre en el índice, en su área y en su cabecera, y una quinta pestaña, <b>Desarrollo</b>. Enseña qué es (el objetivo, cómo funciona en pasos y las reglas), el plan como un tablero con una columna por fase y una tarjeta por pieza con su estado del último seguimiento, y tres dibujos. El modelo de datos, como un camino: las entidades por las que pasa un cambio en una fila, lo que comparten debajo y lo demás encima, con el verbo de cada relación sobre su flecha. Los componentes, como el recorrido de una llamada, con lo externo en caja punteada. La infraestructura, con un contenedor por proveedor y cuenta. Lo que no dibuja así, porque su diseño aún no trae la línea «Flujo:» o las columnas Proveedor y Cuenta, sale como antes y «Lo que no cuadra» dice qué añadir. Una fase, una pieza, una entidad o una caja se abren al pulsarlas en una ventana, que se cierra con Esc, con un clic fuera o con su ×. Sale del diseño, del plan y del seguimiento del proyecto, con la fecha de cada uno; lo que no se pudo leer del plan sale en su parte, y lo demás que no se pudo leer o no cuadra, al final, en «Lo que no cuadra». Lo explica <button type="button" class="lnk" data-help="desarrollo">Cómo se construye software con Claude</button>.</dd>
+      <dt>Desarrollo</dt><dd>Un proyecto que construye software lleva un icono de código (<b>&lt;/&gt;</b>) junto a su nombre en el índice, en su área y en su cabecera, y una quinta pestaña, <b>Desarrollo</b>. Enseña qué es (el objetivo, cómo funciona en pasos y las reglas), el plan como un tablero con una columna por fase y una tarjeta por pieza con su estado del último seguimiento, sus horas de sesión con IA, si el plan las da (la fase lleva su suma), y la marca <b>para</b> en la pieza donde Claude se para a preguntar antes de construirla, y tres dibujos. Cada caja lleva su nombre y, si el diseño la tiene, su línea «En corto» debajo; su color dice su papel (en el flujo, destino, lo demás), con una leyenda bajo el dibujo, y las líneas van en ángulo recto alrededor de las cajas. El dibujo no se encoge: si no cabe, se desplaza de lado. El modelo de datos, como un camino: las entidades por las que pasa un cambio en una fila, lo demás encima y, en una banda debajo y sin líneas, la base que comparten; sus relaciones con ella están en la ventana de cada entidad. Los componentes, como el recorrido de una llamada, con lo externo en caja de borde discontinuo. La infraestructura, con un contenedor por proveedor y cuenta. El icono dice «Proyecto de desarrollo» al pasar por encima, al enfocarlo o al tocarlo. Lo que no dibuja así, porque su diseño aún no trae la línea «Flujo:» o las columnas Proveedor y Cuenta, sale como antes y «Lo que no cuadra» dice qué añadir. Una fase, una pieza, una entidad o una caja se abren al pulsarlas en una ventana, que se cierra con Esc, con un clic fuera o con su ×. Sale del diseño, del plan y del seguimiento del proyecto, con la fecha de cada uno; lo que no se pudo leer del plan sale en su parte, y lo demás que no se pudo leer o no cuadra, al final, en «Lo que no cuadra». Lo explica <button type="button" class="lnk" data-help="desarrollo">Cómo se construye software con Claude</button>.</dd>
       <dt>Estatus</dt><dd>Arriba, <b>Últimos 7 días</b>: sesiones (y en cuántos proyectos), decisiones y documentos publicados de la última semana; sin sesiones, de cuándo es la última. Después, <b>Avanzaron otros</b>: lo que otras personas trabajaron en tus proyectos desde tu última sesión en cada uno, con el tema y los avances de cada sesión y las decisiones que registraron; lo que pasó en proyectos que no son tuyos va plegado. Solo sale lo que ya trajo la última puesta al día. Qué es la organización (el primer párrafo de la guía de la carpeta) sale al pasar el ratón o tocar el icono junto a su nombre (en el teléfono, la línea «Qué es…» bajo la versión). En Inicio sigue una ficha por área con el titular de su Estatus y su primer «Siguiente», y un pie que solo cuenta lo que pide algo: por decidir, vencidas, quién avanzó, y cuántas sesiones hubo esta semana o que no hubo ninguna. En el área, su Estatus entero, que firma su responsable al cerrar sesión, con sus prioridades debajo de «Siguiente» y «Atender» en cada una, y una ficha por proyecto. En el proyecto, su Estatus firmado: lo que se completó, lo que sigue, lo que falta decidir y lo que preocupa. Al final, <b>Esperas a</b>: una fila por persona que te debe algo, con «Ya llegó» (una línea opcional; si era una decisión, te pregunta qué se decidió) y «Ya no aplica». Las dos se pueden deshacer hasta que la carpeta las registre.</dd>
       <dt>Acciones</dt><dd>Arriba, <b>Por dónde empezar</b>: los grupos de tareas que más avanzan con una sola sesión, con «Empezar con Claude», que copia la frase para pegársela. Después, <b>Te toca decidir</b>: lo que falta decidir en tus proyectos y las tareas que empiezan por decidir, definir o elegir, leído como pregunta y con «Decidir con Claude»; solo lleva señal cuando la decisión bloquea algo («Bloquea 3 tareas», «con Ana Centeno»). Luego, <b>Tareas críticas</b>: las que tienen fecha a dos semanas de hoy, hacia atrás o hacia delante, y además están en «Siguiente», sirven a una prioridad del área o tocan a un cliente; las vencidas primero, de la más vieja a la más nueva. Cada una se marca «Hecha», recibe una «Nueva fecha» o se quita con «Ya no aplica» ahí mismo. Al final, <b>Decisiones que te afectan</b>: lo que otra persona decidió en otro proyecto y nombra a uno tuyo o a un área entera en la que eres responsable o colaboras (aunque no tengas proyecto en ella), o lo que alguien de la carpeta decidió dentro de uno tuyo, con «Aceptar» y «Cuestionar» (una línea con el porqué y el proyecto desde el que lo registras). Sale hasta que lo aceptas o lo cuestionas, o hasta que pasan 30 días. Las dos se deshacen hasta que una sesión tuya las registra (<button type="button" class="lnk" data-help="del-tablero">Lo que tocas aquí</button>). En el área y el proyecto, Acciones lleva lo mismo filtrado. Su número cuenta solo lo tuyo por hacer o decidir, igual en los tres niveles. Para saber quién eres, el tablero toma el nombre que la carpeta da a tu cuenta; si no lo encuentra, te lo dice y no te atribuye nada.</dd>
       <dt>Actividad</dt><dd>Lo que se hizo en los últimos 7 o 28 días, con el mismo arranque en los tres niveles: el periodo y sus cifras. En Inicio y el área, por área, por proyecto y por persona; en el proyecto, su registro de sesiones y decisiones del periodo, con «Ver anteriores» y «Cuestionar» en cada decisión de otra persona. Sale de la bitácora: cada entrada dice quién cerró la sesión, qué documentos escribió y cuáles publicó, y cada decisión quién la tomó. De un archivo que cambió sin sesión el tablero sabe cuál y cuándo, pero no quién; por eso cerrar la sesión importa.</dd>
@@ -3660,7 +3837,7 @@ function renderSide(){
   h += areasVis().map(a => {
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
     return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}${a.legible===false && /^Restringid/.test(noLeido(a,true).pill) ? ` <span class="lock-i" ${tip("Restringida")}>${LOCK}</span>` : ""}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
-      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span>${esc(p.nombre)}${marcaDev(p)}</span></button>`).join("")}</div>`;
+      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span class="side-nombre">${esc(p.nombre)}</span>${marcaDev(p)}</button>`).join("")}</div>`;
   }).join("");
   if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
   const hadFocus = document.activeElement && document.activeElement.id==="side-q", pos = hadFocus ? document.activeElement.selectionStart : 0;
@@ -3870,7 +4047,8 @@ document.addEventListener("input", e => { if(e.target.id==="side-q"){ QUERY = e.
   document.addEventListener("keydown", e => { if(e.key==="Escape") hide(); });
   window.addEventListener("scroll", hide, true);
   // un toque sobre algo con burbuja la abre y no la cierra: en el teléfono no hay ratón que pase por encima (1.24.9)
-  document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-tip]"); if(t){ if(t!==cur) show(t); return; } hide(); }, true);
+  // tocar el icono de desarrollo dentro de un botón (el menú lateral) enseña su tooltip, no abre el proyecto
+  document.addEventListener("click", e => { const t = e.target.closest && e.target.closest("[data-tip]"); if(t){ if(t.classList.contains("dev-m") && t.closest("button")){ e.stopPropagation(); e.preventDefault(); } if(t!==cur) show(t); return; } hide(); }, true);
 })();
 // teléfono: la barra de arriba se esconde al bajar y vuelve en cuanto se sube; siempre visible arriba de la página,
 // con el menú abierto o con el foco en ella (1.22.4)

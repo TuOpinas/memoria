@@ -47,7 +47,7 @@ descargado, que el modo Auto de la app frena cuando la petición no tiene que ve
 """
 import datetime, json, os, pathlib, re, sys, time
 
-ESTE_PLUGIN = "1.29.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.29.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 
 def copia_del_metodo(plugin_linea, version):
@@ -2408,6 +2408,14 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
     if completa and not sin_proyecto and PUEDE_ESCRIBIR:
         pasos.append("Antes de responder, la cola del tablero: ToolSearch de mcp__claude-artifacts__list_artifacts, db_query y read_file (o Artifact y ArtifactData si la sesión tiene las de antes); "
                      f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
+    # un proyecto de desarrollo se construye en remoto (1.29.1, P23): antes de trabajar, la sesión conecta sus repositorios con
+    # escritura, y el que no puede lo dice en una línea y sigue. Solo con la sección «## Desarrollo» y repositorios en ella.
+    kit_ = globals().get("KIT")
+    if completa and not sin_proyecto and kit_ is not None and kit_.found and kit_.repositories:
+        pasos.append("Conecta con escritura, antes de trabajar, cada repositorio de «Repositorios:» de este proyecto ("
+                     + " · ".join(kit_.repositories) + "): con la herramienta que añade repositorios a la sesión, con acceso de escritura, y después clónalo "
+                     "como diga su resultado. Todo el desarrollo se hace en remoto, ahí, nunca en la computadora de la persona. Si uno no se puede conectar, "
+                     "dilo en una línea con su nombre y el motivo que dé la herramienta, y sigue con lo demás.")
     # con un proyecto que no se pudo leer, la apertura sale igual, con el recuadro, y la respuesta pregunta cuál era (1.24.9)
     pasos.append(f"Di en una línea que «{ACTIVO}» no se encuentra (no existe, es restringido o no está descargado) y pregunta cuál se abre, con los proyectos de su área del bloque Proyectos de arriba; "
                  "no lo crees sin que lo pidan (la skill nuevo)." if sin_proyecto else

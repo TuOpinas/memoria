@@ -26,14 +26,16 @@ Estado: `cerrada`, `en curso` (solo una) o `pendiente`.
 |---|---|
 | P01 | [En llano, lo que cambia para la persona] |
 
+Horas: [las de sus piezas] de construcción y [las de escenarios, revisión y verificación], con IA. Espera a [persona]: [qué].
+
 Un bloque así por fase, escrito al planearla.
 
 ## Piezas
-Las de fases cerradas se quedan. Un identificador no se reutiliza nunca.
+Las de fases cerradas se quedan. Un identificador no se reutiliza nunca. «Horas» y «Para antes» son opcionales: las horas de sesión con IA de cada pieza, vacía si no se estiman (el tablero suma por fase las que hay), y lo que Claude pregunta antes de construirla, si se para en ella; las comprobaciones de siempre (los escenarios, la revisión, la verificación y el sí) no se escriben ahí.
 
-| Pieza | Fase | Qué entrega |
-|---|---|---|
-| P01 · [nombre] | F1 | [Una frase] |
+| Pieza | Fase | Qué entrega | Horas | Para antes |
+|---|---|---|---|---|
+| P01 · [nombre] | F1 | [Una frase] | [1.5] | [Qué se pregunta antes de construirla, o vacía] |
 
 ## Hecha cuando
 Una pieza está hecha cuando pasan sus escenarios. Claude los propone y quien acepta los aprueba antes de que se construya; un escenario aprobado no se cambia sin que lo apruebe otra vez. Una pieza puramente técnica no tiene escenarios ni verificación: lo dice aquí, «pieza técnica, sin escenarios», y también lo aprueba quien acepta.
