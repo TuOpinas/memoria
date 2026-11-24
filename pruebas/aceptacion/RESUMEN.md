@@ -196,3 +196,34 @@ Hoy fallan todas las filas, y deben. «La pone en verde» dice qué pieza hace p
 - Si dos filas comparten proveedor y cuenta pero no ambiente, el contrato no dice qué ambiente lleva el contenedor: la muestra usa uno solo.
 - «Sin detalle» ya está hoy en la página (la ficha de una entidad sin detalle): la fila 3 de P15 solo prueba, de hecho, que hay ventana.
 - P15 busca el atributo escrito exactamente `aria-label="Proyecto de desarrollo"`: otra forma de dar el mismo texto a los lectores de pantalla no la cuenta.
+
+## P23 · La apertura conecta los repositorios
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-23, en el plan.
+
+**Cómo están planteadas.** La prueba escribe la misma organización de mentira de F2 en una carpeta temporal, abre la sesión de un proyecto con la apertura del plugin, como la cuenta de Ana Pérez, y lee lo que la apertura le pide a la sesión que responda: su lista de pasos numerados. El portal construye software y su sección «Desarrollo» dice «Repositorios: muestra/portal»; la campaña no tiene esa sección.
+
+Hoy fallan las tres primeras filas, y deben: la apertura todavía no nombra los repositorios. La cuarta ya pasa hoy: la apertura de la campaña no habla de repositorios porque todavía no lo hace en ningún proyecto; está para que P23 no lo rompa.
+
+**Queda para la verificación en pantalla**: que la sesión conecte de verdad cada repositorio con escritura antes de trabajar, y que, si uno no se puede conectar, lo diga en una línea con el motivo y siga. Eso lo hace el modelo con su herramienta de repositorios; la prueba solo comprueba que la apertura se lo pide.
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| La apertura nombra los repositorios que conectar | Se abre el portal, con «Repositorios: muestra/portal» | Un paso nombra `muestra/portal` tal cual y dice «con escritura» y «antes de trabajar» | P23 |
+| **Añadido:** La apertura nombra los repositorios que conectar (dos repositorios) | La línea dice «Repositorios: muestra/portal · muestra/api» | Un mismo paso nombra los dos y dice «con escritura» y «antes de trabajar» | P23 |
+| Un repositorio que no se puede conectar se dice | Se abre el portal | El paso que nombra `muestra/portal` dice «una línea», «motivo» y «sigue» | P23 |
+| En otros proyectos no se dice nada | Se abre la campaña, sin «Desarrollo» | Lo que la apertura pide responder tiene pasos, y en ningún sitio dice «repositorio» ni «con escritura» | ya pasa hoy |
+
+La fila de dos repositorios sale del contrato de la pieza, no de un escenario aparte: es cómo se comprueba «cada uno».
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. «Lo que responde la apertura» es su sección «=== RESPUESTA», hasta la siguiente «=== » o el final; un paso va desde su «1. » hasta el siguiente número, aunque ocupe varias líneas.
+2. Los nombres de los repositorios se buscan tal cual, con sus mayúsculas; «con escritura», «antes de trabajar», «una línea», «motivo» y «sigue» se buscan sin distinguir mayúsculas («Con escritura» también vale).
+3. «Se dice en una línea con el motivo, y se sigue» se comprueba en el mismo paso que nombra los repositorios, no en otro.
+4. En la campaña, «nada sobre repositorios» se mira en toda la apertura, no solo en lo que pide responder. **Añadido:** se pide que haya pasos, para que la fila no pase porque la apertura no diga nada de nada.
+
+### Lo que queda sabido
+
+- Un repositorio que no se puede conectar no se puede simular desde la apertura: la prueba no distingue qué repositorio falla, solo que el paso pide decirlo y seguir.
+- La prueba busca palabras, no el sentido: un paso que dijera «no conectes con escritura… antes de trabajar» también pasaría. Eso lo ve quien verifica.
