@@ -227,3 +227,108 @@ La fila de dos repositorios sale del contrato de la pieza, no de un escenario ap
 
 - Un repositorio que no se puede conectar no se puede simular desde la apertura: la prueba no distingue qué repositorio falla, solo que el paso pide decirlo y seguir.
 - La prueba busca palabras, no el sentido: un paso que dijera «no conectes con escritura… antes de trabajar» también pasaría. Eso lo ve quien verifica.
+
+## Fase F5 · El tablero se lee de un vistazo
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-23, en el plan (fase F5, versión 1.29.1): los dos nuevos de P15 y los de P19, P20, P21, P22 y P25.
+
+**Cómo están planteadas.** Hay dos maneras de mirar.
+
+- **Lo que el tablero prepara.** Como en F2 y F4: a la organización de mentira se le cambia lo que pide el escenario (una columna «En corto», una base, las columnas «Horas» y «Para antes»), se genera el tablero y se lee lo que prepara para la pestaña Desarrollo.
+- **El dibujo.** P19, P20 y P21 miran además el dibujo. La página del tablero tendrá un trozo que calcula dónde va cada caja, cada línea y cada verbo. La prueba saca ese trozo de la página, lo corre aparte (con node) sobre lo que preparó el tablero y mide el resultado en píxeles. No abre ningún navegador.
+- P21 se corre sobre dos muestras: el diseño de plugin-memoria tal cual y uno con la forma del de product-design (la nueva, con «En corto», ocho entidades y dos componentes externos) y otros nombres.
+- P25 saca de la página, igual, el trozo que decide con qué pestaña se abre un proyecto, y lo corre aparte.
+- P15 lee la página como texto, igual que en F4.
+
+Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no existe. Las cuatro filas de P15 de F4 siguen pasando y no cambian.
+
+**Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
+- P15: que el icono se vea detrás de un nombre cortado, y que el tooltip salga al pasar el ratón, al enfocar y al tocar.
+- P19: los colores de verdad, que la caja enseñe su línea corta bajo el nombre, y que la ventana de una caja diga su rol con palabras.
+- P20: que la ventana de una entidad liste su relación con la base.
+- P21: que un dibujo ancho se desplace de lado.
+- P22: las horas y la marca en la tarjeta, la suma en la fase y lo que dice la ventana.
+- P25: que al elegir otro proyecto en el menú lateral se abra de verdad en esa pestaña, y que desde Estatus a otro proyecto de desarrollo siga en Estatus.
+- P20: que la banda quede debajo del flujo.
+- P19 a P21: que lo que se ve sea lo que calculó el trazado (sin cruces, verbos libres, letra de 13 px) en los dos diseños reales, y que la infraestructura lleve sus contenedores.
+- P15: el icono en los tres sitios (menú lateral, su área y junto al título).
+
+Todo esto se recorre sobre la candidata, con los diseños reales de product-design y plugin-memoria.
+
+### P15 · El icono, siempre visto y explicado (F5)
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| El icono sobrevive a un nombre largo | La página del tablero | El nombre del menú lateral va en su propio elemento (`class="side-nombre"`), y la página lo corta con «…» (una regla de `.side-nombre` con `text-overflow:ellipsis`) | P15 |
+| El icono se explica al momento | La misma | El icono lleva el tooltip propio del tablero (`data-tip="Proyecto de desarrollo"`). **Añadido:** que no quede el del navegador (`title="Proyecto de desarrollo"`, que hoy sí está) | P15 |
+
+### P19 · Cajas que dicen qué son
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Una caja lleva su línea corta | «En corto» en las tres secciones, en otro sitio en cada una (segunda columna en «Datos», última en «Componentes», tercera en «Infraestructura»), con una celda vacía en cada sección | Cada fila trae su línea corta tal cual, o vacía si la celda lo está. **Añadido:** la columna en otra posición en cada sección | P19 |
+| Sin la columna nada cambia | La muestra tal cual | Cada caja trae la línea corta vacía, y ningún aviso nombra «En corto» | P19 |
+| El color dice el rol | En «Componentes»: el flujo «Tienda web → API»; «Motor de pagos» es externo; «Buzón» recibe una línea y no saca ninguna; «Panel interno» saca líneas sin estar en el flujo | Tienda web y API son del flujo; Buzón es destino; Motor de pagos y Panel interno, del resto: salen los tres roles, y el externo va con el resto. **Añadido:** en «Datos» (el flujo cliente → pedido → producto, con categoría de base), los tres del flujo son del flujo y la base es del resto; en la infraestructura, que no tiene flujo, la base de datos es destino y las otras dos, del flujo | P19 |
+| La leyenda nombra los roles | La misma, con la infraestructura sin conexiones (todo del resto) | Componentes tiene tres roles y Datos dos: su leyenda trae una entrada por cada rol, cada una con texto. **Añadido:** la infraestructura tiene uno solo y su leyenda va vacía | P19 |
+
+### P20 · La base compartida, sin líneas
+
+En todas las filas, la organización de mentira tiene el flujo «cliente → pedido → producto», y pedido y producto apuntan a «categoría», que queda fuera: categoría es la base. Pedido → producto lleva el verbo «lleva».
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| La base es una banda sin líneas | Esa | Las dos relaciones hacia categoría van marcadas como relaciones con la base, y las demás no. En el dibujo, categoría está en la banda, y ninguna línea llega a ella ni sale de ella. **Añadido:** con el diseño de plugin-memoria, donde la base, «Project», apunta a «Area», tampoco sale ninguna línea de «Project» | P20 |
+| **Añadido:** La base es una banda sin líneas (sin «Flujo:» no hay base) | Las mismas relaciones, sin la línea «Flujo:» | Ninguna relación va marcada, y no hay banda | P20 |
+| Las relaciones con la base se siguen contando | Esa | La relación producto → categoría sigue ahí con su verbo «vive en», marcada como relación con la base, y el dibujo trae una nota que dice dónde están | P20 |
+| Cualquier otra relación guarda su línea | Esa | Pedido → producto tiene su línea y su verbo «lleva» | P20 |
+
+### P21 · Líneas que se pueden seguir
+
+Las tres vistas (datos, componentes, infraestructura) de los dos diseños de muestra.
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Ninguna línea pasa por encima de una caja | Las seis vistas | Cada tramo de cada línea es horizontal o vertical. Ningún tramo pasa por dentro de una caja que no sea una de las dos que une. **Añadido:** cada fila es una caja; cada relación o conexión tiene su línea; y cada línea sale de su caja y llega a la otra (cada extremo puede quedar hasta a 12 px de su caja, el sitio de la punta de flecha) | P21 |
+| Un verbo va en un tramo libre | Las mismas | Ningún verbo se monta sobre una caja (tampoco sobre las dos que une) ni sobre otro verbo. **Añadido:** cada relación con verbo que se dibuja tiene el suyo; las que van a la base o salen de ella no se dibujan ni lo llevan | P21 |
+| El texto guarda su tamaño | Las mismas | La página declara que su letra más pequeña es de 13 px o más, en cada dibujo | P21 |
+| Un rótulo largo pasa a dos líneas | Las mismas, y además una caja de componentes con un nombre de 70 letras | Cada rótulo de caja y de contenedor tiene una o dos líneas. Uno de una línea va entero. Uno de dos líneas forma, junto, el texto entero; si se corta, se corta al final de la segunda línea con «…» y el tooltip lleva el texto entero. El de 70 letras va en dos líneas | P21 |
+
+### P22 · Horas y paradas en el plan
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Una pieza enseña sus horas | «Horas» y «Para antes» detrás de «Qué entrega»: P01 «0.5», P02 «0,75», P03 «1.5 h» | Cada pieza trae sus horas (0.5, 0.75 y 1.5). F1 suma 1.25 y F2, 1.5. **Añadido:** ningún aviso del plan nombra las columnas | P22 |
+| **Añadido:** Una pieza enseña sus horas (la celda vacía no cuenta) | P01 «1», P02 y P03 vacías | P01 tiene 1 hora y las otras dos, ninguna. F1 suma 1 y F2 se queda sin horas | P22 |
+| Una parada se marca | P02 lleva «Que Ana Pérez apruebe la lista de precios» en «Para antes»; las otras, nada | P02 trae ese texto y las otras, el texto vacío | P22 |
+| Sin las columnas el plan se dibuja como hoy | La muestra tal cual | Las fases y sus piezas como en la 1.29.0, sin horas y sin «Para antes», y ningún aviso del plan nombra las columnas | P22 |
+
+### P25 · La pestaña se queda al cambiar de proyecto
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Desarrollo se queda abierta | Un proyecto abierto en su pestaña Desarrollo; se elige otro proyecto de desarrollo | Se abre en Desarrollo | P25 |
+| Sin la pestaña, vuelve a Estatus | Lo mismo, y se elige un proyecto que no es de desarrollo | Se abre en Estatus | P25 |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. «Ve el nombre y la línea corta debajo» (P19) se comprueba en lo que prepara el tablero, no en el dibujo.
+2. Los roles de P19 siguen este orden de reglas:
+   - lo externo, y la base de P20, son del resto;
+   - lo que nombra la línea «Flujo:» es del flujo;
+   - lo que recibe líneas y no saca ninguna es destino;
+   - en una sección sin «Flujo:» (la infraestructura nunca la tiene), lo que tiene alguna línea es del flujo;
+   - lo demás es del resto.
+3. «Ninguna línea llega a la base» (P20) quiere decir también que ninguna sale de ella: una relación de la base hacia otra entidad no se dibuja, no lleva verbo y no cuenta para el rol de la otra. Así, en plugin-memoria, «Project → Area» no tiene línea.
+4. Un verbo no puede montarse ni sobre las dos cajas que une.
+5. «Un dibujo más ancho que la página» (P21): como la prueba no conoce la página, el mínimo de 13 px se pide en todos los dibujos.
+6. Dos líneas de un rótulo forman, juntas, el texto entero, separadas por un espacio o sin él (una palabra partida).
+7. La suma de horas de una fase cuenta solo las piezas que tienen horas. Si ninguna tiene, la fase se queda sin horas, no en cero.
+
+### Lo que queda sabido
+
+- P21 no mide el ancho del texto. Un rótulo de una sola línea que se salga de su caja no lo ve. Solo comprueba la forma del rótulo y que el de 70 letras pase a dos líneas.
+- Que un contenedor con un rótulo largo pase a dos líneas solo se ve si alguna de las muestras lo tiene; no hay un caso hecho a propósito, como el de la caja de 70 letras.
+- P15 busca los textos escritos exactamente así: `class="side-nombre"`, `data-tip="Proyecto de desarrollo"` y `title="Proyecto de desarrollo"`. No ve si el nombre de cada proyecto del menú usa esa clase: solo que la clase y su regla existen.
+- P25 solo prueba lo que pasa al salir de Desarrollo. Desde otra pestaña (Estatus, Pasos, Registro, Qué hay) los escenarios no dicen con cuál se abre, y la prueba no lo mira.
+- Las pruebas de P19, P20, P21 y P25 necesitan node en el PATH (el de la imagen de GitHub); sin él no se montan y salen con 2, no con fallo.
+- Un cambio en las pruebas de P21 o en la muestra de P05 se corre también contra P19, P20 y P25, que dependen de ellos.
