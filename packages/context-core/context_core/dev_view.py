@@ -92,25 +92,31 @@ def design_detail_path(design_text: str) -> str:
 
 
 _HOW = (key("Cómo funciona"), key("How it works"))
-_CARD = re.compile(r"^\s*(?:[0-9]+|[NnMm])\s*:\s*(?:[0-9]+|[NnMm])\s*$")
+_CARD = re.compile(r"^\s*(?:[0-9]+|[NnMm*])\s*(?::|\.\.)\s*(?:[0-9]+|[NnMm*])\s*$")
 
 
 def _flow(body: str) -> list:
     """The names of a line «Flujo: A → B → C» of a section (1.29.0), in order, or None without one."""
-    m = re.search(r"^\s*\**\s*Flujo\s*\**\s*:\s*\**\s*(.+?)\s*$", body, re.M)
+    m = re.search(r"^[ \t]*(?:[-*][ \t]+)?\**[ \t]*Flujo[ \t]*\**[ \t]*:[ \t]*\**[ \t]*(.*?)[ \t]*$", body, re.M)
     if not m:
         return None
-    return [x.strip() for x in re.split(r"\s*(?:→|->)\s*", _clean(m.group(1))) if x.strip()]
+    text = _clean(m.group(1)).strip("* ")
+    if not text or text.startswith("["):   # vacía, o el hueco de la plantilla sin rellenar: como si no estuviera
+        return None
+    return [x.strip() for x in re.split(r"\s*(?:→|->)\s*", text) if x.strip()]
 
 
 def _known(flow, names: list, what: str, warn) -> list:
     """The flow's names that its table has, in order; the others are named in a warning."""
-    out = []
+    by_key, out = {key(n): n for n in names}, []
     for n in flow:
-        if n in names:
-            out.append(n)
-        else:
+        k = by_key.get(key(n))
+        if k is None:
             warn(f"«Flujo:» de «{what}» nombra «{n}», que no está en la tabla")
+        elif k in out:
+            warn(f"«Flujo:» de «{what}» repite «{n}»: se dibuja una vez, donde sale primero")
+        else:
+            out.append(k)
     return out
 
 
@@ -129,7 +135,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         return None
 
     out = {"objetivo": "", "como_funciona": [], "reglas": [], "entidades": [], "conceptos": [], "componentes": [],
-           "infraestructura": [], "datos_disposicion": None}
+           "infraestructura": [], "datos_disposicion": None, "componentes_flujo": None, "infraestructura_contenedores": None}
     body = section("Objetivo", "diseno")
     if body is not None:
         out["objetivo"] = _paragraph(body)
@@ -143,8 +149,6 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         t, rows = _table(body.split("\n"))
         c = _columns(t, ["Regla", "Excepción"], "Reglas", warn("diseno"))
         out["reglas"] = [{"regla": _cell(r, c["Regla"]), "excepcion": _cell(r, c["Excepción"])} for r in rows]
-    out["componentes_flujo"] = None
-    out["infraestructura_contenedores"] = None
     for name, part, cols, fields in (
             ("Componentes", "componentes", ["Componente", "Qué hace", "Dónde vive", "Conecta con"], ["nombre", "que_hace", "donde"]),
             ("Infraestructura", "infraestructura", ["Pieza", "Para qué", "Dónde", "Conecta con"], ["nombre", "para_que", "donde"])):
@@ -161,6 +165,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         if by_account:
             items = [{"nombre": _cell(r, c["Pieza"]), "para_que": _cell(r, c["Para qué"]), "proveedor": _cell(r, c["Proveedor"]),
                       "cuenta": _cell(r, c["Cuenta"]), "ambiente": _cell(r, c["Ambiente"]),
+                      # «donde» también, para una página 1.28.0 que aún no se republicó y lee solo ese campo
                       "donde": " · ".join(x for x in (_cell(r, c["Proveedor"]), _cell(r, c["Cuenta"]), _cell(r, c["Ambiente"])) if x),
                       "conecta_con": _list(_cell(r, c["Conecta con"]))} for r in rows]
         else:
@@ -169,7 +174,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             # 1.29.0 (P17): an optional «Externo» column
             ext = {key(x): n for n, x in enumerate(t)}.get(key("Externo"))
             for i, r in zip(items, rows):
-                i["externo"] = bool(re.match(r"^\s*(s[ií]|yes|x)\s*$", _cell(r, ext), re.I))
+                i["externo"] = bool(re.match(r"^\s*(s[ií]|yes|x|✓|externo)\b", _cell(r, ext), re.I))
         names = {i["nombre"] for i in items}
         for i in items:
             for o in [o for o in i["conecta_con"] if o not in names]:
@@ -180,10 +185,13 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
             f = _flow(body)
             if f is not None:
                 out["componentes_flujo"] = _known(f, [i["nombre"] for i in items], name, warn(part))
+            elif items:
+                warn(part)("«Componentes» no tiene línea «Flujo:»: añade «Flujo: A → B → C» con el recorrido de la llamada "
+                           "principal, y los componentes se dibujan como ese recorrido")
         elif by_account:
             boxes = {}
             for i in items:
-                k = (i["proveedor"], i["cuenta"])
+                k = (key(i["proveedor"]), key(i["cuenta"]))
                 if k not in boxes:
                     boxes[k] = {"proveedor": i["proveedor"], "cuenta": i["cuenta"], "ambiente": i["ambiente"], "piezas": []}
                 boxes[k]["piezas"].append(i["nombre"])
@@ -204,8 +212,9 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
                 if m:
                     # 1.29.0 (P16): a cardinality is the type; anything else between brackets is the relation's verb
                     inside = (m.group(2) or "").strip()
-                    card = [y.strip() for y in inside.split(",") if _CARD.match(y)]
-                    verb = [y.strip() for y in inside.split(",") if y.strip() and not _CARD.match(y)]
+                    parts = [y.strip() for y in inside.split(",") if y.strip()]
+                    card = [y for y in parts if _CARD.match(y)]
+                    verb = [y for y in parts if not _CARD.match(y)]
                     r_ = {"con": m.group(1).strip(), "tipo": ", ".join(card)}
                     if verb:
                         r_["verbo"] = ", ".join(verb)

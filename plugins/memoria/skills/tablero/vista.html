@@ -747,6 +747,9 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-nodo text{fill:var(--ink);font:13px var(--f-body)}
 .dev-nodo{cursor:pointer}
 .dev-nodo:hover rect{stroke:var(--signal)}
+.dev-svg .pt{fill:none;stroke:var(--muted);stroke-width:1.5}
+.dev-svg .ln.fl{stroke:var(--ink-soft);stroke-width:2.2}
+.dev-svg .g2{font-weight:400}
 .dev-nodo.ext rect{stroke-dasharray:5 3;fill:var(--ground)}
 .dev-nodo .ex{fill:var(--muted);font:11px var(--f-mono)}
 .dev-av li{color:var(--warn)}
@@ -2695,21 +2698,24 @@ const CARGANDO = `<p class="more">Cargando…</p>`;
 // Lo que pinta la pestaña llega en el detalle del proyecto («desarrollo»): lo leyó la puesta al día del diseño, el plan y el
 // último seguimiento. Aquí solo se dibuja; lo que no se pudo leer o no cuadra sale en «Lo que no cuadra».
 // 1.29.0 (P15): la marca es un icono, y el detalle de lo que se pulsa se abre en una ventana (<dialog>)
-const ICONO_DEV = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>`;
+const ICONO_DEV = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5 1.5 8 5 11.5M11 4.5 14.5 8 11 11.5M9.2 3 6.8 13"/></svg>`;
 const marcaDev = p => p && p.desarrollo ? ` <span class="dev-m" role="img" aria-label="Proyecto de desarrollo" title="Proyecto de desarrollo">${ICONO_DEV}</span>` : "";
-let DEV_ABRIO = null;
-function devDialogo(){
-  const d = document.getElementById("dev-dlg");
-  if(!d.dataset.listo){ d.dataset.listo = "1";
-    // un clic fuera de la caja (en el fondo) la cierra; Esc la cierra solo, porque es un dialog
-    d.addEventListener("click", e => { if(e.target===d) d.close(); });
-    d.addEventListener("close", () => { if(DEV_ABRIO && document.contains(DEV_ABRIO)) DEV_ABRIO.focus(); DEV_ABRIO = null; }); }
-  return d;
-}
+let DEV_ABRIO = null, DEV_CLAVE = "", DEV_ABAJO = null;
+const devDialogo = () => document.getElementById("dev-dlg");
+(() => { const d = devDialogo(); if(!d) return;
+  // un clic en el fondo la cierra, si también empezó en el fondo (seleccionar texto y soltar fuera no); Esc la cierra solo
+  d.addEventListener("mousedown", e => { DEV_ABAJO = e.target; });
+  d.addEventListener("click", e => { if(e.target===d && DEV_ABAJO===d) d.close(); });
+  // al cerrar, el foco vuelve a lo pulsado; si la página se repintó entre medias, a lo que tiene la misma clave
+  d.addEventListener("close", () => { const v = DEV_ABRIO && document.contains(DEV_ABRIO) ? DEV_ABRIO : DEV_CLAVE ? document.querySelector(`[data-dev="${CSS.escape(DEV_CLAVE)}"]`) : null;
+    if(v) v.focus(); DEV_ABRIO = null; DEV_CLAVE = ""; });
+  // Atrás o un enlace llevan a otra pantalla: la ventana no se queda abierta encima
+  window.addEventListener("hashchange", () => { if(d.open) d.close(); });
+})();
 function abrirDev(html, desde){
-  const d = devDialogo(); DEV_ABRIO = desde || null;
+  const d = devDialogo(); DEV_ABRIO = desde || null; DEV_CLAVE = desde && desde.dataset ? desde.dataset.dev || "" : "";
   d.innerHTML = `<div class="dev-dlg-b">${html || `<h3 id="dev-dlg-t">Detalle</h3><p class="more">Sin detalle.</p>`}</div><button type="button" class="dev-dlg-x" data-dev-cerrar aria-label="Cerrar">×</button>`;
-  if(!d.open){ if(d.showModal) d.showModal(); else d.setAttribute("open", ""); }
+  if(!d.open) d.showModal();
   const x = d.querySelector(".dev-dlg-x"); if(x) x.focus();
 }
 document.addEventListener("click", e => {
@@ -2730,7 +2736,7 @@ function devDetalle(p, k){
     return `${t(`${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}`)}<p>${inline(x.entrega||"")}</p><p class="more">${x.estado?`${esc(x.estado)} · seguimiento del ${fecha(x.fecha_estado)}`:f.seguimiento?"Sin estado en el último seguimiento":"Sin seguimiento todavía"}${x.aprobo?` · aprobó: ${esc(x.aprobo)}`:""}</p>${(x.escenarios||[]).length?x.escenarios.map(e=>`<h4>${esc(e.titulo)}</h4><pre>${esc(e.texto||"")}</pre>`).join(""):`<p class="more">Sin escenarios.</p>`}`; }
   if(tipo==="e"){ const e = (d.entidades||[]).find(x=>x.nombre===id); if(!e) return ""; const conc = {}; (d.conceptos||[]).forEach(x=>conc[x.nombre]=x);
     const rel = (e.relaciones||[]).map(x=>`<li>${esc(x.verbo||x.tipo||"se relaciona con")} <b>${esc(x.con)}</b>${x.verbo&&x.tipo?` <span class="more">(${esc(x.tipo)})</span>`:""}</li>`).join("");
-    return `${t(esc(e.nombre))}${e.grupo?`<p class="more">${esc(e.grupo)}</p>`:""}${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${rel?`<h4>Relaciones</h4><ul>${rel}</ul>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([kk,val])=>`<dt>${esc(kk)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}`; }
+    return `${t(esc(e.nombre))}${e.grupo?`<p class="more">${esc(e.grupo)}</p>`:""}${e.que_es?`<p>${inline(e.que_es)}</p>`:""}${rel?`<h4>Relaciones</h4><ul>${rel}</ul>`:""}${e.detalle?`<dl>${Object.entries(e.detalle).map(([kk,val])=>`<dt>${esc(kk)}</dt><dd>${inline(String(val))}</dd>`).join("")}</dl>`:e.que_es||rel?"":`<p class="more">Sin detalle.</p>`}${(e.conceptos||[]).length?`<h4>Conceptos</h4><ul>${e.conceptos.map(n=>`<li><b>${esc(n)}</b>${conc[n]&&conc[n].significa?`: ${inline(conc[n].significa)}`:""}</li>`).join("")}</ul>`:""}`; }
   if(tipo==="c" || tipo==="i"){ const x = (tipo==="c" ? d.componentes : d.infraestructura || []).find(y=>y.nombre===id); if(!x) return "";
     return `${t(esc(x.nombre))}${x.externo?`<p class="more">Externo</p>`:""}<p>${inline(x.que_hace||x.para_que||"")}</p>${x.proveedor!==undefined?`<dl><dt>Proveedor</dt><dd>${esc(x.proveedor||"—")}</dd><dt>Cuenta</dt><dd>${esc(x.cuenta||"—")}</dd><dt>Ambiente</dt><dd>${esc(x.ambiente||"—")}</dd></dl>`:x.donde?`<p class="more">${esc(x.donde)}</p>`:""}${(x.conecta_con||[]).length?`<p class="more">Conecta con ${esc(x.conecta_con.join(", "))}</p>`:""}`; }
   return "";
@@ -2742,32 +2748,41 @@ function borde(a, b){ // el punto del borde de la caja centrada en a por el que 
   const s = Math.min(dx ? (DW/2)/Math.abs(dx) : Infinity, dy ? (DH/2)/Math.abs(dy) : Infinity);
   return {x: a.x + dx*s, y: a.y + dy*s};
 }
+let DEV_DIB = 0;
 function dibujo(pid, pos, nodos, aristas, cajas, ancho, alto, flechas){
   // pos: {id: {x, y}} esquina de cada caja; nodos: [{id, t, k, ext}]; aristas: [{a, b, t}]; cajas: [{x, y, w, h, t}]
   const c = id => ({x: pos[id].x + DW/2, y: pos[id].y + DH/2});
   // otra caja entre dos de la misma fila o columna: la línea recta pasaría por detrás de ella
   const enMedio = (ca, cb) => Object.values(pos).some(q => { const m = {x: q.x + DW/2, y: q.y + DH/2};
     return ca.x===cb.x ? m.x===ca.x && m.y > Math.min(ca.y,cb.y) && m.y < Math.max(ca.y,cb.y) : m.y===ca.y && m.x > Math.min(ca.x,cb.x) && m.x < Math.max(ca.x,cb.x); });
+  const mk = "dev-fl-" + (++DEV_DIB), punta = flechas ? ` marker-end="url(#${mk})"` : "", verbos = [];
   return `<div class="dev-dg"><svg class="dev-svg" viewBox="0 0 ${ancho} ${alto}" style="max-width:${ancho}px;min-width:${Math.round(ancho*0.7)}px" role="group" aria-label="Diagrama">
-    <defs><marker id="dev-fl-${esc(pid)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="context-stroke" stroke-width="1.5"/></marker></defs>
-    ${(cajas||[]).map(g=>{ const n = Math.floor((g.w - 16)/6.7); return `<rect class="g" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="8"/><text class="gt" x="${g.x + 8}" y="${g.y + 15}">${esc(g.t.length>n ? g.t.slice(0,n-1)+"…" : g.t)}<title>${esc(g.t)}</title></text>`; }).join("")}
+    ${flechas?`<defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="pt" d="M1 1L9 5L1 9"/></marker></defs>`:""}
+    ${(cajas||[]).map(g=>{ const n = Math.floor((g.w - 16)/6.7), corta = s => s.length>n ? s.slice(0,n-1)+"…" : s;
+      // el rótulo en dos líneas: proveedor y cuenta, y debajo el ambiente
+      return `<rect class="g" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="8"/><text class="gt" x="${g.x + 8}" y="${g.y + 15}">${esc(corta(g.t))}<title>${esc([g.t, g.t2].filter(Boolean).join(" · "))}</title></text>${g.t2?`<text class="gt g2" x="${g.x + 8}" y="${g.y + 29}">${esc(corta(g.t2))}</text>`:""}`; }).join("")}
     ${aristas.filter(r=>pos[r.a]&&pos[r.b]&&r.a!==r.b).map(r=>{ const ca = c(r.a), cb = c(r.b);
       // en la misma columna con una caja en medio, la línea sale por la derecha y se curva: recta pasaría por detrás
       if(ca.x===cb.x && enMedio(ca, cb)){ const a = {x: ca.x + DW/2, y: ca.y}, b = {x: cb.x + DW/2, y: cb.y}, q = ca.x + DW/2 + 34;
-        return `<path class="ln" d="M${a.x} ${a.y} C${q} ${a.y} ${q} ${b.y} ${b.x} ${b.y}"${flechas?` marker-end="url(#dev-fl-${esc(pid)})"`:""}/>${r.t?`<text class="rt" x="${q + 2}" y="${(a.y+b.y)/2}">${esc(r.t)}</text>`:""}`; }
+        if(r.t) verbos.push(`<text class="rt" x="${q + 2}" y="${(a.y+b.y)/2}">${esc(r.t)}</text>`);
+        return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} C${q} ${a.y} ${q} ${b.y} ${b.x} ${b.y}"${punta}/>`; }
       // en la misma fila con una caja en medio, la línea sale por arriba y se curva
       if(ca.y===cb.y && enMedio(ca, cb)){ const a = {x: ca.x, y: ca.y - DH/2}, b = {x: cb.x, y: cb.y - DH/2}, q = ca.y - DH/2 - 30;
-        return `<path class="ln" d="M${a.x} ${a.y} C${a.x} ${q} ${b.x} ${q} ${b.x} ${b.y}"${flechas?` marker-end="url(#dev-fl-${esc(pid)})"`:""}/>${r.t?`<text class="rt" x="${(a.x+b.x)/2}" y="${q + 4}" text-anchor="middle">${esc(r.t)}</text>`:""}`; }
+        if(r.t) verbos.push(`<text class="rt" x="${(a.x+b.x)/2}" y="${q + 4}" text-anchor="middle">${esc(r.t)}</text>`);
+        return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} C${a.x} ${q} ${b.x} ${q} ${b.x} ${b.y}"${punta}/>`; }
       const a = borde(ca, cb), b = borde(cb, ca), mx = a.x + (b.x-a.x)*0.27, my = a.y + (b.y-a.y)*0.27;
       // el verbo va cerca de quien apunta, no en el medio, donde se cruzan las líneas entre dos filas
-      return `<path class="ln" d="M${a.x} ${a.y} L${b.x} ${b.y}"${flechas?` marker-end="url(#dev-fl-${esc(pid)})"`:""}/>${r.t?`<text class="rt" x="${mx}" y="${my - 4}" text-anchor="middle">${esc(r.t)}</text>`:""}`; }).join("")}
+      if(r.t) verbos.push(`<text class="rt" x="${mx}" y="${my - 4}" text-anchor="middle">${esc(r.t)}</text>`);
+      return `<path class="ln${r.f?" fl":""}" d="M${a.x} ${a.y} L${b.x} ${b.y}"${punta}/>`; }).join("")}
     ${nodos.filter(n=>pos[n.id]).map(n=>{ const q = pos[n.id]; return `<g class="dev-nodo${n.ext?" ext":""}" tabindex="0" role="button" aria-haspopup="dialog" data-dev="${esc(pid)}|${esc(n.k)}"><rect x="${q.x}" y="${q.y}" width="${DW}" height="${DH}" rx="6"/><text x="${q.x + 10}" y="${q.y + (n.ext ? 16 : 24)}">${esc(n.t.length>22 ? n.t.slice(0,21)+"…" : n.t)}</text>${n.ext?`<text class="ex" x="${q.x + 10}" y="${q.y + 31}">externo</text>`:""}<title>${esc(n.t)}${n.ext?" · externo":""}</title></g>`; }).join("")}
+    ${verbos.join("")}
   </svg></div>`;
 }
 const POR_FILA = 5;
-function enFilas(pid, filas, nodos, aristas, flechas){
-  // filas: listas de ids, de arriba abajo; cada una centrada, y partida si pasa de POR_FILA cajas
-  filas = filas.filter(f=>f.length).flatMap(f => { const out = []; for(let i = 0; i < f.length; i += POR_FILA) out.push(f.slice(i, i+POR_FILA)); return out; });
+function enFilas(pid, filas, nodos, aristas, flechas, entera){
+  // filas: listas de ids, de arriba abajo; cada una centrada, y partida si pasa de POR_FILA cajas, salvo la del índice
+  // «entera» (el flujo), que es una fila aunque haya que desplazarse
+  filas = filas.flatMap((f, n) => { if(!f.length) return []; if(n===entera) return [f]; const out = []; for(let i = 0; i < f.length; i += POR_FILA) out.push(f.slice(i, i+POR_FILA)); return out; });
   return enRejilla(pid, Object.fromEntries(filas.flatMap((f, i) => { const x0 = (Math.max(...filas.map(g=>g.length)) - f.length)/2; return f.map((id, j) => [id, [i, x0 + j]]); })), nodos, aristas, flechas);
 }
 function enRejilla(pid, celdas, nodos, aristas, flechas){
@@ -2782,35 +2797,35 @@ function colgados(flujo, todos, aristas){
   // conecta (en cualquier sentido), y si esa columna ya está ocupada, en la fila siguiente; sin conexión, al final
   const celdas = {}, ocupada = new Set();
   flujo.forEach((id, j) => celdas[id] = [0, j]);
-  let libre = flujo.length;
+  let libre = 0;
   for(const id of todos.filter(n=>!flujo.includes(n))){
     const vec = aristas.filter(r=>r.a===id || r.b===id).map(r=>r.a===id ? r.b : r.a).find(n=>celdas[n]!==undefined);
     // en la fila de debajo, lo más cerca posible de su vecino; si no cabe, una fila más abajo
-    const ancla = vec!==undefined ? celdas[vec][1] : libre++, ancho = Math.max(flujo.length, libre);
+    const ancho = Math.max(flujo.length, POR_FILA), ancla = vec!==undefined ? celdas[vec][1] : (libre++ % ancho);
     let sitio = null;
     for(let f = 1; !sitio; f++) for(const d of [0, 1, -1, 2, -2, 3, -3]){ const c = ancla + d; if(c >= 0 && c < ancho && !ocupada.has(f+"|"+c)){ sitio = [f, c]; break; } }
     ocupada.add(sitio.join("|")); celdas[id] = sitio;
   }
   return celdas;
 }
-function enCajas(pid, grupos, nodos, aristas){
+function enCajas(pid, grupos, nodos, aristas, flechas){
   // grupos: [{t, ids}]; cada grupo es un contenedor con sus cajas una debajo de otra; tres contenedores por fila
-  const POR = 3, GW = DW + 60, CAB = 26, pos = {}, cajas = [];
+  const POR = 3, GW = DW + 60, pos = {}, cajas = [], CAB = grupos.some(g=>g.t2) ? 40 : 26;
   const alturas = grupos.map(g => CAB + g.ids.length*(DH+14) + 6);
   let y = DPAD;
   for(let i = 0; i < grupos.length; i += POR){
     const fila = grupos.slice(i, i+POR), h = Math.max(...alturas.slice(i, i+POR));
-    fila.forEach((g, j) => { const x = DPAD + j*(GW + DGX); cajas.push({x, y, w: GW, h, t: g.t}); g.ids.forEach((id, n) => pos[id] = {x: x + 16, y: y + CAB + n*(DH+14)}); });
+    fila.forEach((g, j) => { const x = DPAD + j*(GW + DGX); cajas.push({x, y, w: GW, h, t: g.t, t2: g.t2}); g.ids.forEach((id, n) => pos[id] = {x: x + 16, y: y + CAB + n*(DH+14)}); });
     y += h + DGY/2;
   }
   const nc = Math.min(POR, grupos.length) || 1, ancho = DPAD*2 + nc*GW + (nc-1)*DGX;
-  return dibujo(pid, pos, nodos, aristas, cajas, ancho, y - DGY/2 + DPAD, true);
+  return dibujo(pid, pos, nodos, aristas, cajas, ancho, y - DGY/2 + DPAD, flechas);
 }
 function diagrama(pid, nodos, aristas){
   // 1.28.0: cajas en columnas por grupo (n.g) y líneas sin sentido; queda para un diseño sin las líneas de 1.29.0
   const grupos = [...new Set(nodos.map(n=>n.g||""))], sinG = grupos.length===1 && !grupos[0];
   if(sinG){ const filas = []; nodos.forEach((n,i)=>{ (filas[Math.floor(i/3)] = filas[Math.floor(i/3)] || []).push(n.id); }); return enFilas(pid, filas, nodos, aristas, false); }
-  return enCajas(pid, grupos.map(g=>({t: g, ids: nodos.filter(n=>(n.g||"")===g).map(n=>n.id)})), nodos, aristas).replace(/ marker-end="[^"]*"/g, "");
+  return enCajas(pid, grupos.map(g=>({t: g, ids: nodos.filter(n=>(n.g||"")===g).map(n=>n.id)})), nodos, aristas, false);
 }
 function desarrolloTab(p){
   if(!TEXTOS[p.id]){ traerTextos(p.id); return CARGANDO; }
@@ -2831,7 +2846,7 @@ function desarrolloTab(p){
     const nodos = ents.map(x=>({id:x.nombre, t:x.nombre, g:x.grupo||"", k:"e:"+x.nombre})), aristas = ents.flatMap(x=>(x.relaciones||[]).map(r=>({a:x.nombre, b:r.con, t:r.verbo||r.tipo})));
     const ds = d.datos_disposicion;
     // con «Flujo:», un camino: arriba lo que firma o acompaña, en medio el flujo, abajo donde vive; sin él, como en 1.28.0
-    const dg = ds && (ds.flujo||[]).length ? enFilas(p.id, [ds.arriba||[], ds.flujo, ds.abajo||[]], nodos, aristas, true) : diagrama(p.id, nodos, aristas);
+    const dg = ds && (ds.flujo||[]).length ? enFilas(p.id, [ds.arriba||[], ds.flujo, ds.abajo||[]], nodos, aristas, true, 1) : diagrama(p.id, nodos, aristas);
     datos = `<section class="card"><h2>Modelo de datos</h2><p class="more">Pulsa una entidad para ver su detalle.</p>${dg}</section>`;
   }
   const comps = d.componentes || [];
@@ -2839,6 +2854,8 @@ function desarrolloTab(p){
   if(comps.length){
     const nodos = comps.map(x=>({id:x.nombre, t:x.nombre, k:"c:"+x.nombre, ext:!!x.externo})), aristas = comps.flatMap(x=>(x.conecta_con||[]).map(o=>({a:x.nombre, b:o})));
     const fl = d.componentes_flujo || [];
+    // el recorrido lleva su flecha entre cada par seguido, aunque «Conecta con» no la escriba; más marcada que las demás
+    fl.slice(1).forEach((b, i) => { const a = fl[i], x = aristas.find(r=>r.a===a && r.b===b); if(x) x.f = true; else aristas.push({a, b, f: true}); });
     // con «Flujo:», el recorrido de una llamada en una fila; lo demás, debajo de aquello del recorrido con lo que se conecta
     const dg = fl.length ? enRejilla(p.id, colgados(fl, comps.map(x=>x.nombre), aristas), nodos, aristas, true) : diagrama(p.id, nodos, aristas);
     componentes = `<section class="card"><h2>Componentes</h2><p class="more">Pulsa un componente para ver su detalle.</p>${dg}</section>`;
@@ -2849,7 +2866,7 @@ function desarrolloTab(p){
     const nodos = inf.map(x=>({id:x.nombre, t:x.nombre, k:"i:"+x.nombre})), aristas = inf.flatMap(x=>(x.conecta_con||[]).map(o=>({a:x.nombre, b:o})));
     const cs = d.infraestructura_contenedores;
     // por proveedor y cuenta, cada uno un contenedor con sus piezas; con «Dónde» de antes, como en 1.28.0
-    const dg = cs && cs.length ? enCajas(p.id, cs.map(c=>({t:[c.proveedor, c.cuenta, c.ambiente].filter(Boolean).join(" · ") || "Sin proveedor", ids:c.piezas||[]})), nodos, aristas) : diagrama(p.id, nodos, aristas);
+    const dg = cs && cs.length ? enCajas(p.id, cs.map(c=>({t:[c.proveedor, c.cuenta].filter(Boolean).join(" · ") || "Sin proveedor", t2:c.ambiente||"", ids:c.piezas||[]})), nodos, aristas, true) : diagrama(p.id, nodos, aristas);
     infra = `<section class="card"><h2>Infraestructura</h2><p class="more">Pulsa una pieza para ver su detalle.</p>${dg}</section>`;
   }
   const avisos = avOtros.length ? `<section class="card"><h2>Lo que no cuadra</h2>${avL(avOtros)}</section>` : "";
