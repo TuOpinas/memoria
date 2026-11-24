@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.28.0 · huella 313e3bb · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.29.0 · huella 05b4e36 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -8,7 +8,7 @@ Este archivo reúne el contrato del método, las normas de estilo y el índice d
 
 Contrato base del método. Si una skill contradice algo de aquí o de sus anexos, manda el contrato. Cuatro anexos viven junto a este archivo. `escribir.md` reúne lo que hace falta para escribir (estructura de `area.md` y `proyecto.md`, formatos de los registros, cabecera, rotación y prohibiciones) y se carga antes de cualquier escritura en la carpeta; para cerrar sesión, registrar una premisa o escribir el `Estatus` de un área basta con él, y para crear, guardar o publicar un documento, mover, migrar o montar se carga además este archivo. Los otros tres se leen solo cuando hacen falta: `raices.md` (varias raíces, traspasos, registro de una migración), `montaje.md` (montaje, publicación, bloque de instrucciones, programadores) y `sin-consola.md` (cómo se lee y se escribe cuando la raíz está conectada pero el shell de la computadora no la ve).
 
-Versión del método: **1.28**
+Versión del método: **1.29**
 
 ## 1. Las tres capas de propiedad
 

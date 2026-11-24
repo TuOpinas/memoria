@@ -33,7 +33,7 @@ tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta 
 """
 import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 
-ESTE_PLUGIN = "1.28.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.29.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -2051,7 +2051,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "4"   # 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "5"   # 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
