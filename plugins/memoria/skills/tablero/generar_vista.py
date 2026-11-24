@@ -33,7 +33,7 @@ tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta 
 """
 import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 
-ESTE_PLUGIN = "1.28.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.29.0"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -53,7 +53,7 @@ def _context_core():
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
     'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
-    'dev_view': 'fab387dd62db411b11dc76f2ebe429352654936032003656fd9b9fe01b9039da',
+    'dev_view': '8cd77c3e9e8765e871be6a939428e02de4e16dc9f77ba46098cda480abd3594a',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1587,6 +1587,32 @@ def _context_core():
         '\n'
         '\n'
         '_HOW = (key("C\xf3mo funciona"), key("How it works"))\n'
+        '_CARD = re.compile(r"^\\s*(?:[0-9]+|[NnMm*])\\s*(?::|\\.\\.)\\s*(?:[0-9]+|[NnMm*])\\s*$")\n'
+        '\n'
+        '\n'
+        'def _flow(body: str) -> list:\n'
+        '    """The names of a line \xabFlujo: A \u2192 B \u2192 C\xbb of a section (1.29.0), in order, or None without one."""\n'
+        '    m = re.search(r"^[ \\t]*(?:[-*][ \\t]+)?\\**[ \\t]*Flujo[ \\t]*\\**[ \\t]*:[ \\t]*\\**[ \\t]*(.*?)[ \\t]*$", body, re.M)\n'
+        '    if not m:\n'
+        '        return None\n'
+        '    text = _clean(m.group(1)).strip("* ")\n'
+        '    if not text or text.startswith("["):   # vac\xeda, o el hueco de la plantilla sin rellenar: como si no estuviera\n'
+        '        return None\n'
+        '    return [x.strip() for x in re.split(r"\\s*(?:\u2192|->)\\s*", text) if x.strip()]\n'
+        '\n'
+        '\n'
+        'def _known(flow, names: list, what: str, warn) -> list:\n'
+        '    """The flow\'s names that its table has, in order; the others are named in a warning."""\n'
+        '    by_key, out = {key(n): n for n in names}, []\n'
+        '    for n in flow:\n'
+        '        k = by_key.get(key(n))\n'
+        '        if k is None:\n'
+        '            warn(f"\xabFlujo:\xbb de \xab{what}\xbb nombra \xab{n}\xbb, que no est\xe1 en la tabla")\n'
+        '        elif k in out:\n'
+        '            warn(f"\xabFlujo:\xbb de \xab{what}\xbb repite \xab{n}\xbb: se dibuja una vez, donde sale primero")\n'
+        '        else:\n'
+        '            out.append(k)\n'
+        '    return out\n'
         '\n'
         '\n'
         'def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:\n'
@@ -1604,7 +1630,7 @@ def _context_core():
         '        return None\n'
         '\n'
         '    out = {"objetivo": "", "como_funciona": [], "reglas": [], "entidades": [], "conceptos": [], "componentes": [],\n'
-        '           "infraestructura": []}\n'
+        '           "infraestructura": [], "datos_disposicion": None, "componentes_flujo": None, "infraestructura_contenedores": None}\n'
         '    body = section("Objetivo", "diseno")\n'
         '    if body is not None:\n'
         '        out["objetivo"] = _paragraph(body)\n'
@@ -1625,14 +1651,51 @@ def _context_core():
         '        if body is None:\n'
         '            continue\n'
         '        t, rows = _table(body.split("\\n"))\n'
+        '        keys = {key(x) for x in t}\n'
+        '        by_account = part == "infraestructura" and key("Proveedor") in keys\n'
+        '        if by_account:\n'
+        '            # 1.29.0 (P18): \xabD\xf3nde\xbb parted into Proveedor, Cuenta and Ambiente\n'
+        '            cols = ["Pieza", "Para qu\xe9", "Proveedor", "Cuenta", "Ambiente", "Conecta con"]\n'
         '        c = _columns(t, cols, name, warn(part))\n'
-        '        items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]\n'
+        '        if by_account:\n'
+        '            items = [{"nombre": _cell(r, c["Pieza"]), "para_que": _cell(r, c["Para qu\xe9"]), "proveedor": _cell(r, c["Proveedor"]),\n'
+        '                      "cuenta": _cell(r, c["Cuenta"]), "ambiente": _cell(r, c["Ambiente"]),\n'
+        '                      # \xabdonde\xbb tambi\xe9n, para una p\xe1gina 1.28.0 que a\xfan no se republic\xf3 y lee solo ese campo\n'
+        '                      "donde": " \xb7 ".join(x for x in (_cell(r, c["Proveedor"]), _cell(r, c["Cuenta"]), _cell(r, c["Ambiente"])) if x),\n'
+        '                      "conecta_con": _list(_cell(r, c["Conecta con"]))} for r in rows]\n'
+        '        else:\n'
+        '            items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]\n'
+        '        if part == "componentes":\n'
+        '            # 1.29.0 (P17): an optional \xabExterno\xbb column\n'
+        '            ext = {key(x): n for n, x in enumerate(t)}.get(key("Externo"))\n'
+        '            for i, r in zip(items, rows):\n'
+        '                i["externo"] = bool(re.match(r"^\\s*(s[i\xed]|yes|x|\u2713|externo)\\b", _cell(r, ext), re.I))\n'
         '        names = {i["nombre"] for i in items}\n'
         '        for i in items:\n'
         '            for o in [o for o in i["conecta_con"] if o not in names]:\n'
         '                warn(part)(f"\xab{i[\'nombre\']}\xbb conecta con \xab{o}\xbb, que no est\xe1 en \xab{name}\xbb")\n'
         '                i["conecta_con"].remove(o)\n'
         '        out[part] = items\n'
+        '        if part == "componentes":\n'
+        '            f = _flow(body)\n'
+        '            if f is not None:\n'
+        '                out["componentes_flujo"] = _known(f, [i["nombre"] for i in items], name, warn(part))\n'
+        '            elif items:\n'
+        '                warn(part)("\xabComponentes\xbb no tiene l\xednea \xabFlujo:\xbb: a\xf1ade \xabFlujo: A \u2192 B \u2192 C\xbb con el recorrido de la llamada "\n'
+        '                           "principal, y los componentes se dibujan como ese recorrido")\n'
+        '        elif by_account:\n'
+        '            boxes = {}\n'
+        '            for i in items:\n'
+        '                k = (key(i["proveedor"]), key(i["cuenta"]))\n'
+        '                if k not in boxes:\n'
+        '                    boxes[k] = {"proveedor": i["proveedor"], "cuenta": i["cuenta"], "ambiente": i["ambiente"], "piezas": []}\n'
+        '                boxes[k]["piezas"].append(i["nombre"])\n'
+        '                if i["ambiente"] and i["ambiente"] not in boxes[k]["ambiente"].split(" \xb7 "):\n'
+        '                    boxes[k]["ambiente"] = " \xb7 ".join(x for x in (boxes[k]["ambiente"], i["ambiente"]) if x)\n'
+        '            out["infraestructura_contenedores"] = list(boxes.values())\n'
+        '        elif items:\n'
+        '            warn(part)("\xabInfraestructura\xbb lleva \xabD\xf3nde\xbb en una columna: p\xe1rtela en \xabProveedor\xbb, \xabCuenta\xbb y \xabAmbiente\xbb "\n'
+        '                       "para que cada proveedor y cuenta se dibuje como un contenedor")\n'
         '    body = section("Datos", "datos")\n'
         '    if body is not None:\n'
         '        t, rows = _table(body.split("\\n"))\n'
@@ -1642,7 +1705,15 @@ def _context_core():
         '            for x in (y for y in re.split(r"\\s+\xb7\\s+|,\\s*(?![^()]*\\))", _cell(r, c["Se relaciona con"])) if y.strip()):\n'
         '                m = re.match(r"^\\s*([^()\\s][^()]*?)\\s*(?:\\(([^)]*)\\))?\\s*$", x)\n'
         '                if m:\n'
-        '                    rel.append({"con": m.group(1).strip(), "tipo": (m.group(2) or "").strip()})\n'
+        "                    # 1.29.0 (P16): a cardinality is the type; anything else between brackets is the relation's verb\n"
+        '                    inside = (m.group(2) or "").strip()\n'
+        '                    parts = [y.strip() for y in inside.split(",") if y.strip()]\n'
+        '                    card = [y for y in parts if _CARD.match(y)]\n'
+        '                    verb = [y for y in parts if not _CARD.match(y)]\n'
+        '                    r_ = {"con": m.group(1).strip(), "tipo": ", ".join(card)}\n'
+        '                    if verb:\n'
+        '                        r_["verbo"] = ", ".join(verb)\n'
+        '                    rel.append(r_)\n'
         '                else:\n'
         '                    warn("datos")(f"no se entiende la relaci\xf3n \xab{x.strip()}\xbb de \xab{_cell(r, c[\'Entidad\'])}\xbb: va como \xabentidad (tipo)\xbb, separadas por \xab \xb7 \xbb")\n'
         '            out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,\n'
@@ -1652,6 +1723,22 @@ def _context_core():
         '            for x in [x for x in e["relaciones"] if x["con"] not in names]:\n'
         '                warn("datos")(f"\xab{e[\'nombre\']}\xbb se relaciona con \xab{x[\'con\']}\xbb, que no est\xe1 en \xabDatos\xbb")\n'
         '                e["relaciones"].remove(x)\n'
+        "        # 1.29.0 (P16): the flow's entities in one row; the one two or more of them point to, below; the rest, above\n"
+        '        f = _flow(body)\n'
+        '        if f is None:\n'
+        '            if out["entidades"]:\n'
+        '                warn("datos")("\xabDatos\xbb no tiene l\xednea \xabFlujo:\xbb: a\xf1ade \xabFlujo: A \u2192 B \u2192 C\xbb con las entidades por las que pasa "\n'
+        '                              "un cambio, y el modelo se dibuja como un camino")\n'
+        '        else:\n'
+        '            flow = _known(f, [e["nombre"] for e in out["entidades"]], "Datos", warn("datos"))\n'
+        '            pointed = {}\n'
+        '            for e in out["entidades"]:\n'
+        '                if e["nombre"] in flow:\n'
+        '                    for x in {x["con"] for x in e["relaciones"]}:\n'
+        '                        pointed[x] = pointed.get(x, 0) + 1\n'
+        '            rest = [e["nombre"] for e in out["entidades"] if e["nombre"] not in flow]\n'
+        '            out["datos_disposicion"] = {"flujo": flow, "arriba": [n for n in rest if pointed.get(n, 0) < 2],\n'
+        '                                        "abajo": [n for n in rest if pointed.get(n, 0) >= 2]}\n'
         '    body = section("Conceptos", "diseno")\n'
         '    if body is not None:\n'
         '        t, rows = _table(body.split("\\n"))\n'
@@ -1964,7 +2051,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "4"   # 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "5"   # 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto

@@ -26,16 +26,21 @@ Las reglas de negocio que el producto tiene que cumplir.
 | [Una frase] | [Cuándo no aplica] |
 
 ## Componentes
-| Componente | Qué hace | Dónde vive | Conecta con |
-|---|---|---|---|
-| [Nombre] | [Una frase] | [organización/repositorio:ruta] | [otro componente · otro más] |
+| Componente | Qué hace | Dónde vive | Externo | Conecta con |
+|---|---|---|---|---|
+| [Cliente o servicio de fuera] | [Una frase] | [quién lo da] | sí | [componente al que llama] |
+| [Nombre] | [Una frase] | [organización/repositorio:ruta] | | [otro componente · otro más] |
+
+**Flujo:** [componente → otro → otro: el recorrido de la llamada principal, desde quien la hace]
 
 ## Datos
-Una fila por entidad, con su nombre en el código, y cada relación escrita una sola vez.
+Una fila por entidad, con su nombre en el código, y cada relación escrita una sola vez, en la fila de la entidad que apunta a la otra. Entre paréntesis va la cardinalidad (1:N, N:M) o, mejor, el verbo que dice qué hace la relación (vive en, deja, firma).
 
 | Entidad | Grupo | Qué es | Se relaciona con |
 |---|---|---|---|
-| [nombre_en_codigo] | [Un grupo de entidades] | [Una frase] | [otra_entidad (1:N) · otra (N:M)] |
+| [nombre_en_codigo] | [Un grupo de entidades] | [Una frase] | [otra_entidad (vive en) · otra (N:M)] |
+
+**Flujo:** [entidad → otra → otra: por las que pasa un cambio, en orden; la que reciben dos o más de ellas se dibuja debajo, y las demás encima]
 
 Detalle: [ruta desde la raíz de un documento con una tabla cuya primera columna es la entidad; sin él, se quita esta línea]
 
@@ -47,9 +52,11 @@ Las palabras del producto. Un sinónimo no es un concepto nuevo: va en «No es»
 | [Palabra] | [Una frase] | [otra palabra, otra más] | [entidad · otra] |
 
 ## Infraestructura
-| Pieza | Para qué | Dónde | Conecta con |
-|---|---|---|---|
-| [Servidor, base de datos, dominio, servicio externo] | [Una frase] | [Proveedor, entorno] | [otra pieza] |
+Cada proveedor y cuenta se dibuja como un contenedor con sus piezas dentro. Un servicio del cliente (su Drive, su correo) lleva su propia cuenta.
+
+| Pieza | Para qué | Proveedor | Cuenta | Ambiente | Conecta con |
+|---|---|---|---|---|---|
+| [Servidor, base de datos, dominio, servicio externo] | [Una frase] | [Google Cloud, Cloudflare…] | [proyecto o cuenta] | [Prod, Release] | [otra pieza] |
 
 ## Prototipo
 [Enlace y fecha.]
