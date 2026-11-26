@@ -3462,19 +3462,19 @@ function ayudaArts(){
       <dt>Lo que hice hoy no aparece en el tablero.</dt><dd>Aparece cuando lo pones al día, con «Sincronizar ahora» o ${F("sincroniza el tablero")}: <button type="button" class="lnk" data-help="ponerse-al-dia">Cómo se pone al día</button>.</dd>
     </dl>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo-proceso", t:"El proceso, de principio a fin", h:`
-    <p>Un proyecto que construye software sigue estos pasos, en este orden. Los que se repiten van por cada pieza del plan.</p>
+    <p>Un proyecto que construye software sigue estos pasos, en este orden. Del 5 al 11 se repiten en cada fase.</p>
     <ol class="hc-pasos">
-      <li><b>Montar</b><span>La sección «Desarrollo» del proyecto, con quién acepta, construye, administra, audita y, si lo hay, recibe, y el kit en cada repositorio: su <code>CLAUDE.md</code> y el control de las pruebas. ${F("este proyecto construye software")}</span></li>
-      <li><b>Diseño</b><span>Claude lo escribe con quien acepta, que lo valida: las reglas, los datos, los componentes y la infraestructura.</span></li>
-      <li><b>Plan</b><span>Las fases, con lo que cada una permite hacer a quién, y sus piezas, con sus horas y la decisión pendiente donde Claude pregunta antes de construir. Lo aprueba quien acepta.</span></li>
-      <li><b>Escenarios</b><span>Claude propone los de cada pieza, con sus casos de error, y quien acepta los aprueba. ${F("escribe los escenarios de P03")}</span></li>
-      <li><b>Pruebas aparte</b><span>Un subagente los convierte en pruebas antes de que exista el código, en su propio pull request; GitHub comprueba que fallan y quien acepta lo une.</span></li>
-      <li><b>Construir</b><span>En sesiones aparte, cada una con su encargo, hasta que pasan las pruebas de la pieza y las demás siguen en verde. En los puntos de control Claude para y decide quien acepta.</span></li>
-      <li><b>Revisión de calidad</b><span>Antes de abrir el pull request, con revisores independientes. ${F("revisión de calidad de P03")}</span></li>
-      <li><b>Unir</b><span>Quien construye une el pull request con todo en verde, y queda en Release.</span></li>
-      <li><b>Verificar</b><span>Una sesión aparte, en el modelo que no construyó, recorre Release contra los escenarios y deja el reporte. ${F("verifica P03 en Release")}</span></li>
-      <li><b>Seguimiento y sí</b><span>Quien acepta pide el seguimiento y da el sí sobre él y el reporte. ${F("haz el seguimiento")}</span></li>
-      <li><b>Producción y entrega</b><span>Quien administra despliega lo que tiene el sí; al cerrar una fase, se entrega a quien recibe, si el proyecto lo nombra.</span></li>
+      <li><b>Definir qué se construye</b><span>Con Claude: para quién es, qué reglas de negocio tiene y qué significa cada término. Lo aprueba quien acepta.</span></li>
+      <li><b>Definir cómo se construye</b><span>Los datos, las partes del sistema y dónde va a correr. También lo aprueba quien acepta.</span></li>
+      <li><b>Repartir los roles</b><span>Quién acepta, quién construye, quién administra, si hay auditor y quién recibe cada fase.</span></li>
+      <li><b>Preparar la plataforma y el repositorio</b><span>Lo hace quien administra: las reglas de GitHub, los secretos, los entornos, las reglas para Claude en el repositorio y el control de pruebas, ya obligatorio. Nada se construye antes de esto.</span></li>
+      <li><b>Planear por fases</b><span>Cada fase dice qué podrá hacer quién al terminar. Solo la fase en curso se parte en piezas, con sus horas y sus decisiones pendientes.</span></li>
+      <li><b>Aprobar los escenarios de la fase</b><span>Claude los propone en lenguaje de negocio; quien acepta los aprueba juntos antes de arrancar.</span></li>
+      <li><b>Construir</b><span>Desde una sesión principal que planea y coordina se lanzan sesiones que construyen, cada una con su encargo. Por cada pieza: un subagente escribe sus pruebas antes del código, Claude construye hasta que pasan, se hace la revisión de calidad y quien construye la une.</span></li>
+      <li><b>Parar en los puntos de control</b><span>Si algo es difícil de revertir, se sale del diseño o falla dos veces, Claude se detiene y decide quien acepta.</span></li>
+      <li><b>Verificar con el producto funcionando</b><span>Otra sesión, en otro modelo, recorre el entorno de pruebas contra los escenarios y deja un reporte.</span></li>
+      <li><b>Dar el sí y pasar a producción</b><span>Quien acepta pide el seguimiento y da el sí por escrito; solo quien administra despliega.</span></li>
+      <li><b>Cerrar la fase</b><span>Revisión de la fase entera, conformidad de quien la recibe y plan de la siguiente.</span></li>
     </ol>
     <p class="hc-nota">La auditoría no es un paso: pasa en cualquier momento, cuando el auditor quiere, sobre lo que ya se hizo, y no detiene nada (<button type="button" class="lnk" data-help="desarrollo-roles">Quién hace qué</button>).</p>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo", t:"Cómo se construye software con Claude", h:`

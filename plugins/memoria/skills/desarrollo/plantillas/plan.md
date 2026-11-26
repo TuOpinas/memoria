@@ -59,8 +59,8 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
 - **Cambiar los escenarios de una pieza ya activa**, con la nueva aprobación de quien acepta: su pull request de escenarios («Escenarios · P01») cambia las pruebas y, si la pieza aún no las cumple, la saca de la lista, sin tocar código; el siguiente pull request de la pieza la vuelve a añadir cuando las cumple. Solo él y una reversión de la pieza pueden sacarla.
 - Un pull request que toca las pruebas de aceptación o su workflow, o saca una pieza de la lista, lo une, o lo aprueba por escrito, quien acepta. Sin cuenta de GitHub, quien acepta aprueba los escenarios en este plan, y quien une el pull request cita en él esa aprobación («Aprobó: Nombre Apellido, AAAA-MM-DD, en el plan»).
 - Antes del sí de cada pieza con escenarios, una sesión de contexto limpio, en el modelo que no la construyó, recorre Release contra los escenarios y deja un reporte con evidencia, criterio por criterio (sin Release, la aplicación levantada desde lo unido, con datos de prueba). Quien da el sí lo lee, con el seguimiento.
-- Claude se para y pregunta a quien audita en los puntos de control del `CLAUDE.md`.
-- Al cumplirse «Listo cuando», quien audita y quien acepta deciden si se sigue, se cambia el plan o se para. Si no coinciden, decide quien acepta.
+- Claude se para y pregunta a quien acepta en los puntos de control del `CLAUDE.md`.
+- Al cumplirse «Listo cuando», quien acepta decide si se sigue, se cambia el plan o se para.
 
 ## Cómo se sabe en qué estado está cada pieza
 Por los pull requests a la rama principal cuyo título empieza por el identificador de la pieza: «P01 · …», o «P01 + P02 · …» si un mismo pull request lleva varias.
