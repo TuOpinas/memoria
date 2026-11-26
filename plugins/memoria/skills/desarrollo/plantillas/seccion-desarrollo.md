@@ -23,10 +23,11 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 **Seguimiento** lo escribe Claude cuando alguien lo pide (skill `desarrollo`), y mientras diga `por crear` no cuenta como pieza que falta: el primero se crea en `entregables/seguimiento.md` del proyecto, que nace `vigente`, y pone aquí su ruta. Cada entrada va arriba de la anterior, sin borrarla, y lleva en este orden:
 1. la fecha, quién lo pidió, desde cuándo se leyó y el último commit de la rama principal que se leyó en cada repositorio, y debajo el bloque «en llano» de la fase en curso, copiado del plan;
 2. cada pieza del plan con su estado, en una tabla `| Pieza | Estado |` (el tablero la lee de la entrada más reciente, bajo su `## AAAA-MM-DD`);
-3. lo que está fuera del plan: pull requests sin pieza o con una que el plan no tiene;
+3. lo que está fuera del plan: pull requests sin pieza o con una que el plan no tiene, y el código de una pieza unido en un pull request que no la nombra;
 4. lo que lo unido añade y el diseño no tiene: datos, componentes o conceptos nuevos, también con otro nombre;
-5. los pull requests unidos que tocaron las pruebas de aceptación o su workflow, o sacaron una pieza de la lista de piezas activas (y las piezas con pruebas que siguen fuera de ella), con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
-6. los pasos a Prod, con quién dio el sí (si fue quien construyó, se dice como un hecho), los que no tienen sí, y las verificaciones de las piezas unidas desde el anterior.
+5. si el check «pruebas de aceptación» es obligatorio en la regla de la rama principal; los pull requests unidos que tocaron las pruebas de aceptación, su workflow o su corredor propio, o sacaron una pieza de la lista de piezas activas (y las piezas con pruebas que siguen fuera de ella), con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
+6. los pasos a Prod, con quién dio el sí (si fue quien construyó, se dice como un hecho), los que no tienen sí, y las verificaciones de las piezas unidas desde el anterior;
+7. con «Recibe» en la sección, las fases entregadas y quién las recibió, por lo que digan el plan o el release; si no lo dicen, «sin recibir por escrito».
 
 Quien no tenga el plugin se lo pide a quien acepta o a quien construye.
 

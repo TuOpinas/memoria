@@ -38,6 +38,14 @@ Una columna por repositorio de la línea «Repositorios:».
 
 **Al montar** un repositorio, el `CLAUDE.md` y el workflow (con el corredor propio, si lo hay) van en un pull request «Kit · », en cualquier orden con los primeros escenarios: mientras no exista la carpeta de aceptación, el check pasa. Después, un cambio al workflow o al corredor propio va en su propio pull request («Kit · »), sin código, y lo une o lo aprueba quien acepta: si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow o las pruebas de aceptación, con quién lo unió o lo aprobó.
 
+**El kit entero** se monta en este orden, y no a medias: la apertura de sesión dice lo que le falta a cada repositorio hasta que lo tenga.
+1. La sección «Desarrollo» del `proyecto.md`, con los roles.
+2. El diseño y el plan, que aprueba quien acepta.
+3. Esta configuración: la plataforma y una columna por repositorio.
+4. En cada repositorio, un pull request «Kit · » con el `CLAUDE.md`, el control (`.github/workflows/pruebas-aceptacion.yml`, con su `CORREDOR`) y, si lo hay, el corredor propio.
+5. La regla de la rama principal, con el check «pruebas de aceptación» obligatorio (R1 y R2).
+6. Los escenarios de las primeras piezas; con el código ya construido, los de las piezas que ya existen, que entran pasando (skill `desarrollo`).
+
 ## Verificación
 Dónde encuentra la verificación la aplicación antes del sí (decisión tecnologia/metodologia-desarrollo#2026-11-19-8).
 
