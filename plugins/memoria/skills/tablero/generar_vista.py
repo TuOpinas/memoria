@@ -3225,7 +3225,7 @@ TIPOS_SISTEMA = ("corre", "guarda", "externo")
 
 def el_sistema(vista, texto_diseno):
     """«diseno.sistema»: si «Infraestructura» tiene la columna «Tipo». Cada pieza lleva su tipo, los componentes que
-    corren en ella y los verbos de sus conexiones («context-db (reads)»: «conecta_con» no cambia de forma); cada
+    corren en ella y los verbos de sus conexiones («Base de datos (lee)»: «conecta_con» no cambia de forma); cada
     componente, su «Corre en». Sin «Tipo», un aviso que dice qué añadir."""
     d = vista.get("diseno")
     if d is None:

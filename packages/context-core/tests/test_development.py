@@ -18,7 +18,7 @@ actualizado: 2026-11-18
 2026-11-18 · **En curso.**
 
 ## Quién participa
-Responsable: Juanjo Jiménez-Alfaro (shared-memory)
+Responsable: Ana Pérez (shared-memory)
 Colabora: Ana López (ana@acme.mx)
 
 ## Desarrollo
@@ -29,10 +29,10 @@ Diseño: shared-memory/product-design/entregables/diseno.md
 Plan: shared-memory/product-design/entregables/plan.md
 Seguimiento: por crear
 Paso a Prod: sí sobre el resumen del despliegue
-Acepta: Fabiola Davó (fabi@smilepill.mx)
-Audita: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro)
-Construye: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro) · Ana López (ana@acme.mx, @analopez)
-Administra: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro)
+Acepta: Luisa Gómez (luisa@ejemplo.test)
+Audita: Ana Pérez (ana@ejemplo.test, @ana-perez)
+Construye: Ana Pérez (ana@ejemplo.test, @ana-perez) · Ana López (ana@acme.mx, @analopez)
+Administra: Ana Pérez (ana@ejemplo.test, @ana-perez)
 """
 
 
@@ -48,15 +48,15 @@ class Section(unittest.TestCase):
         self.assertEqual(s.paths[dev.DESIGN], "shared-memory/product-design/entregables/diseno.md")
         self.assertEqual(s.paths[dev.FOLLOW_UP], dev.TO_BUILD)
         self.assertEqual(s.step_to_prod, "sí sobre el resumen del despliegue")
-        self.assertEqual([p.name for p in s.roles["Construye"]], ["Juanjo Jiménez-Alfaro", "Ana López"])
+        self.assertEqual([p.name for p in s.roles["Construye"]], ["Ana Pérez", "Ana López"])
         self.assertEqual(s.roles["Construye"][1].user, "analopez")
-        self.assertEqual(s.roles["Audita"][0].email, "juanjo@tuopinas.mx")
+        self.assertEqual(s.roles["Audita"][0].email, "ana@ejemplo.test")
         self.assertEqual(s.unknown, [])
         self.assertEqual(s.warnings, [])
 
     def test_person_without_github_user(self):
         p = dev.seccion_desarrollo(PROYECTO).roles["Acepta"][0]
-        self.assertEqual((p.name, p.email, p.user), ("Fabiola Davó", "fabi@smilepill.mx", ""))
+        self.assertEqual((p.name, p.email, p.user), ("Luisa Gómez", "luisa@ejemplo.test", ""))
 
     def test_keys_without_accents_nfd_and_case(self):
         cases = {
@@ -91,10 +91,10 @@ class Section(unittest.TestCase):
 
     def test_bad_values_warn(self):
         s = dev.development_section(PROYECTO.replace("decisionbits/work-memory", "work-memory")
-                                    .replace("(fabi@smilepill.mx)", "(fabi en smile pill)"))
+                                    .replace("(luisa@ejemplo.test)", "(luisa en ejemplo)"))
         self.assertEqual(s.repositories, ["TuOpinas/memoria"])
         self.assertTrue(any("work-memory" in w for w in s.warnings))
-        self.assertTrue(any("fabi en smile pill" in w for w in s.warnings))
+        self.assertTrue(any("luisa en ejemplo" in w for w in s.warnings))
 
     def test_section_stops_at_next_heading_and_ignores_fences(self):
         text = PROYECTO + "\n## Otra\nPlan: no/es/de/aqui.md\n"
@@ -106,7 +106,7 @@ class Section(unittest.TestCase):
         # abrir.py, cerrar.py and verificar.sh cut «Quién participa» at the next «## » (the doubt of the kit's first
         # review): a «Desarrollo» after it does not leak its people into the project's collaborators
         resp, coll, _, raw = parse.who_takes_part(parse.frontmatter(PROYECTO)[1])
-        self.assertEqual(resp, "Juanjo Jiménez-Alfaro")
+        self.assertEqual(resp, "Ana Pérez")
         self.assertNotIn("Construye", raw)
         self.assertNotIn("analopez", raw)
         self.assertEqual(parse.section(PROYECTO, "Quién participa").count("\n"), 1)
@@ -138,7 +138,7 @@ class Missing(unittest.TestCase):
             ("por crear cuenta salvo el seguimiento", PROYECTO.replace("Diseño: shared-memory/product-design/entregables/diseno.md",
                                                                       "Diseño: por crear"), None,
              [("Diseño", "por crear")]),
-            ("rol vacío", PROYECTO.replace("Administra: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro)",
+            ("rol vacío", PROYECTO.replace("Administra: Ana Pérez (ana@ejemplo.test, @ana-perez)",
                                            "Administra:"), None, [("Administra", "vacía")]),
             ("repositorios por crear", PROYECTO.replace("Repositorios: decisionbits/work-memory · `TuOpinas/memoria`",
                                                         "Repositorios: Por Crear"), None, [("Repositorios", "por crear")]),
@@ -152,7 +152,7 @@ class Missing(unittest.TestCase):
     def test_audit_may_be_nobody_and_receives_is_optional(self):
         # 1.30.0 (shared-memory/plugin-memoria#2026-11-25-4): «Audita: nadie» is a value, an empty «Audita:» is missing,
         # and «Recibe» counts neither without its line nor empty
-        audit = "Audita: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro)"
+        audit = "Audita: Ana Pérez (ana@ejemplo.test, @ana-perez)"
         for nobody in ("nadie", "Nadie", "NADIE"):
             with self.subTest(nobody):
                 text = PROYECTO.replace(audit, f"Audita: {nobody}")
