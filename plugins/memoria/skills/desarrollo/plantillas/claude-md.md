@@ -10,7 +10,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | Qué es | [Una frase] |
 | Proyecto en la memoria | [área/proyecto] |
 | Diseño y plan | [rutas en la memoria] |
-| Audita | [Nombre Apellido] |
+| Acepta | [Nombre Apellido] |
 | Cómo se revisa | [la skill calidad del plugin Memoria, o la que use el equipo] |
 | Cómo se prueba | [comando de la suite de pruebas del código, que deja fuera la carpeta de aceptación, p. ej. `pytest --ignore=tests/aceptacion`] |
 | Pruebas de aceptación | [carpeta, con los archivos de cada pieza como `<pieza>_<nombre>.py`, lista de piezas activas, cómo se corren las de una pieza y con qué código sale el ejecutor cuando fallan, los mismos que en .github/workflows/pruebas-aceptacion.yml, p. ej. `tests/aceptacion`, `.github/piezas-activas.txt`, `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTEST_ADDOPTS= PYTEST_PLUGINS= python3 -m pytest -c /dev/null --rootdir=. --confcutdir=tests/aceptacion -p no:cacheprovider tests/aceptacion/P01_*.py`, que no lee configuración de fuera de la carpeta (lo que necesiten va en un `conftest.py` de la carpeta, que no lleva `__init__.py`), `1`] |
@@ -23,7 +23,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita.
 4. Ningún secreto en el código.
 5. No pases nada a Prod: lo hace quien administra, con el sí escrito.
-6. Para y pregunta a quien audita antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
+6. Para y pregunta a quien acepta antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
    - algo es difícil de revertir (un esquema, un contrato público, permisos, un proveedor, datos de clientes);
    - un enfoque falló dos veces;
    - la tarea añade una entidad, un componente o un concepto que no está en el diseño, o se sale del plan;

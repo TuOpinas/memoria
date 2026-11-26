@@ -69,7 +69,7 @@ class Section(unittest.TestCase):
             with self.subTest(name):
                 s = dev.development_section(text)
                 self.assertTrue(s.found)
-                self.assertEqual(len(s.present), len(dev.ALL_KEYS), s.unknown)
+                self.assertEqual(len(s.present), len(dev.ALL_KEYS) - len(dev.OPTIONAL_KEYS), s.unknown)
                 self.assertTrue(s.paths[dev.DESIGN].endswith(strip_accents("diseno.md")))
 
     def test_no_section_is_not_development(self):
@@ -148,6 +148,22 @@ class Missing(unittest.TestCase):
         for name, text, exist, want in cases:
             with self.subTest(name):
                 self.assertEqual(self.missing(text, exist), want)
+
+    def test_audit_may_be_nobody_and_receives_is_optional(self):
+        # 1.30.0 (shared-memory/plugin-memoria#2026-11-25-4): «Audita: nadie» is a value, an empty «Audita:» is missing,
+        # and «Recibe» counts neither without its line nor empty
+        audit = "Audita: Juanjo Jiménez-Alfaro (juanjo@tuopinas.mx, @juanjo-jimenez-alfaro)"
+        for nobody in ("nadie", "Nadie", "NADIE"):
+            with self.subTest(nobody):
+                text = PROYECTO.replace(audit, f"Audita: {nobody}")
+                self.assertEqual(dev.seccion_desarrollo(text).roles["Audita"], [])
+                self.assertEqual(self.missing(text), [])
+        self.assertEqual(self.missing(PROYECTO.replace(audit, "Audita:")), [("Audita", "vacía")])
+        self.assertEqual(self.missing(PROYECTO + "Recibe:\n"), [])
+        s = dev.seccion_desarrollo(PROYECTO + "Recibe: Ana López (ana@cliente.mx)\n")
+        self.assertEqual([(p.name, p.email) for p in s.roles["Recibe"]], [("Ana López", "ana@cliente.mx")])
+        # «nadie» is only Audita's: in another role it is read as written
+        self.assertEqual(dev.seccion_desarrollo(PROYECTO + "Recibe: nadie\n").roles["Recibe"][0].name, "nadie")
 
 
 
