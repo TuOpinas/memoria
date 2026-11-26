@@ -33,7 +33,7 @@ Una columna por repositorio de la línea «Repositorios:».
 | R3 | Ningún secreto entra en el código | En la regla de la rama principal, el control de secretos es obligatorio | |
 | R4 | La base de datos cambia solo con migraciones nuevas, y una unida no se edita | Quien revisa el pull request; sin base de datos, `no aplica` | |
 | R5 | A Prod solo despliega quien administra, y solo lo que tiene el sí, como dice «Paso a Prod» | Quién tiene permiso de desplegar en Prod | |
-| R6 | Cada pull request, salvo los de bots, empieza por el identificador de su pieza, por «Escenarios · » y la pieza, o por «Kit · » si solo cambia el kit (el `CLAUDE.md`, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las pruebas de aceptación y los demás de `.github/workflows/`, y la configuración del repositorio, `CODEOWNERS` (en la raíz, `.github/` o `docs/`) y `.github/dependabot.yml` (o `.yaml`)); una reversión, con el título que le da GitHub | El apartado «fuera del plan» del último seguimiento | |
+| R6 | Cada pull request empieza por el identificador de su pieza, por «Escenarios · » y la pieza, o por «Kit · » si cambia el kit (el `CLAUDE.md`, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las pruebas de aceptación y los demás de `.github/workflows/`, y la configuración del repositorio, `CODEOWNERS` (en la raíz, `.github/` o `docs/`) y `.github/dependabot.yml` (o `.yaml`)), salvo si solo cambia workflows, que pasa con cualquier título (el «Bump …» de Dependabot), y entonces sin código; una reversión, con el título que le da GitHub | El apartado «fuera del plan» del último seguimiento | |
 | R7 | El `CLAUDE.md` existe y tiene las reglas de la plantilla del kit | El archivo | |
 
 **El kit entero** se monta en este orden, y no a medias: la apertura de sesión dice lo que le falta a cada repositorio hasta que lo tenga.
@@ -44,7 +44,7 @@ Una columna por repositorio de la línea «Repositorios:».
 5. El plan por fases, que aprueba quien acepta.
 6. Los escenarios de las primeras piezas; con el código ya construido, los de las piezas que ya existen, que entran pasando (skill `desarrollo`).
 
-Después, un cambio al kit (el `CLAUDE.md`, el workflow, el corredor propio o la configuración del repositorio, como dice R6) va en su propio pull request («Kit · »), sin código, y lo une o lo aprueba quien acepta: si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow o las pruebas de aceptación, con quién lo unió o lo aprobó.
+Después, un cambio al kit (el `CLAUDE.md`, el workflow, el corredor propio o la configuración del repositorio, como dice R6) va en su propio pull request («Kit · », o con cualquier título si solo cambia workflows), sin código, y lo une o lo aprueba quien acepta: si va con otra cosa, el propio check falla, pero en su pull request corre ya la versión cambiada, así que el seguimiento lista cada pull request que tocó el workflow o las pruebas de aceptación, con quién lo unió o lo aprobó.
 
 ## Verificación
 Dónde encuentra la verificación la aplicación antes del sí (decisión tecnologia/metodologia-desarrollo#2026-11-19-8).

@@ -36,12 +36,13 @@
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
 # - El kit es el CLAUDE.md, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las
 #   pruebas de aceptación y los demás de .github/workflows/, y la configuración del repositorio, CODEOWNERS (en la raíz,
-#   .github/ o docs/) y .github/dependabot.yml (o .yaml). Un pull request que cambia el kit lleva el título «Kit · …» (o
-#   es su reversión) y no lleva código: en un pull request corre la versión de este archivo que trae. Puede traer la
+#   .github/ o docs/) y .github/dependabot.yml (o .yaml). Un pull request que cambia el kit no lleva código: en un pull
+#   request corre la versión de este archivo que trae. Lleva el título «Kit · …» (o es su reversión) si cambia el
+#   CLAUDE.md, el corredor propio o la configuración del repositorio; si solo cambia workflows, cualquiera. Puede traer la
 #   carpeta, como al montar el kit con CONFIG, pero no con el corredor propio, que va solo, ni con la configuración del
 #   repositorio, que frente a las pruebas cuenta como código. Mientras la carpeta no exista, pasa.
 # - Las acciones van fijadas por commit, con su versión al lado. El pull request de Dependabot que sube una acción en este
-#   y en otro workflow es del kit, como cualquier otro: no se mira quién lo abrió.
+#   y en otro workflow pasa con su título («Bump …»): solo cambia workflows, y no se mira quién lo abrió.
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
@@ -164,15 +165,15 @@ jobs:
           fi
           # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
-          dentro=0; fuera=0; kit=0; workflow=0; wf=""; conf=0; lista_cambia=0; corredor_cambia=0
+          dentro=0; fuera=0; kit=0; workflow=0; wf=""; conf=0; titulado=0; lista_cambia=0; corredor_cambia=0
           while IFS= read -r -d '' f; do
-            if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); corredor_cambia=1
+            if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); titulado=1; corredor_cambia=1
             elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
             elif [ "$f" = "$lista" ]; then lista_cambia=1
-            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"
+            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"; [ "$f" = CLAUDE.md ] && titulado=1
             elif [[ "$f" == .github/workflows/* ]]; then kit=$((kit + 1)); workflow=1; wf="${wf:-$f}"   # los demás workflows, igual que este
             elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ] || [ "$f" = .github/dependabot.yaml ]; then
-              kit=$((kit + 1)); conf=$((conf + 1))   # la configuración del repositorio: kit junto al workflow, fuera junto a las pruebas
+              kit=$((kit + 1)); conf=$((conf + 1)); titulado=1   # la configuración del repositorio: kit junto al workflow, fuera junto a las pruebas
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
@@ -185,8 +186,9 @@ jobs:
           if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
           fi
-          if [ "$kit" -gt 0 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ]; }; then   # «Kit · …» o su reversión
-            echo "::error::Este pull request cambia el kit (el CLAUDE.md, un workflow, el corredor propio o la configuración del repositorio): va solo, en un pull request «Kit · »."; exit 1
+          # el título «Kit · …» (o su reversión) lo pide el kit salvo los workflows: «Bump …» de Dependabot pasa con el suyo
+          if [ "$titulado" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ]; }; then
+            echo "::error::Este pull request cambia el CLAUDE.md, el corredor propio o la configuración del repositorio, que son del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
           # en un pull request de escenarios, cada archivo de pruebas empieza por una pieza de su título y «_»
           if [ "$escenarios" = 1 ]; then

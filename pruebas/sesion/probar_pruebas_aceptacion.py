@@ -165,6 +165,12 @@ c, o = pr(SUBE, titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJO
 ok(c == 0, "el workflow y otro workflow en un «Kit · » pasan (el pull request agrupado de Dependabot)")
 c, o = pr(SUBE + [("escribir", "app/main.py", None)], titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJOS)
 ok(c == 1 and "va en su propio pull request" in errores(o), "el workflow, otro workflow y código fallan")
+c, o = pr(SUBE, titulo="Bump actions/checkout from 6.0.0 to 7.0.1", base_textos=FLUJOS)
+ok(c == 0, "«Bump actions/checkout» que cambia el control y otro workflow pasa con su título (#2026-11-26-5)")
+c, o = pr([("texto", ".github/workflows/pruebas.yml", WF_DESPUES)], titulo="P09 · algo", base_textos=FLUJOS)
+ok(c == 0, "un pull request de pieza que solo cambia un workflow pasa")
+c, o = pr(SUBE + [("escribir", "CLAUDE.md", None)], titulo="Bump actions/checkout", base_textos=FLUJOS)
+ok(c == 1 and "«Kit · »" in errores(o), "con el CLAUDE.md, los workflows vuelven a pedir «Kit · »")
 
 print("La configuración del repositorio va como «Kit · » (1.30.1)")
 for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml", ".github/dependabot.yaml"):
