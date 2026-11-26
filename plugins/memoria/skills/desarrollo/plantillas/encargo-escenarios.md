@@ -18,10 +18,10 @@ Lo rellena la sesión que construye antes de lanzar al subagente `escenarios`, y
 [Las plantillas o los datos de muestra que hacen falta y dónde están; la forma de lo que aún no tiene plantilla.]
 
 ## 6. Dónde van los archivos y lo compartido
-[Como dice «Pruebas de aceptación» del `CLAUDE.md`: el nombre de los archivos, cómo los corre el ejecutor y dónde va lo que comparten. Antes de lanzar se comprueba qué archivos admite el workflow de aceptación en esa carpeta: lo que no admite no se pide.]
+[Como dice «Pruebas de aceptación» del `CLAUDE.md`: el nombre de los archivos, cómo los corre el corredor y dónde va lo que comparten. Antes de lanzar se comprueba qué archivos admite el workflow de aceptación en esa carpeta: lo que no admite no se pide.]
 
 ## 7. Dónde se deja el trabajo
 [Una rama que sale de la rama principal, en un worktree aparte (`git worktree add`), para no cambiar la rama ni los archivos de la sesión que construye; con un commit, sin subirla ni abrir el pull request: lo abre la sesión que lanzó, después de la revisión y de avisar a quien acepta. Sin clon (una pieza ya construida), se lee la carpeta y se sube una rama propia con la API de GitHub. La lista de piezas activas no se toca.]
 
 ## 8. Qué devuelve
-[La lista escenario → prueba; la salida del ejecutor, donde cada prueba falla porque la pieza no existe y no por la muestra ni por un import; y lo que el contrato del campo 3 deja sin poder probar, sin cambiar el escenario.]
+[La lista escenario → prueba; la salida del corredor, donde cada prueba falla porque la pieza no existe y no por la muestra ni por un import; y lo que el contrato del campo 3 deja sin poder probar, sin cambiar el escenario.]
