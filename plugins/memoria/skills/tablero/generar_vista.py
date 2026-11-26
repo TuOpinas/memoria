@@ -3083,7 +3083,7 @@ RUTAS_DEV, _TEXTOS_DEV = set(), {}
 # Lo que la pestaña lee del diseño y del plan viene de context_core (vista_desarrollo); aquí se añade lo de la 1.30.0,
 # con las mismas reglas de lectura de tablas que usa ella.
 from context_core.dev_view import _table, _cell, _optional, _hours  # noqa: E402
-from context_core.development import _sections, key as _clave_dev, _nfc  # noqa: E402
+from context_core.development import _sections, key as _clave_dev, _nfc, SEPARATOR as _SEP_DEV  # noqa: E402
 
 
 def _grupo_de(estado):
@@ -3141,6 +3141,54 @@ def plan_por_estado(vista, texto_plan):
             f["horas_faltan"] = 0
         else:
             f["horas_faltan"] = round(sum(p["horas"] or 0 for p in suyas if p["grupo"] != "hecha") + (f["horas_cierre"] or 0), 2)
+
+
+# ---------- 1.30.0: los datos por grupos (P27) ----------
+def _tablas(lineas):
+    """Todas las tablas de unas líneas, en orden: [(títulos, filas)]."""
+    out = []
+    while lineas:
+        t, filas = _table(lineas)
+        if not t:
+            break
+        out.append((t, filas))
+        i = next(n for n, l in enumerate(lineas) if l.strip().startswith("|"))
+        lineas = lineas[i + 2 + len(filas):]
+    return out
+
+
+def datos_por_grupos(vista, texto_diseno):
+    """«diseno.grupos»: la tabla «Grupos» de «Datos», en su orden, o [] sin ella, con un aviso que dice qué añadir; y un
+    aviso por cada entidad cuyo «Grupo» no está en la tabla."""
+    d = vista.get("diseno")
+    if d is None:
+        return
+    sec = _sections(texto_diseno or "").get(_clave_dev("Datos"))
+    tabla = next(((t, f) for t, f in _tablas(sec[1].split("\n") if sec else [])
+                  if t and _clave_dev(t[0]) == _clave_dev("Grupo")), None)
+    avisar = lambda x: vista["avisos"].append({"parte": "datos", "texto": x})
+    d["grupos"] = []
+    if tabla is None:
+        if d.get("entidades"):
+            avisar("«Datos» no tiene la tabla «Grupos»: añádela debajo de las entidades, una fila por grupo con su nombre, "
+                   "una línea corta, su papel (centro, aparte o vacío) y los grupos con los que se relaciona, y los datos "
+                   "se dibujan apilados por grupo")
+        return
+    t, filas = tabla
+    c = {k: _optional(t, k) for k in ("Grupo", "En corto", "Papel", "Se relaciona con")}
+    for r in filas:
+        rel = []
+        for x in (y for y in _SEP_DEV.split(_cell(r, c["Se relaciona con"])) if y.strip()):
+            m = re.match(r"^\s*([^()]*?)\s*(?:\(([^)]*)\))?\s*$", x)
+            rel.append({"con": m.group(1).strip(), "verbo": (m.group(2) or "").strip()} if m else {"con": x.strip(), "verbo": ""})
+        papel = _cell(r, c["Papel"]).lower()
+        d["grupos"].append({"nombre": _cell(r, c["Grupo"]), "en_corto": _cell(r, c["En corto"]),
+                            "papel": papel if papel in ("centro", "aparte") else "", "relaciones": rel})
+    nombres = {g["nombre"] for g in d["grupos"]}
+    for e in d.get("entidades") or []:
+        if (e.get("grupo") or "") not in nombres:
+            avisar(f"«{e['nombre']}» es del grupo «{e.get('grupo') or ''}», que no está en la tabla «Grupos»: se dibuja "
+                   "al final, aparte")
 
 
 def proyectos_de(carpeta, indice):
@@ -3538,6 +3586,7 @@ for a in areas_guia:
             pdoc["desarrollo"] = True
             pdoc["_desarrollo"] = vista_desarrollo(sec_, lee_desarrollo)
             plan_por_estado(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(PLAN, "")))
+            datos_por_grupos(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(DESIGN, "")))
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
