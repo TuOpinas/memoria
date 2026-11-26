@@ -162,7 +162,7 @@ CUERPOS = {"pasa": "def test_caso():\n    assert True\n", "falla": "def test_cas
            "vacia": "x = 1\n"}
 
 
-def activas(pruebas, lista, titulo, corredor=False, archivos=None, carpeta="tests/aceptacion"):
+def activas(pruebas, lista, titulo, corredor=False, archivos=None, carpeta="tests/aceptacion", entorno=None):
     """pruebas: {pieza: pasa | falla | rota | saltada | vacia}, cada una en su archivo «<pieza>_caso.py» (o los de
     «archivos», {nombre: resultado}); lista: el texto de ACTIVAS o None; corre el segundo paso con el título, con pytest
     o, con «corredor» (el texto de un guion; None si no existe), con un corredor propio, ./corredor, y SUFIJO .py."""
@@ -184,6 +184,7 @@ def activas(pruebas, lista, titulo, corredor=False, archivos=None, carpeta="test
     env = dict(os.environ, ACEPTACION=carpeta, ACTIVAS=ENVW["ACTIVAS"], CORREDOR=ENVW["CORREDOR"], CONFIG=ENVW["CONFIG"],
                SUFIJO=ENVW["SUFIJO"], TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
     env.update(propio)
+    env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
@@ -244,6 +245,11 @@ for carpeta in ("./tests/aceptacion", "tests/aceptacion//"):
     ok(c == 1 and " P02," in errores(o) and "P01" not in errores(o), f"con ACEPTACION «{carpeta}» y un archivo con espacio, el error nombra solo la que falla")
 c, o = activas({"P01": "falla"}, None, "Escenarios · P01", corredor=None)
 ok(c == 1 and "no se pudieron correr" in o, "el corredor que no está: falla y lo dice")
+SIN_PYTEST = pathlib.Path(tempfile.mkdtemp())   # un python3 que no ve lo instalado: «No module named pytest»
+(SIN_PYTEST / "python3").write_text(f'#!/bin/sh\nexec "{sys.executable}" -I -S "$@"\n', encoding="utf-8")
+(SIN_PYTEST / "python3").chmod(0o755)
+c, o = activas({"P01": "falla"}, None, "Escenarios · P01", entorno={"PATH": f"{SIN_PYTEST}{os.pathsep}{os.environ['PATH']}"})
+ok(c == 1 and "pytest no está instalado" in errores(o), "con pytest sin instalar, un «Escenarios · P01» falla y lo dice")
 LEE = '#!/usr/bin/env bash\ncat > /dev/null\nfor f; do case "$f" in *P02_*) echo "FALLA $f" ;; *) echo "PASA $f" ;; esac; done\n'
 c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P03 · x", corredor=LEE)
 ok(c == 1 and "P02" in errores(o) and "P01" not in errores(o), "un corredor que lee la entrada estándar no se come la lista")

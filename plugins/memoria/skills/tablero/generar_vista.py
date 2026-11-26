@@ -3156,7 +3156,7 @@ def plan_por_estado(vista, texto_plan):
     for f in plan["fases"]:
         r = por_fila.get(f["id"], [])
         f["estado"] = _cell(r, col_estado).lower()
-        f["horas_cierre"] = _hours(_cell(r, col_cierre), f"el cierre de {f['id']}", avisar)
+        f["horas_cierre"] = _hours(_cell(r, col_cierre), f"cierre de {f['id']}", avisar)
         f["horas_total"] = None if f["horas"] is None and f["horas_cierre"] is None else round((f["horas"] or 0) + (f["horas_cierre"] or 0), 2)
         suyas = [piezas[i] for i in f["piezas"] if i in piezas]
         f["piezas_total"] = len(suyas)
