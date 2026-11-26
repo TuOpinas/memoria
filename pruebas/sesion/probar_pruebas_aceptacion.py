@@ -181,6 +181,9 @@ for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dep
 c, o = pr([("escribir", "scripts/corredor", None), ("escribir", ".github/CODEOWNERS", None)], titulo="Kit · corredor",
           env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
 ok(c == 0, "el corredor propio con CODEOWNERS en un «Kit · » pasa")
+c, o = pr([("escribir", "scripts/corredor", None)], titulo='Revert "Kit · corredor"',
+          env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
+ok(c == 0, "la reversión de un «Kit · » que cambió el corredor propio pasa")
 
 print("Montar el kit en un repositorio que aún no tiene pruebas de aceptación")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], sin_carpeta=True)

@@ -180,7 +180,7 @@ jobs:
           if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
             echo "::error::Este pull request cambia $wf junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
-          if [ "$corredor_cambia" = 1 ] && { [[ "$TITULO" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
+          if [ "$corredor_cambia" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
             echo "::error::Este pull request cambia $corredor, el corredor de las pruebas de aceptación, que es parte del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
           if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
