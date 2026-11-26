@@ -13,7 +13,7 @@ mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin
 Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «concurrency», «env»
 y «jobs»; un
 solo job con «name», «runs-on», «timeout-minutes» y «steps»; pasos con «name», «uses», «with», «env» y «run: |», y un «if:» solo en un paso «uses:», que no se corre; valores
-de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
+de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:» en un paso «run:»,
 «shell:», «defaults:», otro job, otra expresión, un paso que escribe en $GITHUB_ENV o $GITHUB_PATH) la prueba no se monta
 (salida 2) en vez de correr algo distinto de lo que correría GitHub. Los pasos corren con «bash -e», que es lo que usa
 GitHub cuando el paso no dice «shell:» (sin pipefail: si lo necesita, el paso lo pone), y la plantilla pide bash 4 o
