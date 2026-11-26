@@ -2140,7 +2140,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "6"   # 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "7"   # 1.30.0: el plan por estado, los datos por grupos y el sistema de la pestaña Desarrollo; 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
@@ -3079,6 +3079,70 @@ def lee_desarrollo(r):
 RUTAS_DEV, _TEXTOS_DEV = set(), {}
 
 
+# ---------- 1.30.0: el plan por estado (P26) ----------
+# Lo que la pestaña lee del diseño y del plan viene de context_core (vista_desarrollo); aquí se añade lo de la 1.30.0,
+# con las mismas reglas de lectura de tablas que usa ella.
+from context_core.dev_view import _table, _cell, _optional, _hours  # noqa: E402
+from context_core.development import _sections, key as _clave_dev, _nfc  # noqa: E402
+
+
+def _grupo_de(estado):
+    """El grupo de una pieza por su estado del último seguimiento: terminada cuando su pull request se unió (#2026-11-25)."""
+    e = (estado or "").strip().lower()
+    if e.startswith(("unida", "entregada")):
+        return "hecha"
+    if e.startswith(("en curso", "revertida")):
+        return "en_curso"
+    return "pendiente"
+
+
+def plan_por_estado(vista, texto_plan):
+    """Cada pieza con su grupo y si es técnica; cada fase con su estado, sus horas de cierre, su total, lo que le falta y
+    cuántas piezas lleva hechas."""
+    plan = vista.get("plan")
+    if not plan:
+        return
+    hay_seguimiento = bool((vista.get("fuentes") or {}).get("seguimiento"))
+    secs = _sections(texto_plan or "")
+    # «Hecha cuando»: el bloque de cada pieza, para saber si dice «pieza técnica, sin escenarios»
+    bloques, cur = {}, None
+    sec = secs.get(_clave_dev("Hecha cuando"))
+    for l in (_nfc(sec[1]).split("\n") if sec else []):
+        m = re.match(r"^###\s+([A-Za-z]+\d+)\b", l)
+        if m:
+            cur = bloques.setdefault(m.group(1).upper(), [])
+        elif cur is not None:
+            cur.append(l)
+    for p in plan["piezas"]:
+        p["grupo"] = _grupo_de(p.get("estado")) if hay_seguimiento else None
+        p["tecnica"] = "pieza técnica, sin escenarios" in "\n".join(bloques.get(p["id"], [])).lower()
+    # «Fases»: «Estado» y la columna opcional «Horas de cierre»
+    sec = secs.get(_clave_dev("Fases"))
+    t, filas = _table(sec[1].split("\n")) if sec else ([], [])
+    col_fase, col_estado, col_cierre = _optional(t, "Fase"), _optional(t, "Estado"), _optional(t, "Horas de cierre")
+    por_fila = {}
+    for r in filas:
+        m = re.match(r"^\s*([A-Za-z]+\d+)", _cell(r, col_fase))
+        if m:
+            por_fila.setdefault(m.group(1).upper(), r)
+    avisar = lambda x: vista["avisos"].append({"parte": "plan", "texto": x})
+    piezas = {p["id"]: p for p in plan["piezas"]}
+    for f in plan["fases"]:
+        r = por_fila.get(f["id"], [])
+        f["estado"] = _cell(r, col_estado).lower()
+        f["horas_cierre"] = _hours(_cell(r, col_cierre), f"el cierre de {f['id']}", avisar)
+        f["horas_total"] = None if f["horas"] is None and f["horas_cierre"] is None else round((f["horas"] or 0) + (f["horas_cierre"] or 0), 2)
+        suyas = [piezas[i] for i in f["piezas"] if i in piezas]
+        f["piezas_total"] = len(suyas)
+        f["piezas_hechas"] = sum(1 for p in suyas if p["grupo"] == "hecha") if hay_seguimiento else None
+        if not hay_seguimiento or f["horas_total"] is None:
+            f["horas_faltan"] = None
+        elif f["estado"] == "cerrada":
+            f["horas_faltan"] = 0
+        else:
+            f["horas_faltan"] = round(sum(p["horas"] or 0 for p in suyas if p["grupo"] != "hecha") + (f["horas_cierre"] or 0), 2)
+
+
 def proyectos_de(carpeta, indice):
     """Los proyectos de un área: los de su índice más cualquier carpeta con proyecto.md, en ese orden."""
     if INV is not None:
@@ -3473,6 +3537,7 @@ for a in areas_guia:
             RUTAS_DEV.update(rutas_)
             pdoc["desarrollo"] = True
             pdoc["_desarrollo"] = vista_desarrollo(sec_, lee_desarrollo)
+            plan_por_estado(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(PLAN, "")))
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
