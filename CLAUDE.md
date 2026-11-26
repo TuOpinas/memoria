@@ -5,7 +5,7 @@
 | Qué es | El plugin `memoria` de Claude, que aplica el método Memoria: una memoria de trabajo compartida en una carpeta |
 | Proyecto en la memoria | `shared-memory/plugin-memoria`, en la raíz de TuOpinas |
 | Diseño y plan | `shared-memory/plugin-memoria/entregables/plan.md`. Diseño por crear: mientras tanto hacen de diseño el contrato del método (`plugins/memoria/skills/convenciones/`) y las plantillas del kit (`plugins/memoria/skills/desarrollo/plantillas/`), y la regla 6 se aplica contra ellos |
-| Audita | Juanjo Jiménez-Alfaro |
+| Acepta | Juanjo Jiménez-Alfaro |
 | Cómo se revisa | La skill `calidad` del plugin, con el informe en `taller/revisiones-de-calidad/` del proyecto; la descripción del pull request lo nombra en su línea «Revisión de calidad:» (check `Revisión`) |
 | Cómo se prueba | Todo `.github/workflows/pruebas.yml`: los secretos, `python3 pruebas/probar_compila.py`, las de `packages/context-core/` (`unittest` e `inline.py --check`), cada `pruebas/sesion/probar_*.py` y los de `pruebas/tablero/`, con Python 3.9, 3.10 y el actual. No corre `pruebas/aceptacion/` |
 | Pruebas de aceptación | `pruebas/aceptacion/<pieza>_<nombre>.py` (la pieza, «_» y un nombre: `P01_seleccion_exacta.py`) con su `RESUMEN.md`; para una pieza que hace el modelo sin script, un eval `pruebas/evals/escenarios/NN-<pieza>-<nombre>.md` (la pieza en mayúsculas, entre guiones: `30-P04-aprobacion-citada.md`), con sus datos al lado con el mismo comienzo (`30-P04-aprobacion-citada.json`). Lista de piezas activas: `.github/piezas-activas.txt`. Se corren con `python3 -I pruebas/aceptacion/correr.py P01 P02`, que sale con `0` si pasan, `1` si fallan o se saltan y `2` si no se pudieron correr; las de P01–P03 necesitan pytest en el `python3` del PATH. Las corre `.github/workflows/pruebas-aceptacion.yml`, y a ese workflow lo prueba `pruebas/sesion/probar_aceptacion_memoria.py` (decisiones shared-memory/plugin-memoria#2026-11-22-3 y -9) |
@@ -18,8 +18,9 @@
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita. (Este repositorio no tiene base de datos.)
 4. Ningún secreto en el código.
 5. No pases nada a Prod: aquí unir el pull request de versión publica el plugin. Lo une quien administra, con el sí en su descripción en la línea «Aprobó: Nombre Apellido, AAAA-MM-DD», después de verificar la candidata instalada en una raíz de prueba de TuOpinas.
-6. Para y pregunta a quien audita antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
+6. Para y pregunta a quien acepta antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
    - algo es difícil de revertir (un esquema, un contrato público, permisos, un proveedor, datos de clientes);
+   - el cambio toca lo delicado, que quien acepta revisa antes de unir (una dependencia nueva, permisos, accesos, pagos, datos personales, un cambio de base de datos);
    - un enfoque falló dos veces;
    - la tarea añade una entidad, un componente o un concepto que no está en el diseño, o se sale del plan;
    - el diseño no cubre lo que la tarea necesita, o no puedes leerlo.

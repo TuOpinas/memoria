@@ -5,8 +5,8 @@ Lo que se prueba es la plantilla del workflow del kit de desarrollo, plugins/mem
 pruebas-aceptacion.yml, como la correría GitHub en un pull request: se monta un repositorio de git temporal con la base y
 la cabeza del pull request, y se corren, en orden, los pasos «run:» del workflow con su «env:» de arriba, el «env:» de
 cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). Con comprobar(env_wf=…) la prueba
-cambia el «env:» de arriba como lo deja un proyecto que montó el kit, y el ejecutor cambia con su «CORREDOR» cuando la
-plantilla lo entienda (hoy corre pytest siempre); quitar «CORREDOR» con None exige pytest, igual que no declararlo. Con
+cambia el «env:» de arriba como lo deja un proyecto que montó el kit, y el ejecutor cambia con su «CORREDOR»;
+quitar «CORREDOR» con None exige pytest, igual que no declararlo. Con
 comprobar(ejecutables=…) deja archivos del repositorio ejecutables (un corredor propio, un node_modules/.bin/vitest de
 mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
