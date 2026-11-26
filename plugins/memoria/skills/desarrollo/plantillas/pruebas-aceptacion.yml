@@ -10,9 +10,10 @@
 #   · pytest: los archivos de una pieza se llaman «<pieza>_<nombre>.py».
 #   · vitest: se llaman «<pieza>_<nombre>.test.ts»; CONFIG es la configuración de Vitest, dentro de la carpeta, y es la
 #     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
-#     cada archivo. Node lo pone el paso «Prepara Node», con la versión de .nvmrc (si el proyecto no lo tiene, lo añade o
-#     cambia esa línea en su «Kit · »), y «Prepara el entorno» hace npm ci. Solo admite «.test.ts» (con «.test.tsx»
-#     o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada: el informe no la distingue.
+#     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
+#     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada:
+#     el informe no la distingue.
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
@@ -225,11 +226,10 @@ jobs:
             done
           fi
       - name: Prepara Node
-        if: env.CORREDOR == 'vitest'
+        if: env.CORREDOR == 'vitest' && hashFiles('.nvmrc') != ''
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: npm
       - name: Prepara el entorno
         run: |
           # lo rellena el repositorio: instalar lo que necesitan las pruebas (p. ej. pip install -r requirements.txt; con
