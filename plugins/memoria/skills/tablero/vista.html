@@ -3066,7 +3066,7 @@ function tzDatosGrupos(d){
     cajas: cajas.map(c => ({id: c.id, x: c.x, y: c.y, w: c.w, h: c.h, rol: "resto", grupo: c.grupo, externo: false, nombre: c.nombre, corto: c.corto, titulo: c.titulo, corto_entero: c.corto_entero, k: c.k})),
     contenedores: contenedores.map(g => ({id: g.id, x: g.x, y: g.y, w: g.w, h: g.h, rotulo: g.rotulo, titulo: g.titulo, papel: g.papel, grueso: g.grueso, discontinuo: g.discontinuo, color: g.color})),
     banda: null, lineas: rg.map(r => ({a: r.a, b: r.b, puntos: r.puntos, f: false, entre: "grupos"})).concat(rc.map(r => ({a: r.a, b: r.b, puntos: r.puntos, f: false, entre: "cajas"}))),
-    verbos: verbos.filter(v => v.t), leyenda: gs.map(g => ({grupo: g.nombre, texto: g.en_corto || ""})), nota: sueltas.length ? `${sueltas.map(c => c.id).join(", ")} no ${sueltas.length > 1 ? "tienen" : "tiene"} un grupo de la tabla «Grupos»: va${sueltas.length > 1 ? "n" : ""} al final, aparte.` : ""};
+    verbos: verbos.filter(v => v.t), leyenda: gs.map(g => ({grupo: g.nombre, texto: g.en_corto || ""}))};   // la entidad sin grupo la dice «Lo que no cuadra»
 }
 // 1.30.0 (P28): el sistema, un solo dibujo en lugar de componentes e infraestructura. Una caja por pieza de
 // infraestructura, con el color de su tipo y los nombres de los componentes que corren en ella; un marco por proveedor,

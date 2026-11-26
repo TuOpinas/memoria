@@ -26,7 +26,7 @@ Estado: `cerrada`, `en curso` (solo una) o `pendiente`. «Horas de cierre», opc
 |---|---|
 | P01 | [En llano, lo que cambia para la persona] |
 
-Horas: [las de sus piezas] de construcción y [las de escenarios, revisión y verificación], con IA. Espera a [persona]: [qué].
+Horas: espera a [persona]: [qué].
 
 Un bloque así por fase, escrito al planearla.
 
