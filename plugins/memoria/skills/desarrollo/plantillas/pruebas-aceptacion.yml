@@ -181,6 +181,9 @@ jobs:
           if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
           fi
+          if [ "$kit" -gt 0 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ]; }; then   # «Kit · …» o su reversión
+            echo "::error::Este pull request cambia el kit (el CLAUDE.md, un workflow, el corredor propio o la configuración del repositorio): va solo, en un pull request «Kit · »."; exit 1
+          fi
           # en un pull request de escenarios, cada archivo de pruebas empieza por una pieza de su título y «_»
           if [ "$escenarios" = 1 ]; then
             formas=""; for p in $piezas; do formas="$formas${formas:+ o }«${p}_»"; done

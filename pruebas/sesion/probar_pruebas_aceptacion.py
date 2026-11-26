@@ -143,8 +143,18 @@ c, o = pr([("borrar", "tests/aceptacion", None), ("escribir", "app/main.py", Non
 ok(c == 1 and "quita o mueve" in o, "quitar la carpeta de las pruebas falla")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "app/main.py", None)])
 ok(c == 1 and "va en su propio pull request" in o, "cambiar el workflow junto con código falla")
-c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)])
-ok(c == 0, "cambiarlo con el CLAUDE.md pasa: es el kit")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], titulo="Kit · el control")
+ok(c == 0, "cambiarlo con el CLAUDE.md en un «Kit · » pasa: es el kit")
+
+print("Lo que cambia el kit lleva el título «Kit · » (1.30.1)")
+c, o = pr([("escribir", "CLAUDE.md", None), ("escribir", "app/main.py", None)], titulo="P09 · algo")
+ok(c == 1 and "«Kit · »" in errores(o), "el CLAUDE.md con código y un título de pieza falla")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo="P09 · algo")
+ok(c == 1 and "«Kit · »" in errores(o), "el CLAUDE.md solo, con un título de pieza, falla")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo="Kit · reglas")
+ok(c == 0, "el CLAUDE.md solo, con «Kit · », pasa")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo='Revert "Kit · reglas"')
+ok(c == 0, "y la reversión de ese «Kit · », también")
 
 print("Los demás workflows cuentan como kit, igual que este (1.30.1)")
 WF_ANTES = "    steps:\n      - uses: actions/checkout@aaaa  # v6.0.0\n        with:\n          fetch-depth: 0\n"
@@ -172,8 +182,13 @@ ok(c == 0, "el corredor propio con CODEOWNERS en un «Kit · » pasa")
 print("Montar el kit en un repositorio que aún no tiene pruebas de aceptación")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], sin_carpeta=True)
 ok(c == 0, "el pull request que trae el workflow y el CLAUDE.md pasa")
-c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "tests/aceptacion/.gitkeep", None)], sin_carpeta=True)
-ok(c == 0, "con la carpeta vacía, también")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "tests/aceptacion/.gitkeep", None)], sin_carpeta=True,
+          titulo="Kit · monta el kit")
+ok(c == 0, "con la carpeta vacía, en un «Kit · », también")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None),
+           ("escribir", "tests/aceptacion/vitest.config.ts", None)], sin_carpeta=True, titulo="Kit · monta el kit",
+          env_wf={"CORREDOR": "vitest", "CONFIG": "tests/aceptacion/vitest.config.ts"})
+ok(c == 0, "y con Vitest, con la carpeta que solo trae CONFIG")
 c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True)
 ok(c == 0 and "no hay nada que proteger" in o, "una pieza antes de que haya escenarios pasa, y lo dice")
 
