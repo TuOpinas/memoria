@@ -346,18 +346,18 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase 
   - la tabla «Grupos»;
   - las columnas «Tipo» y «Corre en».
 - **El dibujo.** P27 y P28 sacan de la página el trozo que calcula el dibujo, lo corren aparte (con node) y miden lo que sale. No abren ningún navegador.
-- **La página como texto.** P26, P27 y P33 buscan en la página del tablero textos escritos tal cual: la marca «técnica», los textos de la decisión pendiente, el botón «Todas las relaciones» y los artículos de la ayuda.
+- **La página como texto.** P26, P27, P28 y P33 buscan en la página del tablero textos escritos tal cual: la marca «técnica» (`data-marca="tecnica"`), los textos de la decisión pendiente, «Cierre de fase», el botón «Todas las relaciones», «El sistema» y los artículos de la ayuda.
 
 Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no existe. Las de P16 a P22 siguen pasando y no cambian.
 
-**Una pieza «hecha»** es solo la entregada. Una unida que aún no se entregó cuenta como en curso: lo decidió quien acepta después de escribirse el encargo.
+**Una pieza «hecha»** es solo la entregada. Lo decidió quien acepta el 2026-11-25: una pieza unida y aún no entregada está en curso.
 
 **Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
 - **P26.**
   - Que la pieza hecha salga atenuada, con palomita y plegada al final de su columna, y la que va en curso primero y resaltada.
   - Lo que dice la cabecera de la fase: horas que faltan del total y piezas hechas del total.
   - Que la fase cerrada salga plegada.
-  - La línea «Cierre de fase» al pie de la columna, con sus horas.
+  - Que la línea «Cierre de fase» salga al pie de la columna, con sus horas (la prueba solo ve que la página trae ese texto).
   - Que la marca diga «decisión pendiente» en la tarjeta que la lleva, y que la ventana diga «Decisión pendiente antes de construirla: …» con su texto.
   - Que la tarjeta técnica lleve el rótulo «técnica».
 - **P27.**
@@ -366,10 +366,13 @@ Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no exis
   - Que el botón «Todas las relaciones» cambie el dibujo y, al pulsarlo otra vez, vuelvan los grupos.
   - Que la ventana de una entidad liste sus relaciones con otros grupos.
 - **P28.**
-  - Que la vista se titule «El sistema» y no haya dibujo de componentes.
+  - Que la vista se titule «El sistema» y no haya dibujo de componentes (la prueba solo ve que la página trae ese texto y que el trazado deja sin dibujo los componentes).
   - El color de cada tipo.
   - Que la ventana de una pieza enseñe las filas de sus componentes.
-- **P33.** Que los once pasos sean los del proceso y vayan en su orden, y que la ayuda se abra y se lea bien.
+- **P33.**
+  - Leer si los once pasos son los del proceso y van en su orden: la prueba solo los cuenta.
+  - Que el texto diga que la auditoría es a criterio del auditor: la prueba solo busca la palabra «auditor».
+  - Que la ayuda se abra y se lea bien.
 - **Todas.** Que los dibujos de product-design y de plugin-memoria se lean bien con sus tablas nuevas.
 
 ### P26 · El plan por estado
@@ -381,7 +384,7 @@ Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no exis
 | La fase dice lo que le falta | Horas: P01 0.5 (entregada), P02 0.75, P03 1.5; sin «Horas de cierre» | F1: 1.25 de total, faltan 0.75, 1 de 2 piezas hechas. F2: 1.5, faltan 1.5, 0 de 1. Con F1 cerrada, le faltan 0. **Añadido:** con P01 solo unida, F1 tiene 0 hechas y le faltan 1.25. Ningún aviso nombra «Horas de cierre» | P26 |
 | **Añadido:** La fase dice lo que le falta (sin horas) | Ni horas ni cierre en ninguna parte | El total y lo que falta, sin horas (null); las piezas se cuentan igual | P26 |
 | Una decisión pendiente se lee como tal | P02 lleva texto en «Para antes» | Ese texto sigue llegando, y la página tiene «decisión pendiente» y «Decisión pendiente antes de construirla:» | P26 |
-| El cierre de la fase se ve | Las horas de arriba, y «Horas de cierre» F1 «0,5» y F2 «1.5 h» | F1: 1.75 de total, faltan 1.25 (0.75 + 0.5). F2: 3 de total, faltan 3 | P26 |
+| El cierre de la fase se ve | Las horas de arriba, y «Horas de cierre» F1 «0,5» y F2 «1.5 h» | F1: 1.75 de total, faltan 1.25 (0.75 + 0.5). F2: 3 de total, faltan 3. La página tiene «Cierre de fase» | P26 |
 | **Añadido:** El cierre de la fase se ve (celda vacía, y sin horas en las piezas) | Sin horas en las piezas; cierre F1 vacío y F2 «1» | F1, todo sin horas; F2: cierre 1, total 1, faltan 1 | P26 |
 | Una pieza técnica se marca | El bloque de P03 en «Hecha cuando» dice «Pieza técnica, sin escenarios.» en vez de su escenario | P03 es técnica y P01 y P02 no, y la página tiene la marca `data-marca="tecnica"` | P26 |
 | Sin seguimiento, como hoy | «Seguimiento: por crear» y sin el archivo | Las fases y piezas como en la 1.29.1, sin estado ni grupo, sin piezas hechas ni horas que faltan, y el aviso del seguimiento que ya sale. **Añadido:** con horas, el total sí se cuenta | P26 |
@@ -398,13 +401,12 @@ Dentro de Cosas, «cosa» vive en «carpeta». «enlace» → «cosa» y «acto�
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Los grupos se apilan | La muestra de cuatro grupos | El tablero trae los grupos como la tabla. El dibujo va por grupos, con un contenedor por grupo en el orden de la tabla, de arriba abajo, y cada entidad dentro del suyo con su nombre y su «En corto». **Añadido:** ningún aviso pide «Grupos» | P27 |
+| Los grupos se apilan | La muestra de cuatro grupos | El tablero trae los grupos como la tabla. El dibujo va por grupos, con un contenedor por grupo en el orden de la tabla, de arriba abajo, y cada entidad dentro del suyo con su nombre y su «En corto». **Añadido:** ningún aviso, de ninguna parte, pide «Grupos» | P27 |
 | El centro, y lo que va aparte | La misma | Solo el centro es grueso y solo el aparte es discontinuo, y ninguna línea toca el aparte ni sus cajas | P27 |
 | Líneas entre grupos y dentro de uno | La misma | Una línea entre Enlaces y Cosas con «une», y otra entre Registro y Cosas con «actualiza». Una entre cosa y carpeta con «vive en». Ninguna entre cajas de grupos distintos. Las relaciones entre grupos distintos siguen en las entidades. Sin banda | P27 |
 | El color y la leyenda salen de los grupos | Tres grupos (sin Acceso ni sus entidades) | Cada contenedor con un color distinto; la leyenda, una entrada por grupo con su «En corto» | P27 |
-| **Añadido:** El color y la leyenda salen de los grupos (cuatro, con el aparte) | La de cuatro | Lo mismo | P27 |
 | Todas las relaciones, a petición | La de cuatro | Sin opciones, por grupos. Con «todas», por flujo, y el dibujo es el mismo que el de ese diseño sin grupos (el de la 1.29.1), donde enlace → cosa sí tiene línea. La página tiene el botón `data-accion="todas-las-relaciones"` | P27 |
-| Sin la tabla, como hoy | La muestra de P05 tal cual | Sin grupos; un aviso de la parte «diseno» nombra «Grupos»; los datos van por flujo, con una caja por entidad y una línea por relación | P27 |
+| Sin la tabla, como hoy | La muestra de P05 tal cual | Sin grupos; un aviso, de cualquier parte, nombra «Grupos»; los datos van por flujo, con una caja por entidad y una línea por relación | P27 |
 | Una entidad sin grupo se dice | Una entidad más, «suelta», del grupo «Huérfanos», que no está en la tabla | Un aviso la nombra; su caja no tiene grupo, no está en ningún contenedor y queda debajo del último | P27 |
 
 ### P28 · El sistema
@@ -419,21 +421,21 @@ En «Componentes», una columna «Corre en» al final: Tienda web y API corren e
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Un dibujo en lugar de dos | Esa | El diseño dice que hay sistema; el trazado trae «sistema» y deja sin dibujo los componentes y la infraestructura. **Añadido:** ningún aviso pide «Tipo» | P28 |
+| Un dibujo en lugar de dos | Esa | El diseño dice que hay sistema; el trazado trae «sistema» y deja sin dibujo los componentes y la infraestructura; la página tiene «El sistema». **Añadido:** ningún aviso, de ninguna parte, pide «Tipo» | P28 |
 | Marcos y orden | Esa | Tres contenedores; cada caja dentro de uno solo. Servidor web y Base de datos en el mismo, y Dominio y Pasarela en otros. Dominio queda más arriba que Base de datos y que Pasarela | P28 |
 | El color dice el tipo | Esa | Cada pieza y su caja con su tipo; la leyenda, una entrada por cada uno de los tres tipos, con texto | P28 |
 | **Añadido:** El color dice el tipo (celda vacía) | La celda «Tipo» de Base de datos, vacía | Su tipo es el texto vacío | P28 |
 | Los componentes van dentro de su pieza | Esa | Servidor web lista Tienda web y API, en el orden de «Componentes», en el tablero y en su caja; las demás, ninguno; cada componente dice dónde corre | P28 |
 | **Añadido:** Los componentes van dentro de su pieza (sin «Corre en») | Con «Tipo» y sin «Corre en» | Ningún componente dice dónde corre y ninguna pieza lista componentes | P28 |
 | Un verbo en la línea es opcional | Esa | «Conecta con» sigue siendo la lista de nombres (Servidor web: Base de datos y Pasarela), y los verbos van aparte (solo «lee»). En el dibujo, tres líneas y un solo verbo, «lee», en Servidor web → Base de datos | P28 |
-| Sin «Tipo», como hoy | La muestra de P05 tal cual | No hay sistema; el trazado trae «sistema» vacío (null) y los dibujos de componentes e infraestructura con una caja por fila; un aviso de la parte «diseno» nombra «Tipo» | P28 |
+| Sin «Tipo», como hoy | La muestra de P05 tal cual | No hay sistema; el trazado trae «sistema» vacío (null) y los dibujos de componentes e infraestructura con una caja por fila; un aviso, de cualquier parte, nombra «Tipo» | P28 |
 
 ### P33 · El proceso en la ayuda
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| El proceso, de principio a fin | La página del tablero | El primer artículo de «Proyectos de desarrollo de software» es `desarrollo-proceso`. Su texto trae una lista ordenada de exactamente once pasos y, fuera de ella, «en cualquier momento» y «auditor» | P33 |
-| Los roles son los de hoy | La misma | «Quién hace qué» (`desarrollo-roles`) dice Acepta, Construye, Administra, Audita, «nadie» y Recibe, y la fila de Audita no dice «decide» | P33 |
+| El proceso, de principio a fin | La página del tablero | El primer artículo de «Proyectos de desarrollo de software» es `desarrollo-proceso`. Su texto trae una lista ordenada de exactamente once pasos y, fuera de ella, «en cualquier momento», «no detiene» y la palabra entera «auditor» (no vale «auditoría») | P33 |
+| Los roles son los de hoy | La misma | «Quién hace qué» (`desarrollo-roles`) dice Acepta, Construye, Administra, Audita, «nadie» y Recibe, y la fila de Audita (la de la tabla cuya primera celda es Audita, hasta su `</tr>`) no dice «decide» | P33 |
 
 ### Cómo se leyó lo que el escenario no precisa
 
@@ -446,14 +448,14 @@ En «Componentes», una columna «Corre en» al final: Tienda web y API corren e
 7. «El dibujo por flujo de 1.29.1» (P27) se compara con el mismo diseño sin grupos, que es como la 1.29.1 lo dibujaba. Así no hace falta guardar la salida de la 1.29.1.
 8. «Una pieza de la que solo salen líneas» (P28) es Dominio. «Las que solo reciben» son Base de datos y Pasarela. Servidor web, que llama y recibe, no se compara.
 9. «Los verbos» de una pieza sin ninguna conexión con verbo van vacíos, `{}`.
-10. La sección de un artículo de la ayuda (P33) es su clave `g:"…"`, como en la página de hoy. «en cualquier momento» y «auditor» se buscan sin distinguir mayúsculas; los nombres de los roles, tal cual.
-11. La fila de Audita es la fila de la tabla (`<tr>`) que dice «Audita»; en ella no puede aparecer «decide».
+10. La sección de un artículo de la ayuda (P33) es su clave `g:"…"`, como en la página de hoy. «en cualquier momento», «no detiene» y «auditor» se buscan sin distinguir mayúsculas, «auditor» como palabra entera; los nombres de los roles, tal cual.
+11. La fila de Audita es la fila de la tabla cuya primera celda (`<td>` o `<th>`, sin sus etiquetas) es «Audita», desde su `<tr>` hasta su `</tr>`; en ella no puede aparecer «decide». Lo que haya después de la tabla no cuenta.
+12. Si el trazado de la página devuelve null o nada (P27 y P28), las filas que miran el dibujo fallan y lo dicen.
 
 ### Lo que queda sabido
 
-- Los avisos de «Grupos» y de «Tipo» se piden en la parte «diseno», como dice el contrato del encargo. Los avisos de hoy van en las partes «datos», «componentes», «infraestructura», «plan» y «seguimiento»; ninguno en «diseno». Un aviso en la parte «datos» o «infraestructura» no cuenta.
+- Los avisos de «Grupos» y de «Tipo» se buscan en todos los avisos, de cualquier parte, tanto donde se piden como donde se pide que no los haya: así lo dice la enmienda al contrato tras la revisión de calidad.
 - Que una relación entre grupos distintos «se liste en la ventana de cada una» solo se comprueba a medias: la relación sigue en las entidades del tablero, pero la ventana no se mira.
 - El aviso de la entidad sin grupo se busca en cualquier parte, porque el contrato no dice en cuál.
-- P28 no pide el título «El sistema» en la página: el contrato no lo nombra como texto que buscar.
 - P27 y P28 necesitan node en el PATH; sin él no se montan y salen con 2.
 - P33 cuenta los `<li>` de la lista, no lee los pasos: once pasos cualesquiera pasan.

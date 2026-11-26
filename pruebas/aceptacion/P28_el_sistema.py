@@ -16,9 +16,9 @@
 
 Por las dos entradas de F5: el generador del tablero sobre la raíz de muestra de P05_lectores.py (diseno.sistema;
 tipo, componentes y verbos de cada pieza de infraestructura; corre_en de cada componente; los avisos) y
-trazarDesarrollo(diseno) de la página, corrido con node como en P21_lineas_que_se_siguen.py (el dibujo «sistema»). El
-título «El sistema», los colores de verdad y lo que enseña la ventana de una pieza quedan para la verificación: lo dice
-RESUMEN.md.
+trazarDesarrollo(diseno) de la página, corrido con node como en P21_lineas_que_se_siguen.py (el dibujo «sistema»); el
+título «El sistema», en la página leída como texto. Que la vista salga con ese título, los colores de verdad y lo que
+enseña la ventana de una pieza quedan para la verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P28_el_sistema.py (0 pasa, 1 falla, 2 no se montó).
 """
 import pathlib, sys
@@ -27,6 +27,7 @@ sys.dont_write_bytecode = True   # no deja __pycache__ en la carpeta
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P21_lineas_que_se_siguen import *  # noqa: E402,F401,F403  (la muestra de P05, cómo se saca y se corre el trazado)
 
+TITULO = "El sistema"
 TABLA_VIEJA = """| Pieza | Para qué | Dónde | Conecta con |
 |---|---|---|---|
 | Servidor web | Sirve la tienda y la API | Nube · producción | Base de datos |
@@ -66,7 +67,8 @@ def con_tipo(tipos=None, corre_en=True):
 
 
 def sistema_de(cambios, problemas):
-    """(pestaña, diseno, trazado) de la muestra con esos cambios; lo que falte, None."""
+    """(pestaña, diseno, trazado) de la muestra con esos cambios; lo que falte, None con el porqué (también si
+    trazarDesarrollo devuelve null o nada)."""
     d = pestana(*generar(cambios), problemas)
     if d is None:
         return None, None, None
@@ -74,7 +76,10 @@ def sistema_de(cambios, problemas):
     if not isinstance(dis, dict):
         problemas.append(f"«diseno» es {json.dumps(dis, ensure_ascii=False)[:80]}")
         return d, None, None
+    antes = len(problemas)
     t = correr(INICIO, FIN, "trazarDesarrollo", [dis], problemas)
+    if t is None and len(problemas) == antes:
+        problemas.append("trazarDesarrollo(diseno) devolvió null o nada")
     if t is not None and not isinstance(t, dict):
         problemas.append(f"trazarDesarrollo(diseno) devolvió {json.dumps(t, ensure_ascii=False)[:120]}, no un objeto")
         t = None
@@ -101,14 +106,14 @@ def campo(problemas, que, fila, k, esperado):
 
 
 def sin_aviso_de_tipo(d, problemas):
-    malos = [t for t in avisos(d, "diseno") if "Tipo" in t]
+    malos = [t for t in avisos(d) if "Tipo" in t]
     if malos:
         problemas.append(f"con la columna «Tipo», un aviso la pide: {json.dumps(malos, ensure_ascii=False)}")
 
 
 def escenarios(inf):
     # 1 · Un dibujo en lugar de dos: diseno.sistema es true; el trazado trae «sistema» y deja componentes e
-    #     infraestructura en null. Añadido: ningún aviso de la parte «diseno» pide «Tipo»
+    #     infraestructura en null; la página trae «El sistema». Añadido: ningún aviso pide «Tipo»
     problemas = []
     d, dis, t = sistema_de(con_tipo(), problemas)
     if dis is not None:
@@ -119,6 +124,10 @@ def escenarios(inf):
             if t.get(k, "falta") is not None:
                 problemas.append(f"con «Tipo», «{k}» del trazado es {json.dumps(t.get(k, 'falta'), ensure_ascii=False)[:80]}, "
                                  "no null")
+    if not VISTA.is_file():
+        raise flujo.Montaje(f"no está la página del tablero en {VISTA}")
+    if TITULO not in VISTA.read_text(encoding="utf-8", errors="replace"):
+        problemas.append(f"la página del tablero no tiene «{TITULO}»: la vista no se titula así")
     inf.escenario("Un dibujo en lugar de dos", problemas)
 
     # 2 · Marcos y orden: un contenedor por proveedor, cuenta y ambiente (tres), cada caja dentro de uno solo, Servidor
@@ -243,13 +252,13 @@ def escenarios(inf):
     inf.escenario("Un verbo en la línea es opcional", problemas)
 
     # 6 · Sin «Tipo», como hoy: la muestra de P05 tal cual. diseno.sistema es false, el trazado trae «sistema» null y los
-    #     dibujos de componentes e infraestructura de 1.29.1 (una caja por fila), y un aviso de la parte «diseno» pide «Tipo»
+    #     dibujos de componentes e infraestructura de 1.29.1 (una caja por fila), y un aviso (de cualquier parte) pide «Tipo»
     problemas = []
     d, dis, t = sistema_de([], problemas)
     if dis is not None:
         campo(problemas, "«diseno»", dis, "sistema", False)
-        if not any("Tipo" in x for x in avisos(d, "diseno")):
-            problemas.append(f"ningún aviso de la parte «diseno» nombra «Tipo»: avisos = "
+        if not any("Tipo" in x for x in avisos(d)):
+            problemas.append(f"ningún aviso nombra «Tipo»: avisos = "
                              f"{json.dumps(saca(d, 'avisos'), ensure_ascii=False)[:300]}")
     if t is not None:
         if "sistema" not in t:

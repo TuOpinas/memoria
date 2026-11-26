@@ -53,11 +53,22 @@ def articulos(texto):
     return out
 
 
+FILA = re.compile(r"<tr\b[^>]*>((?:(?!<tr\b|</table>).)*?)</tr>", re.S)   # una fila, cortada en su </tr>
+CELDA = re.compile(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", re.S)
+
+
+def primera_celda(fila):
+    """El texto de la primera celda (<td> o <th>) de una fila, sin etiquetas ni espacios a los lados."""
+    m = CELDA.search(fila)
+    return re.sub(r"<[^>]*>", "", m.group(1)).strip() if m else None
+
+
 def escenarios(inf):
     arts = articulos(pagina())
 
     # 1 · El proceso, de principio a fin: el primer artículo de la sección es «desarrollo-proceso»; su h trae una
-    #     lista ordenada con once <li>, y fuera de ella un texto con «en cualquier momento» y «auditor»
+    #     lista ordenada con once <li>, y fuera de ella un texto con «en cualquier momento», «no detiene» y la palabra
+    #     entera «auditor»
     problemas = []
     de_la_seccion = [a for a in arts if a.get("g") == SECCION]
     if not de_la_seccion:
@@ -77,12 +88,15 @@ def escenarios(inf):
                 if n != 11:
                     problemas.append(f"la lista ordenada de «desarrollo-proceso» tiene {n} <li>, no once")
                 fuera = re.sub(r"<ol\b[^>]*>.*?</ol>", " ", h, flags=re.S).lower()
-                for palabra in ("en cualquier momento", "auditor"):
+                for palabra in ("en cualquier momento", "no detiene"):
                     if palabra not in fuera:
                         problemas.append(f"fuera de la lista, «desarrollo-proceso» no dice «{palabra}»")
+                if not re.search(r"\bauditor\b", fuera):
+                    problemas.append("fuera de la lista, «desarrollo-proceso» no dice la palabra «auditor» (no vale «auditoría»)")
     inf.escenario("El proceso, de principio a fin", problemas)
 
-    # 2 · Los roles son los de hoy: el h de «desarrollo-roles» nombra los seis, y la fila de Audita no dice «decide»
+    # 2 · Los roles son los de hoy: el h de «desarrollo-roles» nombra los seis, y la fila de Audita (la de la tabla cuya
+    #     primera celda es Audita, hasta su </tr>) no dice «decide»
     problemas = []
     roles = [a for a in arts if a.get("id") == "desarrollo-roles"]
     if len(roles) != 1:
@@ -92,9 +106,9 @@ def escenarios(inf):
         for palabra in ROLES:
             if palabra not in h:
                 problemas.append(f"«Quién hace qué» no dice «{palabra}»")
-        filas = [f for f in re.split(r"<tr\b", h) if "Audita" in f]
+        filas = [f for f in FILA.findall(h) if primera_celda(f) == "Audita"]
         if not filas:
-            problemas.append("«Quién hace qué» no tiene una fila (<tr>) de Audita")
+            problemas.append("«Quién hace qué» no tiene una fila de la tabla (<tr>…</tr>) cuya primera celda sea Audita")
         elif any("decide" in f for f in filas):
             problemas.append("la fila de Audita de «Quién hace qué» aún dice «decide» (decide en los puntos de control)")
     inf.escenario("Los roles son los de hoy", problemas)

@@ -17,9 +17,9 @@
 
 Por las dos entradas de F5: el generador del tablero sobre la raíz de muestra de P05_lectores.py (plan.piezas[].grupo y
 tecnica; plan.fases[].horas_cierre, horas_total, piezas_total, piezas_hechas y horas_faltan), y la página del tablero
-(vista.html) leída como texto, para la marca «técnica» y los textos de la decisión pendiente. El atenuado, la palomita,
-el plegado, el orden en la columna, lo que dice la cabecera de la fase y la línea «Cierre de fase» quedan para la
-verificación: lo dice RESUMEN.md.
+(vista.html) leída como texto, para la marca «técnica» (data-marca="tecnica"), los textos de la decisión pendiente y
+«Cierre de fase». El atenuado, la palomita, el plegado, el orden en la columna, lo que dice la cabecera de la fase y que
+la línea «Cierre de fase» salga al pie de la columna con sus horas quedan para la verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P26_plan_por_estado.py (0 pasa, 1 falla, 2 no se montó).
 """
 import pathlib, sys
@@ -31,6 +31,7 @@ from P05_lectores import *  # noqa: E402,F401,F403  (la muestra, cómo se corre 
 VISTA = REPO / "plugins" / "memoria" / "skills" / "tablero" / "vista.html"
 MARCA_TECNICA = 'data-marca="tecnica"'
 PENDIENTE, VENTANA_PENDIENTE = "decisión pendiente", "Decisión pendiente antes de construirla:"
+CIERRE = "Cierre de fase"
 
 # «Horas» y «Para antes» en «Piezas», como en P22
 CABECERA_PIEZAS = ("| Pieza | Fase | Qué entrega |\n|---|---|---|",
@@ -186,13 +187,16 @@ def escenarios(inf):
     inf.escenario("Una decisión pendiente se lee como tal", problemas)
 
     # 4 · El cierre de la fase se ve: «Horas de cierre» F1 «0,5» y F2 «1.5 h», con las horas de las piezas de 2 y P01
-    #     entregada. F1: 1.25 + 0.5 = 1.75, faltan 0.75 + 0.5 = 1.25; F2: 1.5 + 1.5 = 3, faltan 3
+    #     entregada. F1: 1.25 + 0.5 = 1.75, faltan 0.75 + 0.5 = 1.25; F2: 1.5 + 1.5 = 3, faltan 3. La página trae
+    #     «Cierre de fase»
     problemas = []
     d = pestana(*generar(horas + [ENTREGADA] + fases_con(cierre={"F1": "0,5", "F2": "1.5 h"})), problemas)
     if d is not None:
         fases(d, problemas, {
             "F1": {"horas": 1.25, "horas_cierre": 0.5, "horas_total": 1.75, "horas_faltan": 1.25},
             "F2": {"horas": 1.5, "horas_cierre": 1.5, "horas_total": 3, "horas_faltan": 3}})
+    if CIERRE not in pagina():
+        problemas.append(f"la página del tablero no tiene «{CIERRE}»: la columna no acaba con la línea del cierre")
     inf.escenario("El cierre de la fase se ve", problemas)
 
     # 4b · Añadido: sin horas en las piezas, la celda vacía es null y «1» cuenta solo: F1 todo null; F2 cierre 1, total 1,
@@ -216,8 +220,6 @@ def escenarios(inf):
     texto = pagina()
     if MARCA_TECNICA not in texto:
         problemas.append(f"la página del tablero no tiene «{MARCA_TECNICA}»: la tarjeta no lleva el rótulo «técnica»")
-    if "técnica" not in texto:
-        problemas.append("la página del tablero no tiene el texto «técnica»")
     inf.escenario("Una pieza técnica se marca", problemas)
 
     # 6 · Sin seguimiento, como hoy: «Seguimiento: por crear» y sin el archivo. Las piezas sin estado y con grupo null,

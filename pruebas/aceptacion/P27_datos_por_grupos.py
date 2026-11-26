@@ -80,13 +80,18 @@ TRES = ([e for e in ENTIDADES_G if e[2] != "Acceso"], GRUPOS[:3])
 
 
 def trazar_con(diseno, problemas, opciones=None):
-    """trazarDesarrollo(diseno) o trazarDesarrollo(diseno, opciones), corrido con node, o None con el porqué."""
+    """trazarDesarrollo(diseno) o trazarDesarrollo(diseno, opciones), corrido con node, o None con el porqué (también
+    si devuelve null o nada)."""
     if not isinstance(diseno, dict):
         if not shutil.which("node"):
             raise flujo.Montaje("no hay node en el PATH: el trazado de la página se corre con él")
         problemas.append(f"«diseno» es {json.dumps(diseno, ensure_ascii=False)[:80]}: no hay qué trazar")
         return None
+    antes = len(problemas)
     t = correr(INICIO, FIN, "trazarDesarrollo", [diseno] if opciones is None else [diseno, opciones], problemas)
+    if t is None and len(problemas) == antes:
+        problemas.append("trazarDesarrollo(diseno" + ("" if opciones is None else ", opciones") + ") devolvió null o nada")
+        return None
     if t is not None and not isinstance(t, dict):
         problemas.append(f"trazarDesarrollo devolvió {json.dumps(t, ensure_ascii=False)[:120]}, no un objeto")
         return None
@@ -142,7 +147,7 @@ def escenarios(inf):
             problemas.append("«diseno» no trae «grupos»")
         else:
             igual(problemas, "«diseno.grupos»", dis["grupos"], GRUPOS_JSON)
-        malos = [t for t in avisos(d, "diseno") if "Grupos" in t]
+        malos = [t for t in avisos(d) if "Grupos" in t]
         if malos:   # Añadido: con la tabla puesta, ningún aviso la pide
             problemas.append(f"con la tabla «Grupos», un aviso la pide: {json.dumps(malos, ensure_ascii=False)}")
     if modo(problemas, v, "grupos"):
@@ -238,12 +243,6 @@ def escenarios(inf):
     colores_y_leyenda(TRES[1], problemas, v)
     inf.escenario("El color y la leyenda salen de los grupos", problemas)
 
-    # 4b · Añadido: lo mismo con los cuatro grupos, el aparte incluido
-    problemas = []
-    d, dis, v = datos_de([con_grupos()], problemas)
-    colores_y_leyenda(GRUPOS, problemas, v)
-    inf.escenario("El color y la leyenda salen de los grupos (cuatro, con el aparte)", problemas)
-
     # 5 · Todas las relaciones, a petición: sin opciones, modo «grupos»; con {"datos": "todas"}, modo «flujo» y el mismo
     #     dibujo de «datos» que el del mismo diseño sin grupos (el de 1.29.1, con su banda y sus líneas); la página tiene
     #     el botón
@@ -269,7 +268,7 @@ def escenarios(inf):
         problemas.append(f"la página del tablero no tiene «{BOTON}»: no hay botón «Todas las relaciones»")
     inf.escenario("Todas las relaciones, a petición", problemas)
 
-    # 6 · Sin la tabla, como hoy: la muestra de P05 tal cual; diseno.grupos es [], un aviso de la parte «diseno» nombra
+    # 6 · Sin la tabla, como hoy: la muestra de P05 tal cual; diseno.grupos es [], un aviso (de cualquier parte) nombra
     #     «Grupos», y «datos» se dibuja en modo «flujo» con una caja por entidad y una línea por relación
     problemas = []
     d, dis, v = datos_de([], problemas)
@@ -278,8 +277,8 @@ def escenarios(inf):
             problemas.append("«diseno» no trae «grupos» (tiene que ser [])")
         else:
             igual(problemas, "«diseno.grupos»", dis["grupos"], [])
-        if not any("Grupos" in t for t in avisos(d, "diseno")):
-            problemas.append(f"ningún aviso de la parte «diseno» nombra «Grupos»: avisos = "
+        if not any("Grupos" in t for t in avisos(d)):
+            problemas.append(f"ningún aviso nombra «Grupos»: avisos = "
                              f"{json.dumps(saca(d, 'avisos'), ensure_ascii=False)[:300]}")
     if modo(problemas, v, "flujo"):
         nombres, pares = filas(dis, "datos")
