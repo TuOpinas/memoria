@@ -96,8 +96,8 @@ jobs:
                 echo "::error::CORREDOR («$CORREDOR») no es la ruta de un archivo del repositorio."; exit 1
               fi
               sufijo="$SUFIJO"
-              if [ -z "$sufijo" ] || [[ "$sufijo" == */* || "$sufijo" == *[][*?]* ]]; then
-                echo "::error::Con un corredor propio, SUFIJO dice cómo terminan los archivos de prueba (por ejemplo «_test.go»), y aquí está vacío, no es un final de nombre o lleva un comodín (*, ?, [ o ]): ponlo en el «env:» de este workflow."; exit 1
+              if [ -z "$sufijo" ] || [[ "$sufijo" == */* || "$sufijo" == *[][*?\\]* ]]; then
+                echo "::error::Con un corredor propio, SUFIJO dice cómo terminan los archivos de prueba (por ejemplo «_test.go»), y aquí está vacío, no es un final de nombre o lleva un comodín o una contrabarra (*, ?, [, ] o \\): ponlo en el «env:» de este workflow."; exit 1
               fi ;;
             *)
               echo "::error::CORREDOR («$CORREDOR») tiene que ser pytest, vitest o la ruta de un corredor propio que empiece por «./»: ponlo en el «env:» de este workflow, igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1 ;;

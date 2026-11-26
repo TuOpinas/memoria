@@ -52,7 +52,7 @@ def repo(sin_carpeta=False):
     return d, git(d, "rev-parse", "HEAD")
 
 
-def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0):
+def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0, env_wf=None):
     """Aplica los cambios en una rama y corre el primer paso; devuelve (código de salida, salida). lista: el texto de la
     lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama."""
     d, base = repo(sin_carpeta)
@@ -92,6 +92,7 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
                RUNNER_TEMP=tempfile.mkdtemp(), ACTIVAS=envw["ACTIVAS"], TITULO=titulo, CORREDOR=envw["CORREDOR"],
                CONFIG=envw["CONFIG"], SUFIJO=envw["SUFIJO"])
     env.pop("GITHUB_WORKFLOW_REF", None)   # en el CI de este repositorio apunta a pruebas.yml, no al workflow que se prueba
+    env.update(env_wf or {})
     p = subprocess.run(["bash", "-c", cuerpo], cwd=d, env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
 
@@ -152,6 +153,9 @@ c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion-no/
 ok(c == 1 and " · »" in o, "tampoco se cuela si la prueba de la pieza lleva acento en el nombre")
 c, o = pr([("escribir", "app/main.py", None)], titulo="Arreglo de un texto")
 ok(c == 0, "un título sin pieza sigue pasando: es «fuera del plan», y lo dice el seguimiento")
+for sufijo in ("*.spec.ts", "\\.spec.ts"):
+    c, o = pr([("escribir", "app/main.py", None)], env_wf={"CORREDOR": "./corredor", "SUFIJO": sufijo})
+    ok(c == 1 and "SUFIJO" in "\n".join(l for l in o.splitlines() if "::error::" in l), f"un SUFIJO «{sufijo}», con comodín o contrabarra, falla y lo dice")
 
 print("Las piezas activas y los pull requests de escenarios")
 CUERPO2, ENVW = script("Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios")
