@@ -32,6 +32,9 @@
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
 #   Mientras la carpeta no exista, pasa.
+# - Las acciones van fijadas por commit, con su versión al lado. Un pull request de Dependabot (autor dependabot[bot]) que
+#   solo cambia archivos de .github/workflows/, y en ellos solo líneas «uses:», no sigue las reglas del kit; sus pruebas
+#   activas sí corren. Un commit de otra persona en su rama, u otro archivo, y vuelven las reglas.
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
@@ -67,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -76,6 +79,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           TITULO: ${{ github.event.pull_request.title }}
+          AUTOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -eo pipefail
           ident='^[A-Za-z]+[0-9]+[A-Za-z]?$'
@@ -160,6 +164,18 @@ jobs:
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
+          # Dependabot que solo sube acciones: todo en .github/workflows/ y cada línea que cambia es un «uses:»
+          if [ "$AUTOR" = "dependabot[bot]" ]; then
+            flujos=1
+            while IFS= read -r -d '' f; do [[ "$f" == .github/workflows/* ]] || flujos=0; done < "$RUNNER_TEMP/cambios"
+            if [ "$flujos" = 1 ] && git diff -U0 --no-renames "$COMUN" "$HEAD" -- .github/workflows/ | awk '
+                 /^diff --git / { h = 0; next } /^@@ / { h = 1; next }
+                 h && /^[-+]/ && $0 !~ /^[-+][[:space:]]*(-[[:space:]]+)?uses:[[:space:]]*[^[:space:]]+([[:space:]]+#.*)?$/ { m = 1 }
+                 END { exit m }'; then
+              echo "Dependabot solo sube acciones de los workflows: no se le aplican las reglas del kit."; exit 0
+            fi
+            echo "La excepción de Dependabot no vale: cambia algo más que líneas «uses:» de .github/workflows/."
+          fi
           if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
             echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
