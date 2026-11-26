@@ -3191,7 +3191,7 @@ def datos_por_grupos(vista, texto_diseno):
         return
     sec = _sections(texto_diseno or "").get(_clave_dev("Datos"))
     tabla = next(((t, f) for t, f in _tablas(sec[1].split("\n") if sec else [])
-                  if t and _clave_dev(t[0]) == _clave_dev("Grupo")), None)
+                  if t and _clave_dev(t[0]) == _clave_dev("Grupo") and _optional(t, "Entidad") is None), None)
     avisar = lambda x: vista["avisos"].append({"parte": "datos", "texto": x})
     d["grupos"] = []
     if tabla is None:
@@ -3210,11 +3210,13 @@ def datos_por_grupos(vista, texto_diseno):
         papel = _cell(r, c["Papel"]).lower()
         d["grupos"].append({"nombre": _cell(r, c["Grupo"]), "en_corto": _cell(r, c["En corto"]),
                             "papel": papel if papel in ("centro", "aparte") else "", "relaciones": rel})
-    nombres = {g["nombre"] for g in d["grupos"]}
-    for e in d.get("entidades") or []:
-        if (e.get("grupo") or "") not in nombres:
-            avisar(f"«{e['nombre']}» es del grupo «{e.get('grupo') or ''}», que no está en la tabla «Grupos»: se dibuja "
-                   "al final, aparte")
+    nombres = {_clave_dev(g["nombre"]): g["nombre"] for g in d["grupos"]}
+    for e in d.get("entidades") or []:   # «ventas» es «Ventas»: la entidad lleva el nombre del grupo como en su tabla
+        e["grupo"] = nombres.get(_clave_dev(e.get("grupo") or ""), e.get("grupo"))
+    fuera = [e for e in d.get("entidades") or [] if _clave_dev(e.get("grupo") or "") not in nombres]
+    if fuera:
+        avisar(", ".join(f"«{e['nombre']}» (grupo «{e.get('grupo') or ''}»)" for e in fuera) + (" no tienen" if len(fuera) > 1 else " no tiene")
+               + " un grupo de la tabla «Grupos»: se dibuja" + ("n" if len(fuera) > 1 else "") + " al final, aparte")
 
 
 # ---------- 1.30.0: el sistema (P28) ----------
@@ -3235,9 +3237,9 @@ def el_sistema(vista, texto_diseno):
     infra, comps = d.get("infraestructura") or [], d.get("componentes") or []
     t, filas = tabla("Componentes")
     c_nombre, c_corre = _optional(t, "Componente"), _optional(t, "Corre en")
-    corre = {_cell(r, c_nombre): _cell(r, c_corre) for r in filas}
+    corre = {_clave_dev(_cell(r, c_nombre)): _cell(r, c_corre) for r in filas}
     for x in comps:
-        x["corre_en"] = corre.get(x["nombre"], "")
+        x["corre_en"] = corre.get(_clave_dev(x["nombre"]), "")
     t, filas = tabla("Infraestructura")
     c_pieza, c_tipo, c_con = _optional(t, "Pieza"), _optional(t, "Tipo"), _optional(t, "Conecta con")
     d["sistema"] = c_tipo is not None
@@ -3253,17 +3255,30 @@ def el_sistema(vista, texto_diseno):
             n, v = (m.group(1), m.group(2).strip()) if m and m.group(1) in nombres else (y.strip(), "")
             if n in nombres and n not in con:
                 con.append(n)
-                if v:
-                    verbos[n] = v
-                    falso = f"«{x['nombre']}» conecta con «{y.strip()}», que no está en «Infraestructura»"
-                    vista["avisos"] = [a for a in vista["avisos"] if a.get("texto") != falso]
+            if v and n in nombres:   # «DB (lee) · DB (escribe)»: una línea con los dos verbos
+                verbos[n] = f"{verbos[n]}, {v}" if n in verbos else v
+            if m and m.group(1) in nombres:   # también con el verbo vacío o repetido
+                falso = f"«{x['nombre']}» conecta con «{y.strip()}», que no está en «Infraestructura»"
+                vista["avisos"] = [a for a in vista["avisos"] if a.get("texto") != falso]
         if c_con is not None:
             x["conecta_con"] = con
         x["verbos"] = verbos
         if d["sistema"]:
             tipo = _cell(r, c_tipo).lower()
             x["tipo"] = tipo if tipo in TIPOS_SISTEMA else ""
-            x["componentes"] = [k["nombre"] for k in comps if k["corre_en"] == x["nombre"]]
+            if tipo and not x["tipo"]:
+                vista["avisos"].append({"parte": "infraestructura", "texto": f"«{x['nombre']}» tiene el tipo «{_cell(r, c_tipo)}»: "
+                                        "va «corre», «guarda» o «externo»; sin él, se dibuja sin color"})
+            x["componentes"] = [k["nombre"] for k in comps if _clave_dev(k["corre_en"]) == _clave_dev(x["nombre"])]
+    if d["sistema"]:
+        claves = {_clave_dev(x["nombre"]) for x in infra}
+        for k in comps:
+            if _clave_dev(k["corre_en"]) not in claves:
+                vista["avisos"].append({"parte": "componentes", "texto": f"«{k['nombre']}» " + (
+                    f"corre en «{k['corre_en']}», que no está en «Infraestructura»" if k["corre_en"] else "no dice en qué pieza corre («Corre en»)")
+                    + ": no sale en «El sistema»"})
+        # con «El sistema» no hay dibujo de componentes: su «Flujo:» no hace falta
+        vista["avisos"] = [a for a in vista["avisos"] if not (a.get("parte") == "componentes" and "«Flujo:»" in (a.get("texto") or ""))]
     roles = _roles([x["nombre"] for x in infra], [(x["nombre"], o) for x in infra for o in x["conecta_con"]], None)
     for x in infra:
         x["rol"] = roles[x["nombre"]]

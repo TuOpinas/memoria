@@ -31,7 +31,7 @@ Las reglas de negocio que el producto tiene que cumplir.
 | [Cliente o servicio de fuera] | [Qué es, en unas palabras] | [Una frase] | [quién lo da] | sí | [componente al que llama] | [pieza de «Infraestructura»] |
 | [Nombre] | [Qué es, en unas palabras] | [Una frase] | [organización/repositorio:ruta] | | [otro componente · otro más] | [pieza de «Infraestructura»] |
 
-**Flujo:** [componente → otro → otro: el recorrido de la llamada principal, desde quien la hace]
+**Flujo:** [componente → otro → otro: el recorrido de la llamada principal, desde quien la hace. Solo vale sin «Tipo» en «Infraestructura»: con ella, cada componente se dibuja dentro de la pieza de su «Corre en»]
 
 ## Datos
 Una fila por entidad, con su nombre en el código, y cada relación escrita una sola vez, en la fila de la entidad que apunta a la otra. Entre paréntesis va la cardinalidad (1:N, N:M) o, mejor, el verbo que dice qué hace la relación (vive en, deja, firma).
