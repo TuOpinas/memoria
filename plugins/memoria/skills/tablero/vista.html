@@ -734,10 +734,10 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-flujo li::before{content:counter(paso);font:600 11px var(--f-mono);color:var(--signal);display:block}
 .dev-plan{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
 .dev-col{flex:0 0 220px;background:var(--ground);border:1px solid var(--rule);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px}
-.dev-col>button,.dev-pz{all:unset;cursor:pointer;display:block;border-radius:6px;padding:6px 8px}
-.dev-col>button{font-weight:600}
+.dev-col>button,.dev-col details>button,.dev-pz{all:unset;cursor:pointer;display:block;border-radius:6px;padding:6px 8px}
+.dev-col>button,.dev-col details>button{font-weight:600}
 .dev-pz{background:var(--surface);border:1px solid var(--rule)}
-.dev-col>button:focus-visible,.dev-pz:focus-visible,.dev-nodo:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.dev-col>button:focus-visible,.dev-col details>button:focus-visible,.dev-pz:focus-visible,.dev-nodo:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .dev-pz small{display:block;color:var(--muted);font:500 11px var(--f-mono)}
 .dev-dg{overflow-x:auto}
 .dev-svg{display:block;margin-top:8px;max-width:none}
@@ -3137,21 +3137,27 @@ function dibujoDe(pid, g, flechas){
   </svg></div>${leyenda}${g.nota?`<p class="more dev-nota">${esc(g.nota)}</p>`:""}`;
 }
 // 1.30.0 (P26): una columna por fase. Con seguimiento, lo que va en curso primero y resaltado, lo pendiente como antes y
-// lo hecho atenuado, con palomita y plegado al final; una fase cerrada, plegada entera. Al pie, «Cierre de fase» con sus horas
+// lo hecho atenuado, con palomita y plegado al final; las cerradas, juntas en un bloque plegado al final (devFases). Al pie, «Cierre de fase» con sus horas
 function devPieza(pid, z){
   const ok = z.grupo==="hecha" ? `<span class="dev-ok" aria-label="Hecha">✓</span>` : "";
   return `<button type="button" class="dev-pz${z.grupo?` g-${esc(z.grupo)}`:""}" aria-haspopup="dialog" data-dev="${esc(pid)}|p:${esc(z.id)}"><small>${hDev(z.horas)?`<span class="h">${hDev(z.horas)}</span>`:""}${ok}${esc(z.id)}${z.estado?` · ${esc(z.estado)}`:""}${z.tecnica?`<span class="dev-tec" data-marca="tecnica" ${tip("Pieza técnica: sin escenarios ni verificación")}>técnica</span>`:""}${z.para_antes?`<span class="dev-para" role="img" aria-label="Decisión pendiente antes de construirla" ${tip("Decisión pendiente antes de construirla: "+z.para_antes)}>decisión pendiente</span>`:""}</small>${esc(z.nombre||z.entrega||"")}</button>`;
 }
 function devColumna(pid, x, piezas){
   const suyas = (x.piezas||[]).map(i=>piezas[i]).filter(Boolean);
-  const orden = {en_curso: 0, pendiente: 1, hecha: 2}, vivas = suyas.filter(z=>z.grupo!=="hecha").sort((a, b) => (orden[a.grupo]||1) - (orden[b.grupo]||1)), hechas = suyas.filter(z=>z.grupo==="hecha");
+  const orden = {en_curso: 0, pendiente: 1, hecha: 2}, vivas = suyas.filter(z=>z.grupo!=="hecha").sort((a, b) => (orden[a.grupo] ?? 1) - (orden[b.grupo] ?? 1)), hechas = suyas.filter(z=>z.grupo==="hecha");
   const cuenta = [x.horas_faltan!==null && x.horas_faltan!==undefined && hDev(x.horas_total) ? `faltan ${hDev(x.horas_faltan)} de ${hDev(x.horas_total)}` : hDev(x.horas_total) ? `${hDev(x.horas_total)}` : "",
     x.piezas_hechas!==null && x.piezas_hechas!==undefined ? `${x.piezas_hechas} de ${x.piezas_total} piezas hechas` : ""].filter(Boolean).join(" · ");
   const cab = `<button type="button" aria-haspopup="dialog" data-dev="${esc(pid)}|f:${esc(x.id)}">${esc(x.id)}${x.nombre?` · ${esc(x.nombre)}`:""}<small class="more" style="display:block;font-weight:400">${esc(x.version||"")}${cuenta?` · ${esc(cuenta)}`:""}</small></button>`;
   const cierre = hDev(x.horas_cierre) ? `<p class="dev-cierre">Cierre de fase · ${hDev(x.horas_cierre)}</p>` : "";
-  if(x.estado==="cerrada") return `<div class="dev-col">${cab}<details><summary>Fase cerrada · ${suyas.length} pieza${suyas.length===1?"":"s"}</summary>${suyas.map(z=>devPieza(pid, z)).join("")}${cierre}</details></div>`;
+  if(x.estado==="cerrada") return `${cab}${suyas.map(z=>devPieza(pid, z)).join("")}${cierre}`;
   const plegadas = hechas.length ? `<details><summary>✓ ${hechas.length} hecha${hechas.length===1?"":"s"}</summary>${hechas.map(z=>devPieza(pid, z)).join("")}</details>` : "";
   return `<div class="dev-col">${cab}${vivas.map(z=>devPieza(pid, z)).join("")}${plegadas}${cierre}</div>`;
+}
+// las fases cerradas, todas en un solo bloque plegado al final: lo abierto se ve primero
+function devFases(pid, fases, piezas){
+  const cerradas = fases.filter(x=>x.estado==="cerrada");
+  return fases.filter(x=>x.estado!=="cerrada").map(x=>devColumna(pid, x, piezas)).join("")
+    + (cerradas.length ? `<div class="dev-col"><details><summary>${cerradas.length} fase${cerradas.length===1?"":"s"} cerrada${cerradas.length===1?"":"s"}</summary>${cerradas.map(x=>devColumna(pid, x, piezas)).join("")}</details></div>` : "");
 }
 function desarrolloTab(p){
   if(!TEXTOS[p.id]){ traerTextos(p.id); return CARGANDO; }
@@ -3165,7 +3171,7 @@ function desarrolloTab(p){
   const piezas = {}; (pl.piezas||[]).forEach(x=>piezas[x.id]=x);
   const avPlan = (v.avisos||[]).filter(a=>a.parte==="plan"), avOtros = (v.avisos||[]).filter(a=>a.parte!=="plan" && !(a.parte==="seguimiento" && !f.seguimiento));   // sin seguimiento ya lo dice la línea de las fechas
   const avL = xs => xs.length ? `<ul class="dev-av">${xs.map(a=>`<li>${inline(a.texto||"")}</li>`).join("")}</ul>` : "";
-  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${(pl.fases||[]).map(x=>devColumna(p.id, x, piezas)).join("")}</div></section>`;
+  const plan = !v.plan ? (avPlan.length ? `<section class="card"><h2>Plan</h2>${avL(avPlan)}</section>` : "") : `<section class="card"><h2>Plan</h2>${avL(avPlan)}<p class="more">Pulsa una fase o una pieza para ver su detalle.</p><div class="dev-plan">${devFases(p.id, pl.fases||[], piezas)}</div></section>`;
   // la geometría, una vez por diseño: repintar la pestaña no la vuelve a calcular
   // 1.30.0 (P27): con grupos, «Todas las relaciones» cambia al dibujo por flujo y vuelve
   const todas = DEV_TODAS.has(p.id), clave = todas ? "todas" : "grupos";
