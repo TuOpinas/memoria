@@ -552,4 +552,6 @@ Lo que pedía P23 sigue ahí: sus pruebas siguen en la lista de activas y siguen
 - La forma de los argumentos con que el control llama a Vitest («…» en el contrato) no está cerrada: el Vitest de mentira admite archivos, carpetas o trozos de ruta.
 - Las pruebas buscan palabras, no el sentido: un paso que dijera «no compruebes el corredor» también pasaría. Eso lo ve quien verifica. «Una línea» ya está hoy en el paso de la apertura que nombra los repositorios; lo que le falta es lo demás.
 - `test.fails` de Vitest no se distingue en el informe: queda para la verificación.
+- Una prueba marcada `todo` cuenta como una saltada en el contrato, pero el Vitest de mentira solo da `skipped`: un control que mirase solo `skipped` pasaría. Queda para la verificación.
+- Con el corredor propio, todas las filas tienen solo archivos que terminan en el sufijo declarado: no hay una fila que compruebe que un archivo de la pieza con otro final (`P05_notas.md`) se queda fuera. Queda para la verificación.
 - Las filas de P30 que ya pasan hoy (las cuatro de la pieza construida y sin construir con pytest, y una del identificador) no prueban nada nuevo de P30: esa parte del control ya existe y son un seguro para que no se rompa.
