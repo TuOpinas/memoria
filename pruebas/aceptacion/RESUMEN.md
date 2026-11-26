@@ -350,7 +350,7 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase 
 
 Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no existe. Las de P16 a P22 siguen pasando y no cambian.
 
-**Una pieza «hecha»** es solo la entregada. Lo decidió quien acepta el 2026-11-25: una pieza unida y aún no entregada está en curso.
+**Una pieza «hecha»** es la unida o la entregada. Lo decidió quien acepta el 2026-11-25: una pieza cuenta como terminada cuando su pull request se une, entregada o no. «En curso» y «Revertida» están en curso.
 
 **Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
 - **P26.**
@@ -379,9 +379,9 @@ Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no exis
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Los estados se distinguen | El último seguimiento da P01 «Entregada», P02 «en curso», y P03 no sale | P01 es hecha, P02 en curso y P03 pendiente | P26 |
-| **Añadido:** Los estados se distinguen (unida, revertida, otro estado y entregada en mayúsculas) | P01 «UNIDA», P02 «revertida», P03 «pendiente»; y aparte, P01 «ENTREGADA (1.0.0)» | Unida y revertida son en curso, el otro estado es pendiente, y la entregada en mayúsculas es hecha | P26 |
-| La fase dice lo que le falta | Horas: P01 0.5 (entregada), P02 0.75, P03 1.5; sin «Horas de cierre» | F1: 1.25 de total, faltan 0.75, 1 de 2 piezas hechas. F2: 1.5, faltan 1.5, 0 de 1. Con F1 cerrada, le faltan 0. **Añadido:** con P01 solo unida, F1 tiene 0 hechas y le faltan 1.25. Ningún aviso nombra «Horas de cierre» | P26 |
+| Los estados se distinguen | El último seguimiento de la muestra da P01 «unida», P02 «en curso», y P03 no sale | P01 es hecha, P02 en curso y P03 pendiente | P26 |
+| **Añadido:** Los estados se distinguen (unida, revertida, otro estado y entregada en mayúsculas) | P01 «UNIDA», P02 «revertida», P03 «pendiente»; y aparte, P01 «ENTREGADA (1.0.0)» | La unida en mayúsculas es hecha, la revertida en curso, el otro estado es pendiente, y la entregada en mayúsculas es hecha | P26 |
+| La fase dice lo que le falta | Horas: P01 0.5 (unida), P02 0.75, P03 1.5; sin «Horas de cierre» | F1: 1.25 de total, faltan 0.75, 1 de 2 piezas hechas. F2: 1.5, faltan 1.5, 0 de 1. Con F1 cerrada, le faltan 0. **Añadido:** con P01 «Revertida», F1 tiene 0 hechas y le faltan 1.25. Ningún aviso nombra «Horas de cierre» | P26 |
 | **Añadido:** La fase dice lo que le falta (sin horas) | Ni horas ni cierre en ninguna parte | El total y lo que falta, sin horas (null); las piezas se cuentan igual | P26 |
 | Una decisión pendiente se lee como tal | P02 lleva texto en «Para antes» | Ese texto sigue llegando, y la página tiene «decisión pendiente» y «Decisión pendiente antes de construirla:» | P26 |
 | El cierre de la fase se ve | Las horas de arriba, y «Horas de cierre» F1 «0,5» y F2 «1.5 h» | F1: 1.75 de total, faltan 1.25 (0.75 + 0.5). F2: 3 de total, faltan 3. La página tiene «Cierre de fase» | P26 |
@@ -439,7 +439,7 @@ En «Componentes», una columna «Corre en» al final: Tienda web y API corren e
 
 ### Cómo se leyó lo que el escenario no precisa
 
-1. «Hecha» (P26) es la pieza cuyo estado empieza por «Entregada». «En curso» es la que empieza por «En curso», «Unida» o «Revertida». Lo demás es pendiente, también si no sale en la última entrada. Sin distinguir mayúsculas.
+1. «Hecha» (P26) es la pieza cuyo estado empieza por «Unida» o «Entregada». «En curso» es la que empieza por «En curso» o «Revertida». Lo demás es pendiente, también si no sale en la última entrada. Sin distinguir mayúsculas.
 2. Lo que falta a una fase cuenta como cero las piezas sin horas y el cierre sin horas. Una fase cerrada no tiene nada que falte. Sin seguimiento, lo que falta y las piezas hechas no se cuentan (null); el total sí.
 3. «Tiene que ser null» y «el texto vacío» se piden con la clave presente, no ausente.
 4. La pieza técnica se reconoce por «pieza técnica, sin escenarios» en su bloque de «Hecha cuando», también con mayúscula al principio.

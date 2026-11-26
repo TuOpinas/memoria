@@ -47,9 +47,10 @@ CABECERA_FASES = ("| Fase | Qué podrá hacer quién | Versión | Listo cuando |
 FASE = {"F1": "| F1 · Catálogo | El cliente ve los productos y sus precios | 1.0.0 | P01 y P02 pasan | en curso |",
         "F2": "| F2 · Pedidos | El cliente pide y paga en línea | 1.1.0 | P03 pasa | pendiente |"}
 
+# La última entrada de la muestra de P05: P01 «unida» (hecha: su pull request se unió), P02 «en curso», P03 no sale
 ULTIMA = "## 2026-11-20\n| Pieza | Estado |\n|---|---|\n| P01 | unida |\n| P02 | en curso |\n"
-# La última entrada con P01 entregada: la muestra de P05 la da «unida», que en 1.30.0 es en curso, no hecha
-ENTREGADA = (SEGUIMIENTO, ULTIMA, ULTIMA.replace("| P01 | unida |", "| P01 | Entregada |"))
+# Esa entrada con P01 revertida: en curso, no hecha
+REVERTIDA = (SEGUIMIENTO, ULTIMA, ULTIMA.replace("| P01 | unida |", "| P01 | Revertida |"))
 SIN_SEGUIMIENTO = ([(PROYECTO_MD, f"Seguimiento: {SEGUIMIENTO}", "Seguimiento: por crear")], [SEGUIMIENTO])
 P03_ESCENARIO = ("- **Un pedido pagado queda registrado**\n  Dado un cliente con dos productos elegidos\n"
                  "  Cuando paga su pedido\n  Entonces el pedido queda registrado como pagado\n")
@@ -120,33 +121,33 @@ def sin_aviso_de_cierre(d, problemas):
 
 
 def escenarios(inf):
-    # 1 · Los estados se distinguen: P01 «Entregada» (hecha), P02 «en curso» y P03 sin estado en la última entrada
-    #     (pendiente)
+    # 1 · Los estados se distinguen: la muestra tal cual, P01 «unida» (hecha), P02 «en curso» y P03 sin estado en la
+    #     última entrada (pendiente)
     problemas = []
-    d = pestana(*generar([ENTREGADA]), problemas)
+    d = pestana(*generar(), problemas)
     if d is not None:
         grupos(d, problemas, {"P01": "hecha", "P02": "en_curso", "P03": "pendiente"})
     inf.escenario("Los estados se distinguen", problemas)
 
-    # 1b · Añadido: «Unida» (aún no entregada) y «Revertida» son en curso, sin distinguir mayúsculas; un estado que no
-    #      es de esos («pendiente») es pendiente. Y «ENTREGADA (1.0.0)» es hecha
+    # 1b · Añadido: sin distinguir mayúsculas, «UNIDA» es hecha y «revertida» en curso; un estado que no es de esos
+    #      («pendiente») es pendiente. Y «ENTREGADA (1.0.0)» también es hecha
     problemas = []
     otra = "## 2026-11-20\n| Pieza | Estado |\n|---|---|\n| P01 | UNIDA |\n| P02 | revertida |\n| P03 | pendiente |\n"
     d = pestana(*generar([(SEGUIMIENTO, ULTIMA, otra)]), problemas)
     if d is not None:
-        grupos(d, problemas, {"P01": "en_curso", "P02": "en_curso", "P03": "pendiente"})
+        grupos(d, problemas, {"P01": "hecha", "P02": "en_curso", "P03": "pendiente"})
     otra = ULTIMA.replace("| P01 | unida |", "| P01 | ENTREGADA (1.0.0) |")
     d = pestana(*generar([(SEGUIMIENTO, ULTIMA, otra)]), problemas)
     if d is not None:
         grupos(d, problemas, {"P01": "hecha"})
     inf.escenario("Los estados se distinguen (unida, revertida, otro estado y entregada en mayúsculas)", problemas)
 
-    # 2 · La fase dice lo que le falta: P01 0.5 h (entregada: hecha), P02 0.75 h (en curso), P03 1.5 h. Sin «Horas de
+    # 2 · La fase dice lo que le falta: P01 0.5 h (unida: hecha), P02 0.75 h (en curso), P03 1.5 h. Sin «Horas de
     #     cierre». F1: 1.25 de total, faltan 0.75, 1 de 2 piezas hechas; F2: 1.5, faltan 1.5, 0 de 1. Con F1 cerrada,
-    #     le faltan 0. Añadido: con P01 solo «unida» no está hecha: F1 0 de 2 y faltan 1.25
+    #     le faltan 0. Añadido: con P01 «Revertida» no está hecha: F1 0 de 2 y faltan 1.25
     problemas = []
     horas = piezas_con({"P01": ("0.5", ""), "P02": ("0.75", ""), "P03": ("1.5", "")})
-    d = pestana(*generar(horas + [ENTREGADA]), problemas)
+    d = pestana(*generar(horas), problemas)
     if d is not None:
         fases(d, problemas, {
             "F1": {"horas": 1.25, "horas_cierre": None, "horas_total": 1.25, "horas_faltan": 0.75, "piezas_total": 2,
@@ -154,17 +155,17 @@ def escenarios(inf):
             "F2": {"horas": 1.5, "horas_cierre": None, "horas_total": 1.5, "horas_faltan": 1.5, "piezas_total": 1,
                    "piezas_hechas": 0}})
         sin_aviso_de_cierre(d, problemas)
-    d = pestana(*generar(horas + [ENTREGADA] + fases_con(estados={"F1": "cerrada", "F2": "en curso"})), problemas)
+    d = pestana(*generar(horas + fases_con(estados={"F1": "cerrada", "F2": "en curso"})), problemas)
     if d is not None:
         fases(d, problemas, {"F1": {"horas_total": 1.25, "horas_faltan": 0}, "F2": {"horas_faltan": 1.5}})
-    d = pestana(*generar(horas), problemas)
+    d = pestana(*generar(horas + [REVERTIDA]), problemas)
     if d is not None:
         fases(d, problemas, {"F1": {"horas_faltan": 1.25, "piezas_hechas": 0}})
     inf.escenario("La fase dice lo que le falta", problemas)
 
     # 2b · Añadido: sin horas en ninguna parte, el total y lo que falta son null, y las piezas se cuentan igual
     problemas = []
-    d = pestana(*generar([ENTREGADA]), problemas)
+    d = pestana(*generar(), problemas)
     if d is not None:
         fases(d, problemas, {
             "F1": {"horas_total": None, "horas_faltan": None, "piezas_total": 2, "piezas_hechas": 1},
@@ -187,10 +188,10 @@ def escenarios(inf):
     inf.escenario("Una decisión pendiente se lee como tal", problemas)
 
     # 4 · El cierre de la fase se ve: «Horas de cierre» F1 «0,5» y F2 «1.5 h», con las horas de las piezas de 2 y P01
-    #     entregada. F1: 1.25 + 0.5 = 1.75, faltan 0.75 + 0.5 = 1.25; F2: 1.5 + 1.5 = 3, faltan 3. La página trae
+    #     unida. F1: 1.25 + 0.5 = 1.75, faltan 0.75 + 0.5 = 1.25; F2: 1.5 + 1.5 = 3, faltan 3. La página trae
     #     «Cierre de fase»
     problemas = []
-    d = pestana(*generar(horas + [ENTREGADA] + fases_con(cierre={"F1": "0,5", "F2": "1.5 h"})), problemas)
+    d = pestana(*generar(horas + fases_con(cierre={"F1": "0,5", "F2": "1.5 h"})), problemas)
     if d is not None:
         fases(d, problemas, {
             "F1": {"horas": 1.25, "horas_cierre": 0.5, "horas_total": 1.75, "horas_faltan": 1.25},
