@@ -18,7 +18,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 | No se toca | [lo que no se cambia nunca] |
 
 ## Reglas
-1. Una rama por bloque (una o varias piezas) y nunca `main`. El título del pull request empieza por el identificador de la pieza seguido de « · », o por las piezas que lleva («P01 + P02 · »); el de los escenarios de una pieza, por «Escenarios · P01», y el que solo cambia el kit (este archivo, el workflow o el corredor propio de las pruebas de aceptación), por «Kit · »; un cambio de configuración del repositorio (`CODEOWNERS`, `.github/dependabot.yml`) también va como «Kit · ». Un identificador de pieza puede acabar en una letra (`H22a`). Una reversión lleva el título que le da GitHub («Revert "P01 · …"»).
+1. Una rama por bloque (una o varias piezas) y nunca `main`. El título del pull request empieza por el identificador de la pieza seguido de « · », o por las piezas que lleva («P01 + P02 · »); el de los escenarios de una pieza, por «Escenarios · P01», y el que solo cambia el kit (este archivo, el workflow, el corredor propio o la configuración del repositorio), por «Kit · »: el workflow es el de las pruebas de aceptación y los demás de `.github/workflows/`, y la configuración del repositorio, `CODEOWNERS` (en la raíz, `.github/` o `docs/`) y `.github/dependabot.yml` (o `.yaml`). Un identificador de pieza puede acabar en una letra (`H22a`). Una reversión lleva el título que le da GitHub («Revert "P01 · …"»).
 2. Antes de abrir el pull request, la revisión de calidad, como dice «Cómo se revisa». El pull request dice con qué modelo se construyó («Construyó: Opus 5.5»).
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita.
 4. Ningún secreto en el código.

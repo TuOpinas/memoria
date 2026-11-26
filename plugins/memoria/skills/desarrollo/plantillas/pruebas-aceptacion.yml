@@ -21,7 +21,7 @@
 #     como argumentos. El corredor escribe una línea por archivo, «PASA <ruta>», «FALLA <ruta>» o «NO_CORRIO <ruta>» (las
 #     demás líneas no cuentan), y sale con 0 si pudo correr, pasen o no; con otro código, las pruebas no se pudieron
 #     correr. «PASA» solo si todas las pruebas del archivo pasaron: con una saltada o por hacer, no. El corredor es parte
-#     del kit: solo lo cambia un pull request «Kit · », sin nada más.
+#     del kit: solo lo cambia un pull request «Kit · », sin código ni pruebas.
 #   Un archivo del que el corredor no da resultado cuenta como no corrido.
 # - Un pull request no cambia las pruebas de aceptación y código a la vez: los escenarios entran en su propio pull request.
 # - Las pruebas de una pieza cuentan desde que su identificador está en ACTIVAS, un archivo fuera de la carpeta. El pull
@@ -34,11 +34,14 @@
 #   que pasar.
 # - Un identificador de pieza son letras, dígitos y, como mucho, una letra al final: P01, H22, H22a. H22, H22a y H22b
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
-# - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
-#   Mientras la carpeta no exista, pasa. La configuración del repositorio (CODEOWNERS, en la raíz, .github/ o docs/, y
-#   .github/dependabot.yml) cuenta como kit: puede ir con el workflow en un «Kit · ».
-# - Las acciones van fijadas por commit, con su versión al lado. Los demás workflows de .github/workflows/ cuentan como kit,
-#   igual que este: el pull request de Dependabot que sube una acción en este y en otro workflow va como un «Kit · ».
+# - El kit es el CLAUDE.md, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las
+#   pruebas de aceptación y los demás de .github/workflows/, y la configuración del repositorio, CODEOWNERS (en la raíz,
+#   .github/ o docs/) y .github/dependabot.yml (o .yaml). Un pull request que cambia el kit lleva el título «Kit · …» (o
+#   es su reversión) y no lleva código: en un pull request corre la versión de este archivo que trae. Puede traer la
+#   carpeta, como al montar el kit con CONFIG, pero no con el corredor propio, que va solo, ni con la configuración del
+#   repositorio, que frente a las pruebas cuenta como código. Mientras la carpeta no exista, pasa.
+# - Las acciones van fijadas por commit, con su versión al lado. El pull request de Dependabot que sube una acción en este
+#   y en otro workflow es del kit, como cualquier otro: no se mira quién lo abrió.
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
@@ -54,8 +57,8 @@
 #   esperada como fallo. Unas pruebas que no corren no cuentan como verdes.
 # - Esto cierra la configuración, no el código: lo que importan las pruebas corre en su proceso y puede hacer trampa (salir
 #   con 0, tocar el corredor). Eso lo ven la verificación sobre Release y quien revisa.
-# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista, este workflow o el corredor
-# propio; si es otra persona, lo exige un CODEOWNERS (configuración, R2).
+# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o el kit; si es otra persona, lo
+# exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
 on:
   pull_request:
