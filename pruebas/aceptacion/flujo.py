@@ -4,8 +4,11 @@ por una pieza y «_»).
 Lo que se prueba es la plantilla del workflow del kit de desarrollo, plugins/memoria/skills/desarrollo/plantillas/
 pruebas-aceptacion.yml, como la correría GitHub en un pull request: se monta un repositorio de git temporal con la base y
 la cabeza del pull request, y se corren, en orden, los pasos «run:» del workflow con su «env:» de arriba, el «env:» de
-cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). El ejecutor es pytest, como en la
-plantilla. Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
+cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). Con comprobar(env_wf=…) la prueba
+cambia el «env:» de arriba como lo deja un proyecto que montó el kit, y el ejecutor cambia con su «CORREDOR» cuando la
+plantilla lo entienda (hoy corre pytest siempre); quitar «CORREDOR» con None exige pytest, igual que no declararlo. Con
+comprobar(ejecutables=…) deja archivos del repositorio ejecutables (un corredor propio, un node_modules/.bin/vitest de
+mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
 Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «concurrency», «env»
 y «jobs»; un
@@ -17,8 +20,9 @@ GitHub cuando el paso no dice «shell:» (sin pipefail: si lo necesita, el paso 
 posterior. El entorno de los pasos se arma desde cero (PATH, HOME, idioma y carpeta temporal), para que el color de la
 terminal, PYTHONPATH o la configuración de git de quien corre no cambien el resultado.
 
-Una prueba que usa este arnés sale con 0 si pasa, con 1 si falla y con 2 si no se pudo montar (sin git, sin pytest, sin
-la plantilla): eso no es que la pieza falte, y correr.py lo cuenta como error.
+Una prueba que usa este arnés sale con 0 si pasa, con 1 si falla y con 2 si no se pudo montar (sin git, sin la plantilla,
+sin pytest con el corredor pytest, sin node o npx con el corredor vitest): eso no es que la pieza falte, y correr.py lo
+cuenta como error.
 """
 import atexit, itertools, os, pathlib, re, shutil, signal, subprocess, sys, tempfile, traceback
 
@@ -201,7 +205,9 @@ def _git(d, *a):
     return r.stdout.strip()
 
 
-def _escribir(d, archivos):
+def _escribir(d, archivos, ejecutables=()):
+    """Escribe los archivos (None borra). Los que están en «ejecutables» quedan con permiso de ejecución (0755), que
+    git guarda en el commit como 100755."""
     for ruta, texto in archivos.items():
         p = d / ruta
         if texto is None:
@@ -210,31 +216,43 @@ def _escribir(d, archivos):
             continue
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(texto, encoding="utf-8")
+        if ruta in ejecutables:
+            p.chmod(0o755)
+            if not os.access(p, os.X_OK):
+                raise Montaje(f"{ruta} no queda ejecutable: la carpeta temporal está en un sistema de archivos noexec")
 
 
-def repositorio(base, cabeza, despues=None):
+def repositorio(base, cabeza, despues=None, ejecutables=()):
     """Un repositorio con la base (archivos de main) y una rama con los cambios del pull request (None borra). Lleva el
     workflow de la plantilla en su sitio, como un repositorio que ya montó el kit. Con «despues», main recibe esos cambios
     después de cortarse la rama, y lo que queda en la carpeta es la unión de las dos, como el checkout de GitHub en un pull
-    request. Devuelve (carpeta, sha base, sha cabeza)."""
+    request. Las rutas de «ejecutables» (una lista o tupla, escritas igual que en la base, la cabeza o «despues») quedan
+    ejecutables en la carpeta y en los commits. Devuelve (carpeta, sha base, sha cabeza)."""
     if not shutil.which("git"):
         raise Montaje("no hay git")
+    if not isinstance(ejecutables, (list, tuple)):
+        raise Montaje("ejecutables: tiene que ser una lista o tupla de rutas, no " + type(ejecutables).__name__)
+    sueltas = [r for r in ejecutables if r not in {**base, **cabeza, **(despues or {})}]
+    if sueltas:
+        raise Montaje("ejecutables: no están en la base, la cabeza ni «despues»: " + ", ".join(map(str, sueltas)))
+    ejecutables = frozenset(ejecutables)
     d = _tmp("repo", carpeta=True)
     _git(d, "init", "-q", "-b", "main")
+    _git(d, "config", "core.fileMode", "true")
     todo = {WORKFLOW: YML.read_text(encoding="utf-8"), "app/main.py": "x = 1\n"}
     todo.update(base)
-    _escribir(d, todo)
+    _escribir(d, todo, ejecutables)
     _git(d, "add", "-A")
     _git(d, "commit", "-qm", "base")
     sha_base = _git(d, "rev-parse", "HEAD")
     _git(d, "checkout", "-qb", "pull-request")
-    _escribir(d, cabeza)
+    _escribir(d, cabeza, ejecutables)
     _git(d, "add", "-A")
     _git(d, "commit", "-qm", "cambio", "--allow-empty")
     sha_cabeza = _git(d, "rev-parse", "HEAD")
     if despues:
         _git(d, "checkout", "-q", "main")
-        _escribir(d, despues)
+        _escribir(d, despues, ejecutables)
         _git(d, "add", "-A")
         _git(d, "commit", "-qm", "main sigue")
         sha_base = _git(d, "rev-parse", "HEAD")
@@ -247,27 +265,36 @@ def repositorio(base, cabeza, despues=None):
     return d, sha_base, sha_cabeza
 
 
-_comprobado = False
+_comprobado = set()
 
 
-def _requisitos(env):
-    """Lo que los pasos necesitan del entorno, con el mismo PATH con el que corren: si falta, no se monta (2)."""
-    global _comprobado
-    if _comprobado:
+def _requisitos(env, corredor=None):
+    """Lo que los pasos necesitan del entorno, con el mismo PATH con el que corren: si falta, no se monta (2). Depende
+    del «CORREDOR» del «env:» de arriba: sin él o con «pytest», pytest en el python3 del PATH; con «vitest», node y npx;
+    con cualquier otro valor (un corredor propio, vacío, otra palabra) ninguno de los dos, que lo que falte lo dice el
+    control."""
+    tipo = "pytest" if corredor is None or corredor == "pytest" else "vitest" if corredor == "vitest" else "otro"
+    if tipo in _comprobado:
         return
     if not shutil.which("bash", path=env.get("PATH")):
         raise Montaje("no hay bash")
     r = subprocess.run(["bash", "-c", "echo ${BASH_VERSINFO[0]}"], capture_output=True, text=True, env=env)
     if not r.stdout.strip().isdigit() or int(r.stdout.strip()) < 4:
         raise Montaje("el bash del PATH es anterior al 4 (macOS trae el 3.2): los pasos del workflow no corren con él")
-    if subprocess.run(["bash", "-c", "python3 -m pytest --version"], capture_output=True, env=env).returncode != 0:
-        raise Montaje("el python3 del PATH no tiene pytest (python3 -m pip install pytest): la plantilla corre las pruebas con él")
-    _comprobado = True
+    if tipo == "pytest":
+        if subprocess.run(["bash", "-c", "python3 -m pytest --version"], capture_output=True, env=env).returncode != 0:
+            raise Montaje("el python3 del PATH no tiene pytest (python3 -m pip install pytest): la plantilla corre las pruebas con él")
+    elif tipo == "vitest":
+        faltan = [p for p in ("node", "npx") if not shutil.which(p, path=env.get("PATH"))]
+        if faltan:
+            raise Montaje(f"con «CORREDOR: vitest» los pasos necesitan {' y '.join(faltan)} en el PATH, y no está"
+                          + ("n" if len(faltan) > 1 else ""))
+    _comprobado.add(tipo)
 
 
-def _entorno(d, extra):
+def _entorno(d, extra, corredor=None):
     env = _limpio()
-    _requisitos(env)
+    _requisitos(env, corredor)
     archivos = {}
     for v in ("GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_STEP_SUMMARY"):
         archivos[v] = _tmp(v.lower())
@@ -287,18 +314,29 @@ def _expresiones(v, contexto):
     return re.sub(r"\$\{\{\s*([^}]*?)\s*\}\}", una, v)
 
 
-def comprobar(base, cabeza, titulo, extra=None, cuerpo="", autor="persona", despues=None, omitir=("Prepara el entorno",)):
+def comprobar(base, cabeza, titulo, extra=None, cuerpo="", autor="persona", despues=None, omitir=("Prepara el entorno",),
+              env_wf=None, ejecutables=()):
     """Corre el workflow entero sobre un pull request y devuelve (código de salida, salida). Como en GitHub, se para en el
-    primer paso que falla. extra: variables para las pruebas sembradas (p. ej. dónde escriben sus marcas). despues: lo que
-    main recibe después de cortarse la rama (ver repositorio). omitir: pasos que no se corren; por defecto el que instala,
-    para no cambiar el entorno de quien corre las pruebas (el arnés ya comprueba que pytest está)."""
-    env_wf, pasos = plantilla()
-    d, sb, sh = repositorio(base, cabeza, despues)
+    primer paso que falla. extra: variables para las pruebas sembradas (p. ej. dónde escriben sus marcas); el «env:» de
+    la plantilla las pisa. despues: lo que main recibe después de cortarse la rama (ver repositorio). omitir: pasos que no
+    se corren; por defecto el que instala, para no cambiar el entorno de quien corre las pruebas (el arnés ya comprueba
+    que está lo que pide el corredor). env_wf: cambios al «env:» de arriba de la plantilla, como los deja un proyecto que
+    montó el kit ({"CORREDOR": "vitest", "CONFIG": None}: un valor lo pone, aunque sea "", y None quita la clave); van al
+    entorno de los pasos, que es de donde el control lee «CORREDOR» y «CONFIG», como en GitHub. ejecutables:
+    rutas del repositorio temporal que quedan con permiso de ejecución, en la carpeta y en git (ver repositorio)."""
+    plantilla_env, pasos = plantilla()
+    efectivo = dict(plantilla_env)
+    for k, v in (env_wf or {}).items():
+        if v is None:
+            efectivo.pop(k, None)
+        else:
+            efectivo[k] = v
+    d, sb, sh = repositorio(base, cabeza, despues, ejecutables)
     contexto = {"github.event.pull_request.base.sha": sb, "github.event.pull_request.head.sha": sh,
                 "github.event.pull_request.title": titulo, "github.event.pull_request.body": cuerpo,
                 "github.event.pull_request.user.login": autor, "github.event.pull_request.number": "1"}
-    env = _entorno(d, extra)
-    env.update({k: _expresiones(v, contexto) for k, v in env_wf.items()})
+    env = _entorno(d, extra, efectivo.get("CORREDOR"))
+    env.update({k: _expresiones(v, contexto) for k, v in efectivo.items()})
     salida = []
     for paso in pasos:
         if not paso["run"] or paso["nombre"] in omitir:
