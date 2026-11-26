@@ -53,7 +53,7 @@ def _context_core():
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
     'development': '9cf816f24d477f31d4c3925b0cdd7a8fc3c5c920cbc22ecbffbc6c28c08e9575',
-    'dev_view': 'e49685a3114d465b37d95ffd9e6787dc0343668cbdefde1dd6bbf47e0558b00d',
+    'dev_view': '086a59702bfbb8b6f9a2b142ffda9946840bcdbaac0d381cf3de8f199047bd05',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
     if _pkg is not None:
@@ -1612,10 +1612,21 @@ def _context_core():
         '    return [x.strip() for x in SEPARATOR.split(cell) if x.strip()]\n'
         '\n'
         '\n'
+        '# The identifier of a piece or a phase: letters, digits and at most one letter at the end (P01, H22a), as the tests\n'
+        "# control reads it. The readers here and the board's generator use this one definition (review of 1.30.0, finding 3).\n"
+        'PIECE_ID = r"[A-Za-z]+\\d+[A-Za-z]?"\n'
+        '\n'
+        '\n'
+        'def piece_key(raw: str) -> str:\n'
+        '    """\xabp02A\xbb -> \xabP02a\xbb: the leading letters in capitals and the final one in lower case, so plan and follow-up match."""\n'
+        '    m = re.match(r"^([A-Za-z]+)(\\d+)([A-Za-z]?)$", raw)\n'
+        '    return m.group(1).upper() + m.group(2) + m.group(3).lower() if m else raw\n'
+        '\n'
+        '\n'
         'def _split_id(cell: str) -> tuple:\n'
-        '    """\xabP01 \xb7 Lista de productos\xbb -> ("P01", "Lista de productos"); \xabF1\xbb -> ("F1", "")."""\n'
-        '    m = re.match(r"^\\s*([A-Za-z]+\\d+)\\s*(?:[\xb7:\u2014-]\\s*(.*))?$", _clean(cell))\n'
-        '    return (m.group(1).upper(), (m.group(2) or "").strip()) if m else ("", _clean(cell))\n'
+        '    """\xabP01 \xb7 Lista de productos\xbb -> ("P01", "Lista de productos"); \xabF1\xbb -> ("F1", ""); \xabP02a\xbb -> ("P02a", "")."""\n'
+        '    m = re.match(r"^\\s*(" + PIECE_ID + r")\\s*(?:[\xb7:\u2014-]\\s*(.*))?$", _clean(cell))\n'
+        '    return (piece_key(m.group(1)), (m.group(2) or "").strip()) if m else ("", _clean(cell))\n'
         '\n'
         '\n'
         'def _paragraph(body: str) -> str:\n'
@@ -1873,7 +1884,7 @@ def _context_core():
         '    return int(v) if v == int(v) else v\n'
         '\n'
         '\n'
-        '_PLAIN = re.compile(r"^###\\s+([A-Za-z]+\\d+)\\s*[\xb7:\u2014-]?\\s*(?:en llano|in plain words)\\s*$", re.I)\n'
+        '_PLAIN = re.compile(r"^###\\s+(" + PIECE_ID + r")\\s*[\xb7:\u2014-]?\\s*(?:en llano|in plain words)\\s*$", re.I)\n'
         '\n'
         '\n'
         'def read_plan(text: str) -> tuple:\n'
@@ -1899,7 +1910,7 @@ def _context_core():
         '        for l in _nfc(sec[1]).split("\\n"):\n'
         '            m = _PLAIN.match(l.strip())\n'
         '            if m:\n'
-        '                cur = plain.setdefault(m.group(1).upper(), [])\n'
+        '                cur = plain.setdefault(piece_key(m.group(1)), [])\n'
         '            elif l.startswith("### "):\n'
         '                cur = None\n'
         '            elif cur is not None:\n'
@@ -1936,9 +1947,9 @@ def _context_core():
         '    sec = secs.get(key("Hecha cuando"))\n'
         '    cur, scen = None, None\n'
         '    for l in (_nfc(sec[1]).split("\\n") if sec else []):\n'
-        '        m = re.match(r"^###\\s+([A-Za-z]+\\d+)\\b", l)\n'
+        '        m = re.match(r"^###\\s+(" + PIECE_ID + r")\\b", l)\n'
         '        if m:\n'
-        '            cur, scen = by_id.get(m.group(1).upper()), None\n'
+        '            cur, scen = by_id.get(piece_key(m.group(1))), None\n'
         '            continue\n'
         '        if cur is None:\n'
         '            continue\n'
@@ -3097,7 +3108,7 @@ RUTAS_DEV, _TEXTOS_DEV = set(), {}
 # ---------- 1.30.0: el plan por estado (P26) ----------
 # Lo que la pestaña lee del diseño y del plan viene de context_core (vista_desarrollo); aquí se añade lo de la 1.30.0,
 # con las mismas reglas de lectura de tablas que usa ella.
-from context_core.dev_view import _table, _cell, _optional, _hours, _roles  # noqa: E402
+from context_core.dev_view import _table, _cell, _optional, _hours, _roles, _split_id, PIECE_ID, piece_key  # noqa: E402
 from context_core.development import _sections, key as _clave_dev, _nfc, SEPARATOR as _SEP_DEV  # noqa: E402
 
 
@@ -3123,9 +3134,9 @@ def plan_por_estado(vista, texto_plan):
     bloques, cur = {}, None
     sec = secs.get(_clave_dev("Hecha cuando"))
     for l in (_nfc(sec[1]).split("\n") if sec else []):
-        m = re.match(r"^###\s+([A-Za-z]+\d+)\b", l)
+        m = re.match(r"^###\s+(" + PIECE_ID + r")\b", l)
         if m:
-            cur = bloques.setdefault(m.group(1).upper(), [])
+            cur = bloques.setdefault(piece_key(m.group(1)), [])
         elif cur is not None:
             cur.append(l)
     for p in plan["piezas"]:
@@ -3137,9 +3148,9 @@ def plan_por_estado(vista, texto_plan):
     col_fase, col_estado, col_cierre = _optional(t, "Fase"), _optional(t, "Estado"), _optional(t, "Horas de cierre")
     por_fila = {}
     for r in filas:
-        m = re.match(r"^\s*([A-Za-z]+\d+)", _cell(r, col_fase))
-        if m:
-            por_fila.setdefault(m.group(1).upper(), r)
+        fid = _split_id(_cell(r, col_fase))[0]
+        if fid:
+            por_fila.setdefault(fid, r)
     avisar = lambda x: vista["avisos"].append({"parte": "plan", "texto": x})
     piezas = {p["id"]: p for p in plan["piezas"]}
     for f in plan["fases"]:

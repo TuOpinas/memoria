@@ -1,11 +1,11 @@
 """The development kit's reading (1.27): the «Desarrollo» section and the missing pieces
 (tecnologia/metodologia-desarrollo#2026-11-18-4 and #2026-11-19-2)."""
-import pathlib, sys, unicodedata, unittest
+import pathlib, re, sys, unicodedata, unittest
 
 CORE = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(CORE)]
 
-from context_core import development as dev, parse  # noqa: E402
+from context_core import development as dev, dev_view, parse  # noqa: E402
 
 PROYECTO = """---
 estado: vigente
@@ -164,6 +164,27 @@ class Missing(unittest.TestCase):
         self.assertEqual([(p.name, p.email) for p in s.roles["Recibe"]], [("Ana López", "ana@cliente.mx")])
         # «nadie» is only Audita's: in another role it is read as written
         self.assertEqual(dev.seccion_desarrollo(PROYECTO + "Recibe: nadie\n").roles["Recibe"][0].name, "nadie")
+
+
+class PieceIdentifier(unittest.TestCase):
+    """A piece whose identifier ends in a letter (review of 1.30.0, finding 3): read as its own piece."""
+    PLAN = ("## Fases\n| Fase | Qué podrá hacer quién | Versión | Listo cuando |\n|---|---|---|---|\n| F1 · Uno | x | 1.0.0 | x |\n\n"
+            "## Piezas\n| Pieza | Fase | Qué entrega |\n|---|---|---|\n| P02 · Lista | F1 | a |\n| P02a · Filtro | F1 | b |\n\n"
+            "## Hecha cuando\n### P02 · Lista\nAprobó: Ana Pérez, 2026-11-20\n- **Lista** se ve\n\n"
+            "### P02a · Filtro\nAprobó: pendiente\n- **Filtro** filtra\n")
+
+    def test_p02a(self):
+        plan, warnings = dev_view.read_plan(self.PLAN)
+        self.assertEqual(warnings, [])
+        self.assertEqual([p["id"] for p in plan["piezas"]], ["P02", "P02a"])
+        self.assertEqual(plan["fases"][0]["piezas"], ["P02", "P02a"])
+        p02, p02a = plan["piezas"]
+        self.assertEqual([e["titulo"] for e in p02["escenarios"]], ["Lista"])
+        self.assertEqual([e["titulo"] for e in p02a["escenarios"]], ["Filtro"])
+        self.assertEqual(p02a["aprobo"], "")
+        seg = "## 2026-11-25\n| Pieza | Estado |\n|---|---|\n| p02A | En curso |\n"
+        self.assertEqual(dev_view.read_follow_up(seg), ("2026-11-25", {"P02a": "En curso"}))
+        self.assertTrue(re.fullmatch(dev_view.PIECE_ID, "H22a"))
 
 
 
