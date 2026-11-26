@@ -146,22 +146,15 @@ ok(c == 1 and "va en su propio pull request" in o, "cambiar el workflow junto co
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)])
 ok(c == 0, "cambiarlo con el CLAUDE.md pasa: es el kit")
 
-print("Dependabot que solo sube acciones (1.30.1)")
+print("Los demás workflows cuentan como kit, igual que este (1.30.1)")
 WF_ANTES = "    steps:\n      - uses: actions/checkout@aaaa  # v6.0.0\n        with:\n          fetch-depth: 0\n"
 WF_DESPUES = WF_ANTES.replace("@aaaa  # v6.0.0", "@bbbb  # v7.0.1")
 FLUJOS = {".github/workflows/pruebas-aceptacion.yml": WF_ANTES, ".github/workflows/pruebas.yml": WF_ANTES}
 SUBE = [("texto", f, WF_DESPUES) for f in FLUJOS]
-BOT = {"AUTOR": "dependabot[bot]"}
-c, o = pr(SUBE, titulo="Bump actions/checkout from 6.0.0 to 7.0.1", base_textos=FLUJOS, env_wf=BOT)
-ok(c == 0 and "no se le aplican" in o, "un pull request de dependabot[bot] que solo cambia líneas «uses:» de .github/workflows/ pasa")
-c, o = pr(SUBE[:1] + [("texto", ".github/workflows/pruebas.yml", WF_DESPUES.replace("fetch-depth: 0", "fetch-depth: 1"))],
-          titulo="Bump actions/checkout", base_textos=FLUJOS, env_wf=BOT)
-ok(c == 1 and "no vale" in o and "va en su propio pull request" in errores(o), "si además cambia otra línea del workflow, falla con la regla de siempre")
-for otro in ("app/main.py", ".github/dependabot.yml"):
-    c, o = pr(SUBE + [("escribir", otro, None)], titulo="Bump actions/checkout", base_textos=FLUJOS, env_wf=BOT)
-    ok(c == 1 and "no vale" in o and "va en su propio pull request" in errores(o), f"si además cambia {otro}, fuera de .github/workflows/, también")
-c, o = pr(SUBE, titulo="Bump actions/checkout", base_textos=FLUJOS, env_wf={"AUTOR": "persona"})
-ok(c == 1 and "va en su propio pull request" in errores(o), "el mismo cambio de una persona falla como antes")
+c, o = pr(SUBE, titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJOS)
+ok(c == 0, "el workflow y otro workflow en un «Kit · » pasan (el pull request agrupado de Dependabot)")
+c, o = pr(SUBE + [("escribir", "app/main.py", None)], titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJOS)
+ok(c == 1 and "va en su propio pull request" in errores(o), "el workflow, otro workflow y código fallan")
 
 print("La configuración del repositorio va como «Kit · » (1.30.1)")
 for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml"):

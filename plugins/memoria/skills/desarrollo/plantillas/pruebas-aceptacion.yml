@@ -36,9 +36,8 @@
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
 #   Mientras la carpeta no exista, pasa. La configuración del repositorio (CODEOWNERS, en la raíz, .github/ o docs/, y
 #   .github/dependabot.yml) cuenta como kit: puede ir con el workflow en un «Kit · ».
-# - Las acciones van fijadas por commit, con su versión al lado. Un pull request de Dependabot (autor dependabot[bot]) que
-#   solo cambia archivos de .github/workflows/, y en ellos solo líneas «uses:», no sigue las reglas del kit; sus pruebas
-#   activas sí corren. Un commit de otra persona en su rama, u otro archivo, y vuelven las reglas.
+# - Las acciones van fijadas por commit, con su versión al lado. Los demás workflows de .github/workflows/ cuentan como kit,
+#   igual que este: el pull request de Dependabot que sube una acción en este y en otro workflow va como un «Kit · ».
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
@@ -86,7 +85,6 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           TITULO: ${{ github.event.pull_request.title }}
-          AUTOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -eo pipefail
           ident='^[A-Za-z]+[0-9]+[A-Za-z]?$'
@@ -162,31 +160,20 @@ jobs:
           fi
           # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
-          dentro=0; fuera=0; kit=0; workflow=0; lista_cambia=0; corredor_cambia=0
+          dentro=0; fuera=0; kit=0; workflow=0; wf=""; lista_cambia=0; corredor_cambia=0
           while IFS= read -r -d '' f; do
             if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); corredor_cambia=1
             elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
             elif [ "$f" = "$lista" ]; then lista_cambia=1
-            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1
+            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"
+            elif [[ "$f" == .github/workflows/* ]]; then kit=$((kit + 1)); workflow=1; wf="${wf:-$f}"   # los demás workflows, igual que este
             elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ]; then
               kit=$((kit + 1))   # la configuración del repositorio también va como «Kit · »
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
-          # Dependabot que solo sube acciones: todo en .github/workflows/ y cada línea que cambia es un «uses:»
-          if [ "$AUTOR" = "dependabot[bot]" ]; then
-            flujos=1
-            while IFS= read -r -d '' f; do [[ "$f" == .github/workflows/* ]] || flujos=0; done < "$RUNNER_TEMP/cambios"
-            if [ "$flujos" = 1 ] && git diff -U0 --no-renames "$COMUN" "$HEAD" -- .github/workflows/ | awk '
-                 /^diff --git / { h = 0; next } /^@@ / { h = 1; next }
-                 h && /^[-+]/ && $0 !~ /^[-+][[:space:]]*(-[[:space:]]+)?uses:[[:space:]]*[^[:space:]]+([[:space:]]+#.*)?$/ { m = 1 }
-                 END { exit m }'; then
-              echo "Dependabot solo sube acciones de los workflows: no se le aplican las reglas del kit."; exit 0
-            fi
-            echo "La excepción de Dependabot no vale: cambia algo más que líneas «uses:» de .github/workflows/."
-          fi
           if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
-            echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."; exit 1
+            echo "::error::Este pull request cambia $wf junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
           if [ "$corredor_cambia" = 1 ] && { [[ "$TITULO" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
             echo "::error::Este pull request cambia $corredor, el corredor de las pruebas de aceptación, que es parte del kit: va solo, en un pull request «Kit · »."; exit 1
