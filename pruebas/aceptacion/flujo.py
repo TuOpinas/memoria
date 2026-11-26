@@ -4,10 +4,11 @@ por una pieza y «_»).
 Lo que se prueba es la plantilla del workflow del kit de desarrollo, plugins/memoria/skills/desarrollo/plantillas/
 pruebas-aceptacion.yml, como la correría GitHub en un pull request: se monta un repositorio de git temporal con la base y
 la cabeza del pull request, y se corren, en orden, los pasos «run:» del workflow con su «env:» de arriba, el «env:» de
-cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). El ejecutor es pytest, como en la
-plantilla, salvo que la prueba cambie el «CORREDOR» del «env:» de arriba con comprobar(env_wf=…), como lo deja un proyecto
-que montó el kit; con comprobar(ejecutables=…) deja archivos del repositorio ejecutables (un corredor propio, un
-node_modules/.bin/vitest de mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
+cada paso y lo que GitHub pone en ${{ … }} (base, cabeza y título del pull request). Con comprobar(env_wf=…) la prueba
+cambia el «env:» de arriba como lo deja un proyecto que montó el kit, y el ejecutor cambia con su «CORREDOR» cuando la
+plantilla lo entienda (hoy corre pytest siempre); quitar «CORREDOR» con None exige pytest, igual que no declararlo. Con
+comprobar(ejecutables=…) deja archivos del repositorio ejecutables (un corredor propio, un node_modules/.bin/vitest de
+mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin.
 
 Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «concurrency», «env»
 y «jobs»; un
@@ -217,50 +218,28 @@ def _escribir(d, archivos, ejecutables=()):
         p.write_text(texto, encoding="utf-8")
         if ruta in ejecutables:
             p.chmod(0o755)
+            if not os.access(p, os.X_OK):
+                raise Montaje(f"{ruta} no queda ejecutable: la carpeta temporal está en un sistema de archivos noexec")
 
 
-def _con_env(texto, cambios):
-    """El texto del workflow con su «env:» de arriba cambiado como en comprobar(env_wf=…): cada clave toma su valor (entre
-    comillas dobles), se añade al final del bloque si no estaba, y con None se quita."""
-    if not cambios:
-        return texto
-    lineas = texto.split("\n")
-    try:
-        i = next(n for n, l in enumerate(lineas) if l.startswith("env:"))
-    except StopIteration:
-        raise Montaje("la plantilla no tiene «env:» arriba y la prueba pide cambiarlo")
-    fin = i + 1
-    while fin < len(lineas) and (not lineas[fin].strip() or lineas[fin].startswith(" ")):
-        fin += 1
-    while fin > i + 1 and not lineas[fin - 1].strip():
-        fin -= 1
-    bloque, vistas = [], set()
-    for l in lineas[i + 1:fin]:
-        m = re.match(r"^  ([A-Za-z_][A-Za-z0-9_]*):", l)
-        if m and m.group(1) in cambios:
-            vistas.add(m.group(1))
-            if cambios[m.group(1)] is not None:
-                bloque.append(f'  {m.group(1)}: "{cambios[m.group(1)]}"')
-            continue
-        bloque.append(l)
-    bloque += [f'  {k}: "{v}"' for k, v in cambios.items() if k not in vistas and v is not None]
-    return "\n".join(lineas[:i + 1] + bloque + lineas[fin:])
-
-
-def repositorio(base, cabeza, despues=None, ejecutables=(), env_wf=None):
+def repositorio(base, cabeza, despues=None, ejecutables=()):
     """Un repositorio con la base (archivos de main) y una rama con los cambios del pull request (None borra). Lleva el
-    workflow de la plantilla en su sitio, como un repositorio que ya montó el kit, con su «env:» de arriba cambiado por
-    «env_wf» (ver comprobar). Con «despues», main recibe esos cambios después de cortarse la rama, y lo que queda en la
-    carpeta es la unión de las dos, como el checkout de GitHub en un pull request. Las rutas de «ejecutables» quedan
-    ejecutables en la carpeta y en los commits, se escriban en la base, en la cabeza o en «despues». Devuelve (carpeta,
-    sha base, sha cabeza)."""
+    workflow de la plantilla en su sitio, como un repositorio que ya montó el kit. Con «despues», main recibe esos cambios
+    después de cortarse la rama, y lo que queda en la carpeta es la unión de las dos, como el checkout de GitHub en un pull
+    request. Las rutas de «ejecutables» (una lista o tupla, escritas igual que en la base, la cabeza o «despues») quedan
+    ejecutables en la carpeta y en los commits. Devuelve (carpeta, sha base, sha cabeza)."""
     if not shutil.which("git"):
         raise Montaje("no hay git")
+    if not isinstance(ejecutables, (list, tuple)):
+        raise Montaje("ejecutables: tiene que ser una lista o tupla de rutas, no " + type(ejecutables).__name__)
+    sueltas = [r for r in ejecutables if r not in {**base, **cabeza, **(despues or {})}]
+    if sueltas:
+        raise Montaje("ejecutables: no están en la base, la cabeza ni «despues»: " + ", ".join(map(str, sueltas)))
     ejecutables = frozenset(ejecutables)
     d = _tmp("repo", carpeta=True)
     _git(d, "init", "-q", "-b", "main")
     _git(d, "config", "core.fileMode", "true")
-    todo = {WORKFLOW: _con_env(YML.read_text(encoding="utf-8"), env_wf), "app/main.py": "x = 1\n"}
+    todo = {WORKFLOW: YML.read_text(encoding="utf-8"), "app/main.py": "x = 1\n"}
     todo.update(base)
     _escribir(d, todo, ejecutables)
     _git(d, "add", "-A")
@@ -342,31 +321,22 @@ def comprobar(base, cabeza, titulo, extra=None, cuerpo="", autor="persona", desp
     la plantilla las pisa. despues: lo que main recibe después de cortarse la rama (ver repositorio). omitir: pasos que no
     se corren; por defecto el que instala, para no cambiar el entorno de quien corre las pruebas (el arnés ya comprueba
     que está lo que pide el corredor). env_wf: cambios al «env:» de arriba de la plantilla, como los deja un proyecto que
-    montó el kit ({"CORREDOR": "vitest", "CONFIG": None}: un valor lo pone, aunque sea "", y None quita la clave); van en
-    el workflow del repositorio temporal y en el entorno de los pasos, encima del «env:» de la plantilla. ejecutables:
+    montó el kit ({"CORREDOR": "vitest", "CONFIG": None}: un valor lo pone, aunque sea "", y None quita la clave); van al
+    entorno de los pasos, que es de donde el control lee «CORREDOR» y «CONFIG», como en GitHub. ejecutables:
     rutas del repositorio temporal que quedan con permiso de ejecución, en la carpeta y en git (ver repositorio)."""
     plantilla_env, pasos = plantilla()
-    cambios = dict(env_wf or {})
-    for k, v in cambios.items():
-        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", k):
-            raise Montaje(f"env_wf: «{k}» no es un nombre de variable")
-        if v is not None and (not isinstance(v, str) or re.search(r'["\\\n]', v)):
-            raise Montaje(f"env_wf: el valor de {k} tiene que ser un texto de una línea sin comillas dobles ni «\\»")
     efectivo = dict(plantilla_env)
-    for k, v in cambios.items():
+    for k, v in (env_wf or {}).items():
         if v is None:
             efectivo.pop(k, None)
         else:
             efectivo[k] = v
-    d, sb, sh = repositorio(base, cabeza, despues, ejecutables, cambios)
+    d, sb, sh = repositorio(base, cabeza, despues, ejecutables)
     contexto = {"github.event.pull_request.base.sha": sb, "github.event.pull_request.head.sha": sh,
                 "github.event.pull_request.title": titulo, "github.event.pull_request.body": cuerpo,
                 "github.event.pull_request.user.login": autor, "github.event.pull_request.number": "1"}
     env = _entorno(d, extra, efectivo.get("CORREDOR"))
     env.update({k: _expresiones(v, contexto) for k, v in efectivo.items()})
-    for k, v in cambios.items():   # una clave que se quita no llega a los pasos aunque venga de «extra»
-        if v is None:
-            env.pop(k, None)
     salida = []
     for paso in pasos:
         if not paso["run"] or paso["nombre"] in omitir:
