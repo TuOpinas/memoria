@@ -27,15 +27,15 @@ Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub 
 4. lo que lo unido añade y el diseño no tiene: datos, componentes o conceptos nuevos, también con otro nombre;
 5. si el check «pruebas de aceptación» es obligatorio en la regla de la rama principal; los pull requests unidos que tocaron las pruebas de aceptación, su workflow o su corredor propio, o sacaron una pieza de la lista de piezas activas (y las piezas con pruebas que siguen fuera de ella), con quién los unió o aprobó (o, si quien acepta no tiene cuenta de GitHub, la aprobación del plan que cita): si no fue quien acepta, se señala;
 6. los pasos a Prod, con quién dio el sí (si fue quien construyó, se dice como un hecho), los que no tienen sí, y las verificaciones de las piezas unidas desde el anterior;
-7. con «Recibe» en la sección, las fases entregadas y quién las recibió, por lo que digan el plan o el release; si no lo dicen, «sin recibir por escrito».
+7. con «Recibe» en la sección, las fases recibidas y quién las recibió, por la línea «Recibió:» de cada fase en el plan; sin ella, «sin recibir por escrito».
 
 Quien no tenga el plugin se lo pide a quien acepta o a quien construye.
 
 **Paso a Prod** dice dónde queda escrito el sí que deja pasar algo a Prod. Lo recomendado es `release de GitHub`: quien administra publica un release sobre el commit que leyó el seguimiento, con la línea «Aprobó: Nombre Apellido, AAAA-MM-DD · seguimiento AAAA-MM-DD». Otras formas valen si se dicen aquí, por ejemplo `aprobación en <herramienta>` o, sin entorno de Release, `sí sobre el resumen del despliegue`. Donde unir publica (un plugin como Memoria), unir el pull request de versión es el paso a Prod: lo une quien administra, con el sí, después de verificar la candidata instalada en una raíz o un entorno de prueba.
 
 **Qué hace cada rol**
-- **Acepta:** aprueba el diseño, el plan y los escenarios de cada pieza (o que una pieza técnica no los tiene), decide en los puntos de control del `CLAUDE.md`, comprueba la configuración al montar el proyecto y cuando cambia, une o aprueba los pull requests que tocan las pruebas de aceptación, lee el reporte de la verificación y da el sí.
-- **Audita:** mira después, cuando quiere, lo que se hizo: el diseño técnico, el plan, lo delicado (dependencias nuevas, permisos, accesos, pagos, datos personales, cambios de base de datos) y la configuración. Lo que encuentra se lo lleva a quien acepta; no detiene nada. Si el proyecto no tiene auditoría, la línea dice `nadie`.
+- **Acepta:** aprueba el diseño, el plan y los escenarios de cada pieza (o que una pieza técnica no los tiene), decide en los puntos de control del `CLAUDE.md`, comprueba la configuración al montar el proyecto y cuando cambia, une o aprueba los pull requests que tocan las pruebas de aceptación, revisa lo delicado (dependencias nuevas, permisos, accesos, pagos, datos personales, cambios de base de datos) antes de unir, lee el reporte de la verificación y da el sí.
+- **Audita:** mira después, cuando quiere, lo que se hizo: el diseño técnico, el plan y la configuración. Lo que encuentra se lo lleva a quien acepta; no detiene nada. Si el proyecto no tiene auditoría, la línea dice `nadie`.
 - **Construye:** construye con Claude, por bloques de una o varias piezas en un pull request a la rama principal, y lo une con las pruebas en verde y la revisión de calidad hecha.
 - **Administra:** mantiene la configuración y pasa a Prod lo que recibió el sí. Es el único que despliega a Prod; donde unir publica, es quien une el pull request de versión.
 - **Recibe:** la persona a quien se entrega cada fase, por ejemplo el cliente. Es opcional: sin ella, nadie recibe por escrito.

@@ -27,8 +27,9 @@ Estado: `cerrada`, `en curso` (solo una) o `pendiente`. «Horas de cierre», opc
 | P01 | [En llano, lo que cambia para la persona] |
 
 Horas: espera a [persona]: [qué].
+Recibió: [Nombre Apellido, AAAA-MM-DD]
 
-Un bloque así por fase, escrito al planearla.
+Un bloque así por fase, escrito al planearla. «Recibió:», opcional, como el «Aprobó:» de las piezas: lo escribe quien acepta al cerrar la fase, cuando quien recibe da su conformidad.
 
 ## Piezas
 Las de fases cerradas se quedan. Un identificador no se reutiliza nunca. «Horas» y «Para antes» son opcionales: las horas de sesión con IA de cada pieza, vacía si no se estiman (el tablero suma por fase las que hay), y lo que Claude pregunta antes de construirla, si se para en ella; las comprobaciones de siempre (los escenarios, la revisión, la verificación y el sí) no se escriben ahí.
