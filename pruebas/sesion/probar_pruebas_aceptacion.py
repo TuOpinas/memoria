@@ -21,6 +21,10 @@ def ok(c, t):
     fallos += 0 if c else 1
 
 
+def errores(o):
+    return "\n".join(l for l in o.splitlines() if "::error::" in l)
+
+
 def script(paso="Las pruebas de aceptación van en su propio pull request"):
     """El bloque «run: |» de un paso, sin su sangría, y los valores de env del workflow."""
     texto = YML.read_text(encoding="utf-8")
@@ -52,10 +56,17 @@ def repo(sin_carpeta=False):
     return d, git(d, "rev-parse", "HEAD")
 
 
-def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0, env_wf=None):
+def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0, env_wf=None,
+       base_textos=None, ejecutables=()):
     """Aplica los cambios en una rama y corre el primer paso; devuelve (código de salida, salida). lista: el texto de la
-    lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama."""
+    lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama; base_textos:
+    {ruta: texto} en la base; ejecutables: rutas que quedan ejecutables en git. En los cambios, («texto», ruta, texto) escribe ese texto."""
     d, base = repo(sin_carpeta)
+    if base_textos:
+        for ruta, texto in base_textos.items():
+            (d / ruta).parent.mkdir(parents=True, exist_ok=True)
+            (d / ruta).write_text(texto, encoding="utf-8")
+        git(d, "add", "-A"); git(d, "commit", "-qm", "textos"); base = git(d, "rev-parse", "HEAD")
     if base_extra:
         (d / "tests/aceptacion/datos").mkdir(parents=True, exist_ok=True)
         for i in range(base_extra):
@@ -70,6 +81,9 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
         if orden == "escribir":
             (d / ruta).parent.mkdir(parents=True, exist_ok=True)
             (d / ruta).write_text("y = 2\n", encoding="utf-8")
+        elif orden == "texto":
+            (d / ruta).parent.mkdir(parents=True, exist_ok=True)
+            (d / ruta).write_text(destino, encoding="utf-8")
         elif orden == "lista":
             (d / ".github").mkdir(exist_ok=True)
             (d / ".github/piezas-activas.txt").write_text(ruta, encoding="utf-8")
@@ -79,6 +93,8 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
             (d / destino).parent.mkdir(parents=True, exist_ok=True)
             git(d, "mv", ruta, destino)
     git(d, "add", "-A")
+    for x in ejecutables:
+        git(d, "update-index", "--chmod=+x", x)
     git(d, "commit", "-qm", "cambio", "--allow-empty")
     if main_despues:
         git(d, "checkout", "-q", "main")
@@ -127,14 +143,58 @@ c, o = pr([("borrar", "tests/aceptacion", None), ("escribir", "app/main.py", Non
 ok(c == 1 and "quita o mueve" in o, "quitar la carpeta de las pruebas falla")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "app/main.py", None)])
 ok(c == 1 and "va en su propio pull request" in o, "cambiar el workflow junto con código falla")
-c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)])
-ok(c == 0, "cambiarlo con el CLAUDE.md pasa: es el kit")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], titulo="Kit · el control")
+ok(c == 0, "cambiarlo con el CLAUDE.md en un «Kit · » pasa: es el kit")
+
+print("Lo que cambia el kit lleva el título «Kit · » (1.30.1)")
+c, o = pr([("escribir", "CLAUDE.md", None), ("escribir", "app/main.py", None)], titulo="P09 · algo")
+ok(c == 1 and "«Kit · »" in errores(o), "el CLAUDE.md con código y un título de pieza falla")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo="P09 · algo")
+ok(c == 1 and "«Kit · »" in errores(o), "el CLAUDE.md solo, con un título de pieza, falla")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo="Kit · reglas")
+ok(c == 0, "el CLAUDE.md solo, con «Kit · », pasa")
+c, o = pr([("escribir", "CLAUDE.md", None)], titulo='Revert "Kit · reglas"')
+ok(c == 0, "y la reversión de ese «Kit · », también")
+
+print("Los demás workflows cuentan como kit, igual que este (1.30.1)")
+WF_ANTES = "    steps:\n      - uses: actions/checkout@aaaa  # v6.0.0\n        with:\n          fetch-depth: 0\n"
+WF_DESPUES = WF_ANTES.replace("@aaaa  # v6.0.0", "@bbbb  # v7.0.1")
+FLUJOS = {".github/workflows/pruebas-aceptacion.yml": WF_ANTES, ".github/workflows/pruebas.yml": WF_ANTES}
+SUBE = [("texto", f, WF_DESPUES) for f in FLUJOS]
+c, o = pr(SUBE, titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJOS)
+ok(c == 0, "el workflow y otro workflow en un «Kit · » pasan (el pull request agrupado de Dependabot)")
+c, o = pr(SUBE + [("escribir", "app/main.py", None)], titulo="Kit · sube actions/checkout a 7.0.1", base_textos=FLUJOS)
+ok(c == 1 and "va en su propio pull request" in errores(o), "el workflow, otro workflow y código fallan")
+c, o = pr(SUBE, titulo="Bump actions/checkout from 6.0.0 to 7.0.1", base_textos=FLUJOS)
+ok(c == 0, "«Bump actions/checkout» que cambia el control y otro workflow pasa con su título (#2026-11-26-5)")
+c, o = pr([("texto", ".github/workflows/pruebas.yml", WF_DESPUES)], titulo="P09 · algo", base_textos=FLUJOS)
+ok(c == 0, "un pull request de pieza que solo cambia un workflow pasa")
+c, o = pr(SUBE + [("escribir", "CLAUDE.md", None)], titulo="Bump actions/checkout", base_textos=FLUJOS)
+ok(c == 1 and "«Kit · »" in errores(o), "con el CLAUDE.md, los workflows vuelven a pedir «Kit · »")
+
+print("La configuración del repositorio va como «Kit · » (1.30.1)")
+for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml", ".github/dependabot.yaml"):
+    c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None)], titulo="Kit · configuración")
+    ok(c == 0, f"el workflow con {conf} en un «Kit · » pasa")
+    c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", conf, None)], titulo="Escenarios · P01")
+    ok(c == 1 and "y código fuera de ellas" in errores(o), f"las pruebas de aceptación con {conf} fallan: frente a ellas, cuenta como fuera")
+c, o = pr([("escribir", "scripts/corredor", None), ("escribir", ".github/CODEOWNERS", None)], titulo="Kit · corredor",
+          env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
+ok(c == 0, "el corredor propio con CODEOWNERS en un «Kit · » pasa")
+c, o = pr([("escribir", "scripts/corredor", None)], titulo='Revert "Kit · corredor"',
+          env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
+ok(c == 0, "la reversión de un «Kit · » que cambió el corredor propio pasa")
 
 print("Montar el kit en un repositorio que aún no tiene pruebas de aceptación")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], sin_carpeta=True)
 ok(c == 0, "el pull request que trae el workflow y el CLAUDE.md pasa")
-c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "tests/aceptacion/.gitkeep", None)], sin_carpeta=True)
-ok(c == 0, "con la carpeta vacía, también")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "tests/aceptacion/.gitkeep", None)], sin_carpeta=True,
+          titulo="Kit · monta el kit")
+ok(c == 0, "con la carpeta vacía, en un «Kit · », también")
+c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None),
+           ("escribir", "tests/aceptacion/vitest.config.ts", None)], sin_carpeta=True, titulo="Kit · monta el kit",
+          env_wf={"CORREDOR": "vitest", "CONFIG": "tests/aceptacion/vitest.config.ts"})
+ok(c == 0, "y con Vitest, con la carpeta que solo trae CONFIG")
 c, o = pr([("escribir", "app/main.py", None)], sin_carpeta=True)
 ok(c == 0 and "no hay nada que proteger" in o, "una pieza antes de que haya escenarios pasa, y lo dice")
 
@@ -191,10 +251,6 @@ def activas(pruebas, lista, titulo, corredor=False, archivos=None, carpeta="test
     env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
-
-
-def errores(o):
-    return "\n".join(l for l in o.splitlines() if "::error::" in l)
 
 
 ok(ENVW["CORREDOR"] == "pytest" and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y «CORREDOR: pytest»")

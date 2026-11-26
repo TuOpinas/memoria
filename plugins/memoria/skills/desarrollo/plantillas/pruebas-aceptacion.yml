@@ -10,14 +10,18 @@
 #   · pytest: los archivos de una pieza se llaman «<pieza>_<nombre>.py».
 #   · vitest: se llaman «<pieza>_<nombre>.test.ts»; CONFIG es la configuración de Vitest, dentro de la carpeta, y es la
 #     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
-#     cada archivo. «Prepara el entorno» instala node y las dependencias (npm ci). Solo admite «.test.ts» (con «.test.tsx»
-#     o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada: el informe no la distingue.
+#     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
+#     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada:
+#     el informe no la distingue.
+#     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
+#     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
 #     sus archivos de prueba («_test.go»). El control lo llama desde la raíz del repositorio con los archivos de prueba
 #     como argumentos. El corredor escribe una línea por archivo, «PASA <ruta>», «FALLA <ruta>» o «NO_CORRIO <ruta>» (las
 #     demás líneas no cuentan), y sale con 0 si pudo correr, pasen o no; con otro código, las pruebas no se pudieron
 #     correr. «PASA» solo si todas las pruebas del archivo pasaron: con una saltada o por hacer, no. El corredor es parte
-#     del kit: solo lo cambia un pull request «Kit · », sin nada más.
+#     del kit: solo lo cambia un pull request «Kit · », sin código ni pruebas.
 #   Un archivo del que el corredor no da resultado cuenta como no corrido.
 # - Un pull request no cambia las pruebas de aceptación y código a la vez: los escenarios entran en su propio pull request.
 # - Las pruebas de una pieza cuentan desde que su identificador está en ACTIVAS, un archivo fuera de la carpeta. El pull
@@ -30,8 +34,15 @@
 #   que pasar.
 # - Un identificador de pieza son letras, dígitos y, como mucho, una letra al final: P01, H22, H22a. H22, H22a y H22b
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
-# - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
-#   Mientras la carpeta no exista, pasa.
+# - El kit es el CLAUDE.md, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las
+#   pruebas de aceptación y los demás de .github/workflows/, y la configuración del repositorio, CODEOWNERS (en la raíz,
+#   .github/ o docs/) y .github/dependabot.yml (o .yaml). Un pull request que cambia el kit no lleva código: en un pull
+#   request corre la versión de este archivo que trae. Lleva el título «Kit · …» (o es su reversión) si cambia el
+#   CLAUDE.md, el corredor propio o la configuración del repositorio; si solo cambia workflows, cualquiera. Puede traer la
+#   carpeta, como al montar el kit con CONFIG, pero no con el corredor propio, que va solo, ni con la configuración del
+#   repositorio, que frente a las pruebas cuenta como código. Mientras la carpeta no exista, pasa.
+# - Las acciones van fijadas por commit, con su versión al lado. El pull request de Dependabot que sube una acción en este
+#   y en otro workflow pasa con su título («Bump …»): solo cambia workflows, y no se mira quién lo abrió.
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
@@ -47,14 +58,17 @@
 #   esperada como fallo. Unas pruebas que no corren no cuentan como verdes.
 # - Esto cierra la configuración, no el código: lo que importan las pruebas corre en su proceso y puede hacer trampa (salir
 #   con 0, tocar el corredor). Eso lo ven la verificación sobre Release y quien revisa.
-# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista, este workflow o el corredor
-# propio; si es otra persona, lo exige un CODEOWNERS (configuración, R2).
+# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o el kit; si es otra persona, lo
+# exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
+concurrency:                                   # si llega otra corrida, cancela la anterior; editar el título o la descripción la repite
+  group: aceptacion-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 env:
   ACEPTACION: tests/aceptacion                 # la carpeta de las pruebas de aceptación
   ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
@@ -64,10 +78,10 @@ env:
 jobs:
   aparte:
     name: pruebas de aceptación
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -151,23 +165,30 @@ jobs:
           fi
           # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
-          dentro=0; fuera=0; kit=0; workflow=0; lista_cambia=0; corredor_cambia=0
+          dentro=0; fuera=0; kit=0; workflow=0; wf=""; conf=0; titulado=0; lista_cambia=0; corredor_cambia=0
           while IFS= read -r -d '' f; do
-            if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); corredor_cambia=1
+            if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); titulado=1; corredor_cambia=1
             elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
             elif [ "$f" = "$lista" ]; then lista_cambia=1
-            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1
+            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"; [ "$f" = CLAUDE.md ] && titulado=1
+            elif [[ "$f" == .github/workflows/* ]]; then kit=$((kit + 1)); workflow=1; wf="${wf:-$f}"   # los demás workflows, igual que este
+            elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ] || [ "$f" = .github/dependabot.yaml ]; then
+              kit=$((kit + 1)); conf=$((conf + 1)); titulado=1   # la configuración del repositorio: kit junto al workflow, fuera junto a las pruebas
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
           if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
-            echo "::error::Este pull request cambia $este junto con código: va en su propio pull request («Kit · »)."; exit 1
+            echo "::error::Este pull request cambia $wf junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
-          if [ "$corredor_cambia" = 1 ] && { [[ "$TITULO" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
+          if [ "$corredor_cambia" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
             echo "::error::Este pull request cambia $corredor, el corredor de las pruebas de aceptación, que es parte del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
-          if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then
+          if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
+          fi
+          # el título «Kit · …» (o su reversión) lo pide el kit salvo los workflows: «Bump …» de Dependabot pasa con el suyo
+          if [ "$titulado" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ]; }; then
+            echo "::error::Este pull request cambia el CLAUDE.md, el corredor propio o la configuración del repositorio, que son del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
           # en un pull request de escenarios, cada archivo de pruebas empieza por una pieza de su título y «_»
           if [ "$escenarios" = 1 ]; then
@@ -209,10 +230,15 @@ jobs:
               fi
             done
           fi
+      - name: Prepara Node
+        if: env.CORREDOR == 'vitest' && hashFiles('.nvmrc') != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version-file: .nvmrc
       - name: Prepara el entorno
         run: |
           # lo rellena el repositorio: instalar lo que necesitan las pruebas (p. ej. pip install -r requirements.txt; con
-          # vitest, node y npm ci)
+          # vitest, npm ci)
           true
       - name: Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios
         env:
