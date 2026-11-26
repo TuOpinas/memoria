@@ -759,7 +759,7 @@ h1 .dev-m svg{width:15px;height:15px}
 .dev-ley i.r-destino{border-width:2.4px;border-color:var(--ink)}
 .dev-svg .rtb{fill:var(--surface)}
 .dev-nota{margin-top:4px}
-.dev-pz .h{float:right;font:500 11px var(--f-mono);color:var(--muted)}
+.dev-pz .h{float:right;margin-left:8px;font:500 11px var(--f-mono);color:var(--muted)}
 /* 1.30.0 (P26): el plan por estado: lo que va en curso, resaltado y primero; lo hecho, atenuado y plegado al final */
 .dev-pz.g-en_curso{border-color:var(--signal);box-shadow:inset 3px 0 0 var(--signal)}
 .dev-pz.g-hecha{opacity:.6}
@@ -3477,7 +3477,7 @@ function ayudaArts(){
       <li><b>Planear por fases</b><span>Cada fase dice qué podrá hacer quién al terminar. Solo la fase en curso se parte en piezas, con sus horas y sus decisiones pendientes.</span></li>
       <li><b>Aprobar los escenarios de la fase</b><span>Claude los propone en lenguaje de negocio; quien acepta los aprueba juntos antes de arrancar.</span></li>
       <li><b>Construir</b><span>Desde una sesión principal que planea y coordina se lanzan sesiones que construyen, cada una con su encargo. Por cada pieza: un subagente escribe sus pruebas antes del código, Claude construye hasta que pasan, se hace la revisión de calidad y quien construye la une.</span></li>
-      <li><b>Parar en los puntos de control</b><span>Si algo es difícil de revertir, se sale del diseño o falla dos veces, Claude se detiene y decide quien acepta.</span></li>
+      <li><b>Parar en los puntos de control</b><span>Si algo es difícil de revertir, toca lo delicado (permisos, pagos, datos personales, una dependencia nueva), se sale del diseño o falla dos veces, Claude se detiene y decide quien acepta.</span></li>
       <li><b>Verificar con el producto funcionando</b><span>Otra sesión, en otro modelo, recorre el entorno de pruebas contra los escenarios y deja un reporte.</span></li>
       <li><b>Dar el sí y pasar a producción</b><span>Quien acepta pide el seguimiento y da el sí por escrito; solo quien administra despliega.</span></li>
       <li><b>Cerrar la fase</b><span>Revisión de la fase entera, conformidad de quien la recibe y plan de la siguiente.</span></li>
