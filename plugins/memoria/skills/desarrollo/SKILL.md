@@ -15,8 +15,6 @@ Esta skill no tiene scripts: lee y juzga Claude, y tres pasos los hacen subagent
 
 En los puntos de control del `CLAUDE.md`: cuando un enfoque falló dos veces (disparador 3), se propone a la persona pasar la pieza a Fable 5.2; cuando algo es difícil de revertir o se sale del diseño (disparadores 1 y 4), se consulta una vez a Fable 5.2, con un subagente en ese modelo, antes de preguntar a quien acepta, y su respuesta va con la pregunta en el pull request.
 
-**Los roles** (shared-memory/plugin-memoria#2026-11-25-4): quien acepta aprueba el diseño, el plan y los escenarios, decide en los puntos de control y da el sí; quien audita mira después, cuando quiere, y no detiene nada, y puede ser `nadie`; quien recibe, si la sección lo nombra, es a quien se entrega cada fase.
-
 ## El seguimiento
 
 Lo pide cualquiera que lea el proyecto, y quien da el sí lo pide antes de darlo (#2026-11-18-9). Nunca se hace al abrir ni sin que nadie lo pida. Lo prepara el subagente `seguimiento`, con estos pasos en su encargo; esta sesión escribe lo que devuelve.
