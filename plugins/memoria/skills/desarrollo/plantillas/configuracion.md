@@ -39,7 +39,7 @@ Una columna por repositorio de la línea «Repositorios:».
 **El kit entero** se monta en este orden, y no a medias: la apertura de sesión dice lo que le falta a cada repositorio hasta que lo tenga.
 1. Qué se construye: lo funcional del diseño, que aprueba quien acepta.
 2. Cómo se construye: los datos, los componentes y la infraestructura del diseño, que también aprueba quien acepta.
-3. Los roles, en la sección «Desarrollo» del `proyecto.md`.
+3. Los roles, en la sección «Desarrollo» del `proyecto.md`: la sección ya existe desde que se creó el proyecto, y aquí se completan sus roles.
 4. La plataforma y cada repositorio, que prepara quien administra antes de construir nada: esta configuración; en cada repositorio, un pull request «Kit · » con el `CLAUDE.md`, el control (`.github/workflows/pruebas-aceptacion.yml`, con su `CORREDOR`) y, si lo hay, el corredor propio; y la regla de la rama principal, con el check «pruebas de aceptación» obligatorio (R1 y R2). Mientras no exista la carpeta de aceptación, el check pasa.
 5. El plan por fases, que aprueba quien acepta.
 6. Los escenarios de las primeras piezas; con el código ya construido, los de las piezas que ya existen, que entran pasando (skill `desarrollo`).
