@@ -229,6 +229,8 @@ def escenarios(inf):
     for rol in CINCO:
         if rol not in vin:
             problemas.append(f"bajo «Qué hace cada rol» no hay una viñeta «- **{rol}:**» (hay: {', '.join(vin) or 'ninguna'})")
+        elif not vin[rol].strip():
+            problemas.append(f"la viñeta «- **{rol}:**» de «Qué hace cada rol» no tiene texto detrás del nombre")
     if "Audita" in vin:
         a = vin["Audita"].lower()
         if "nadie" not in a:

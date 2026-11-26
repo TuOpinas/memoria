@@ -16,18 +16,17 @@
   the control runs, Entonces it is green only if those tests pass.
 - A piece not built still has to fail. Dado a scenarios pull request that does not add its piece to the list, Cuando
   the control runs, Entonces it is green only if those tests fail as tests.
+- A project's own runner is part of the kit. Dado a repository with a runner of its own, Cuando a pull request that is
+  not «Kit · » changes it, Entonces the control fails and names the runner; a «Kit · » pull request may change it.
 
 Contra la plantilla del workflow (pruebas-aceptacion.yml), con flujo.py, como P01 a P03: el workflow entero sobre un
 repositorio temporal con la base y la cabeza de un pull request. Contrato de la pieza: decisión
-shared-memory/plugin-memoria#2026-11-25-5. Cómo se monta cada escenario está en RESUMEN.md.
-
-Lo que corre con pytest (el valor de la plantilla) se prueba primero. Lo que pide otro «CORREDOR» (vitest, un corredor
-propio, vacío) está escrito al final, en con_otro_corredor(), y no se monta: flujo.py no deja cambiar el «env:» de
-arriba del workflow ni dejar ejecutable un archivo del repositorio (ver montar()). Esa parte queda para un pull request
-«Kit · »; hasta entonces este archivo sale con 2 después de juzgar lo de pytest.
+shared-memory/plugin-memoria#2026-11-25-5 y las enmiendas del encargo de F7. Cómo se monta cada escenario está en
+RESUMEN.md. Lo que pide otro «CORREDOR» (vitest, un corredor propio, vacío) se monta con flujo.comprobar(env_wf=…,
+ejecutables=…), que trae el pull request «Kit · » de flujo.py; sin él, la prueba sale con 2 (no se pudo montar).
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P30_un_control.py (0 pasa, 1 falla, 2 no se montó).
 """
-import json, pathlib, shutil, sys
+import inspect, json, pathlib, sys
 
 sys.dont_write_bytecode = True   # no deja __pycache__ en la carpeta
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -35,30 +34,26 @@ import flujo  # noqa: E402
 
 CODIGO = {"app/main.py": "x = 2\n"}
 CORREDOR_PROPIO = "scripts/corredor-aceptacion"   # se declara «CORREDOR: ./scripts/corredor-aceptacion»
-EXT_PROPIO = ".py"   # el contrato no dice cómo se llaman los archivos con un corredor propio: ver RESUMEN.md
-
-
-# ---------- lo que flujo.py no deja montar ----------
-NO_MONTA = ("flujo.py no deja montar este caso: comprobar() pone el «env:» de arriba de la plantilla después de «extra» "
-            "(la línea «env.update({k: _expresiones(v, contexto) for k, v in env_wf.items()})»), así que CORREDOR y CONFIG "
-            "no se pueden cambiar por caso, y los pasos salen de la plantilla, no del workflow del repositorio temporal; "
-            "además _escribir() deja los archivos sin permiso de ejecución, y el Vitest de mentira "
-            "(node_modules/.bin/vitest) y el corredor propio tienen que ser ejecutables. Queda para un pull request «Kit · »")
+SUFIJO = "_test.go"   # el final de los archivos de prueba con el corredor propio: ni .py ni .test.ts
 
 
 def montar(arriba, base, cabeza, titulo, extra, ejecutables=()):
-    """Corre el control con el «env:» de arriba cambiado (arriba: {"CORREDOR": …, "CONFIG": …}, None quita la clave),
-    como lo deja un proyecto que montó el kit, y con esos archivos del repositorio ejecutables. flujo.py no lo deja: no
-    se monta (salida 2)."""
-    raise flujo.Montaje(NO_MONTA)
+    """Corre el control con el «env:» de arriba cambiado (arriba: {"CORREDOR": …, "CONFIG": …}; "" lo deja vacío, None
+    quita la clave), como lo deja un proyecto que montó el kit, y con esos archivos del repositorio ejecutables."""
+    if "env_wf" not in inspect.signature(flujo.comprobar).parameters:
+        raise flujo.Montaje("falta el cambio del kit: flujo.comprobar() no admite env_wf ni ejecutables, que trae el pull "
+                            "request «Kit · » de flujo.py; sin él no se puede cambiar CORREDOR ni dejar ejecutable el "
+                            "Vitest de mentira o el corredor propio")
+    return flujo.comprobar(base, cabeza, titulo, extra, env_wf=arriba, ejecutables=ejecutables)
 
 
 # ---------- lo que la prueba escribe: el Vitest de mentira y el corredor propio ----------
 def vitest_falso(estados):
-    """El texto de un node_modules/.bin/vitest de mentira. estados: {ruta relativa: "passed" | "failed" | "sin_resultado"}.
-    Toma los archivos que le piden (los argumentos que no son opciones filtran por ruta, como Vitest; sin ninguno, todos),
-    deja una marca por cada uno en $MARCAS y escribe en --outputFile.json un informe con la forma del de Vitest; los
-    «sin_resultado» no salen en el informe."""
+    """El texto de un node_modules/.bin/vitest de mentira. estados: {ruta relativa: "passed" | "failed" |
+    "passed_con_saltada" | "sin_resultado"}. Toma los archivos que le piden (los argumentos que no son opciones filtran
+    por ruta, como Vitest; sin ninguno, todos), deja una marca por cada uno en $MARCAS y escribe en --outputFile.json un
+    informe con la forma del de Vitest. «passed_con_saltada» es un archivo «passed» con una prueba que pasa y otra
+    «skipped»; los «sin_resultado» no salen en el informe."""
     return ("#!/usr/bin/env node\n"
             "const fs = require('fs'), path = require('path');\n"
             f"const ESTADOS = {json.dumps(estados)};\n"
@@ -79,21 +74,25 @@ def vitest_falso(estados):
             "for (const r of tomados) {\n"
             "  fs.appendFileSync(process.env.MARCAS, path.basename(r).replace(/\\.test\\.ts$/, '') + ' ' + process.pid + '\\n');\n"
             "  const e = ESTADOS[r]; if (e === 'sin_resultado') continue; if (e === 'failed') falla = true;\n"
-            "  resultados.push({name: path.resolve(r), status: e, assertionResults: [{status: e, fullName: r + ' caso'}]});\n"
+            "  const pruebas = e === 'passed_con_saltada'\n"
+            "    ? [{status: 'passed', fullName: r + ' caso'}, {status: 'skipped', fullName: r + ' saltada'}]\n"
+            "    : [{status: e, fullName: r + ' caso'}];\n"
+            "  resultados.push({name: path.resolve(r), status: e === 'passed_con_saltada' ? 'passed' : e, "
+            "assertionResults: pruebas});\n"
             "}\n"
             "fs.writeFileSync(salida, JSON.stringify({testResults: resultados}));\n"
             "process.exit(falla ? 1 : 0);\n")
 
 
 def corredor_falso(estados, sale=0):
-    """El texto de un corredor propio de pocas líneas. estados: {nombre del archivo sin extensión: "PASA" | "FALLA" |
+    """El texto de un corredor propio de pocas líneas. estados: {nombre del archivo sin SUFIJO: "PASA" | "FALLA" |
     "NO_CORRIO" | "sin_linea"}. Por cada archivo que recibe deja una marca y escribe su línea; escribe también líneas que
     no cuentan, y sale con «sale»."""
     casos = "".join(f"    {n}) echo \"{e} $f\" ;;\n" if e != "sin_linea" else f"    {n}) : ;;\n" for n, e in estados.items())
     return ("#!/usr/bin/env bash\n"
             "echo \"corredor de muestra: $# archivos\"   # no cuenta\n"
             "for f in \"$@\"; do\n"
-            "  n=$(basename \"$f\"); n=${n%.*}\n"
+            f"  n=$(basename \"$f\"); n=${{n%\"{SUFIJO}\"}}\n"
             "  echo \"$n $$\" >> \"$MARCAS\"\n"
             "  case \"$n\" in\n" + casos +
             "    *) echo \"FALLA $f\" ;;\n"
@@ -114,6 +113,15 @@ def rojo_y_nombra(problemas, rc, salida, corrieron, falla, pasa, que="el control
         problemas.append(f"ningún error nombra a {falla}")
     if pasa and flujo.nombra(err, pasa):
         problemas.append(f"un error nombra a {pasa}, cuyas pruebas pasan")
+
+
+def rojo_y_dice(problemas, rc, salida, que, texto, minusculas=False):
+    """Rojo, y una línea «::error::» contiene texto."""
+    if rc == 0:
+        problemas.append(f"el control pasó con {que}")
+    err = flujo.errores(salida)
+    if not any(texto in (l.lower() if minusculas else l) for l in err):
+        problemas.append(f"ningún error del control dice «{texto}»")
 
 
 def escenarios(inf):
@@ -163,7 +171,7 @@ def escenarios(inf):
     inf.escenario("Un identificador puede acabar en letra («H22 · …» no toma las de H22a ni H22b)", problemas,
                   salida if problemas else "")
 
-    #     «Escenarios · H22a» con un archivo de H22b falla, y el error nombra el archivo
+    #     «Escenarios · H22a» con un archivo de H22b falla: un error nombra H22b_x.py y ninguno H22a_x.py, que es suyo
     extra, _ = flujo.marcas()
     cabeza = {f"{acept}/H22a_x.py": flujo.sembrada("H22a_x", "falla"),
               f"{acept}/H22b_x.py": flujo.sembrada("H22b_x", "falla")}
@@ -173,6 +181,9 @@ def escenarios(inf):
         problemas.append("el control pasó con H22b_x.py en «Escenarios · H22a»")
     if not any("H22b_x.py" in l for l in flujo.errores(salida)):
         problemas.append("ningún error nombra a H22b_x.py")
+    nombran_suyo = [l for l in flujo.errores(salida) if "H22a_x.py" in l]
+    if nombran_suyo:
+        problemas.append(f"un error nombra a H22a_x.py, que es de H22a: {nombran_suyo[0][:160]}")
     inf.escenario("Un identificador puede acabar en letra («Escenarios · H22a» con un archivo de H22b)", problemas,
                   salida if problemas else "")
 
@@ -208,14 +219,12 @@ def escenarios(inf):
         caso = f"{'la añade' if anade else 'no la añade'} y su prueba {resultado}: {'verde' if verde_ else 'rojo'}"
         inf.escenario(f"{titulo} ({caso})", problemas, salida if problemas else "")
 
-    # Lo que pide otro CORREDOR: no se monta (sale con 2, después de lo anterior)
+    # Lo que pide otro CORREDOR: con el arnés del pull request «Kit · »
     con_otro_corredor(inf, acept, activas)
 
 
 def con_otro_corredor(inf, acept, activas):
-    """Los casos con vitest, con un corredor propio y sin corredor. Escritos hasta donde se puede: montar() no se monta."""
-    if not shutil.which("node"):
-        raise flujo.Montaje("no hay node en el PATH: el Vitest de mentira es un guion de node")
+    """Los casos con vitest, con un corredor propio y sin corredor."""
     config = f"{acept}/vitest.config.ts"
     vitest = {"CORREDOR": "vitest", "CONFIG": config}
     bin_vitest = "node_modules/.bin/vitest"
@@ -230,14 +239,18 @@ def con_otro_corredor(inf, acept, activas):
         rc, salida = montar(arriba, base, cabeza or CODIGO, titulo, extra, ejecutables=(bin_vitest,))
         return rc, salida, {n for n, _ in leer()}
 
-    propio = {"CORREDOR": "./" + CORREDOR_PROPIO, "CONFIG": None}
+    propio = {"CORREDOR": "./" + CORREDOR_PROPIO, "SUFIJO": SUFIJO, "CONFIG": None}
 
-    def con_propio(estados, sale=0, cabeza=None, titulo="P09 · otra cosa"):
-        base = {activas: "P05\nP06\n", CORREDOR_PROPIO: corredor_falso(estados, sale)}
+    def con_propio(estados, sale=0, cabeza=None, titulo="P09 · otra cosa", activas_="P05\nP06\n", arriba=propio,
+                   en_cabeza=()):
+        """estados: los de corredor_falso. Los archivos de prueba van en la base, salvo los de «en_cabeza», que trae el
+        pull request."""
+        base = {activas: activas_, CORREDOR_PROPIO: corredor_falso(estados, sale)}
+        cab = dict(cabeza if cabeza is not None else CODIGO)
         for n in estados:
-            base[f"{acept}/{n}{EXT_PROPIO}"] = "# la corre el corredor propio\n"
+            (cab if n in en_cabeza else base)[f"{acept}/{n}{SUFIJO}"] = "// la corre el corredor propio\n"
         extra, leer = flujo.marcas()
-        rc, salida = montar(propio, base, cabeza or CODIGO, titulo, extra, ejecutables=(CORREDOR_PROPIO,))
+        rc, salida = montar(arriba, base, cab, titulo, extra, ejecutables=(CORREDOR_PROPIO,))
         return rc, salida, {n for n, _ in leer()}
 
     # 1 · Las mismas reglas con cualquiera de las dos (vitest): el mismo pull request de código, con P05 fallando
@@ -246,6 +259,13 @@ def con_otro_corredor(inf, acept, activas):
     rojo_y_nombra(problemas, rc, salida, corrieron, "P05", "P06")
     inf.escenario("Las mismas reglas con cualquiera de las dos (vitest)", problemas, salida if problemas else "")
 
+    #     Con vitest, un archivo «passed» con una prueba saltada no pasa (como con pytest): P05 activa da rojo
+    problemas = []
+    rc, salida, corrieron = con_vitest({"P05_alta": "passed_con_saltada", "P06_baja": "passed"})
+    rojo_y_nombra(problemas, rc, salida, corrieron, "P05", "P06")
+    inf.escenario("Las mismas reglas con cualquiera de las dos (vitest, P05 «passed» con una prueba saltada)", problemas,
+                  salida if problemas else "")
+
     # 2 · El corredor propio de un proyecto: una prueba de P05 que falla da rojo y nombra a P05; todas en PASA, verde
     problemas = []
     rc, salida, corrieron = con_propio({"P05_alta": "FALLA", "P06_baja": "PASA"})
@@ -253,25 +273,45 @@ def con_otro_corredor(inf, acept, activas):
     inf.escenario("El corredor propio de un proyecto (falla P05)", problemas, salida if problemas else "")
 
     rc, salida, corrieron = con_propio({"P05_alta": "PASA", "P06_baja": "PASA"})
-    problemas = [f"no corrió {n}" for n in ("P05_alta", "P06_baja") if n not in corrieron] + flujo.verde(rc, salida)
+    problemas = [f"no corrió {n}{SUFIJO}" for n in ("P05_alta", "P06_baja") if n not in corrieron] + flujo.verde(rc, salida)
     inf.escenario("El corredor propio de un proyecto (todas pasan)", problemas, salida if problemas else "")
 
-    #     Añadido: el corredor sale con otro código que 0: el control falla y dice que no se pudieron correr
-    rc, salida, _ = con_propio({"P05_alta": "PASA", "P06_baja": "PASA"}, sale=3)
-    problemas = []
-    if rc == 0:
-        problemas.append("el control pasó con el corredor saliendo con 3")
-    if not any("no se pudieron correr" in l.lower() for l in flujo.errores(salida)):
-        problemas.append("ningún error dice que las pruebas no se pudieron correr")
+    #     Las mismas reglas en el pull request de escenarios: «Escenarios · P05» que no añade P05 a la lista, verde si su
+    #     prueba falla (FALLA) y rojo si pasa (PASA). P01 ya está activa y pasa
+    for resultado, verde_ in (("FALLA", True), ("PASA", False)):
+        rc, salida, corrieron = con_propio({"P01_alta": "PASA", "P05_alta": resultado}, cabeza={},
+                                           titulo="Escenarios · P05", activas_="P01\n", en_cabeza=("P05_alta",))
+        problemas = [] if "P05_alta" in corrieron else [f"P05_alta{SUFIJO} no corrió"]
+        if verde_:
+            problemas += flujo.verde(rc, salida)
+        elif rc == 0:
+            problemas.append("el control quedó en verde con la prueba de P05 que pasa y P05 fuera de la lista")
+        inf.escenario(f"El corredor propio de un proyecto («Escenarios · P05» sin añadirla, su prueba dice {resultado}: "
+                      f"{'verde' if verde_ else 'rojo'})", problemas, salida if problemas else "")
+
+    #     Añadido: el corredor sale con otro código que 0: el control falla y dice que no se pudieron correr; y el
+    #     corredor se llamó, para que no pase por otra cosa que falle antes
+    rc, salida, corrieron = con_propio({"P05_alta": "PASA", "P06_baja": "PASA"}, sale=3)
+    problemas = [] if corrieron else ["el corredor propio no se llamó: no hay marcas suyas"]
+    rojo_y_dice(problemas, rc, salida, "el corredor saliendo con 3", "no se pudieron correr", minusculas=True)
     inf.escenario("El corredor propio de un proyecto (sale con 3)", problemas, salida if problemas else "")
+
+    #     Con corredor propio y sin SUFIJO (sin declarar, o vacío): rojo, y un error dice «SUFIJO»
+    problemas = []
+    for que, valor in (("SUFIJO sin declarar", None), ("SUFIJO vacío", "")):
+        rc, salida, _ = con_propio({"P05_alta": "PASA", "P06_baja": "PASA"}, arriba={**propio, "SUFIJO": valor})
+        p = []
+        rojo_y_dice(p, rc, salida, que, "SUFIJO")
+        problemas += [f"{que}: {x}" for x in p]
+    inf.escenario("El corredor propio de un proyecto (sin SUFIJO)", problemas, salida if problemas else "")
 
     # 3 · Un archivo que no se corrió cuenta como no corrido: el corredor propio no escribe línea para P05_alta, y el
     #     informe de Vitest no lo trae. Añadido: el corredor dice «NO_CORRIO» de él
     for que, (rc, salida, corrieron), archivo in (
             ("el corredor propio no escribe su línea", con_propio({"P05_alta": "sin_linea", "P06_baja": "PASA"}),
-             f"P05_alta{EXT_PROPIO}"),
+             f"P05_alta{SUFIJO}"),
             ("el corredor propio dice NO_CORRIO", con_propio({"P05_alta": "NO_CORRIO", "P06_baja": "PASA"}),
-             f"P05_alta{EXT_PROPIO}"),
+             f"P05_alta{SUFIJO}"),
             ("el informe de Vitest no lo trae", con_vitest({"P05_alta": "sin_resultado", "P06_baja": "passed"}),
              "P05_alta.test.ts")):
         problemas = []
@@ -288,19 +328,24 @@ def con_otro_corredor(inf, acept, activas):
                                              ("vitest sin el archivo de CONFIG", vitest, True, "CONFIG")):
         rc, salida, _ = con_vitest({"P05_alta": "passed", "P06_baja": "passed"}, arriba=arriba, sin_config=sin_config)
         problemas = []
-        if rc == 0:
-            problemas.append(f"el control pasó con {que}")
-        if palabra not in salida:
-            problemas.append(f"la salida del control no dice «{palabra}»")
+        rojo_y_dice(problemas, rc, salida, que, palabra)
         inf.escenario(f"Sin corredor no hay control ({que})", problemas, salida if problemas else "")
 
-    # Añadido (más allá de los escenarios): el corredor propio es del kit; un pull request que no es «Kit · » y lo
-    # cambia falla, aunque todas las pruebas pasen
-    rc, salida, _ = con_propio({"P05_alta": "PASA", "P06_baja": "PASA"},
-                               cabeza={CORREDOR_PROPIO: corredor_falso({"P05_alta": "PASA", "P06_baja": "PASA"})
-                                       + "# cambio\n", **CODIGO})
+    # 8 · El corredor propio es parte del kit: un pull request que no es «Kit · » y lo cambia falla y nombra el
+    #     corredor, aunque todas las pruebas pasen; uno «Kit · …» que lo cambia queda en verde
+    todas = {"P05_alta": "PASA", "P06_baja": "PASA"}
+    cambio = {CORREDOR_PROPIO: corredor_falso(todas) + "# cambio\n", **CODIGO}
+    rc, salida, _ = con_propio(todas, cabeza=cambio)
     problemas = [] if rc != 0 else ["el control pasó con un pull request «P09 · …» que cambia el corredor propio"]
-    inf.escenario("El corredor propio es del kit (un pull request que no es «Kit · » lo cambia)", problemas,
+    if not any(CORREDOR_PROPIO in l for l in flujo.errores(salida)):
+        problemas.append(f"ningún error nombra el corredor ({CORREDOR_PROPIO})")
+    inf.escenario("El corredor propio es parte del kit (un pull request que no es «Kit · » lo cambia: rojo)", problemas,
+                  salida if problemas else "")
+
+    rc, salida, _ = con_propio(todas, cabeza={CORREDOR_PROPIO: cambio[CORREDOR_PROPIO]},
+                               titulo="Kit · el corredor de aceptación")
+    problemas = flujo.verde(rc, salida)
+    inf.escenario("El corredor propio es parte del kit (un pull request «Kit · …» lo cambia: verde)", problemas,
                   salida if problemas else "")
 
 

@@ -462,20 +462,23 @@ En «Componentes», una columna «Corre en» al final: Tienda web y API corren e
 
 ## Fase F7 · El kit (P29, P30 y P31)
 
-Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase F7, versión 1.30.0). P32 es una pieza técnica y no tiene pruebas.
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase F7, versión 1.30.0). El octavo de P30, «El corredor propio es parte del kit», lo aprobó el mismo día y entró en el plan después. P32 es una pieza técnica y no tiene pruebas.
 
 **Cómo están planteadas.**
 - **P29 y P31, por la apertura.** Se prueban como P23: la organización de mentira de F2 se escribe en una carpeta temporal, se le cambia lo que pide el escenario y se abre la sesión del proyecto con la cuenta de Ana Pérez. P29 lee los avisos de la apertura, las líneas que empiezan por «Desarrollo:». P31 lee los pasos que la apertura pide a la sesión.
 - **P29, también por el lector de la sección.** Es la parte del plugin que lee la sección «Desarrollo» y dice qué falta. La prueba mira qué personas lee en cada rol y qué da como pieza que falta. Lee además dos plantillas del kit como texto: la de la sección y la de las reglas del repositorio.
 - **P30, por el control.** Como P01 a P03: cada prueba monta un repositorio de mentira con un pull request de mentira y corre sobre él la comprobación tal como la entrega el kit. Para Vitest, la prueba escribe un Vitest de mentira. Deja el informe con la misma forma que el de verdad, sin instalar nada. Para el corredor propio escribe un corredor de pocas líneas que responde según el contrato.
 
-**No todo P30 se puede montar hoy.** El arnés de las pruebas del control (`flujo.py`) no deja cambiar por caso la herramienta que declara el control (`CORREDOR`, `CONFIG`). Tampoco deja que un archivo del repositorio de mentira sea ejecutable, y el Vitest de mentira y el corredor propio tienen que serlo. Las filas que usan Vitest, un corredor propio o ningún corredor están escritas enteras, pero no corren. La prueba juzga primero las de pytest; después dice que no se pudo montar y sale con error (2), no con fallo. Cambiar `flujo.py` es del kit y va en un pull request «Kit · » aparte. Hasta entonces, P30 no sale «falla» sino «no se pudo ejecutar».
+**Lo que P30 necesita para correr.** El arnés de las pruebas del control (`flujo.py`) tiene que dejar cambiar por caso el corredor que declara el control y hacer ejecutable un archivo del repositorio de mentira. Eso llega en un pull request «Kit · » aparte, que se une antes que este. Sin él, P30 juzga las filas de pytest y después dice que no se pudo montar porque falta el cambio del kit (salida 2, no fallo). Hacen falta también `node` y `npx` en el PATH, porque el Vitest de mentira es un guion de `node`; sin ellos, P30 tampoco se monta.
 
-**Qué falla hoy.** Hoy fallan, y deben, las filas de «Audita: nadie», «Recibe», las plantillas y P31 «La apertura pide comprobar el repositorio». En P30 fallan la de pytest y dos del identificador que acaba en letra. Ya pasan hoy las filas de lo que tiene que seguir igual: P29 «Los otros tres siguen contando», P31 «En otros proyectos no se dice nada» y las cuatro de «Una pieza ya construida entra pasando» y «Una pieza sin construir tiene que fallar». Esas cuatro ya pasan porque la comprobación de hoy ya trata como activa a una pieza que el mismo pull request de escenarios añade a la lista. También pasan dos de las filas del identificador (abajo). Todas están para que F7 no rompa lo que ya funciona.
+**Qué falla hoy.** Hoy fallan, y deben, las filas de «Audita: nadie», «Recibe», las plantillas y P31 «La apertura pide comprobar el repositorio». En P30, con el arnés del kit, fallan todas las filas menos cinco, porque el control aún no entiende `CORREDOR`. Ya pasan hoy las filas de lo que tiene que seguir igual: P29 «Los otros tres siguen contando», P31 «En otros proyectos no se dice nada», en P30 las cuatro de «Una pieza ya construida entra pasando» y «Una pieza sin construir tiene que fallar» con pytest, y una del identificador (abajo). Esa parte del control ya existe hoy: ya trata como activa a una pieza que el mismo pull request de escenarios añade a la lista. Esas filas son un seguro para que F7 no rompa lo que ya funciona.
+
+«Audita: nadie» ya no da aviso hoy en la apertura. Su fila falla solo por el lector, que lee «nadie» como una persona.
 
 **Queda para la verificación sobre la candidata**, porque estas pruebas no lo ven:
 - que la sesión de verdad compruebe el repositorio que conecta y diga lo que falta;
 - que la comprobación lea bien el informe de un Vitest de verdad (se ve al montarla en un repositorio que lo usa);
+- que una prueba de Vitest marcada con `test.fails` no cuente como que pasa: el informe no la distingue de una que pasa;
 - que la skill `desarrollo` diga cómo adopta el kit un proyecto con el código ya construido;
 - que un seguimiento traiga lo que añade P32.
 
@@ -483,39 +486,44 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase 
 
 | Título que imprime | Situación | Tiene que pasar | Hoy |
 |---|---|---|---|
-| «Audita: nadie» no es algo que falte («Audita: nadie») | La sección del portal dice «Audita: nadie» | El lector no lee a nadie en Audita (lista vacía) y no la da como pieza que falta; ningún aviso «Desarrollo:» de la apertura nombra «Audita» | falla |
-| **Añadido:** lo mismo con «Audita: Nadie» y con «Audita: NADIE» | Lo mismo, con otras mayúsculas | Lo mismo | falla |
+| «Audita: nadie» no es algo que falte («Audita: nadie») | La sección del portal dice «Audita: nadie» | El lector no lee a nadie en Audita (lista vacía) y no la da como pieza que falta; ningún aviso «Desarrollo:» de la apertura nombra «Audita» | falla (por el lector; la apertura ya no avisa) |
+| **Añadido:** lo mismo con «Audita: Nadie» y con «Audita: NADIE» | Lo mismo, con otras mayúsculas | Lo mismo | falla (por el lector) |
 | «Recibe» es opcional | La sección sin línea «Recibe», y otra con «Recibe: Ana Pérez (ana@muestra.mx)» | En las dos, ni el lector ni la apertura avisan de «Recibe». En la segunda, el lector lee en Recibe una sola persona, con el mismo nombre y correo que lee en «Acepta», que en la muestra es la misma persona | falla |
 | Los otros tres siguen contando («Acepta» vacía) | La línea «Acepta:» sin nada detrás | El lector da «Acepta» como pieza que falta y un aviso «Desarrollo:» nombra «Acepta» | ya pasa |
 | Los otros tres siguen contando («Construye» vacía) | Lo mismo con «Construye» | Lo mismo | ya pasa |
 | Los otros tres siguen contando («Administra» vacía) | Lo mismo con «Administra» | Lo mismo | ya pasa |
 | **Añadido:** Los otros tres siguen contando («Audita» vacía) | «Audita:» sin nada, ni «nadie» | Lo mismo: vacía no es «nadie» | ya pasa |
-| Las plantillas llevan los roles | Las plantillas del kit | La plantilla de la sección trae las cinco líneas en su ejemplo y una viñeta por rol en «Qué hace cada rol». La de Audita dice «nadie» y ya no dice «da el sí» ni «decide en los puntos de control»; la de Acepta dice «puntos de control» y «da el sí». Las reglas del repositorio dicen «pregunta a quien acepta» y no «pregunta a quien audita» | falla |
+| Las plantillas llevan los roles | Las plantillas del kit | La plantilla de la sección trae las cinco líneas en su ejemplo y una viñeta por rol en «Qué hace cada rol», cada una con texto detrás del nombre. Las reglas del repositorio dicen «pregunta a quien acepta» y no «pregunta a quien audita». **Añadido, del encargo y no del escenario:** la viñeta de Audita dice «nadie» y ya no dice «da el sí» ni «decide en los puntos de control»; la de Acepta dice «puntos de control» y «da el sí» | falla |
 
 ### P30 · Un control, un corredor por proyecto
 
-| Título que imprime | Situación | Tiene que pasar | Hoy |
+| Título que imprime | Situación | Tiene que pasar | Hoy, con el arnés del kit |
 |---|---|---|---|
 | Las mismas reglas con cualquiera de las dos (pytest) | El control declara `CORREDOR: pytest`; un pull request de código con la prueba de P05 (activa) fallando y la de P06 pasando | El control declara pytest; queda en rojo y el error nombra a P05, no a P06 | falla (el control no declara `CORREDOR`) |
-| Las mismas reglas con cualquiera de las dos (vitest) | El mismo pull request, con `CORREDOR: vitest` y pruebas `.test.ts` | Lo mismo | no se monta |
-| El corredor propio de un proyecto (falla P05) | Un corredor del proyecto dice «FALLA» de la prueba de P05 | Queda en rojo y el error nombra a P05, no a P06 | no se monta |
-| El corredor propio de un proyecto (todas pasan) | El corredor dice «PASA» de todas | Queda en verde | no se monta |
-| **Añadido:** El corredor propio de un proyecto (sale con 3) | El corredor sale con 3 | Queda en rojo y un error dice que las pruebas «no se pudieron correr» | no se monta |
-| Un archivo que no se corrió cuenta como no corrido (el corredor propio no escribe su línea) | El corredor no escribe nada de la prueba de P05 | Queda en rojo y un error nombra el archivo | no se monta |
-| **Añadido:** lo mismo (el corredor propio dice NO_CORRIO) | El corredor dice «NO_CORRIO» de ella | Lo mismo | no se monta |
-| Un archivo que no se corrió cuenta como no corrido (el informe de Vitest no lo trae) | El informe de Vitest no trae la prueba de P05 | Lo mismo | no se monta |
-| Sin corredor no hay control (CORREDOR vacío) | `CORREDOR` vacío | Queda en rojo y la salida dice «CORREDOR» | no se monta |
-| **Añadido:** Sin corredor no hay control (CORREDOR con otra palabra) | `CORREDOR: jest` | Lo mismo | no se monta |
-| Sin corredor no hay control (vitest sin el archivo de CONFIG) | `CORREDOR: vitest` y el archivo de `CONFIG` no existe | Queda en rojo y la salida dice «CONFIG» | no se monta |
+| Las mismas reglas con cualquiera de las dos (vitest) | El mismo pull request, con `CORREDOR: vitest` y pruebas `.test.ts` | Lo mismo | falla |
+| **Añadido:** Las mismas reglas con cualquiera de las dos (vitest, P05 «passed» con una prueba saltada) | El informe da el archivo de P05 como `passed`, con una prueba `skipped` | Queda en rojo y el error nombra a P05: una prueba saltada no cuenta, como con pytest | falla |
+| El corredor propio de un proyecto (falla P05) | Un corredor del proyecto dice «FALLA» de la prueba de P05 | Queda en rojo y el error nombra a P05, no a P06 | falla |
+| El corredor propio de un proyecto (todas pasan) | El corredor dice «PASA» de todas | Corren las dos y queda en verde | falla |
+| El corredor propio de un proyecto («Escenarios · P05» sin añadirla, su prueba dice FALLA: verde) | Con el corredor propio, «Escenarios · P05» trae la prueba de P05 y no la añade a la lista; el corredor dice «FALLA» | Corre y queda en verde | falla |
+| El corredor propio de un proyecto («Escenarios · P05» sin añadirla, su prueba dice PASA: rojo) | Lo mismo; el corredor dice «PASA» | Corre y queda en rojo | falla (no corre) |
+| **Añadido:** El corredor propio de un proyecto (sale con 3) | El corredor sale con 3 | El corredor se llamó; queda en rojo y un error dice que las pruebas «no se pudieron correr» | falla |
+| **Añadido, del encargo:** El corredor propio de un proyecto (sin SUFIJO) | Corredor propio con `SUFIJO` sin declarar, y con `SUFIJO` vacío | En los dos, queda en rojo y un error dice «SUFIJO» | falla |
+| Un archivo que no se corrió cuenta como no corrido (el corredor propio no escribe su línea) | El corredor no escribe nada de la prueba de P05 | Queda en rojo y un error nombra el archivo | falla |
+| **Añadido:** lo mismo (el corredor propio dice NO_CORRIO) | El corredor dice «NO_CORRIO» de ella | Lo mismo | falla |
+| Un archivo que no se corrió cuenta como no corrido (el informe de Vitest no lo trae) | El informe de Vitest no trae la prueba de P05 | Lo mismo | falla |
+| Sin corredor no hay control (CORREDOR vacío) | `CORREDOR` vacío | Queda en rojo y un error dice «CORREDOR» | falla |
+| **Añadido:** Sin corredor no hay control (CORREDOR con otra palabra) | `CORREDOR: jest` | Lo mismo | falla |
+| Sin corredor no hay control (vitest sin el archivo de CONFIG) | `CORREDOR: vitest` y el archivo de `CONFIG` no existe | Queda en rojo y un error dice «CONFIG» | falla |
 | Un identificador puede acabar en letra («H22a · …» toma solo las de H22a) | H22, H22a y H22b con prueba; solo H22a activa y su prueba pasa; las otras fallarían | Corre solo la de H22a y queda en verde | falla |
 | **Añadido:** Un identificador puede acabar en letra («H22 · …» no toma las de H22a ni H22b) | Al revés: H22 activa y pasando | Corre solo la de H22 y queda en verde | ya pasa |
-| Un identificador puede acabar en letra («Escenarios · H22a» con un archivo de H22b) | «Escenarios · H22a» trae `H22a_x.py` y `H22b_x.py` | Queda en rojo y un error nombra `H22b_x.py` | ya pasa (hoy, porque no reconoce ninguno de los dos) |
+| Un identificador puede acabar en letra («Escenarios · H22a» con un archivo de H22b) | «Escenarios · H22a» trae `H22a_x.py` y `H22b_x.py` | Queda en rojo; un error nombra `H22b_x.py` y ninguno `H22a_x.py` | falla (hoy no reconoce ninguno de los dos) |
 | **Añadido:** Un identificador puede acabar en letra («Escenarios · H22a» con solo lo suyo) | «Escenarios · H22a» trae solo `H22a_x.py`, que falla como debe | Queda en verde | falla |
 | Una pieza ya construida entra pasando (la añade y su prueba pasa: verde) | «Escenarios · P05» añade P05 a la lista y su prueba pasa | Queda en verde | ya pasa |
 | Una pieza ya construida entra pasando (la añade y su prueba falla: rojo) | Lo mismo, y su prueba falla | Queda en rojo | ya pasa |
 | Una pieza sin construir tiene que fallar (no la añade y su prueba falla: verde) | «Escenarios · P05» sin tocar la lista; su prueba falla | Queda en verde | ya pasa |
 | Una pieza sin construir tiene que fallar (no la añade y su prueba pasa: rojo) | Lo mismo, y su prueba pasa | Queda en rojo | ya pasa |
-| **Añadido, más allá de los escenarios:** El corredor propio es del kit (un pull request que no es «Kit · » lo cambia) | «P09 · …» cambia el corredor propio, y todas las pruebas pasan | Queda en rojo | no se monta |
+| El corredor propio es parte del kit (un pull request que no es «Kit · » lo cambia: rojo) | «P09 · …» cambia el corredor propio, y todas las pruebas pasan | Queda en rojo y un error nombra la ruta del corredor | falla |
+| El corredor propio es parte del kit (un pull request «Kit · …» lo cambia: verde) | «Kit · …» cambia solo el corredor propio, y todas las pruebas pasan | Queda en verde | falla |
 
 ### P31 · El kit, montado o dicho
 
@@ -530,17 +538,18 @@ Lo que pedía P23 sigue ahí: sus pruebas siguen en la lista de activas y siguen
 
 1. «La apertura no avisa» (P29) se mira en dos sitios: en el lector de la sección (no da el rol como pieza que falta) y en las líneas «Desarrollo:» de los avisos de la apertura (ninguna nombra el rol).
 2. «Lee a la persona como en los otros roles» (P29): mismo nombre y mismo correo que la misma persona escrita en «Acepta». El usuario de GitHub no se compara, porque la muestra no lo trae.
-3. En las plantillas (P29), las palabras se buscan sin distinguir mayúsculas, y la viñeta de un rol llega hasta la siguiente viñeta.
+3. En las plantillas (P29), las palabras se buscan sin distinguir mayúsculas, y la viñeta de un rol llega hasta la siguiente viñeta. «Explica las cinco líneas» es que cada viñeta tiene texto detrás del nombre.
 4. «Junto a él» (P31) es el paso de antes o el de después del que nombra los repositorios. Todas las palabras tienen que estar en un mismo paso. «CLAUDE.md» se busca tal cual; las demás, sin distinguir mayúsculas.
 5. En la campaña (P31), «no dice nada» se mira solo en lo que la apertura pide responder, no en toda la apertura.
-6. «Nombra la pieza» y «nombra el archivo» (P30) son como en P01 a P03: van en un mensaje de error de la comprobación. «Dice qué falta» es que la salida lleva «CORREDOR» o «CONFIG» tal cual.
-7. Con un corredor propio, el contrato no dice cómo se llaman los archivos de prueba. La prueba usa `<pieza>_<nombre>.py`, el nombre que ya se admite hoy.
+6. «Nombra la pieza», «nombra el archivo», «nombra el corredor» y «dice qué falta» (P30) se buscan en los mensajes de error de la comprobación, como en P01 a P03, no en toda su salida: «CORREDOR», «CONFIG» y «SUFIJO» tal cual; «no se pudieron correr», sin distinguir mayúsculas.
+7. Con un corredor propio, los archivos de prueba terminan en el `SUFIJO` que declara el proyecto. La prueba usa `_test.go`, que no es `.py` ni `.test.ts`, para que no pase por el nombre de hoy.
 8. El Vitest de mentira toma los archivos que le pasan como Vitest, que filtra por la ruta. Sin argumentos los toma todos.
+9. «Las mismas reglas» del corredor propio se prueban también en el pull request de escenarios: la pieza sin construir tiene que fallar con él como con pytest.
 
 ### Lo que queda sabido
 
-- P30 necesita, para montar lo que no es pytest, que `flujo.py` deje fijar por caso el `env:` de arriba del workflow y hacer ejecutable un archivo del repositorio de mentira. Mientras tanto, la prueba de P30 sale con error (2).
-- `flujo.py` comprueba siempre que haya pytest, también en los casos que usan Vitest o un corredor propio.
+- P30 necesita el arnés del pull request «Kit · » de `flujo.py`, que se une antes que este, y `node` y `npx` en el PATH.
 - La forma de los argumentos con que el control llama a Vitest («…» en el contrato) no está cerrada: el Vitest de mentira admite archivos, carpetas o trozos de ruta.
-- Las pruebas buscan palabras, no el sentido: un paso que dijera «no compruebes el corredor» también pasaría. Eso lo ve quien verifica.
-- Las filas de P30 que ya pasan hoy (las cuatro de la pieza construida y sin construir, y dos del identificador) no prueban nada nuevo de P30: son un seguro para que no se rompa.
+- Las pruebas buscan palabras, no el sentido: un paso que dijera «no compruebes el corredor» también pasaría. Eso lo ve quien verifica. «Una línea» ya está hoy en el paso de la apertura que nombra los repositorios; lo que le falta es lo demás.
+- `test.fails` de Vitest no se distingue en el informe: queda para la verificación.
+- Las filas de P30 que ya pasan hoy (las cuatro de la pieza construida y sin construir con pytest, y una del identificador) no prueban nada nuevo de P30: esa parte del control ya existe y son un seguro para que no se rompa.
