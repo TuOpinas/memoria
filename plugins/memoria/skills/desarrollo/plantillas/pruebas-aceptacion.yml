@@ -65,7 +65,7 @@ on:
     types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
-concurrency:                                   # una sola corrida por pull request: editar el título la repite
+concurrency:                                   # si llega otra corrida, cancela la anterior; editar el título o la descripción la repite
   group: aceptacion-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 env:
