@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Prueba el workflow de la plantilla del kit de desarrollo (1.27), skills/desarrollo/plantillas/pruebas-aceptacion.yml:
 falla si un mismo pull request cambia las pruebas de aceptación y algo fuera de ellas, y pasa si cambia solo una de las
-dos cosas (tecnologia/metodologia-desarrollo#2026-11-19-2).
+dos cosas (tecnologia/metodologia-desarrollo#2026-11-19-2). Desde la 1.30.0 corre con el corredor que declara CORREDOR
+(shared-memory/plugin-memoria#2026-11-25-5): aquí, pytest y un corredor propio de pocas líneas; vitest lo prueba P30.
 
 Uso: python3 pruebas/sesion/probar_pruebas_aceptacion.py
 Saca el script del paso del workflow y lo corre con bash en un repositorio de git temporal, como lo correría GitHub con
@@ -27,7 +28,7 @@ def script(paso="Las pruebas de aceptación van en su propio pull request"):
     m = re.compile(r"^(\s*)run: \|\n((?:\1  .*\n|\s*\n)+)", re.M).search(texto, i)
     sangria = len(m.group(1)) + 2
     cuerpo = "".join(l[sangria:] + "\n" for l in m.group(2).rstrip("\n").split("\n"))
-    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"').strip("'") for k in ("ACEPTACION", "ACTIVAS", "PRUEBA", "FALLAN")}
+    env = {k: re.search(rf"^\s*{k}:\s*(\S.*?)\s*(?:#.*)?$", texto, re.M).group(1).strip('"').strip("'") for k in ("ACEPTACION", "ACTIVAS", "CORREDOR", "CONFIG", "SUFIJO")}
     return cuerpo, env
 
 
@@ -51,7 +52,7 @@ def repo(sin_carpeta=False):
     return d, git(d, "rev-parse", "HEAD")
 
 
-def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0):
+def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0, env_wf=None):
     """Aplica los cambios en una rama y corre el primer paso; devuelve (código de salida, salida). lista: el texto de la
     lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama."""
     d, base = repo(sin_carpeta)
@@ -88,8 +89,10 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
         git(d, "checkout", "-q", "pieza")
     cuerpo, envw = script()
     env = dict(os.environ, BASE=base, HEAD=git(d, "rev-parse", "HEAD"), ACEPTACION=acept if acept is not None else envw["ACEPTACION"],
-               RUNNER_TEMP=tempfile.mkdtemp(), ACTIVAS=envw["ACTIVAS"], TITULO=titulo)
+               RUNNER_TEMP=tempfile.mkdtemp(), ACTIVAS=envw["ACTIVAS"], TITULO=titulo, CORREDOR=envw["CORREDOR"],
+               CONFIG=envw["CONFIG"], SUFIJO=envw["SUFIJO"])
     env.pop("GITHUB_WORKFLOW_REF", None)   # en el CI de este repositorio apunta a pruebas.yml, no al workflow que se prueba
+    env.update(env_wf or {})
     p = subprocess.run(["bash", "-c", cuerpo], cwd=d, env=env, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
 
@@ -150,18 +153,23 @@ c, o = pr([("escribir", "app/main.py", None), ("escribir", "tests/aceptacion-no/
 ok(c == 1 and " · »" in o, "tampoco se cuela si la prueba de la pieza lleva acento en el nombre")
 c, o = pr([("escribir", "app/main.py", None)], titulo="Arreglo de un texto")
 ok(c == 0, "un título sin pieza sigue pasando: es «fuera del plan», y lo dice el seguimiento")
+for sufijo in ("*.spec.ts", "\\.spec.ts"):
+    c, o = pr([("escribir", "app/main.py", None)], env_wf={"CORREDOR": "./corredor", "SUFIJO": sufijo})
+    ok(c == 1 and "SUFIJO" in "\n".join(l for l in o.splitlines() if "::error::" in l), f"un SUFIJO «{sufijo}», con comodín o contrabarra, falla y lo dice")
 
 print("Las piezas activas y los pull requests de escenarios")
 CUERPO2, ENVW = script("Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios")
 
 
 CUERPOS = {"pasa": "def test_caso():\n    assert True\n", "falla": "def test_caso():\n    assert False\n",
-           "rota": "def test_caso(:\n", "saltada": "import pytest\n\n\ndef test_caso():\n    pytest.skip('luego')\n"}
+           "rota": "def test_caso(:\n", "saltada": "import pytest\n\n\ndef test_caso():\n    pytest.skip('luego')\n",
+           "vacia": "x = 1\n"}
 
 
-def activas(pruebas, lista, titulo, prueba=None, archivos=None, carpeta="tests/aceptacion"):
-    """pruebas: {pieza: pasa | falla | rota | saltada}, cada una en su archivo «<pieza>_caso.py» (o los de «archivos»,
-    {nombre: resultado}); lista: el texto de ACTIVAS o None; corre el segundo paso con el título, con pytest."""
+def activas(pruebas, lista, titulo, corredor=False, archivos=None, carpeta="tests/aceptacion", entorno=None):
+    """pruebas: {pieza: pasa | falla | rota | saltada | vacia}, cada una en su archivo «<pieza>_caso.py» (o los de
+    «archivos», {nombre: resultado}); lista: el texto de ACTIVAS o None; corre el segundo paso con el título, con pytest
+    o, con «corredor» (el texto de un guion; None si no existe), con un corredor propio, ./corredor, y SUFIJO .py."""
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
     for p, r in pruebas.items():
@@ -171,8 +179,16 @@ def activas(pruebas, lista, titulo, prueba=None, archivos=None, carpeta="tests/a
     if lista is not None:
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
-    env = dict(os.environ, ACEPTACION=carpeta, ACTIVAS=ENVW["ACTIVAS"], PRUEBA=prueba or ENVW["PRUEBA"], FALLAN=ENVW["FALLAN"],
-               TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
+    propio = {}
+    if corredor is not False:
+        propio = {"CORREDOR": "./corredor", "SUFIJO": ".py"}
+        if corredor:
+            (d / "corredor").write_text(corredor, encoding="utf-8")
+            (d / "corredor").chmod(0o755)
+    env = dict(os.environ, ACEPTACION=carpeta, ACTIVAS=ENVW["ACTIVAS"], CORREDOR=ENVW["CORREDOR"], CONFIG=ENVW["CONFIG"],
+               SUFIJO=ENVW["SUFIJO"], TITULO=titulo, RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
+    env.update(propio)
+    env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
@@ -181,7 +197,7 @@ def errores(o):
     return "\n".join(l for l in o.splitlines() if "::error::" in l)
 
 
-ok("{archivos}" in ENVW["PRUEBA"] and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y PRUEBA con {archivos}")
+ok(ENVW["CORREDOR"] == "pytest" and ENVW["ACTIVAS"].endswith(".txt"), "la plantilla trae ACTIVAS y «CORREDOR: pytest»")
 c, o = activas({"P01": "falla"}, None, "Escenarios · P01")
 ok(c == 0, "un pull request de escenarios se une en verde si sus pruebas fallan")
 c, o = activas({"P01": "pasa"}, None, "Escenarios · P01")
@@ -218,8 +234,7 @@ ok(c == 1 and "P1 está en la lista" in errores(o), "una pieza activa sin archiv
 c, o = activas({"P1": "rota", "P2": "pasa"}, "P1\nP2\n", "P9 · x")
 ok(c == 1 and " P1," in errores(o) and "P2" not in errores(o), "un archivo que no carga cuenta contra su pieza")
 
-print("«Fallan» quiere decir que fallaron como pruebas (FALLAN)")
-ok(ENVW["FALLAN"] == "1", "la plantilla trae FALLAN, el código de pytest para pruebas fallidas")
+print("«Fallan» quiere decir que fallaron como pruebas")
 c, o = activas({}, None, "Escenarios · P01")
 ok(c == 1 and "No hay pruebas de P01" in o, "sin pruebas de la pieza: falla y dice cómo se llaman sus archivos")
 c, o = activas({"P01": "rota"}, None, "Escenarios · P01")
@@ -227,15 +242,21 @@ ok(c == 1 and "no fallaron como pruebas" in o, "un error al cargarlas: falla y l
 for titulo, lista in (("Escenarios · P01", None), ("P9 · x", "P01\n")):
     c, o = activas({"P01": "pasa" if lista else "falla"}, lista, titulo, archivos={"conftest.py": "rota"})
     ok(c == 1 and ("no fallaron como pruebas" in o or "no se pudieron correr" in o), f"un conftest.py que no carga (salida 4) en «{titulo}»: falla y lo dice")
-c, o = activas({"P01": "pasa"}, "P01\n", "P9 · x", prueba=ENVW["PRUEBA"] + " --co")
-ok(c == 1 and "Ninguna prueba de aceptación de P01 corrió" in o, "unas pruebas que se recogen y no corren no cuentan como pasadas")
+c, o = activas({"P01": "vacia"}, "P01\n", "P9 · x")
+ok(c == 1 and "P01, que ya cuenta, no corrió" in errores(o), "un archivo sin pruebas, que no corre, no cuenta como pasado")
 for carpeta in ("./tests/aceptacion", "tests/aceptacion//"):
     c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P9 · x", carpeta=carpeta, archivos={"P01_con espacio.py": "pasa"})
     ok(c == 1 and " P02," in errores(o) and "P01" not in errores(o), f"con ACEPTACION «{carpeta}» y un archivo con espacio, el error nombra solo la que falla")
-c, o = activas({"P01": "falla"}, None, "Escenarios · P01", prueba="ejecutor-que-no-existe {archivos}")
-ok(c == 1 and "no fallaron como pruebas" in o, "el ejecutor sin instalar: falla y lo dice")
-c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P03 · x", prueba="cat > /dev/null; " + ENVW["PRUEBA"])
-ok(c == 1 and "P02" in errores(o), "un comando que lee la entrada estándar no se come la lista")
+c, o = activas({"P01": "falla"}, None, "Escenarios · P01", corredor=None)
+ok(c == 1 and "no se pudieron correr" in o, "el corredor que no está: falla y lo dice")
+SIN_PYTEST = pathlib.Path(tempfile.mkdtemp())   # un python3 que no ve lo instalado: «No module named pytest»
+(SIN_PYTEST / "python3").write_text(f'#!/bin/sh\nexec "{sys.executable}" -I -S "$@"\n', encoding="utf-8")
+(SIN_PYTEST / "python3").chmod(0o755)
+c, o = activas({"P01": "falla"}, None, "Escenarios · P01", entorno={"PATH": f"{SIN_PYTEST}{os.pathsep}{os.environ['PATH']}"})
+ok(c == 1 and "pytest no está instalado" in errores(o), "con pytest sin instalar, un «Escenarios · P01» falla y lo dice")
+LEE = '#!/usr/bin/env bash\ncat > /dev/null\nfor f; do case "$f" in *P02_*) echo "FALLA $f" ;; *) echo "PASA $f" ;; esac; done\n'
+c, o = activas({"P01": "pasa", "P02": "falla"}, "P01\nP02\n", "P03 · x", corredor=LEE)
+ok(c == 1 and "P02" in errores(o) and "P01" not in errores(o), "un corredor que lee la entrada estándar no se come la lista")
 
 print("La configuración del ejecutor de fuera de la carpeta no pone en verde las pruebas (con pytest de verdad)")
 TRAMPAS = {
@@ -251,7 +272,7 @@ TRAMPAS = {
 def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro=None, extra=None, entorno=None,
                cabecera=""):
     """Un repositorio con la prueba de P01 en la carpeta y un archivo de fuera que intenta ponerla en verde; corre el
-    segundo paso con el PRUEBA de la plantilla."""
+    segundo paso con el pytest de la plantilla."""
     d = pathlib.Path(tempfile.mkdtemp())
     (d / "tests/aceptacion").mkdir(parents=True)
     (d / "tests/aceptacion/P01_caso.py").write_text(f"{cabecera}def test_p01_caso({'dato' if conftest_dentro else ''}):\n    {prueba_p01}\n", encoding="utf-8")
@@ -266,8 +287,8 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
     if lista is not None:
         (d / ".github").mkdir()
         (d / ".github/piezas-activas.txt").write_text(lista, encoding="utf-8")
-    env = dict(os.environ, ACEPTACION=ENVW["ACEPTACION"], ACTIVAS=ENVW["ACTIVAS"], PRUEBA=ENVW["PRUEBA"],
-               FALLAN=ENVW["FALLAN"], TITULO=titulo,
+    env = dict(os.environ, ACEPTACION=ENVW["ACEPTACION"], ACTIVAS=ENVW["ACTIVAS"], CORREDOR=ENVW["CORREDOR"],
+               CONFIG=ENVW["CONFIG"], SUFIJO=ENVW["SUFIJO"], TITULO=titulo,
                RUNNER_TEMP=tempfile.mkdtemp(), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTEST_ADDOPTS="", PYTEST_PLUGINS="")
     env.update(entorno or {})
     r = subprocess.run(["bash", "-c", CUERPO2], cwd=d, env=env, capture_output=True, text=True)
@@ -277,7 +298,7 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
 yml = YML.read_text(encoding="utf-8")
 ok(all(f'{v}: ""' in yml for v in ("PYTEST_ADDOPTS", "PYTEST_PLUGINS")) and 'PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in yml,
    "el paso no carga solos los plugins que instala el código, ni lee PYTEST_ADDOPTS o PYTEST_PLUGINS del entorno")
-ok(all(x in ENVW["PRUEBA"] for x in ("-c /dev/null", '--confcutdir="$ACEPTACION"', "--rootdir=.")), "PRUEBA no lee la configuración de fuera")
+ok(all(x in yml for x in ("pytest -c /dev/null", '--confcutdir="$dir"', "--rootdir=.")), "pytest no lee la configuración de fuera")
 try:
     import pytest as _pytest  # noqa: F401
     hay_pytest = True

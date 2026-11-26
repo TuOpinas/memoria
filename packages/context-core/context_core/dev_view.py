@@ -102,10 +102,21 @@ def _list(cell: str) -> list:
     return [x.strip() for x in SEPARATOR.split(cell) if x.strip()]
 
 
+# The identifier of a piece or a phase: letters, digits and at most one letter at the end (P01, H22a), as the tests
+# control reads it. The readers here and the board's generator use this one definition (review of 1.30.0, finding 3).
+PIECE_ID = r"[A-Za-z]+\d+[A-Za-z]?"
+
+
+def piece_key(raw: str) -> str:
+    """«p02A» -> «P02a»: the leading letters in capitals and the final one in lower case, so plan and follow-up match."""
+    m = re.match(r"^([A-Za-z]+)(\d+)([A-Za-z]?)$", raw)
+    return m.group(1).upper() + m.group(2) + m.group(3).lower() if m else raw
+
+
 def _split_id(cell: str) -> tuple:
-    """«P01 · Lista de productos» -> ("P01", "Lista de productos"); «F1» -> ("F1", "")."""
-    m = re.match(r"^\s*([A-Za-z]+\d+)\s*(?:[·:—-]\s*(.*))?$", _clean(cell))
-    return (m.group(1).upper(), (m.group(2) or "").strip()) if m else ("", _clean(cell))
+    """«P01 · Lista de productos» -> ("P01", "Lista de productos"); «F1» -> ("F1", ""); «P02a» -> ("P02a", "")."""
+    m = re.match(r"^\s*(" + PIECE_ID + r")\s*(?:[·:—-]\s*(.*))?$", _clean(cell))
+    return (piece_key(m.group(1)), (m.group(2) or "").strip()) if m else ("", _clean(cell))
 
 
 def _paragraph(body: str) -> str:
@@ -363,7 +374,7 @@ def _hours(cell: str, pid: str, warn):
     return int(v) if v == int(v) else v
 
 
-_PLAIN = re.compile(r"^###\s+([A-Za-z]+\d+)\s*[·:—-]?\s*(?:en llano|in plain words)\s*$", re.I)
+_PLAIN = re.compile(r"^###\s+(" + PIECE_ID + r")\s*[·:—-]?\s*(?:en llano|in plain words)\s*$", re.I)
 
 
 def read_plan(text: str) -> tuple:
@@ -389,7 +400,7 @@ def read_plan(text: str) -> tuple:
         for l in _nfc(sec[1]).split("\n"):
             m = _PLAIN.match(l.strip())
             if m:
-                cur = plain.setdefault(m.group(1).upper(), [])
+                cur = plain.setdefault(piece_key(m.group(1)), [])
             elif l.startswith("### "):
                 cur = None
             elif cur is not None:
@@ -426,9 +437,9 @@ def read_plan(text: str) -> tuple:
     sec = secs.get(key("Hecha cuando"))
     cur, scen = None, None
     for l in (_nfc(sec[1]).split("\n") if sec else []):
-        m = re.match(r"^###\s+([A-Za-z]+\d+)\b", l)
+        m = re.match(r"^###\s+(" + PIECE_ID + r")\b", l)
         if m:
-            cur, scen = by_id.get(m.group(1).upper()), None
+            cur, scen = by_id.get(piece_key(m.group(1))), None
             continue
         if cur is None:
             continue

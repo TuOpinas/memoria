@@ -4,7 +4,8 @@ out; no I/O, no network, no clock.
 A project is a development project when its proyecto.md has a «## Desarrollo» section
 (tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the
 design, the plan and the follow-up) and names the people of each role. This module reads the section and says which
-pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`
+pieces are missing; it reads nothing else. «Audita» may say «nadie» and «Recibe» is an optional line (1.30.0,
+shared-memory/plugin-memoria#2026-11-25-4). The design, the plan and the follow-up are read for the board by `dev_view`
 (1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the
 plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).
 
@@ -19,12 +20,14 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 __all__ = [
-    "SECTION", "PATH_KEYS", "ROLE_KEYS", "ALL_KEYS", "TO_BUILD", "DevPerson", "DevSection", "Missing",
+    "SECTION", "PATH_KEYS", "ROLE_KEYS", "OPTIONAL_KEYS", "ALL_KEYS", "TO_BUILD", "NOBODY", "DevPerson", "DevSection",
+    "Missing",
     "key", "development_section", "missing_pieces", "seccion_desarrollo", "piezas_faltantes",
 ]
 
 SECTION = "Desarrollo"
 TO_BUILD = "por crear"
+NOBODY = "nadie"                                # what «Audita» says when the project has no audit
 
 # the section's keys, as written in the template (plantilla-seccion-desarrollo.md), in their order
 REPOSITORIES = "Repositorios"
@@ -35,7 +38,11 @@ PLAN = "Plan"
 FOLLOW_UP = "Seguimiento"
 STEP_TO_PROD = "Paso a Prod"
 PATH_KEYS = (PLATFORM, REPOSITORY_CONFIG, DESIGN, PLAN, FOLLOW_UP)
-ROLE_KEYS = ("Acepta", "Audita", "Construye", "Administra")
+AUDIT = "Audita"
+RECEIVES = "Recibe"
+ROLE_KEYS = ("Acepta", AUDIT, "Construye", "Administra", RECEIVES)
+OPTIONAL_KEYS = (RECEIVES,)                     # without its line, or with it empty, nothing is missing
+MAY_BE_NOBODY = (AUDIT,)                        # «nadie» is a value, not a person
 ALL_KEYS = (REPOSITORIES,) + PATH_KEYS + (STEP_TO_PROD,) + ROLE_KEYS
 
 SEPARATOR = re.compile(r"\s+·\s+")          # « · » between values; a bare «·» inside a name is not a separator
@@ -109,6 +116,7 @@ class DevSection:
     roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]
     present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling
     to_build: list = field(default_factory=list)           # the keys whose value is «por crear»
+    nobody: list = field(default_factory=list)             # the roles that say «nadie» (only MAY_BE_NOBODY)
     unknown: list = field(default_factory=list)            # lines of the section it does not recognise
     warnings: list = field(default_factory=list)
 
@@ -169,6 +177,10 @@ def development_section(project_text: str) -> DevSection:
             elif k in ROLE_KEYS:
                 out.roles[k] = []
             continue
+        if k in MAY_BE_NOBODY and key(value) == NOBODY:
+            out.nobody.append(k)
+            out.roles[k] = []
+            continue
         if k == REPOSITORIES:
             for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):
                 # pegado como enlace de GitHub: se queda con organización/repositorio
@@ -206,11 +218,14 @@ class Missing:
 def missing_pieces(section: DevSection, exists: Callable[[str], bool]) -> list:
     """The lines of the section that are missing or point to a file that is not there, with `exists(path)` saying
     whether a path from the root exists. «Seguimiento: por crear» does not count: the plugin creates it at the first
-    follow-up. Empty for a project without the section."""
+    follow-up; neither does an optional line that is not there, nor «Audita: nadie». Empty for a project without the
+    section."""
     if not section.found:
         return []
     out = []
     for k in ALL_KEYS:
+        if k in section.nobody or k in OPTIONAL_KEYS:
+            continue
         if k not in section.present:
             out.append(Missing(k, "sin línea"))
         elif k in section.to_build:
