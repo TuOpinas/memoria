@@ -58,6 +58,9 @@ on:
     types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
+concurrency:                                   # una sola corrida por pull request: editar el título la repite
+  group: aceptacion-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 env:
   ACEPTACION: tests/aceptacion                 # la carpeta de las pruebas de aceptación
   ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
