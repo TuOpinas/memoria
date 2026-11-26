@@ -2425,12 +2425,16 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                      f"si list_artifacts trae un «Tablero {ORGANIZACION or '<organización>'}» de esta cuenta, se lee y se enseña como dice el anexo cola.md de la skill sesion. Sin el conector o sin tablero, nada, y no se dice.")
     # un proyecto de desarrollo se construye en remoto (1.29.1, P23): antes de trabajar, la sesión conecta sus repositorios con
     # escritura, y el que no puede lo dice en una línea y sigue. Solo con la sección «## Desarrollo» y repositorios en ella.
+    # En cada uno comprueba el kit en el clon, sin leer GitHub, y dice en una línea lo que falta (1.30.0, P31).
     kit_ = globals().get("KIT")
     if completa and not sin_proyecto and kit_ is not None and kit_.found and kit_.repositories:
         pasos.append("Conecta con escritura, antes de trabajar, cada repositorio de «Repositorios:» de este proyecto ("
                      + " · ".join(kit_.repositories) + "): con la herramienta que añade repositorios a la sesión, con acceso de escritura, y después clónalo "
                      "como diga su resultado. Todo el desarrollo se hace en remoto, ahí, nunca en la computadora de la persona. Si uno no se puede conectar, "
-                     "dilo en una línea con su nombre y el motivo que dé la herramienta, y sigue con lo demás.")
+                     "dilo en una línea con su nombre y el motivo que dé la herramienta, y sigue con lo demás. En cada uno que conectes, comprueba en el clon "
+                     "que tiene el kit: el CLAUDE.md con las reglas del kit, el control de pruebas de aceptación (.github/workflows/pruebas-aceptacion.yml) "
+                     "y su corredor (el que dice CORREDOR: con vitest, el archivo de CONFIG; con uno propio, su archivo, ejecutable). Si algo falta, dilo en "
+                     "una línea por repositorio («<repositorio>: falta …») y propón montarlo con las plantillas de la skill desarrollo; no lo montes sin un sí.")
     # con un proyecto que no se pudo leer, la apertura sale igual, con el recuadro, y la respuesta pregunta cuál era (1.24.9)
     pasos.append(f"Di en una línea que «{ACTIVO}» no se encuentra (no existe, es restringido o no está descargado) y pregunta cuál se abre, con los proyectos de su área del bloque Proyectos de arriba; "
                  "no lo crees sin que lo pidan (la skill nuevo)." if sin_proyecto else
