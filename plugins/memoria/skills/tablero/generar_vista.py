@@ -3184,8 +3184,9 @@ def _tablas(lineas):
 
 
 def datos_por_grupos(vista, texto_diseno):
-    """«diseno.grupos»: la tabla «Grupos» de «Datos», en su orden, o [] sin ella, con un aviso que dice qué añadir; y un
-    aviso por cada entidad cuyo «Grupo» no está en la tabla."""
+    """«diseno.grupos»: la tabla «Grupos» de «Datos», en su orden, o [] sin ella, con un aviso que dice qué añadir; un
+    aviso con las entidades cuyo «Grupo» no está en la tabla, y uno por cada relación con un grupo que no está en ella. Los
+    grupos se comparan sin mayúsculas ni acentos, y se quedan con el nombre que tienen en la tabla."""
     d = vista.get("diseno")
     if d is None:
         return
@@ -3211,6 +3212,12 @@ def datos_por_grupos(vista, texto_diseno):
         d["grupos"].append({"nombre": _cell(r, c["Grupo"]), "en_corto": _cell(r, c["En corto"]),
                             "papel": papel if papel in ("centro", "aparte") else "", "relaciones": rel})
     nombres = {_clave_dev(g["nombre"]): g["nombre"] for g in d["grupos"]}
+    for g in d["grupos"]:
+        for r in g["relaciones"]:
+            if _clave_dev(r["con"]) in nombres:
+                r["con"] = nombres[_clave_dev(r["con"])]
+            else:
+                avisar(f"el grupo «{g['nombre']}» se relaciona con «{r['con']}», que no está en la tabla «Grupos»: no se dibuja esa línea")
     for e in d.get("entidades") or []:   # «ventas» es «Ventas»: la entidad lleva el nombre del grupo como en su tabla
         e["grupo"] = nombres.get(_clave_dev(e.get("grupo") or ""), e.get("grupo"))
     fuera = [e for e in d.get("entidades") or [] if _clave_dev(e.get("grupo") or "") not in nombres]
