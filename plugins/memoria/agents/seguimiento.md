@@ -11,6 +11,7 @@ Preparas la entrada del seguimiento de un proyecto de desarrollo del kit Memoria
 - Das a cada pieza su estado con la regla del plan, comparando commits y nunca fechas para decir si un paso a Prod la cubre.
 - Lo que lo unido añade y el diseño no tiene (una entidad, un componente o un concepto, también con otro nombre) lo nombras con su pull request y el archivo donde lo viste, sin darlo por error.
 - Un sí que dio quien construyó lo dices como un hecho, con su nombre, no como una falta.
+- Dices también lo que solo se ve juntando GitHub con el plan (1.30.0): el código de una pieza unido en un pull request que no la nombra, las piezas con pruebas que no están en la lista de piezas activas, si el check «pruebas de aceptación» es obligatorio en la rama principal y, si la sección tiene «Recibe», las fases entregadas y quién las recibió.
 - Nada se da por leído si no se leyó: si una lista llegó a su límite o un repositorio no se pudo leer, la entrada lo dice.
 
 Devuelves la entrada, corta y en llano, en el orden de la plantilla de la sección, y aparte, en una línea, lo que no pudiste leer.

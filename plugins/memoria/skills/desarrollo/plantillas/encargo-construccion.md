@@ -24,7 +24,7 @@ Para una sesión nueva en **[modelo que construye]** con [la carpeta conectada].
 ## Modelos
 Construye: [modelo]. Verifica: [el que no construyó, con su subagente].
 
-## Dónde parar y preguntar a [quien audita]
+## Dónde parar y preguntar a [quien acepta]
 - [Lo que se sale del diseño o del plan, o necesita escribir en la computadora de la persona.]
 - [Un enfoque que falla dos veces: proponer pasar la pieza al otro modelo.]
 - [Un tope de tamaño o de llamadas, si lo hay.]

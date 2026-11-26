@@ -52,7 +52,7 @@ def _context_core():
     'rules': '11b5a591b02632ccf7f2fd2df551f16305ee58245e86f15e847f357e241ade45',
     'compat': '2d7b357ba25bef9e78c5ab08b995b5bbe0f86c6a504bbb84bf1739e16c4a8dab',
     'minimum': '6f201e7a41557d8fa840f17df7d3d239dbd1c9b926b179488ac6cce399246630',
-    'development': 'db15d15ad336d67a3c86204ef17516f4c00248f25b8c832af64f09842c051067',
+    'development': '9cf816f24d477f31d4c3925b0cdd7a8fc3c5c920cbc22ecbffbc6c28c08e9575',
     'dev_view': 'e49685a3114d465b37d95ffd9e6787dc0343668cbdefde1dd6bbf47e0558b00d',
     }
     _pkg, _todo = _s.modules.get("context_core"), list(_fp)
@@ -1261,7 +1261,8 @@ def _context_core():
         'A project is a development project when its proyecto.md has a \xab## Desarrollo\xbb section\n'
         '(tecnologia/metodologia-desarrollo#2026-11-18-4). The section points to each piece of the kit (the configuration, the\n'
         'design, the plan and the follow-up) and names the people of each role. This module reads the section and says which\n'
-        'pieces are missing; it reads nothing else. The design, the plan and the follow-up are read for the board by `dev_view`\n'
+        'pieces are missing; it reads nothing else. \xabAudita\xbb may say \xabnadie\xbb and \xabRecibe\xbb is an optional line (1.30.0,\n'
+        'shared-memory/plugin-memoria#2026-11-25-4). The design, the plan and the follow-up are read for the board by `dev_view`\n'
         "(1.28.0), which only the board's generator imports. The status of each piece in GitHub is applied by the model from the\n"
         "plan's rule (tecnologia/metodologia-desarrollo#2026-11-19-2).\n"
         '\n'
@@ -1276,12 +1277,14 @@ def _context_core():
         'from typing import Callable\n'
         '\n'
         '__all__ = [\n'
-        '    "SECTION", "PATH_KEYS", "ROLE_KEYS", "ALL_KEYS", "TO_BUILD", "DevPerson", "DevSection", "Missing",\n'
+        '    "SECTION", "PATH_KEYS", "ROLE_KEYS", "OPTIONAL_KEYS", "ALL_KEYS", "TO_BUILD", "NOBODY", "DevPerson", "DevSection",\n'
+        '    "Missing",\n'
         '    "key", "development_section", "missing_pieces", "seccion_desarrollo", "piezas_faltantes",\n'
         ']\n'
         '\n'
         'SECTION = "Desarrollo"\n'
         'TO_BUILD = "por crear"\n'
+        'NOBODY = "nadie"                                # what \xabAudita\xbb says when the project has no audit\n'
         '\n'
         "# the section's keys, as written in the template (plantilla-seccion-desarrollo.md), in their order\n"
         'REPOSITORIES = "Repositorios"\n'
@@ -1292,7 +1295,11 @@ def _context_core():
         'FOLLOW_UP = "Seguimiento"\n'
         'STEP_TO_PROD = "Paso a Prod"\n'
         'PATH_KEYS = (PLATFORM, REPOSITORY_CONFIG, DESIGN, PLAN, FOLLOW_UP)\n'
-        'ROLE_KEYS = ("Acepta", "Audita", "Construye", "Administra")\n'
+        'AUDIT = "Audita"\n'
+        'RECEIVES = "Recibe"\n'
+        'ROLE_KEYS = ("Acepta", AUDIT, "Construye", "Administra", RECEIVES)\n'
+        'OPTIONAL_KEYS = (RECEIVES,)                     # without its line, or with it empty, nothing is missing\n'
+        'MAY_BE_NOBODY = (AUDIT,)                        # \xabnadie\xbb is a value, not a person\n'
         'ALL_KEYS = (REPOSITORIES,) + PATH_KEYS + (STEP_TO_PROD,) + ROLE_KEYS\n'
         '\n'
         'SEPARATOR = re.compile(r"\\s+\xb7\\s+")          # \xab \xb7 \xbb between values; a bare \xab\xb7\xbb inside a name is not a separator\n'
@@ -1366,6 +1373,7 @@ def _context_core():
         '    roles: dict = field(default_factory=dict)              # ROLE_KEYS -> [DevPerson]\n'
         '    present: list = field(default_factory=list)            # the keys that have a line, in ALL_KEYS spelling\n'
         '    to_build: list = field(default_factory=list)           # the keys whose value is \xabpor crear\xbb\n'
+        '    nobody: list = field(default_factory=list)             # the roles that say \xabnadie\xbb (only MAY_BE_NOBODY)\n'
         '    unknown: list = field(default_factory=list)            # lines of the section it does not recognise\n'
         '    warnings: list = field(default_factory=list)\n'
         '\n'
@@ -1426,6 +1434,10 @@ def _context_core():
         '            elif k in ROLE_KEYS:\n'
         '                out.roles[k] = []\n'
         '            continue\n'
+        '        if k in MAY_BE_NOBODY and key(value) == NOBODY:\n'
+        '            out.nobody.append(k)\n'
+        '            out.roles[k] = []\n'
+        '            continue\n'
         '        if k == REPOSITORIES:\n'
         '            for r in (x.strip() for x in SEPARATOR.split(value) if x.strip()):\n'
         '                # pegado como enlace de GitHub: se queda con organizaci\xf3n/repositorio\n'
@@ -1463,11 +1475,14 @@ def _context_core():
         'def missing_pieces(section: DevSection, exists: Callable[[str], bool]) -> list:\n'
         '    """The lines of the section that are missing or point to a file that is not there, with `exists(path)` saying\n'
         '    whether a path from the root exists. \xabSeguimiento: por crear\xbb does not count: the plugin creates it at the first\n'
-        '    follow-up. Empty for a project without the section."""\n'
+        '    follow-up; neither does an optional line that is not there, nor \xabAudita: nadie\xbb. Empty for a project without the\n'
+        '    section."""\n'
         '    if not section.found:\n'
         '        return []\n'
         '    out = []\n'
         '    for k in ALL_KEYS:\n'
+        '        if k in section.nobody or k in OPTIONAL_KEYS:\n'
+        '            continue\n'
         '        if k not in section.present:\n'
         '            out.append(Missing(k, "sin l\xednea"))\n'
         '        elif k in section.to_build:\n'
