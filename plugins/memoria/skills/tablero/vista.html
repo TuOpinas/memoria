@@ -3087,19 +3087,13 @@ function tzSistema(d){
   grupos.forEach(g => { g.rotulo = marcos ? tzPartir(g.titulo, rl, 2) : []; });
   const cab = marcos ? Math.max(...grupos.map(g => tzArriba(10 + g.rotulo.length * 16 + 4, TZ.PASO))) : 0, y0 = TZ.PAD + cab;
   const yDe = k => y0 + fila[k] * (h + TZ.GY), contenedores = [];
-  // los marcos, uno al lado del otro hasta el ancho de la página (el de POR_FILA_CAJAS marcos del dibujo por cuentas); el
-  // que no cabe empieza otra fila, debajo de la anterior
-  const limite = TZ.PAD + TZ.POR_FILA_CAJAS * (GW + TZ.GX) - TZ.GX;
-  let x = TZ.PAD, oy = 0, fondo = 0;
+  let x = TZ.PAD;
   grupos.forEach(g => {
     const enCapa = k => g.ids.filter(n => capa(n) === k), ancho = Math.max(1, ...capas.map(k => enCapa(k).length)) * (TZ.W + gx) - gx;
-    const w = ancho + (marcos ? 2 * TZ.CI : 0);
-    if(marcos && x > TZ.PAD && x + w > limite){ x = TZ.PAD; oy = fondo + TZ.GY - TZ.PAD; }
-    capas.forEach(k => enCapa(k).forEach((n, j) => { por[n].x = x + (marcos ? TZ.CI : 0) + j * (TZ.W + gx); por[n].y = oy + yDe(k); }));
+    capas.forEach(k => enCapa(k).forEach((n, j) => { por[n].x = x + (marcos ? TZ.CI : 0) + j * (TZ.W + gx); por[n].y = yDe(k); }));
     const ks = capas.filter(k => enCapa(k).length);
-    if(marcos && ks.length){ const y = oy + yDe(ks[0]) - cab, alto = oy + yDe(ks[ks.length - 1]) + h + TZ.CI - y;
-      contenedores.push({x, y, w, h: alto, rotulo: g.rotulo, titulo: g.titulo, cab}); fondo = Math.max(fondo, y + alto); }
-    x += w + gx;
+    if(marcos && ks.length){ const y = yDe(ks[0]) - cab; contenedores.push({x, y, w: ancho + 2 * TZ.CI, h: yDe(ks[ks.length - 1]) + h + TZ.CI - y, rotulo: g.rotulo, titulo: g.titulo, cab}); }
+    x += ancho + (marcos ? 2 * TZ.CI : 0) + gx;
   });
   const g = tzMontar(cajas, aristas, contenedores, null, "");
   // el color es el del tipo, no el del papel
