@@ -157,9 +157,11 @@ c, o = pr(SUBE + [("escribir", "app/main.py", None)], titulo="Kit · sube action
 ok(c == 1 and "va en su propio pull request" in errores(o), "el workflow, otro workflow y código fallan")
 
 print("La configuración del repositorio va como «Kit · » (1.30.1)")
-for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml"):
+for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml", ".github/dependabot.yaml"):
     c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None)], titulo="Kit · configuración")
     ok(c == 0, f"el workflow con {conf} en un «Kit · » pasa")
+    c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", conf, None)], titulo="Escenarios · P01")
+    ok(c == 1 and "y código fuera de ellas" in errores(o), f"las pruebas de aceptación con {conf} fallan: frente a ellas, cuenta como fuera")
     c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None), ("escribir", "app/main.py", None)],
               titulo="Kit · configuración")
     ok(c == 1 and "va en su propio pull request" in errores(o), f"con código fuera, el workflow y {conf} fallan")

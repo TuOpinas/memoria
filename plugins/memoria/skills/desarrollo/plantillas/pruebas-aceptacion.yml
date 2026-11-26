@@ -160,15 +160,15 @@ jobs:
           fi
           # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
-          dentro=0; fuera=0; kit=0; workflow=0; wf=""; lista_cambia=0; corredor_cambia=0
+          dentro=0; fuera=0; kit=0; workflow=0; wf=""; conf=0; lista_cambia=0; corredor_cambia=0
           while IFS= read -r -d '' f; do
             if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); corredor_cambia=1
             elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
             elif [ "$f" = "$lista" ]; then lista_cambia=1
             elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"
             elif [[ "$f" == .github/workflows/* ]]; then kit=$((kit + 1)); workflow=1; wf="${wf:-$f}"   # los demás workflows, igual que este
-            elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ]; then
-              kit=$((kit + 1))   # la configuración del repositorio también va como «Kit · »
+            elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ] || [ "$f" = .github/dependabot.yaml ]; then
+              kit=$((kit + 1)); conf=$((conf + 1))   # la configuración del repositorio: kit junto al workflow, fuera junto a las pruebas
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
@@ -178,7 +178,7 @@ jobs:
           if [ "$corredor_cambia" = 1 ] && { [[ "$TITULO" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
             echo "::error::Este pull request cambia $corredor, el corredor de las pruebas de aceptación, que es parte del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
-          if [ "$dentro" -gt 0 ] && [ "$fuera" -gt 0 ]; then
+          if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
             echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
           fi
           # en un pull request de escenarios, cada archivo de pruebas empieza por una pieza de su título y «_»
