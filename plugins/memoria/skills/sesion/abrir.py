@@ -2434,7 +2434,9 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
                      "dilo en una línea con su nombre y el motivo que dé la herramienta, y sigue con lo demás. En cada uno que conectes, comprueba en el clon "
                      "que tiene el kit: el CLAUDE.md con las reglas del kit, el control de pruebas de aceptación (.github/workflows/pruebas-aceptacion.yml) "
                      "y su corredor (el que dice CORREDOR: con vitest, el archivo de CONFIG; con uno propio, su archivo, ejecutable). Si algo falta, dilo en "
-                     "una línea por repositorio («<repositorio>: falta …») y propón montarlo con las plantillas de la skill desarrollo; no lo montes sin un sí.")
+                     "una línea por repositorio («<repositorio>: falta …») y propón montarlo con las plantillas de la skill desarrollo; no lo montes sin un sí. "
+                     "Un CLAUDE.md con «Audita» en su tabla o un control con PRUEBA (los de la 1.29.1) siguen valiendo y no faltan: "
+                     "di en una línea que hay kit nuevo (los puntos de control pasan a quien acepta y el control declara CORREDOR) y propón ponerlo al día.")
     # con un proyecto que no se pudo leer, la apertura sale igual, con el recuadro, y la respuesta pregunta cuál era (1.24.9)
     pasos.append(f"Di en una línea que «{ACTIVO}» no se encuentra (no existe, es restringido o no está descargado) y pregunta cuál se abre, con los proyectos de su área del bloque Proyectos de arriba; "
                  "no lo crees sin que lo pidan (la skill nuevo)." if sin_proyecto else
