@@ -60,6 +60,29 @@ def caso(nombre, base_, cabeza, titulo, espera, cuerpo="", autor="persona", mens
     return bien
 
 
+def con_if():
+    """El arnés entiende un «if:» en un paso «uses:», que no corre, y no monta uno en un paso «run:»."""
+    import tempfile
+    pasos = {"uses": "      - name: Prepara Node\n        if: env.CORREDOR == 'vitest'\n        uses: actions/setup-node@x  # v7\n",
+             "run": "      - name: Corre\n        if: env.CORREDOR == 'vitest'\n        run: |\n          true\n"}
+    r = []
+    for tipo, paso in pasos.items():
+        yml = pathlib.Path(tempfile.mkdtemp()) / "wf.yml"
+        yml.write_text("name: x\non:\n  pull_request:\nenv:\n  A: b\njobs:\n  j:\n    name: x\n    steps:\n" + paso
+                       + "      - name: Otro\n        run: |\n          true\n", encoding="utf-8")
+        antes, flujo.YML = flujo.YML, yml
+        try:
+            flujo.plantilla(); monta = True
+        except flujo.Montaje:
+            monta = False
+        finally:
+            flujo.YML = antes
+        bien = monta == (tipo == "uses")
+        print(("bien " if bien else "MAL  ") + f"«if:» en un paso «{tipo}:» ({'se monta' if monta else 'no se monta'})")
+        r.append(bien)
+    return r
+
+
 def main():
     activa_pasa = base(**{L: "P05\n", f"{A}/P05_x.py": prueba("pasa")})
     activa_falla = base(**{L: "P05\n", f"{A}/P05_x.py": prueba("falla")})
@@ -117,6 +140,7 @@ def main():
         caso("Una línea mal escrita en la lista", base(**{f"{A}/P05_x.py": prueba("falla"), f"{A}/P06_x.py": prueba("falla")}), {L: "P05, P06\n", **CODIGO}, "1.27.1: dos piezas", "rojo", mensaje="no son un identificador"),
         caso("Corregir las pruebas de una activa que siguen pasando, sacándola", activa_pasa, {L: "", f"{A}/P05_x.py": prueba("pasa") + "# corregida\n"}, "Escenarios · P05", "rojo", mensaje="ya pasan"),
     ]
+    r += con_if()
     print(f"{sum(r)} de {len(r)}")
     return 0 if all(r) else 1
 
