@@ -3082,7 +3082,7 @@ RUTAS_DEV, _TEXTOS_DEV = set(), {}
 # ---------- 1.30.0: el plan por estado (P26) ----------
 # Lo que la pestaña lee del diseño y del plan viene de context_core (vista_desarrollo); aquí se añade lo de la 1.30.0,
 # con las mismas reglas de lectura de tablas que usa ella.
-from context_core.dev_view import _table, _cell, _optional, _hours  # noqa: E402
+from context_core.dev_view import _table, _cell, _optional, _hours, _roles  # noqa: E402
 from context_core.development import _sections, key as _clave_dev, _nfc, SEPARATOR as _SEP_DEV  # noqa: E402
 
 
@@ -3189,6 +3189,62 @@ def datos_por_grupos(vista, texto_diseno):
         if (e.get("grupo") or "") not in nombres:
             avisar(f"«{e['nombre']}» es del grupo «{e.get('grupo') or ''}», que no está en la tabla «Grupos»: se dibuja "
                    "al final, aparte")
+
+
+# ---------- 1.30.0: el sistema (P28) ----------
+TIPOS_SISTEMA = ("corre", "guarda", "externo")
+
+
+def el_sistema(vista, texto_diseno):
+    """«diseno.sistema»: si «Infraestructura» tiene la columna «Tipo». Cada pieza lleva su tipo, los componentes que
+    corren en ella y los verbos de sus conexiones («context-db (reads)»: «conecta_con» no cambia de forma); cada
+    componente, su «Corre en». Sin «Tipo», un aviso que dice qué añadir."""
+    d = vista.get("diseno")
+    if d is None:
+        return
+    secs = _sections(texto_diseno or "")
+    def tabla(nombre):
+        sec = secs.get(_clave_dev(nombre))
+        return _table(sec[1].split("\n")) if sec else ([], [])
+    infra, comps = d.get("infraestructura") or [], d.get("componentes") or []
+    t, filas = tabla("Componentes")
+    c_nombre, c_corre = _optional(t, "Componente"), _optional(t, "Corre en")
+    corre = {_cell(r, c_nombre): _cell(r, c_corre) for r in filas}
+    for x in comps:
+        x["corre_en"] = corre.get(x["nombre"], "")
+    t, filas = tabla("Infraestructura")
+    c_pieza, c_tipo, c_con = _optional(t, "Pieza"), _optional(t, "Tipo"), _optional(t, "Conecta con")
+    d["sistema"] = c_tipo is not None
+    por_nombre = {_cell(r, c_pieza): r for r in reversed(filas)}
+    nombres = {x["nombre"] for x in infra}
+    for x in infra:
+        r = por_nombre.get(x["nombre"], [])
+        # «Conecta con» otra vez, ahora con el verbo entre paréntesis; lo que context_core no encontró por el verbo, se
+        # quita de sus avisos
+        con, verbos = [], {}
+        for y in (z for z in _SEP_DEV.split(_cell(r, c_con)) if z.strip()):
+            m = re.match(r"^\s*(.*?)\s*\(([^()]*)\)\s*$", y)
+            n, v = (m.group(1), m.group(2).strip()) if m and m.group(1) in nombres else (y.strip(), "")
+            if n in nombres and n not in con:
+                con.append(n)
+                if v:
+                    verbos[n] = v
+                    falso = f"«{x['nombre']}» conecta con «{y.strip()}», que no está en «Infraestructura»"
+                    vista["avisos"] = [a for a in vista["avisos"] if a.get("texto") != falso]
+        if c_con is not None:
+            x["conecta_con"] = con
+        x["verbos"] = verbos
+        if d["sistema"]:
+            tipo = _cell(r, c_tipo).lower()
+            x["tipo"] = tipo if tipo in TIPOS_SISTEMA else ""
+            x["componentes"] = [k["nombre"] for k in comps if k["corre_en"] == x["nombre"]]
+    roles = _roles([x["nombre"] for x in infra], [(x["nombre"], o) for x in infra for o in x["conecta_con"]], None)
+    for x in infra:
+        x["rol"] = roles[x["nombre"]]
+    if infra and not d["sistema"]:
+        vista["avisos"].append({"parte": "infraestructura", "texto":
+            "«Infraestructura» no tiene la columna «Tipo»: añádela con «corre», «guarda» o «externo» en cada pieza, y "
+            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «El sistema»"})
 
 
 def proyectos_de(carpeta, indice):
@@ -3587,6 +3643,7 @@ for a in areas_guia:
             pdoc["_desarrollo"] = vista_desarrollo(sec_, lee_desarrollo)
             plan_por_estado(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(PLAN, "")))
             datos_por_grupos(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(DESIGN, "")))
+            el_sistema(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(DESIGN, "")))
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero
