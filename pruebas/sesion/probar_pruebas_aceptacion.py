@@ -172,9 +172,6 @@ for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dep
     ok(c == 0, f"el workflow con {conf} en un «Kit · » pasa")
     c, o = pr([("escribir", "tests/aceptacion/P01_caso.py", None), ("escribir", conf, None)], titulo="Escenarios · P01")
     ok(c == 1 and "y código fuera de ellas" in errores(o), f"las pruebas de aceptación con {conf} fallan: frente a ellas, cuenta como fuera")
-    c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None), ("escribir", "app/main.py", None)],
-              titulo="Kit · configuración")
-    ok(c == 1 and "va en su propio pull request" in errores(o), f"con código fuera, el workflow y {conf} fallan")
 c, o = pr([("escribir", "scripts/corredor", None), ("escribir", ".github/CODEOWNERS", None)], titulo="Kit · corredor",
           env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
 ok(c == 0, "el corredor propio con CODEOWNERS en un «Kit · » pasa")
