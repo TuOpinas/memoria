@@ -12,8 +12,8 @@ mentira). Solo biblioteca estándar (Python 3.9+), sin leer nada más del plugin
 
 Del workflow se entiende un subconjunto: arriba, «name», «on» (con «pull_request»), «permissions», «concurrency», «env»
 y «jobs»; un
-solo job con «name», «runs-on», «timeout-minutes» y «steps»; pasos con «name», «uses», «with», «env» y «run: |»; valores
-de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:»,
+solo job con «name», «runs-on», «timeout-minutes» y «steps»; pasos con «name», «uses», «with», «env» y «run: |», y un «if:» solo en un paso «uses:», que no se corre; valores
+de una línea, y las expresiones de base, cabeza y título del pull request, solo en «env». Ante cualquier otra cosa («if:» en un paso «run:»,
 «shell:», «defaults:», otro job, otra expresión, un paso que escribe en $GITHUB_ENV o $GITHUB_PATH) la prueba no se monta
 (salida 2) en vez de correr algo distinto de lo que correría GitHub. Los pasos corren con «bash -e», que es lo que usa
 GitHub cuando el paso no dice «shell:» (sin pipefail: si lo necesita, el paso lo pone), y la plantilla pide bash 4 o
@@ -143,7 +143,7 @@ def plantilla():
         if l.strip() and (len(l) - len(l.lstrip())) < ind:
             break
         if re.match(r"^" + " " * ind + r"- ", l):
-            actual = {"nombre": "", "env": {}, "run": None}
+            actual = {"nombre": "", "env": {}, "run": None, "if": False}
             pasos.append(actual)
             l = " " * (ind + 2) + l[ind + 2:]
             lineas[k] = l
@@ -152,10 +152,12 @@ def plantilla():
             raise Montaje(f"no se entiende esta línea de un paso de la plantilla: {l.strip()[:60]}")
         if actual is not None and c:
             clave, resto = c.group(1), c.group(2)
-            if clave not in ("name", "uses", "with", "env", "run"):
+            if clave not in ("name", "uses", "with", "env", "run", "if"):
                 raise Montaje(f"el paso «{actual['nombre']}» usa «{clave}:», que este arnés no entiende")
             if clave == "name":
                 actual["nombre"] = _valor(resto)
+            elif clave == "if":
+                actual["if"] = True
             elif clave == "env":
                 if resto.strip():
                     raise Montaje(f"el paso «{actual['nombre']}» trae su «env:» en una línea, que este arnés no entiende")
@@ -179,6 +181,8 @@ def plantilla():
     if not any(p["run"] for p in pasos):
         raise Montaje("la plantilla no tiene pasos «run:»")
     for p in pasos:
+        if p["if"] and p["run"] is not None:
+            raise Montaje(f"el paso «{p['nombre']}» lleva «if:» y «run:»: este arnés no evalúa la condición")
         if p["run"] and "${{" in p["run"]:
             raise Montaje(f"el paso «{p['nombre']}» usa una expresión de GitHub dentro de «run:», que este arnés no sustituye")
         if p["run"] and re.search(r"GITHUB_(ENV|PATH)\b", p["run"]):
