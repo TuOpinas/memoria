@@ -33,7 +33,8 @@
 # - Un identificador de pieza son letras, dígitos y, como mucho, una letra al final: P01, H22, H22a. H22, H22a y H22b
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
 # - Este archivo va en su propio pull request («Kit · »), sin código: en un pull request corre la versión que trae.
-#   Mientras la carpeta no exista, pasa.
+#   Mientras la carpeta no exista, pasa. La configuración del repositorio (CODEOWNERS, en la raíz, .github/ o docs/, y
+#   .github/dependabot.yml) cuenta como kit: puede ir con el workflow en un «Kit · ».
 # - Las acciones van fijadas por commit, con su versión al lado. Un pull request de Dependabot (autor dependabot[bot]) que
 #   solo cambia archivos de .github/workflows/, y en ellos solo líneas «uses:», no sigue las reglas del kit; sus pruebas
 #   activas sí corren. Un commit de otra persona en su rama, u otro archivo, y vuelven las reglas.
@@ -166,6 +167,8 @@ jobs:
             elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
             elif [ "$f" = "$lista" ]; then lista_cambia=1
             elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1
+            elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ]; then
+              kit=$((kit + 1))   # la configuración del repositorio también va como «Kit · »
             else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
           echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."

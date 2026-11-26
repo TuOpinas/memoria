@@ -57,10 +57,10 @@ def repo(sin_carpeta=False):
 
 
 def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None, main_despues=None, base_extra=0, env_wf=None,
-       base_textos=None):
+       base_textos=None, ejecutables=()):
     """Aplica los cambios en una rama y corre el primer paso; devuelve (código de salida, salida). lista: el texto de la
     lista de piezas activas en la base; main_despues: archivos que llegan a main después de abrir la rama; base_textos:
-    {ruta: texto} en la base. En los cambios, («texto», ruta, texto) escribe ese texto."""
+    {ruta: texto} en la base; ejecutables: rutas que quedan ejecutables en git. En los cambios, («texto», ruta, texto) escribe ese texto."""
     d, base = repo(sin_carpeta)
     if base_textos:
         for ruta, texto in base_textos.items():
@@ -93,6 +93,8 @@ def pr(cambios, acept=None, sin_carpeta=False, titulo="P09 · algo", lista=None,
             (d / destino).parent.mkdir(parents=True, exist_ok=True)
             git(d, "mv", ruta, destino)
     git(d, "add", "-A")
+    for x in ejecutables:
+        git(d, "update-index", "--chmod=+x", x)
     git(d, "commit", "-qm", "cambio", "--allow-empty")
     if main_despues:
         git(d, "checkout", "-q", "main")
@@ -160,6 +162,17 @@ for otro in ("app/main.py", ".github/dependabot.yml"):
     ok(c == 1 and "no vale" in o and "va en su propio pull request" in errores(o), f"si además cambia {otro}, fuera de .github/workflows/, también")
 c, o = pr(SUBE, titulo="Bump actions/checkout", base_textos=FLUJOS, env_wf={"AUTOR": "persona"})
 ok(c == 1 and "va en su propio pull request" in errores(o), "el mismo cambio de una persona falla como antes")
+
+print("La configuración del repositorio va como «Kit · » (1.30.1)")
+for conf in ("CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS", ".github/dependabot.yml"):
+    c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None)], titulo="Kit · configuración")
+    ok(c == 0, f"el workflow con {conf} en un «Kit · » pasa")
+    c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", conf, None), ("escribir", "app/main.py", None)],
+              titulo="Kit · configuración")
+    ok(c == 1 and "va en su propio pull request" in errores(o), f"con código fuera, el workflow y {conf} fallan")
+c, o = pr([("escribir", "scripts/corredor", None), ("escribir", ".github/CODEOWNERS", None)], titulo="Kit · corredor",
+          env_wf={"CORREDOR": "./scripts/corredor", "SUFIJO": "_test.go"}, ejecutables=("scripts/corredor",))
+ok(c == 0, "el corredor propio con CODEOWNERS en un «Kit · » pasa")
 
 print("Montar el kit en un repositorio que aún no tiene pruebas de aceptación")
 c, o = pr([("escribir", ".github/workflows/pruebas-aceptacion.yml", None), ("escribir", "CLAUDE.md", None)], sin_carpeta=True)
