@@ -3508,7 +3508,7 @@ function ayudaArts(){
     <ol class="hc-pasos">
       <li><b>Escenarios</b><span>Claude propone los escenarios de la pieza, con sus casos de error; quien acepta los aprueba o los corrige. ${F("escribe los escenarios de P03")}</span></li>
       <li><b>Pruebas aparte</b><span>Antes de que exista el código de la pieza, Claude encarga a un subagente, que solo lee lo que le nombra su encargo (los escenarios, las reglas del repositorio y su carpeta de pruebas), convertirlos en pruebas, en su propio pull request. No hace falta abrir otra conversación. GitHub comprueba que fallan, porque la pieza aún no existe, y quien acepta lo une o lo aprueba.</span></li>
-      <li><b>Construir</b><span>Claude construye la pieza de punta a punta hasta que pasan sus pruebas y las demás siguen en verde; desde ese pull request, las pruebas de la pieza son obligatorias. Se para solo si algo es difícil de revertir, se sale del diseño, falla dos veces o el diseño no lo cubre.</span></li>
+      <li><b>Construir</b><span>Claude construye la pieza de punta a punta hasta que pasan sus pruebas y las demás siguen en verde; desde ese pull request, las pruebas de la pieza son obligatorias. Se para solo si algo es difícil de revertir, toca lo delicado, se sale del diseño, falla dos veces o el diseño no lo cubre.</span></li>
       <li><b>Unir</b><span>Con todo en verde y la revisión de calidad hecha, quien construye la une y queda en Release.</span></li>
       <li><b>Verificar</b><span>Antes del sí, una sesión aparte, en el modelo que no la construyó, recorre Release contra los escenarios y deja el reporte; sin Release, la aplicación levantada desde lo unido, con datos de prueba. ${F("verifica P03 en Release")}</span></li>
       <li><b>Seguimiento y sí</b><span>Quien da el sí pide el seguimiento, que compara lo unido con el diseño y el plan, y lo da sobre ese seguimiento y el reporte. ${F("haz el seguimiento")}</span></li>
@@ -3537,7 +3537,7 @@ function ayudaArts(){
       <li>La base de datos cambia solo con migraciones nuevas; una ya unida no se edita.</li>
       <li>Ningún secreto en el código.</li>
       <li>Nada pasa a producción sin el sí escrito, y solo quien administra despliega.</li>
-      <li>Claude se para y pregunta en lo difícil de revertir, cuando se sale del diseño, cuando algo falla dos veces o cuando el diseño no lo cubre.</li>
+      <li>Claude se para y pregunta en lo difícil de revertir, en lo delicado, cuando se sale del diseño, cuando algo falla dos veces o cuando el diseño no lo cubre.</li>
     </ul>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo-modelos", t:"Qué modelo hace qué", h:`
     <p>Trabajas en tu sesión con <b>Opus</b> en esfuerzo medio. El kit elige el modelo de cada paso que lanza por su cuenta: las pruebas de aceptación en Opus, la verificación en Release en el modelo que no construyó la pieza (Fable si la construyó Opus, Opus si la construyó Fable), para que no comparta sus supuestos, y el seguimiento en Sonnet. Si un enfoque falla dos veces, Claude propone pasar la pieza a Fable. Si el modelo de un paso no está disponible, Claude lo dice y no lo hace con otro.</p>
