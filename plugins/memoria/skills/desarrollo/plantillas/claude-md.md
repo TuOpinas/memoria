@@ -25,6 +25,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
 5. No pases nada a Prod: lo hace quien administra, con el sí escrito.
 6. Para y pregunta a quien acepta antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
    - algo es difícil de revertir (un esquema, un contrato público, permisos, un proveedor, datos de clientes);
+   - el cambio toca lo delicado, que quien acepta revisa antes de unir (una dependencia nueva, permisos, accesos, pagos, datos personales, un cambio de base de datos);
    - un enfoque falló dos veces;
    - la tarea añade una entidad, un componente o un concepto que no está en el diseño, o se sale del plan;
    - el diseño no cubre lo que la tarea necesita, o no puedes leerlo;
