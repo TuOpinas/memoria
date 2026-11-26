@@ -2155,7 +2155,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "6"   # 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "7"   # 1.30.0: el plan por estado, los datos por grupos y el sistema de la pestaña Desarrollo; 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
@@ -3094,6 +3094,174 @@ def lee_desarrollo(r):
 RUTAS_DEV, _TEXTOS_DEV = set(), {}
 
 
+# ---------- 1.30.0: el plan por estado (P26) ----------
+# Lo que la pestaña lee del diseño y del plan viene de context_core (vista_desarrollo); aquí se añade lo de la 1.30.0,
+# con las mismas reglas de lectura de tablas que usa ella.
+from context_core.dev_view import _table, _cell, _optional, _hours, _roles  # noqa: E402
+from context_core.development import _sections, key as _clave_dev, _nfc, SEPARATOR as _SEP_DEV  # noqa: E402
+
+
+def _grupo_de(estado):
+    """El grupo de una pieza por su estado del último seguimiento: terminada cuando su pull request se unió (#2026-11-25)."""
+    e = (estado or "").strip().lower()
+    if e.startswith(("unida", "entregada")):
+        return "hecha"
+    if e.startswith(("en curso", "revertida")):
+        return "en_curso"
+    return "pendiente"
+
+
+def plan_por_estado(vista, texto_plan):
+    """Cada pieza con su grupo y si es técnica; cada fase con su estado, sus horas de cierre, su total, lo que le falta y
+    cuántas piezas lleva hechas."""
+    plan = vista.get("plan")
+    if not plan:
+        return
+    hay_seguimiento = bool((vista.get("fuentes") or {}).get("seguimiento"))
+    secs = _sections(texto_plan or "")
+    # «Hecha cuando»: el bloque de cada pieza, para saber si dice «pieza técnica, sin escenarios»
+    bloques, cur = {}, None
+    sec = secs.get(_clave_dev("Hecha cuando"))
+    for l in (_nfc(sec[1]).split("\n") if sec else []):
+        m = re.match(r"^###\s+([A-Za-z]+\d+)\b", l)
+        if m:
+            cur = bloques.setdefault(m.group(1).upper(), [])
+        elif cur is not None:
+            cur.append(l)
+    for p in plan["piezas"]:
+        p["grupo"] = _grupo_de(p.get("estado")) if hay_seguimiento else None
+        p["tecnica"] = "pieza técnica, sin escenarios" in "\n".join(bloques.get(p["id"], [])).lower()
+    # «Fases»: «Estado» y la columna opcional «Horas de cierre»
+    sec = secs.get(_clave_dev("Fases"))
+    t, filas = _table(sec[1].split("\n")) if sec else ([], [])
+    col_fase, col_estado, col_cierre = _optional(t, "Fase"), _optional(t, "Estado"), _optional(t, "Horas de cierre")
+    por_fila = {}
+    for r in filas:
+        m = re.match(r"^\s*([A-Za-z]+\d+)", _cell(r, col_fase))
+        if m:
+            por_fila.setdefault(m.group(1).upper(), r)
+    avisar = lambda x: vista["avisos"].append({"parte": "plan", "texto": x})
+    piezas = {p["id"]: p for p in plan["piezas"]}
+    for f in plan["fases"]:
+        r = por_fila.get(f["id"], [])
+        f["estado"] = _cell(r, col_estado).lower()
+        f["horas_cierre"] = _hours(_cell(r, col_cierre), f"el cierre de {f['id']}", avisar)
+        f["horas_total"] = None if f["horas"] is None and f["horas_cierre"] is None else round((f["horas"] or 0) + (f["horas_cierre"] or 0), 2)
+        suyas = [piezas[i] for i in f["piezas"] if i in piezas]
+        f["piezas_total"] = len(suyas)
+        f["piezas_hechas"] = sum(1 for p in suyas if p["grupo"] == "hecha") if hay_seguimiento else None
+        if not hay_seguimiento or f["horas_total"] is None:
+            f["horas_faltan"] = None
+        elif f["estado"] == "cerrada":
+            f["horas_faltan"] = 0
+        else:
+            f["horas_faltan"] = round(sum(p["horas"] or 0 for p in suyas if p["grupo"] != "hecha") + (f["horas_cierre"] or 0), 2)
+
+
+# ---------- 1.30.0: los datos por grupos (P27) ----------
+def _tablas(lineas):
+    """Todas las tablas de unas líneas, en orden: [(títulos, filas)]."""
+    out = []
+    while lineas:
+        t, filas = _table(lineas)
+        if not t:
+            break
+        out.append((t, filas))
+        i = next(n for n, l in enumerate(lineas) if l.strip().startswith("|"))
+        lineas = lineas[i + 2 + len(filas):]
+    return out
+
+
+def datos_por_grupos(vista, texto_diseno):
+    """«diseno.grupos»: la tabla «Grupos» de «Datos», en su orden, o [] sin ella, con un aviso que dice qué añadir; y un
+    aviso por cada entidad cuyo «Grupo» no está en la tabla."""
+    d = vista.get("diseno")
+    if d is None:
+        return
+    sec = _sections(texto_diseno or "").get(_clave_dev("Datos"))
+    tabla = next(((t, f) for t, f in _tablas(sec[1].split("\n") if sec else [])
+                  if t and _clave_dev(t[0]) == _clave_dev("Grupo")), None)
+    avisar = lambda x: vista["avisos"].append({"parte": "datos", "texto": x})
+    d["grupos"] = []
+    if tabla is None:
+        if d.get("entidades"):
+            avisar("«Datos» no tiene la tabla «Grupos»: añádela debajo de las entidades, una fila por grupo con su nombre, "
+                   "una línea corta, su papel (centro, aparte o vacío) y los grupos con los que se relaciona, y los datos "
+                   "se dibujan apilados por grupo")
+        return
+    t, filas = tabla
+    c = {k: _optional(t, k) for k in ("Grupo", "En corto", "Papel", "Se relaciona con")}
+    for r in filas:
+        rel = []
+        for x in (y for y in _SEP_DEV.split(_cell(r, c["Se relaciona con"])) if y.strip()):
+            m = re.match(r"^\s*([^()]*?)\s*(?:\(([^)]*)\))?\s*$", x)
+            rel.append({"con": m.group(1).strip(), "verbo": (m.group(2) or "").strip()} if m else {"con": x.strip(), "verbo": ""})
+        papel = _cell(r, c["Papel"]).lower()
+        d["grupos"].append({"nombre": _cell(r, c["Grupo"]), "en_corto": _cell(r, c["En corto"]),
+                            "papel": papel if papel in ("centro", "aparte") else "", "relaciones": rel})
+    nombres = {g["nombre"] for g in d["grupos"]}
+    for e in d.get("entidades") or []:
+        if (e.get("grupo") or "") not in nombres:
+            avisar(f"«{e['nombre']}» es del grupo «{e.get('grupo') or ''}», que no está en la tabla «Grupos»: se dibuja "
+                   "al final, aparte")
+
+
+# ---------- 1.30.0: el sistema (P28) ----------
+TIPOS_SISTEMA = ("corre", "guarda", "externo")
+
+
+def el_sistema(vista, texto_diseno):
+    """«diseno.sistema»: si «Infraestructura» tiene la columna «Tipo». Cada pieza lleva su tipo, los componentes que
+    corren en ella y los verbos de sus conexiones («context-db (reads)»: «conecta_con» no cambia de forma); cada
+    componente, su «Corre en». Sin «Tipo», un aviso que dice qué añadir."""
+    d = vista.get("diseno")
+    if d is None:
+        return
+    secs = _sections(texto_diseno or "")
+    def tabla(nombre):
+        sec = secs.get(_clave_dev(nombre))
+        return _table(sec[1].split("\n")) if sec else ([], [])
+    infra, comps = d.get("infraestructura") or [], d.get("componentes") or []
+    t, filas = tabla("Componentes")
+    c_nombre, c_corre = _optional(t, "Componente"), _optional(t, "Corre en")
+    corre = {_cell(r, c_nombre): _cell(r, c_corre) for r in filas}
+    for x in comps:
+        x["corre_en"] = corre.get(x["nombre"], "")
+    t, filas = tabla("Infraestructura")
+    c_pieza, c_tipo, c_con = _optional(t, "Pieza"), _optional(t, "Tipo"), _optional(t, "Conecta con")
+    d["sistema"] = c_tipo is not None
+    por_nombre = {_cell(r, c_pieza): r for r in reversed(filas)}
+    nombres = {x["nombre"] for x in infra}
+    for x in infra:
+        r = por_nombre.get(x["nombre"], [])
+        # «Conecta con» otra vez, ahora con el verbo entre paréntesis; lo que context_core no encontró por el verbo, se
+        # quita de sus avisos
+        con, verbos = [], {}
+        for y in (z for z in _SEP_DEV.split(_cell(r, c_con)) if z.strip()):
+            m = re.match(r"^\s*(.*?)\s*\(([^()]*)\)\s*$", y)
+            n, v = (m.group(1), m.group(2).strip()) if m and m.group(1) in nombres else (y.strip(), "")
+            if n in nombres and n not in con:
+                con.append(n)
+                if v:
+                    verbos[n] = v
+                    falso = f"«{x['nombre']}» conecta con «{y.strip()}», que no está en «Infraestructura»"
+                    vista["avisos"] = [a for a in vista["avisos"] if a.get("texto") != falso]
+        if c_con is not None:
+            x["conecta_con"] = con
+        x["verbos"] = verbos
+        if d["sistema"]:
+            tipo = _cell(r, c_tipo).lower()
+            x["tipo"] = tipo if tipo in TIPOS_SISTEMA else ""
+            x["componentes"] = [k["nombre"] for k in comps if k["corre_en"] == x["nombre"]]
+    roles = _roles([x["nombre"] for x in infra], [(x["nombre"], o) for x in infra for o in x["conecta_con"]], None)
+    for x in infra:
+        x["rol"] = roles[x["nombre"]]
+    if infra and not d["sistema"]:
+        vista["avisos"].append({"parte": "infraestructura", "texto":
+            "«Infraestructura» no tiene la columna «Tipo»: añádela con «corre», «guarda» o «externo» en cada pieza, y "
+            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «El sistema»"})
+
+
 def proyectos_de(carpeta, indice):
     """Los proyectos de un área: los de su índice más cualquier carpeta con proyecto.md, en ese orden."""
     if INV is not None:
@@ -3488,6 +3656,9 @@ for a in areas_guia:
             RUTAS_DEV.update(rutas_)
             pdoc["desarrollo"] = True
             pdoc["_desarrollo"] = vista_desarrollo(sec_, lee_desarrollo)
+            plan_por_estado(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(PLAN, "")))
+            datos_por_grupos(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(DESIGN, "")))
+            el_sistema(pdoc["_desarrollo"], lee_desarrollo(sec_.paths.get(DESIGN, "")))
         mq = re.search(r"(?:Responsable|Dueñ[oa]):\s*(.+)", pdoc["quien"])
         pdoc["dueno"] = mq.group(1).strip() if mq else a["dueno"]
         # los nombres, sin las cuentas: la cuenta solo sirve para saber quién escribe, y no sale en ningún tablero

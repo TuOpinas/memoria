@@ -12,12 +12,12 @@ Las fases dicen qué valor entrega cada una; las piezas, qué es estar hecha. El
 Cambiar una fase o el alcance pide una decisión. Añadir, partir o detallar piezas de la fase en curso, no.
 
 ## Fases
-| Fase | Qué podrá hacer quién | Versión | Listo cuando | Estado |
-|---|---|---|---|---|
-| F1 · [nombre] | [Una frase] | [versión] | [Algo que se comprueba] | en curso |
-| F2 · [nombre] | | | | pendiente |
+| Fase | Qué podrá hacer quién | Versión | Listo cuando | Estado | Horas de cierre |
+|---|---|---|---|---|---|
+| F1 · [nombre] | [Una frase] | [versión] | [Algo que se comprueba] | en curso | [3] |
+| F2 · [nombre] | | | | pendiente | |
 
-Estado: `cerrada`, `en curso` (solo una) o `pendiente`.
+Estado: `cerrada`, `en curso` (solo una) o `pendiente`. «Horas de cierre», opcional: las de escenarios, revisión y verificación de la fase, que el tablero suma a las de sus piezas.
 
 ### F1 en llano
 [Una frase: qué mejora esta fase para quien usa el producto, sin jerga.]
