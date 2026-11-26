@@ -7,7 +7,7 @@ basado_en: []
 
 # Diseño
 
-Lo redacta Claude al empezar; lo validan quien acepta (lo funcional) y quien audita (lo técnico). Las tablas las lee el tablero para dibujar la pestaña Desarrollo: se pueden añadir columnas, pero estas se quedan con su nombre. Varios valores en una celda van separados por « · ». La columna «En corto», en «Componentes», «Datos» e «Infraestructura», es opcional: lo que dice, en unas palabras, sale bajo el nombre de su caja; sin ella, cada caja lleva solo su nombre.
+Lo redacta Claude al empezar; lo aprueba quien acepta. Las tablas las lee el tablero para dibujar la pestaña Desarrollo: se pueden añadir columnas, pero estas se quedan con su nombre. Varios valores en una celda van separados por « · ». La columna «En corto», en «Componentes», «Datos» e «Infraestructura», es opcional: lo que dice, en unas palabras, sale bajo el nombre de su caja; sin ella, cada caja lleva solo su nombre.
 
 **La regla:** lo que no esté aquí (una entidad, un componente o un concepto) entra solo con una decisión, y esa sesión pone al día este documento. El seguimiento compara lo unido con lo que dice este documento.
 

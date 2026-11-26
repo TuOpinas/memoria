@@ -5,7 +5,7 @@ description: El kit de desarrollo de un proyecto que construye software (con la 
 
 # Desarrollo
 
-El kit garantiza que lo que llega a Prod pasó los escenarios que aprobó quien acepta, y que cada cambio se puede rastrear hasta una pieza del plan (tecnologia/metodologia-desarrollo#2026-11-19-3). A quien no es técnico no le añade más pasos que aprobar los escenarios y leer el reporte: todo lo que se le dice es breve y en llano, sin códigos de regla.
+El kit garantiza que lo que llega a Prod pasó los escenarios que aprobó quien acepta, y que cada cambio se puede rastrear hasta una pieza del plan (tecnologia/metodologia-desarrollo#2026-11-19-3). Quien acepta no necesita ser técnico: lo que se le pide (aprobar, decidir en los puntos de control, dar el sí) se le dice breve y en llano, sin códigos de regla.
 
 Un proyecto de desarrollo es el que tiene la sección `## Desarrollo` en su `proyecto.md` (`convenciones`, `escribir.md`, sección 3). Sin ella, esta skill solo la ofrece: en un proyecto que ya existe, se enseña en cita la sección rellena con lo que se sepa (`plantillas/seccion-desarrollo.md`, `por crear` en lo que falte) y, con el sí, la escribe `cerrar.py` con un solo reemplazo de `proyecto`, que pone la sección detrás de la última línea de `Quién participa`. Con la sección, el resto del kit se monta entero en el orden de «El kit entero», en `plantillas/configuracion.md`. La sesión del proyecto se abre antes, como siempre (skill `sesion`), y antes de escribir en la carpeta se carga `escribir.md`. Las plantillas están en `plantillas/`, junto a este archivo.
 
