@@ -12,9 +12,8 @@
 #     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
 #     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
 #     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
-#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada
-#     en un pull request de código (el informe no la distingue), y en uno de escenarios lo deja en rojo, porque el
-#     resumen de la salida dice «expected fail».
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y un archivo con «test.fails» o «it.fails» cuenta
+#     como esperado como fallo: el informe la da como pasada, así que el control lo busca en el texto del archivo.
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
@@ -302,16 +301,13 @@ jobs:
                     let e = "NO_CORRIO";
                     if (a && (n("failed") > 0 || (a.status === "failed" && ps.length > 0))) e = "FALLA";
                     else if (ps.length > 0 && n("passed") < ps.length) e = "SALTADA";
+                    // «test.fails» sale como pasada en el informe, con cualquier versión: se mira en el archivo
+                    else if (ps.length > 0 && /(^|[^\w.$])(test|it)\.fails\b/m.test(fs.readFileSync(f, "utf8"))) e = "SALTADA";
                     else if (ps.length > 0) e = "PASA";
                     // un archivo que falla y además salta alguna: lo mira un pull request de escenarios
-                    if (e === "FALLA" && n("passed") + n("failed") < ps.length) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
+                    if (e === "FALLA" && (n("passed") + n("failed") < ps.length || /(^|[^\w.$])(test|it)\.fails\b/m.test(fs.readFileSync(f, "utf8")))) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
                     console.log(e + " " + f);
-                  }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0
-                # «test.fails» pasa en el informe; solo el resumen de la salida dice «expected fail», sin el archivo:
-                # lo mira un pull request de escenarios (en uno de código cuenta como pasada)
-                if sed 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/salida" | grep -qE '^[[:space:]]*Tests[[:space:]].*[0-9]+ expected fail'; then
-                  echo "un archivo con «test.fails»" >> "$RUNNER_TEMP/saltadas"
-                fi ;;
+                  }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0 ;;
               *)
                 "$CORREDOR" "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 [ "$rc" = 0 ] || pudo=0
