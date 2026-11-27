@@ -12,8 +12,10 @@
 #     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
 #     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
 #     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
-#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y un archivo con «test.fails» o «it.fails» cuenta
-#     como esperado como fallo: el informe la da como pasada, así que el control lo busca en el texto del archivo.
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y un archivo que espera un fallo cuenta como
+#     saltado: el informe da esa prueba como pasada, así que el control busca en el texto del archivo cualquier «.fails»
+#     («test.fails», «it.only.fails», «test.skipIf(x).fails», también en otra línea) y la opción «fails: true». Un alias
+#     de «test» o «test["fails"]» no lo ve, y un comentario que dice «.fails» pone en rojo su archivo, que el error nombra.
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
@@ -301,11 +303,12 @@ jobs:
                     let e = "NO_CORRIO";
                     if (a && (n("failed") > 0 || (a.status === "failed" && ps.length > 0))) e = "FALLA";
                     else if (ps.length > 0 && n("passed") < ps.length) e = "SALTADA";
-                    // «test.fails» sale como pasada en el informe, con cualquier versión: se mira en el archivo
-                    else if (ps.length > 0 && /(^|[^\w.$])(test|it)\.fails\b/m.test(fs.readFileSync(f, "utf8"))) e = "SALTADA";
+                    // «test.fails» sale como pasada en el informe, con cualquier versión: se busca en el archivo
+                    // cualquier «.fails» (también con only, concurrent, skipIf o runIf, o en otra línea) y «fails: true»
+                    else if (ps.length > 0 && /\.\s*fails\b|\bfails\s*:\s*true\b/.test(fs.readFileSync(f, "utf8"))) e = "SALTADA";
                     else if (ps.length > 0) e = "PASA";
                     // un archivo que falla y además salta alguna: lo mira un pull request de escenarios
-                    if (e === "FALLA" && (n("passed") + n("failed") < ps.length || /(^|[^\w.$])(test|it)\.fails\b/m.test(fs.readFileSync(f, "utf8")))) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
+                    if (e === "FALLA" && (n("passed") + n("failed") < ps.length || /\.\s*fails\b|\bfails\s*:\s*true\b/.test(fs.readFileSync(f, "utf8")))) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
                     console.log(e + " " + f);
                   }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0 ;;
               *)
