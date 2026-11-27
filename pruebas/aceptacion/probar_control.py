@@ -161,8 +161,9 @@ def comparar(plantilla, control, nombre, decir=print):
     except ValueError:
         otra = True
     if dice and dice == huella(tomado) and otra:
-        decir(f"::warning::{nombre} va detrás de la plantilla, que cambió después: regenéralo en un «Kit · » justo después "
-              "de esta versión, con «python3 pruebas/aceptacion/probar_control.py --escribe»")
+        antes = "pon al día adaptar() y " if esperado is None else ""
+        decir(f"::warning::{nombre} va detrás de la plantilla, que cambió después: {antes}regenéralo en un «Kit · » justo "
+              "después de esta versión, con «python3 pruebas/aceptacion/probar_control.py --escribe»")
         return True
     decir(f"MAL  {nombre} no es la plantilla con lo de este repositorio: no se cambia a mano; genéralo con "
           "«python3 pruebas/aceptacion/probar_control.py --escribe»")
