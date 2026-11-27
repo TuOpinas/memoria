@@ -22,11 +22,11 @@ Para una sesión nueva en **[modelo que construye]** con [la carpeta conectada].
 [Los archivos y carpetas que esta sesión toca, y los que no toca porque son de otra. Dos sesiones a la vez nunca comparten un archivo.]
 
 ## Modelos
-Construye: [modelo]. Verifica: [el que no construyó, con su subagente].
+Construye: [modelo de `construye`]. Revisa: [de `revisa`, `contraste` y `arreglos`]. Verifica: [de `verifica`, nunca el que construye, con el subagente `verificador`]. Consulta: [de `consulta`, o `nadie`]. Todos de la línea «Modelos:» de la sección, o por defecto (`plantillas/seccion-desarrollo.md`).
 
 ## Dónde parar y preguntar a [quien acepta]
 - [Lo que se sale del diseño o del plan, o necesita escribir en la computadora de la persona.]
-- [Un enfoque que falla dos veces: proponer pasar la pieza al otro modelo.]
+- [Un enfoque que falla dos veces: proponer pasar la pieza al modelo de `consulta`.]
 - [Un tope de tamaño o de llamadas, si lo hay.]
 
 ## Horas

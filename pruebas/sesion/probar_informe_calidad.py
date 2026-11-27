@@ -71,6 +71,8 @@ rechaza(BUENO + medicion(raz="normalito"), "el nivel es uno de", "rechaza un niv
 rechaza(BUENO + medicion().replace("Razonamiento: medio\n", ""), "Razonamiento: medio", "rechaza una medición sin razonamiento")
 rechaza(BUENO + "## Doubts\n\n### 4. Duda\nLens: risks · Pesa: lo mejora\n\n" + medicion(), "una duda no lleva", "rechaza una duda con «Lens:»")
 acepta(BUENO + medicion(raz="Fable 5.2 medio · Opus 5.5 alto"), "acepta un nivel por modelo")
+# 1.31.0: el esfuerzo «extra» de la herramienta de agentes también se apunta
+acepta(BUENO + medicion(modelo="Sonnet 5.5 (E, R, O)", raz="extra"), "acepta el nivel extra")
 # 1.26.11: la pregunta de una lente que no corrió, pegada a la lente que la hizo; el origen en una revisión de arreglos
 acepta(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencies), risks (efficiency) ·") + medicion(), "acepta una lente con la pregunta de otra pegada")
 rechaza(BUENO.replace("Lens: errors, risks ·", "Lens: objective (inconsistencias), risks ·") + medicion(), "no tiene la forma", "rechaza una pregunta que no es una lente")

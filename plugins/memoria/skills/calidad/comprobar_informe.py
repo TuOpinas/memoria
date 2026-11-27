@@ -25,7 +25,7 @@ import re, sys
 
 LENTES = ("errors", "inconsistencies", "objective", "risks", "efficiency")
 PESOS = {"impide cumplir el objetivo": "impiden", "pone en riesgo el objetivo": "riesgo", "lo mejora": "mejoran"}
-NIVELES = ("máximo", "alto", "medio", "bajo", "no consta")
+NIVELES = ("máximo", "extra", "alto", "medio", "bajo", "no consta")
 ORIGENES = ("en el original", "lo abrió un arreglo anterior", "lo abrió este arreglo")
 LENTE = r"[a-z]+(?: \((?:errors|inconsistencies|objective|risks|efficiency)\))?"
 INICIAL = {"errors": "E", "inconsistencies": "I", "objective": "O", "risks": "R", "efficiency": "F"}
