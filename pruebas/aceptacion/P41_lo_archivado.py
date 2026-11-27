@@ -15,9 +15,10 @@
 Por una función de la página: menuArchivado(areas, proyectos, ver), del bloque entre «// >>> archivado» y
 «// <<< archivado» de vista.html, que se saca como texto y se corre con node como pestanaAlCambiar en P25, sobre listas
 de áreas y proyectos escritas aquí. Devuelve {"boton", "grupos": [{"slug", "archivada", "proyectos": [{"id",
-"cerrado"}]}]}. Y la página leída como texto: el rótulo «Archivado», «Archivada», la etiqueta «cerrado» y el atributo
-data-archivado, y que lea y escriba la clave «ver-archivadas». El gris, los sitios en pantalla y que la elección
-sobreviva a cerrar y abrir la página quedan para la verificación: lo dice RESUMEN.md.
+"cerrado"}]}]}. Y la página leída como texto: el rótulo «Archivado», el atributo data-archivado (como atributo:
+«data-archivado=» o «[data-archivado») y una llamada a menuArchivado( fuera de su bloque. El gris, los sitios en
+pantalla, que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página quedan para la
+verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P41_lo_archivado.py (0 pasa, 1 falla, 2 no se montó).
 """
 import pathlib, sys
@@ -27,7 +28,6 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P21_lineas_que_se_siguen import *  # noqa: E402,F401,F403  (cómo se saca y se corre un bloque de la página)
 
 INICIO_A, FIN_A = "// >>> archivado", "// <<< archivado"
-CLAVE = "ver-archivadas"
 MOSTRAR, OCULTAR = "Mostrar lo archivado", "Ocultar lo archivado"
 
 # La carpeta del encargo. En el orden de la guía, el área archivada va primero, para ver que pasa al final; y en
@@ -56,8 +56,9 @@ LIMPIO = [{"slug": "ventas", "archivada": False, "proyectos": [{"id": "ventas--p
 
 
 def menu(areas, proyectos, ver, problemas):
+    antes = len(problemas)
     r = correr(INICIO_A, FIN_A, "menuArchivado", [areas, proyectos, ver], problemas)
-    if r is None:
+    if len(problemas) > antes:   # correr ya dijo por qué no corrió
         return None
     if not isinstance(r, dict) or "boton" not in r or not isinstance(r.get("grupos"), list):
         problemas.append(f"menuArchivado(...) devolvió {json.dumps(r, ensure_ascii=False)[:120]}, no {{\"boton\", \"grupos\"}}")
@@ -91,6 +92,16 @@ def pagina():
     return VISTA.read_text(encoding="utf-8", errors="replace")
 
 
+def fuera_del_bloque(texto):
+    """La página sin las líneas del bloque «archivado» (con sus dos marcas), si lo trae una sola vez; si no, entera."""
+    lineas = texto.split("\n")
+    ini = [i for i, l in enumerate(lineas) if l.lstrip().startswith(INICIO_A)]
+    fi = [i for i, l in enumerate(lineas) if l.lstrip().startswith(FIN_A)]
+    if len(ini) == 1 and len(fi) == 1 and fi[0] > ini[0]:
+        lineas = lineas[:ini[0]] + lineas[fi[0] + 1:]
+    return "\n".join(lineas)
+
+
 def escenarios(inf):
     # 1 · Oculto por defecto: con el botón apagado, ni el área archivada ni el proyecto cerrado; el botón dice
     #     «Mostrar lo archivado (2)» (un área archivada + un proyecto cerrado de un área vigente)
@@ -107,30 +118,27 @@ def escenarios(inf):
     inf.escenario("Hidden by default", problemas)
 
     # 2 · Visto, cada uno dice qué es: el área vigente en su sitio, con el abierto y después el cerrado marcado; el área
-    #     archivada al final y marcada. Y la página trae «Archivado», «Archivada», «cerrado» y data-archivado
+    #     archivada al final y marcada. Y la página trae el rótulo «Archivado», el atributo data-archivado y una llamada
+    #     a menuArchivado fuera de su bloque. («Archivada» y «cerrado» ya están hoy en la página: buscarlos no prueba nada)
     problemas = []
     r = menu(AREAS, PROYECTOS, True, problemas)
     if r is not None:
         grupos_igual(problemas, "el menú con lo archivado visto", r, VISTO)
     texto = pagina()
-    for cadena, que in (("Archivado", "el rótulo del grupo del final"), ("Archivada", "lo que va donde la cuenta"),
-                        ("cerrado", "la etiqueta del proyecto cerrado"), ("data-archivado", "el atributo de lo que marca")):
-        if cadena not in texto:
-            problemas.append(f"la página del tablero no tiene «{cadena}» ({que})")
+    if "Archivado" not in texto:
+        problemas.append("la página del tablero no tiene «Archivado» (el rótulo del grupo del final)")
+    if not re.search(r"data-archivado\s*=|\[\s*data-archivado", texto):
+        problemas.append("la página del tablero no tiene el atributo data-archivado («data-archivado=» o «[data-archivado»)")
+    if "menuArchivado(" not in fuera_del_bloque(texto):
+        problemas.append("la página del tablero no llama a menuArchivado( fuera de su bloque: el menú no lo usa")
     inf.escenario("Shown, each one says what it is", problemas)
 
-    # 3 · La elección se queda: la página lee y escribe la clave «ver-archivadas», y con ver verdadero el botón dice
-    #     «Ocultar lo archivado» y lo archivado sale
+    # 3 · La elección se queda: con ver verdadero, el botón dice «Ocultar lo archivado». Que la página guarde la
+    #     elección (la clave «ver-archivadas», que ya usa hoy) y la recupere al abrirse queda para la verificación
     problemas = []
-    texto = pagina()
-    for patron, que in ((r'getItem\(\s*["\']' + CLAVE + r'["\']\s*\)', "la lee"),
-                        (r'setItem\(\s*["\']' + CLAVE + r'["\']\s*,', "la escribe")):
-        if not re.search(patron, texto):
-            problemas.append(f"la página del tablero no {que} con la clave «{CLAVE}»")
     r = menu(AREAS, PROYECTOS, True, problemas)
     if r is not None:
         igual(problemas, "el botón con lo archivado visto", r["boton"], OCULTAR)
-        grupos_igual(problemas, "el menú con lo archivado visto", r, VISTO)
     inf.escenario("The choice stays", problemas)
 
     # 4 · Nada archivado, sin botón: con el botón apagado y encendido, boton es null y el menú trae todo como está.
