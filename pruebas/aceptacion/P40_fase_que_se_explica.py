@@ -12,10 +12,10 @@
   the phase, Cuando the window opens, Entonces that row shows as written, and the rest of the window is unchanged.
 
 Por dos entradas: el generador del tablero sobre la raíz de muestra de P05_lectores.py (plan.fases[].en_llano, el
-párrafo, y plan.fases[].arregla, [{"pieza", "texto"}] en el orden de la tabla), y la función faseEnLlano(fase) de la
+párrafo, y plan.fases[].arregla, [{"pieza", "que"}] en el orden de la tabla), y la función faseEnLlano(fase) de la
 página del tablero (el bloque entre «// >>> fase en llano» y «// <<< fase en llano» de vista.html), que se saca como
 texto y se corre con node, como pestanaAlCambiar en P25, sobre la fase que dejó el generador. Devuelve null o
-{"primera", "parrafo", "filas"}. Dónde pinta la página el párrafo, la tabla y la primera frase queda para la
+{"primera", "parrafo", "filas": [[pieza, que], …]}. Dónde pinta la página el párrafo, la tabla y la primera frase queda para la
 verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P40_fase_que_se_explica.py (0 pasa, 1 falla, 2 no se montó).
 """
@@ -53,14 +53,14 @@ def fase_de(d, fid, problemas):
 
 
 def revisa_datos(f, fid, parrafo, filas, problemas):
-    """plan.fases[fid].en_llano es el párrafo y .arregla las filas, [{"pieza", "texto"}] en el orden de la tabla."""
+    """plan.fases[fid].en_llano es el párrafo y .arregla las filas, [{"pieza", "que"}] en el orden de la tabla."""
     igual(problemas, f"«en_llano» de la fase {fid}", f.get("en_llano"), parrafo)
     arregla = f.get("arregla")
     if not isinstance(arregla, list):
         problemas.append(f"«arregla» de la fase {fid} es {json.dumps(arregla, ensure_ascii=False)}, no una lista")
         return
-    igual(problemas, f"«arregla» de la fase {fid} como [pieza, texto]",
-          [[saca(a, "pieza"), saca(a, "texto")] for a in arregla], filas)
+    igual(problemas, f"«arregla» de la fase {fid} como [pieza, que]",
+          [[saca(a, "pieza"), saca(a, "que")] for a in arregla], filas)
 
 
 NO_CORRIO = object()   # faseEnLlano no se pudo correr: correr ya dijo por qué

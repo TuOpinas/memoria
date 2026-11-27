@@ -618,13 +618,13 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan: los d
 
 **Cómo están planteadas.** Como en F5 y F6:
 
-- **Lo que el tablero prepara (P40).** A la organización de mentira de P05 se le cambia el bloque «### F1 en llano» o se le quita el de F2, se genera el tablero y se lee lo que prepara de cada fase: el párrafo (`en_llano`) y las filas de la tabla (`arregla`, cada una con su pieza y su texto).
+- **Lo que el tablero prepara (P40).** A la organización de mentira de P05 se le cambia el bloque «### F1 en llano» o se le quita el de F2, se genera el tablero y se lee lo que prepara de cada fase: el párrafo (`en_llano`) y las filas de la tabla (`arregla`, cada una con su pieza y lo que arregla, en la clave `que`).
 - **Un trozo de la página, corrido aparte (P40 y P41).** Las pruebas sacan de la página del tablero dos trozos y los corren con node, sin abrir un navegador:
   - el que decide qué lleva la fase: la primera frase para la tarjeta, y el párrafo y las filas para la ventana, o nada si la fase no tiene bloque;
   - el que arma el menú: qué áreas y proyectos salen, en qué orden, cuáles van marcados como archivados o cerrados, y qué dice el botón.
 - **La página como texto (P41).** Que traiga el rótulo «Archivado», la palabra «Archivada», la etiqueta «cerrado» y la marca `data-archivado`, y que lea y escriba la elección del botón con la clave `ver-archivadas`.
 
-Hoy fallan todas las filas, y deben: la página aún no trae esos dos trozos. Además, el tablero ya prepara el párrafo y las filas de cada fase, pero llama «que» al texto de cada fila, y el contrato lo pide como «texto»: P40 pide «texto».
+Hoy fallan todas las filas, y deben: la página aún no trae esos dos trozos. El tablero ya prepara el párrafo y las filas de cada fase (`{"pieza", "que"}`), así que lo que falla de P40 es solo la página.
 
 **Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
 - **P40.**
@@ -673,7 +673,7 @@ La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, c
 
 ### Lo que queda sabido
 
-- El tablero ya lee el bloque, también titulado «in plain words». Cuando la pieza dé «texto» en cada fila, esa parte de las filas de arriba pasa sola.
+- El tablero ya lee el bloque, también titulado «in plain words», y ya da cada fila como `{"pieza", "que"}`: la parte de las filas que mira lo que prepara el tablero ya pasa hoy; lo nuevo de P40 está en la página.
 - La página ya tiene la palabra «Archivada», la clave `ver-archivadas` (que ya lee y escribe) y «cerrado» muchas veces: buscarlas no prueba nada nuevo. Lo que falla hoy es el trozo del menú, el rótulo «Archivado» y la marca `data-archivado`.
 - Que «Archivado», «Archivada» y «cerrado» estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación.
 - P40 y P41 necesitan node en el PATH; sin él no se montan y salen con 2.
