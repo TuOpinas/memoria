@@ -49,10 +49,10 @@
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
 #   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["anyio.pytest_plugin"],
 #   con @pytest.mark.anyio en cada prueba async o pytestmark en su archivo) y sys.path si hace falta más. El control pone
-#   la raíz del repositorio una sola vez, con su ruta completa, al final de sys.path antes de cargar pytest: un
+#   la raíz del repositorio una sola vez, por su ruta real, al final de sys.path antes de cargar pytest: un
 #   pytest.py o un pdb.py de la raíz no sustituye a lo que pytest encuentra instalado, y el código sin instalar se
 #   encuentra, también desde el conftest.py, salvo un módulo de la raíz que se llame como uno de la biblioteca estándar
-#   o de una dependencia instalada (email/, queue/, types/…): ese se renombra o se instala. Con Vitest, en
+#   o de una dependencia instalada (email/, queue/, types/…): ese se renombra. Con Vitest, en
 #   la configuración de CONFIG. Con un corredor propio, lo que lee de fuera lo revisa quien acepta (R2).
 # - Las pruebas de una pieza son los archivos de la carpeta que empiezan por su identificador y «_» y terminan como dice
 #   el corredor (P1_alta.py es de P1; P10_baja.py, no): un archivo de pruebas con otro nombre no entra en un pull request
@@ -267,8 +267,9 @@ jobs:
             case "$CORREDOR" in
               pytest)
                 # la raíz del repositorio va una vez y al final de sys.path, aunque PYTHONPATH o una instalación editable la
-                # pongan antes: un pytest.py o un pdb.py de ella no sustituye a pytest ni a lo que pytest carga, y el código
-                # que no se instala se sigue encontrando, también desde el conftest.py y tras un chdir
+                # pongan antes: un pytest.py o un pdb.py de ella no sustituye a lo que pytest encuentra instalado, y el código
+                # que no se instala se sigue encontrando, también desde el conftest.py y tras un chdir, salvo un módulo que
+                # se llame como uno de la biblioteca estándar o de una dependencia
                 python3 -c 'import os, sys; c = os.path.realpath("."); sys.path[:] = [p for p in sys.path if os.path.realpath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.console_main())' \
                   -c /dev/null --rootdir=. --confcutdir="$dir" -p no:cacheprovider --continue-on-collection-errors -r fEsxXp "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 case "$rc" in 0|1|2|5) ;; *) pudo=0 ;; esac
