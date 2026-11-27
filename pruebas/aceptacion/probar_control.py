@@ -4,8 +4,12 @@ pruebas/aceptacion/correr.py. No es una prueba de una pieza: correr.py solo corr
 y «_».
 
 1. El control es la plantilla del kit (plugins/memoria/skills/desarrollo/plantillas/pruebas-aceptacion.yml) con lo que
-   este repositorio rellena, y nada más: lo construye adaptar() y tiene que salir igual, línea por línea. Lo que la
-   plantilla decide lo prueban probar_pruebas_aceptacion.py y las pruebas de aceptación de P01–P03 y P30.
+   este repositorio rellena, y nada más: lo construye adaptar() y tiene que salir igual, línea por línea, sin contar el
+   commit al que va fijada cada acción, que sube Dependabot en el workflow y no en la plantilla. Su cabecera lleva la
+   huella de la plantilla de la que salió: si la plantilla cambió después (una versión que la cambia va antes que el
+   «Kit · » que regenera el control, porque el control no deja juntar un workflow con código), lo dice y no falla; si
+   no cambió y el control no sale igual, alguien lo tocó a mano, y falla. Lo que la plantilla decide lo prueban
+   probar_pruebas_aceptacion.py y las pruebas de aceptación de P01–P03 y P30.
 2. Con correr.py como corredor propio, el control queda en verde o en rojo sobre pull requests de mentira, con el arnés
    de flujo.py.
 3. correr.py, llamado con piezas como dice el CLAUDE.md, sale con 0, 1 o 2.
@@ -13,7 +17,7 @@ y «_».
 Uso, desde la raíz del repositorio: python3 pruebas/aceptacion/probar_control.py (0 todo bien, 1 algo falla, 2 no se
 pudo montar: sin git o sin bash 4). Va en «Kit · » con el control: los dos están en la carpeta del kit o en él.
 """
-import pathlib, subprocess, sys, tempfile
+import hashlib, pathlib, re, subprocess, sys, tempfile
 
 sys.dont_write_bytecode = True
 AQUI = pathlib.Path(__file__).resolve().parent
@@ -28,12 +32,12 @@ L = ".github/piezas-activas.txt"
 CORRER = (AQUI / "correr.py").read_text(encoding="utf-8")
 CODIGO = {"plugins/memoria/x.py": "x = 2\n"}
 
-CABECERA = """# Las pruebas de aceptación de memoria: la plantilla del kit de desarrollo del plugin (1.31.1), con este repositorio en
-# su «env:» y su entorno, y nada más; probar_control.py, junto al corredor, comprueba que es así. El corredor es propio,
+CABECERA = """# Las pruebas de aceptación de memoria: la plantilla del kit de desarrollo del plugin, con este repositorio en su
+# «env:» y su entorno, y nada más; probar_control.py, junto al corredor, comprueba que es así. El corredor es propio,
 # pruebas/aceptacion/correr.py, que corre cada script de prueba y responde por el contrato de abajo. Los evals no entran
 # en este control: cuestan tokens y no siempre dan lo mismo, y corren con la etiqueta «evals» antes del sí
 # (shared-memory/plugin-memoria#2026-11-22-3). Decisiones tecnologia/metodologia-desarrollo#2026-11-19-7 y
-# shared-memory/plugin-memoria#2026-11-25-5.
+# shared-memory/plugin-memoria#2026-11-25-5. Plantilla: {huella}
 """
 CAMBIOS = [
     ("  ACEPTACION: tests/aceptacion   ", "  ACEPTACION: pruebas/aceptacion "),
@@ -43,17 +47,27 @@ CAMBIOS = [
      "las pruebas (p. ej. pip install -r requirements.txt; con\n          # vitest, npm ci)\n          true\n",
      "      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0\n"
      "        with:\n          python-version: '3.12'\n"
-     "      - name: Prepara el entorno\n        run: |\n          # las de P01–P03 corren la plantilla del kit con pytest; las de P19–P21 y P25, node, que trae la imagen\n"
+     "      - name: Prepara el entorno\n        run: |\n          # pytest para P01–P03 y P30, que corren la plantilla del kit; node, que trae la imagen, para P19–P21, P25, P27, P28 y P30\n"
      "          python3 -I -m pip install -q pytest==8.3.5\n"),
 ]
 
 
+def huella(plantilla):
+    return hashlib.sha256(plantilla.encode("utf-8")).hexdigest()[:12]
+
+
+def sin_commits(texto):
+    """Cada «uses: acción@commit  # vX» sin el commit ni la versión: los sube Dependabot en el workflow."""
+    return re.sub(r"(uses: [^@\s]+)@\S+(\s+#.*)?", r"\1@…", texto)
+
+
 def adaptar(plantilla):
-    """La plantilla con lo que rellena este repositorio: su cabecera, el «env:» y el entorno."""
+    """La plantilla con lo que rellena este repositorio: su cabecera, con la huella de la plantilla, el «env:» y el
+    entorno."""
     lineas = plantilla.split("\n")
     if "#" not in lineas:
         raise SystemExit("La plantilla ya no separa su primer párrafo con una línea «#»: ponlo al día.")
-    texto = CABECERA + "\n".join(lineas[lineas.index("#"):])   # su primer párrafo dice cómo se copia: va el nuestro
+    texto = CABECERA.format(huella=huella(plantilla)) + "\n".join(lineas[lineas.index("#"):])   # su primer párrafo dice cómo se copia: va el nuestro
     for viejo, nuevo in CAMBIOS:
         if texto.count(viejo) != 1:
             raise SystemExit(f"La plantilla cambió y adaptar() ya no encuentra «{viejo.strip()[:60]}»: ponlo al día.")
@@ -110,14 +124,41 @@ def por_piezas():
     return r
 
 
+def comparar(plantilla, control, nombre, decir=print):
+    """True si el control es la plantilla adaptada, o si va detrás de una plantilla que cambió después."""
+    if sin_commits(control) == sin_commits(adaptar(plantilla)):
+        decir(f"bien {nombre} es la plantilla con lo de este repositorio")
+        return True
+    m = re.search(r"Plantilla: ([0-9a-f]{12})", control)
+    if m and m.group(1) != huella(plantilla):
+        decir(f"bien {nombre} va detrás de la plantilla, que cambió después: regenéralo en un «Kit · » con "
+              "«python3 pruebas/aceptacion/probar_control.py --escribe»")
+        return True
+    decir(f"MAL  {nombre} no es la plantilla con lo de este repositorio: no se cambia a mano; genéralo con "
+          "«python3 pruebas/aceptacion/probar_control.py --escribe»")
+    return False
+
+
+def huella_y_commits():
+    """Un «Bump …» y una plantilla nueva pasan; un cambio a mano, no."""
+    plantilla = PLANTILLA.read_text(encoding="utf-8")
+    control = adaptar(plantilla)
+    nueva = plantilla.replace("timeout-minutes: 30", "timeout-minutes: 31")
+    casos = [("un «Bump …» del commit de una acción", plantilla, re.sub(r"(actions/checkout@)[0-9a-f]+", r"\g<1>" + "0" * 40, control), True),
+             ("una plantilla nueva antes de regenerar", nueva, control, True),
+             ("un cambio a mano", plantilla, control.replace("timeout-minutes: 30", "timeout-minutes: 31"), False)]
+    r = []
+    for nombre, p, c, espera in casos:
+        bien = comparar(p, c, nombre, decir=lambda _: None) == espera
+        print(("bien " if bien else "MAL  ") + f"{nombre}: {'pasa' if espera else 'falla'}")
+        r.append(bien)
+    return r
+
+
 def main():
-    esperado = adaptar(PLANTILLA.read_text(encoding="utf-8"))
-    igual = WF.read_text(encoding="utf-8") == esperado
-    print(("bien " if igual else "MAL  ") + "el control es la plantilla con lo de este repositorio"
-          + ("" if igual else ": genéralo con «python3 pruebas/aceptacion/probar_control.py --escribe»"))
+    igual = comparar(PLANTILLA.read_text(encoding="utf-8"), WF.read_text(encoding="utf-8"), "el control")
     flujo.YML = WF
     activa = lambda que, **x: base(**{L: "P05\n", f"{A}/P05_x.py": prueba(que)}, **x)
-    wf = WF.read_text(encoding="utf-8")
     r = [igual,
          caso("Activa que pasa, pull request de código", activa("pasa"), CODIGO, "P09 · otra", "verde"),
          caso("Activa que falla", activa("falla"), CODIGO, "P09 · otra", "rojo", mensaje="P05"),
@@ -125,15 +166,8 @@ def main():
          caso("Activa que sale sin su línea RESULTADO", activa("rota"), CODIGO, "P09 · otra", "rojo", mensaje="no corrió"),
          caso("Escenarios cuyas pruebas fallan", base(), {f"{A}/P06_x.py": prueba("falla")}, "Escenarios · P06", "verde"),
          caso("Escenarios cuyas pruebas ya pasan", base(), {f"{A}/P06_x.py": prueba("pasa")}, "Escenarios · P06", "rojo", mensaje="ya pasan"),
-         caso("Escenarios cuyas pruebas solo se saltan", base(), {f"{A}/P06_x.py": prueba("saltada")}, "Escenarios · P06", "rojo", mensaje="no fallaron como pruebas"),
-         caso("correr.py fuera de un «Kit · »", activa("pasa"), {f"{A}/correr.py": CORRER + "\n"}, "P09 · otra", "rojo", mensaje="correr.py"),
-         caso("correr.py en un «Kit · »", activa("pasa"), {f"{A}/correr.py": CORRER + "\n"}, "Kit · corredor", "verde"),
-         caso("Kit: el control, su prueba y CLAUDE.md", activa("pasa"),
-              {WF.relative_to(RAIZ).as_posix(): wf + "\n", ".github/workflows/pruebas.yml": "x\n", "CLAUDE.md": "x\n",
-               f"{A}/probar_control.py": "x = 1\n"}, "Kit · control", "verde"),
-         caso("Kit con código", base(), {"CLAUDE.md": "x\n", **CODIGO}, "Kit · x", "rojo", mensaje="Kit · "),
-         caso("Dependabot sube las acciones", activa("pasa"), {".github/workflows/pruebas.yml": "x\n"}, "Bump actions", "verde", autor="dependabot[bot]"),
-         caso("Un eval sin pieza con código", base(), {"pruebas/evals/escenarios/12-algo.md": "x\n", **CODIGO}, "1.31.2: algo", "verde")]
+         caso("Escenarios cuyas pruebas solo se saltan", base(), {f"{A}/P06_x.py": prueba("saltada")}, "Escenarios · P06", "rojo", mensaje="no fallaron como pruebas")]
+    r += huella_y_commits()
     r += por_piezas()
     print(f"{sum(r)} de {len(r)}")
     return 0 if all(r) else 1

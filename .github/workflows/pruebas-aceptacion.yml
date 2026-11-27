@@ -1,9 +1,9 @@
-# Las pruebas de aceptación de memoria: la plantilla del kit de desarrollo del plugin (1.31.1), con este repositorio en
-# su «env:» y su entorno, y nada más; probar_control.py, junto al corredor, comprueba que es así. El corredor es propio,
+# Las pruebas de aceptación de memoria: la plantilla del kit de desarrollo del plugin, con este repositorio en su
+# «env:» y su entorno, y nada más; probar_control.py, junto al corredor, comprueba que es así. El corredor es propio,
 # pruebas/aceptacion/correr.py, que corre cada script de prueba y responde por el contrato de abajo. Los evals no entran
 # en este control: cuestan tokens y no siempre dan lo mismo, y corren con la etiqueta «evals» antes del sí
 # (shared-memory/plugin-memoria#2026-11-22-3). Decisiones tecnologia/metodologia-desarrollo#2026-11-19-7 y
-# shared-memory/plugin-memoria#2026-11-25-5.
+# shared-memory/plugin-memoria#2026-11-25-5. Plantilla: c71e6de88898
 #
 # - El corredor lo declara el proyecto en CORREDOR, y las reglas son las mismas con cualquiera:
 #   · pytest: los archivos de una pieza se llaman «<pieza>_<nombre>.py».
@@ -239,7 +239,7 @@ jobs:
           python-version: '3.12'
       - name: Prepara el entorno
         run: |
-          # las de P01–P03 corren la plantilla del kit con pytest; las de P19–P21 y P25, node, que trae la imagen
+          # pytest para P01–P03 y P30, que corren la plantilla del kit; node, que trae la imagen, para P19–P21, P25, P27, P28 y P30
           python3 -I -m pip install -q pytest==8.3.5
       - name: Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios
         env:
