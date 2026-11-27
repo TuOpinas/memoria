@@ -354,7 +354,7 @@ def con_pytest(trampa, lista, titulo, prueba_p01="assert False", conftest_dentro
 yml = YML.read_text(encoding="utf-8")
 ok(all(f'{v}: ""' in yml for v in ("PYTEST_ADDOPTS", "PYTEST_PLUGINS")) and 'PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in yml,
    "el paso no carga solos los plugins que instala el código, ni lee PYTEST_ADDOPTS o PYTEST_PLUGINS del entorno")
-ok(all(x in yml for x in ("-c /dev/null --rootdir=.", '--confcutdir="$dir"', "--rootdir=.")), "pytest no lee la configuración de fuera")
+ok(all(x in yml for x in ("-c /dev/null --rootdir=.", '--confcutdir="$dir"')), "pytest no lee la configuración de fuera")
 try:
     import pytest as _pytest  # noqa: F401
     hay_pytest = True

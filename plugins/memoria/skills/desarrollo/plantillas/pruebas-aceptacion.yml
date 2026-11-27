@@ -13,15 +13,15 @@
 #     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
 #     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
 #     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada:
-#     el informe no la distingue.
+#     el informe no la distingue, así que tampoco cuenta como esperada como fallo en un pull request de escenarios.
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
 #     sus archivos de prueba («_test.go»). El control lo llama desde la raíz del repositorio con los archivos de prueba
 #     como argumentos. El corredor escribe una línea por archivo, «PASA <ruta>», «FALLA <ruta>» o «NO_CORRIO <ruta>» (las
 #     demás líneas no cuentan), y sale con 0 si pudo correr, pasen o no; con otro código, las pruebas no se pudieron
-#     correr. «PASA» solo si todas las pruebas del archivo pasaron: un archivo con una saltada o por hacer es «NO_CORRIO». El corredor es parte
-#     del kit: solo lo cambia un pull request «Kit · », sin código ni pruebas.
+#     correr. «PASA» solo si todas las pruebas del archivo pasaron: un archivo con una saltada o por hacer es «NO_CORRIO»,
+#     aunque otra falle. El corredor es parte del kit: solo lo cambia un pull request «Kit · », sin código ni pruebas.
 #   Un archivo del que el corredor no da resultado cuenta como no corrido.
 # - Un pull request no cambia las pruebas de aceptación y código a la vez: los escenarios entran en su propio pull request.
 # - Las pruebas de una pieza cuentan desde que su identificador está en ACTIVAS, un archivo fuera de la carpeta. El pull
@@ -29,8 +29,9 @@
 #   lista, salvo el de escenarios de esa misma pieza, que la saca mientras se cambian, o su reversión.
 #   Una pieza técnica, sin escenarios, no tiene pruebas y no entra en la lista.
 # - Un pull request de escenarios («Escenarios · P01») de una pieza que no está en la lista se une en verde si sus pruebas
-#   fallan como pruebas: alguna falla, y todas corrieron (no valen un archivo que no se pudo cargar ni el corredor sin
-#   instalar). Si la pieza ya está construida, ese mismo pull request la añade a la lista, y entonces sus pruebas tienen
+#   fallan como pruebas: alguna falla, y todas corrieron (no valen un archivo que no se pudo cargar, el corredor sin
+#   instalar ni una prueba saltada, por hacer o esperada como fallo; con pytest, tampoco un ERROR al prepararse o al
+#   limpiarse ni una prueba async que pytest no pudo correr). Si la pieza ya está construida, ese mismo pull request la añade a la lista, y entonces sus pruebas tienen
 #   que pasar.
 # - Un identificador de pieza son letras, dígitos y, como mucho, una letra al final: P01, H22, H22a. H22, H22a y H22b
 #   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
@@ -263,9 +264,10 @@ jobs:
             local r="$RUNNER_TEMP/resultados"; : > "$r"; : > "$RUNNER_TEMP/saltadas"; printf '%s\n' "$@" > "$RUNNER_TEMP/pedidos"; pudo=1
             case "$CORREDOR" in
               pytest)
-                # pytest se carga sin la raíz en sys.path, para que un pytest.py o un pdb.py de ella no lo sustituya, y la
-                # raíz vuelve justo antes de reunir las pruebas, para el código que no se instala
-                python3 -c 'import sys; r = sys.path.pop(0); import pytest; sys.exit(int(pytest.main(sys.argv[1:], plugins=[type("Raiz", (), {"pytest_collection": staticmethod(lambda session: sys.path.insert(0, r))})()])))' \
+                # la raíz del repositorio va una vez y al final de sys.path, aunque PYTHONPATH o una instalación editable la
+                # pongan antes: un pytest.py o un pdb.py de ella no sustituye a pytest ni a lo que pytest carga, y el código
+                # que no se instala se sigue encontrando, también desde el conftest.py y tras un chdir
+                python3 -c 'import os, sys; c = os.getcwd(); sys.path[:] = [p for p in sys.path if os.path.abspath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.console_main())' \
                   -c /dev/null --rootdir=. --confcutdir="$dir" -p no:cacheprovider --continue-on-collection-errors -r fEsxXp "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 case "$rc" in 0|1|2|5) ;; *) pudo=0 ;; esac
                 # del resumen corto, una línea por prueba: «PASSED ruta::prueba», «SKIPPED [1] ruta:3: …», «ERROR ruta - …»
@@ -298,7 +300,7 @@ jobs:
                     else if (ps.length > 0 && n("passed") < ps.length) e = "SALTADA";
                     else if (ps.length > 0) e = "PASA";
                     // un archivo que falla y además salta alguna: lo mira un pull request de escenarios
-                    if (n("passed") + n("failed") < ps.length) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
+                    if (e === "FALLA" && n("passed") + n("failed") < ps.length) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
                     console.log(e + " " + f);
                   }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0 ;;
               *)
@@ -359,7 +361,7 @@ jobs:
                 elif [ -n "$(con "$p" NO_CORRIO)" ]; then
                   echo "::error::De las pruebas de aceptación de $p, que ya cuenta, no corrió $(con "$p" NO_CORRIO): unas pruebas que no corren no cuentan como pasadas."; mal=1
                 elif [ -n "$(con "$p" SALTADA)" ]; then
-                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" SALTADA) tiene pruebas saltadas, por hacer o esperadas como fallo, que no cuentan$([ "$CORREDOR" = pytest ] && printf ' (una async sin su plugin se salta o falla, según la versión de pytest)')."; mal=1
+                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" SALTADA) tiene pruebas saltadas, por hacer o esperadas como fallo, que no cuentan$([ "$CORREDOR" = pytest ] && printf ' (una async sin su plugin se salta)')."; mal=1
                 fi
               done
               if [ "$mal" = 0 ] && [ "$sueltas" = 1 ]; then
@@ -387,13 +389,13 @@ jobs:
                 echo "::error::Las pruebas de $p no se pudieron correr ($(quien) salió con $rc): no fallaron como pruebas. ¿Está instalado el corredor?"; exit 1
               fi
               # con pytest, dos rojos que no son que falte la pieza: una async que pytest no pudo correr y un ERROR al prepararse
-              if [ "$CORREDOR" = pytest ] && grep -qE 'async def functions? (are not natively supported|and no async plugin)' "$RUNNER_TEMP/salida"; then
+              if [ "$CORREDOR" = pytest ] && grep -qE 'async def functions? (are not natively supported|and no async plugin)|requested an async fixture' "$RUNNER_TEMP/salida"; then
                 echo "::error::pytest no pudo correr una prueba async de $p: falta el plugin async en el conftest.py de la carpeta (pytest_plugins = [\"anyio\"]) o la marca de la prueba (@pytest.mark.anyio); no es que falte la pieza."; exit 1
               fi
               if [ "$CORREDOR" = pytest ]; then
                 prep=""; for f in "${suyos[@]}"; do grep -qF "ERROR $f::" "$RUNNER_TEMP/salida" && prep="$prep${prep:+, }$f"; done
                 if [ -n "$prep" ]; then
-                  echo "::error::Las pruebas de $p dan ERROR al prepararse en $prep: falló su preparación (una fixture, algo que monta la prueba), no la pieza que falta. Si la preparación importa lo que la pieza aún no tiene, que lo importe dentro de la prueba."; exit 1
+                  echo "::error::Las pruebas de $p dan ERROR al prepararse o al limpiarse en $prep: falló su preparación (una fixture, algo que monta o limpia la prueba), no la pieza que falta. Si la preparación importa lo que la pieza aún no tiene, que lo importe dentro de la prueba."; exit 1
                 fi
               fi
               if [ -n "$(con "$p" NO_CORRIO)" ]; then
@@ -404,7 +406,7 @@ jobs:
               saltan="$(con "$p" SALTADA)"
               [ -s "$RUNNER_TEMP/saltadas" ] && saltan="$saltan${saltan:+, }$(paste -sd, "$RUNNER_TEMP/saltadas" | sed 's/,/, /g')"
               if [ -n "$saltan" ] || { [ "$CORREDOR" = pytest ] && grep -qE ' (skipped|xfailed|xpassed)' <<< "$ultima"; }; then
-                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
+                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo, o un beforeAll que falló («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
               fi
               if [ -z "$(con "$p" FALLA)" ]; then
                 echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios. Si la pieza ya está construida, este pull request la añade a $ACTIVAS y entonces tienen que pasar."; exit 1
