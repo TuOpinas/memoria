@@ -96,7 +96,8 @@ def main(args):
     pasan = fallan = saltadas = 0
     mal, piezas_fallan, piezas_saltadas, rotas = False, [], [], []
     for pieza in piezas:
-        archivos = sorted(p for p in AQUI.iterdir() if p.is_file() and p.suffix == ".py" and p.name.startswith(pieza + "_"))
+        archivos = sorted(p for p in AQUI.iterdir()   # sin mayúsculas, como el control: p05_x.py es de P05
+                          if p.is_file() and p.suffix == ".py" and p.name.lower().startswith(pieza.lower() + "_"))
         if not archivos:
             print(f"== {pieza}: no hay ningún archivo {pieza}_*.py en {AQUI.name}/")
             mal = True
