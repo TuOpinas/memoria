@@ -2,7 +2,7 @@
 """P28 · The system (escenarios aprobados: Juanjo Jiménez-Alfaro, 2026-11-25, en el plan).
 
 - One drawing instead of two. Dado a design whose «Infraestructura» has «Tipo», Cuando the tab opens, Entonces it shows
-  «El sistema» and no drawing of components.
+  «Arquitectura técnica» and no drawing of components.
 - Frames and order. Dado pieces of two providers, Cuando the tab opens, Entonces each is inside the frame of its
   provider, account and environment, those that only call are on top and those that only receive at the bottom.
 - Colour tells the type. Dado pieces of «Tipo» `corre`, `guarda` and `externo`, Cuando the tab opens, Entonces each type
@@ -27,7 +27,7 @@ sys.dont_write_bytecode = True   # no deja __pycache__ en la carpeta
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from P21_lineas_que_se_siguen import *  # noqa: E402,F401,F403  (la muestra de P05, cómo se saca y se corre el trazado)
 
-TITULO = "El sistema"
+TITULO = "Arquitectura técnica"
 TABLA_VIEJA = """| Pieza | Para qué | Dónde | Conecta con |
 |---|---|---|---|
 | Servidor web | Sirve la tienda y la API | Nube · producción | Base de datos |
