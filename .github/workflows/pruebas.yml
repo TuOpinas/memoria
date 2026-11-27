@@ -67,7 +67,7 @@ jobs:
           python3 -m pip install -q pytest==8.3.5
           python3 --version
           fallos=0
-          for f in pruebas/sesion/probar_*.py; do
+          for f in pruebas/sesion/probar_*.py pruebas/aceptacion/probar_control.py; do
             echo "== $f"
             python3 "$f" || fallos=$((fallos + 1))
           done

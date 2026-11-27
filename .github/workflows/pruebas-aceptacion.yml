@@ -1,34 +1,79 @@
-# Las pruebas de aceptación de memoria (kit de desarrollo del plugin, 1.27): la plantilla del kit adaptada a este
-# repositorio (decisiones shared-memory/plugin-memoria#2026-11-22-2, -3 y -9). Las pruebas son scripts con su propio
-# ejecutor (pruebas/aceptacion/correr.py), no pytest, y una pieza que hace el modelo, sin script, se prueba con un eval que
-# no entra en este check: cuesta tokens y no siempre da lo mismo, y corre con la etiqueta «evals».
+# Las pruebas de aceptación de memoria: la plantilla del kit de desarrollo del plugin (1.31.1), con este repositorio en
+# su «env:» y su entorno, y nada más; probar_control.py, junto al corredor, comprueba que es así. El corredor es propio,
+# pruebas/aceptacion/correr.py, que corre cada script de prueba y responde por el contrato de abajo. Los evals no entran
+# en este control: cuestan tokens y no siempre dan lo mismo, y corren con la etiqueta «evals» antes del sí
+# (shared-memory/plugin-memoria#2026-11-22-3). Decisiones tecnologia/metodologia-desarrollo#2026-11-19-7 y
+# shared-memory/plugin-memoria#2026-11-25-5.
 #
-# Tres clases de archivo:
-# - escenarios: pruebas/aceptacion/<pieza>_*.py, pruebas/aceptacion/RESUMEN.md y pruebas/evals/escenarios/NN-<pieza>-….md.
-#   Entran en su propio pull request («Escenarios · P01[ + P02]»), directo a main, y solo los de las piezas de su título.
-# - kit: este archivo, CLAUDE.md, pruebas/aceptacion/correr.py y flujo.py, y su prueba (pruebas/sesion/
-#   probar_aceptacion_memoria.py). Van en su propio pull request («Kit · »), sin nada más.
-# - lo demás, también el resto de pruebas/evals/, va con cualquier pull request.
-# La lista de piezas activas (ACTIVAS) no pierde ninguna pieza, salvo la que saca el pull request de escenarios que cambia
-# sus pruebas, o su reversión. Un pull request que nombra una pieza con pruebas la tiene en la lista.
-#
-# Lo que este check no cierra: el código que las pruebas importan corre en su proceso y puede hacer trampa, y el workflow
-# que juzga un pull request es el que ese pull request trae; un pull request que lo cambia va solo, como «Kit · », y lo
-# une quien acepta (CLAUDE.md, regla 1). Eso lo ven quien une, la verificación sobre la candidata y el seguimiento.
-# Las acciones van fijadas por commit, con su etiqueta al lado, como en pruebas.yml.
+# - El corredor lo declara el proyecto en CORREDOR, y las reglas son las mismas con cualquiera:
+#   · pytest: los archivos de una pieza se llaman «<pieza>_<nombre>.py».
+#   · vitest: se llaman «<pieza>_<nombre>.test.ts»; CONFIG es la configuración de Vitest, dentro de la carpeta, y es la
+#     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
+#     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
+#     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada:
+#     el informe no la distingue.
+#     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
+#     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
+#   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
+#     sus archivos de prueba («_test.go»). El control lo llama desde la raíz del repositorio con los archivos de prueba
+#     como argumentos. El corredor escribe una línea por archivo, «PASA <ruta>», «FALLA <ruta>» o «NO_CORRIO <ruta>» (las
+#     demás líneas no cuentan), y sale con 0 si pudo correr, pasen o no; con otro código, las pruebas no se pudieron
+#     correr. «PASA» solo si todas las pruebas del archivo pasaron: con una saltada o por hacer, no. El corredor es parte
+#     del kit: solo lo cambia un pull request «Kit · », sin código ni pruebas.
+#   Un archivo del que el corredor no da resultado cuenta como no corrido.
+# - Un pull request no cambia las pruebas de aceptación y código a la vez: los escenarios entran en su propio pull request.
+# - Las pruebas de una pieza cuentan desde que su identificador está en ACTIVAS, un archivo fuera de la carpeta. El pull
+#   request de una pieza que ya tiene pruebas en la carpeta tiene que añadirla, y ninguno puede quitar una pieza de la
+#   lista, salvo el de escenarios de esa misma pieza, que la saca mientras se cambian, o su reversión.
+#   Una pieza técnica, sin escenarios, no tiene pruebas y no entra en la lista.
+# - Un pull request de escenarios («Escenarios · P01») de una pieza que no está en la lista se une en verde si sus pruebas
+#   fallan como pruebas: alguna falla, y todas corrieron (no valen un archivo que no se pudo cargar ni el corredor sin
+#   instalar). Si la pieza ya está construida, ese mismo pull request la añade a la lista, y entonces sus pruebas tienen
+#   que pasar.
+# - Un identificador de pieza son letras, dígitos y, como mucho, una letra al final: P01, H22, H22a. H22, H22a y H22b
+#   son tres piezas distintas, en la lista, en los archivos (H22a_x.py es de H22a, no de H22) y en el título.
+# - El kit es el CLAUDE.md, el workflow, el corredor propio o la configuración del repositorio: el workflow es el de las
+#   pruebas de aceptación y los demás de .github/workflows/, y la configuración del repositorio, CODEOWNERS (en la raíz,
+#   .github/ o docs/) y .github/dependabot.yml (o .yaml). Un pull request que cambia el kit no lleva código: en un pull
+#   request corre la versión de este archivo que trae. Lleva el título «Kit · …» (o es su reversión) si cambia el
+#   CLAUDE.md, el corredor propio o la configuración del repositorio; si solo cambia workflows, cualquiera. Puede traer la
+#   carpeta, como al montar el kit con CONFIG, pero no con el corredor propio, que va solo, ni con la configuración del
+#   repositorio, que frente a las pruebas cuenta como código. Mientras la carpeta no exista, pasa.
+# - Las acciones van fijadas por commit, con su versión al lado. El pull request de Dependabot que sube una acción en este
+#   y en otro workflow pasa con su título («Bump …»): solo cambia workflows, y no se mira quién lo abrió.
+# - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
+#   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
+#   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
+#   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["asyncio"])
+#   y sys.path si el código no se instala; python3 -m pytest ya pone la raíz del repositorio en sys.path. Con Vitest, en
+#   la configuración de CONFIG. Con un corredor propio, lo que lee de fuera lo revisa quien acepta (R2).
+# - Las pruebas de una pieza son los archivos de la carpeta que empiezan por su identificador y «_» y terminan como dice
+#   el corredor (P1_alta.py es de P1; P10_baja.py, no): un archivo de pruebas con otro nombre no entra en un pull request
+#   de escenarios, y lo que comparten va aparte (con pytest, en conftest.py). Todas las piezas activas corren en una sola
+#   corrida, y el error nombra la que no pasa. Un archivo cuyo nombre lleva comilla, tabulador o contrabarra no lo ve el
+#   control (git lo entrecomilla): no se usan.
+# - Una pieza activa pasa si cada uno de sus archivos pasa: alguna prueba pasada y ninguna fallida, saltada, por hacer o
+#   esperada como fallo. Unas pruebas que no corren no cuentan como verdes.
+# - Esto cierra la configuración, no el código: lo que importan las pruebas corre en su proceso y puede hacer trampa (salir
+#   con 0, tocar el corredor). Eso lo ven la verificación sobre Release y quien revisa.
+# Quien acepta une o aprueba por escrito cada pull request que toca las pruebas, la lista o el kit; si es otra persona, lo
+# exige un CODEOWNERS (configuración, R2).
 name: pruebas de aceptación
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 permissions:
   contents: read
-concurrency:
+concurrency:                                   # si llega otra corrida, cancela la anterior; editar el título o la descripción la repite
   group: aceptacion-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 env:
-  ACEPTACION: pruebas/aceptacion
-  ESCENARIOS_EVALS: pruebas/evals/escenarios
-  ACTIVAS: .github/piezas-activas.txt
+  ACEPTACION: pruebas/aceptacion               # la carpeta de las pruebas de aceptación
+  ACTIVAS: .github/piezas-activas.txt          # una pieza por línea (P01): sus pruebas ya cuentan
+  CORREDOR: ./pruebas/aceptacion/correr.py     # pytest, vitest o la ruta de un corredor propio (./scripts/corredor)
+  CONFIG: ""                                   # con vitest: su configuración, dentro de ACEPTACION (tests/aceptacion/vitest.config.ts)
+  SUFIJO: ".py"                                # con un corredor propio: cómo terminan sus archivos de prueba (_test.go)
 jobs:
   aparte:
     name: pruebas de aceptación
@@ -39,193 +84,307 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        with:
-          python-version: '3.12'
-      - name: Cada cosa en su pull request, y la lista de piezas activas no pierde ninguna
+      - name: Las pruebas de aceptación van en su propio pull request, y la lista de piezas activas no pierde ninguna
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           TITULO: ${{ github.event.pull_request.title }}
-          AUTOR: ${{ github.event.pull_request.user.login }}
         run: |
-          set -e
+          set -eo pipefail
+          ident='^[A-Za-z]+[0-9]+[A-Za-z]?$'
+          canon() { [[ "$1" =~ ^([A-Za-z]+)([0-9]+)([A-Za-z]?)$ ]] && printf '%s%s%s' "${BASH_REMATCH[1]^^}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3],,}"; }
+          norm() { local c="$1"; while [[ "$c" == ./* ]]; do c="${c#./}"; done; printf '%s' "$c" | tr -s '/'; }
+          carpeta="$(norm "$ACEPTACION")"; carpeta="${carpeta%/}/"
+          lista="$(norm "$ACTIVAS")"
           este="${GITHUB_WORKFLOW_REF%@*}"; este="${este#*/*/}"
           [ -n "$este" ] || este=".github/workflows/pruebas-aceptacion.yml"
+          # el corredor que declara el proyecto, y cómo terminan sus archivos de prueba
+          corredor=""
+          case "$CORREDOR" in
+            pytest) sufijo=".py" ;;
+            vitest) sufijo=".test.ts" ;;
+            ./*)
+              corredor="$(norm "$CORREDOR")"
+              if [ -z "$corredor" ] || [[ "/$corredor/" == */../* || "/$corredor/" == */./* ]]; then
+                echo "::error::CORREDOR («$CORREDOR») no es la ruta de un archivo del repositorio."; exit 1
+              fi
+              sufijo="$SUFIJO"
+              if [ -z "$sufijo" ] || [[ "$sufijo" == */* || "$sufijo" == *[][*?\\]* ]]; then
+                echo "::error::Con un corredor propio, SUFIJO dice cómo terminan los archivos de prueba (por ejemplo «_test.go»), y aquí está vacío, no es un final de nombre o lleva un comodín o una contrabarra (*, ?, [, ] o \\): ponlo en el «env:» de este workflow."; exit 1
+              fi ;;
+            *)
+              echo "::error::CORREDOR («$CORREDOR») tiene que ser pytest, vitest o la ruta de un corredor propio que empiece por «./»: ponlo en el «env:» de este workflow, igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1 ;;
+          esac
+          suf_re="$(printf '%s' "$sufijo" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+          if [ "$carpeta" = "/" ] || [[ "/$carpeta" == */./* || "/$carpeta" == */../* ]]; then
+            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1
+          fi
           COMUN="$(git merge-base "$BASE" "$HEAD")"
-          ident='^[A-Za-z]+[0-9]+$'
-          # el título: «Kit · …», «Escenarios · P01[ + P02][ · …]», «Revert "…"» o «P01[ + P02] · …»
-          tipo=otro; t="$TITULO"; revierte=0
-          while [[ "$t" == 'Revert "'* ]]; do revierte=1; t="${t#Revert \"}"; t="${t%\"}"; t="${t% (#[0-9]*)}"; done
-          pieza_al_inicio='^[A-Za-z]+[0-9]+[[:space:]]*([+·:,-]|$)'
-          if [[ "$t" == "Kit · "* ]]; then tipo=kit
-          elif [[ "$t" == "Escenarios · "* ]]; then tipo=escenarios; t="${t#Escenarios · } · "
-          elif [[ "$t" =~ $pieza_al_inicio ]]; then
-            if [ "$revierte" = 1 ]; then tipo=revert; else tipo=pieza; fi
+          tipo() { git cat-file -t "$1:${carpeta%/}" 2>/dev/null || true; }
+          if [ -n "$(tipo "$HEAD")" ] && [ "$(tipo "$HEAD")" != tree ]; then
+            echo "::error::ACEPTACION («$ACEPTACION») no es una carpeta: ponla igual que «Pruebas de aceptación» del CLAUDE.md."; exit 1
           fi
+          if [ -z "$(tipo "$HEAD")" ]; then
+            if [ "$(tipo "$COMUN")" = tree ]; then
+              echo "::error::Este pull request quita o mueve la carpeta de las pruebas de aceptación ($carpeta)."; exit 1
+            fi
+            echo "Todavía no hay pruebas de aceptación en $carpeta: no hay nada que proteger."; exit 0
+          fi
+          if [ "$CORREDOR" = vitest ]; then
+            config="$(norm "$CONFIG")"
+            if [ -z "$config" ] || [[ "$config" != "$carpeta"?* ]] || [ "$(git cat-file -t "$HEAD:$config" 2>/dev/null)" != blob ]; then
+              echo "::error::Con «CORREDOR: vitest», CONFIG («$CONFIG») es la configuración de Vitest dentro de $carpeta, y ese archivo no está: ponlo en el «env:» de este workflow y el archivo en la carpeta."; exit 1
+            fi
+          fi
+          if [ -n "$corredor" ] && [ "$(git ls-tree "$HEAD" -- "$corredor" | awk '{print $1}')" != 100755 ]; then
+            echo "::error::CORREDOR («$CORREDOR») no es un archivo ejecutable de este repositorio."; exit 1
+          fi
+          if [ "$CORREDOR" = pytest ] && git cat-file -e "$HEAD:${carpeta}__init__.py" 2>/dev/null; then
+            echo "::error::${carpeta}__init__.py convierte las pruebas de aceptación en un paquete, y pytest ejecutaría el __init__.py de la carpeta de arriba, que un pull request de código puede cambiar. Quítalo: python3 -m pytest ya encuentra el código."; exit 1
+          fi
+          # las piezas del título, con sus letras en mayúsculas y la del final en minúscula (H22a): «P01 · …», «P01 + P02 · …», «Escenarios · P01[ · …]» o la reversión
+          # que pone GitHub, «Revert "P01 · …"»
+          escenarios=0; revert=0; t="$TITULO"
+          if [[ "$t" == "Escenarios · "* ]]; then escenarios=1; t="${t#Escenarios · } · "
+          elif [[ "$t" == 'Revert "'* ]]; then revert=1; t="${t#Revert \"}"; fi
           piezas=" "
-          if [ "$tipo" = escenarios ] || [ "$tipo" = pieza ] || [ "$tipo" = revert ]; then
-            if [[ "$t" != *" · "* ]]; then
-              echo "::error::El título empieza por una pieza pero no sigue la forma «P01 · …» o «P01 + P02 · …»: «$TITULO»."; exit 1
-            fi
+          if [[ "$t" == *" · "* ]]; then
             IFS='+' read -r -a ps <<< "${t%% · *}"
-            for p in "${ps[@]}"; do
-              p="${p//[[:space:]]/}"
-              [[ "$p" =~ $ident ]] || { echo "::error::«$p» no es un identificador de pieza (título «$TITULO»)."; exit 1; }
-              piezas="$piezas${p^^} "
-            done
+            for p in "${ps[@]}"; do p="${p//[[:space:]]/}"; [[ "$p" =~ $ident ]] && piezas="$piezas$(canon "$p") "; done
           fi
-          # qué cambia, por clase
-          clase() {  # kit, lista, escenario, ajeno (en la carpeta de aceptación sin ser de nadie) o fuera
-            local f="$1" b="${1##*/}"
-            case "$f" in "$este"|CLAUDE.md|"$ACEPTACION/correr.py"|"$ACEPTACION/flujo.py"|pruebas/sesion/probar_aceptacion_memoria.py) echo kit; return;; esac
-            [ "$f" = "$ACTIVAS" ] && { echo lista; return; }
-            if [[ "$f" == "$ACEPTACION/"* ]]; then
-              if [ "$f" = "$ACEPTACION/RESUMEN.md" ] || [[ "$b" =~ ^[A-Za-z]+[0-9]+_.*\.py$ ]]; then echo escenario; else echo ajeno; fi; return
+          # un título que empieza por una pieza con pruebas y no sigue con « · » no se cuela como «sin pieza»
+          nombres="$(git -c core.quotepath=off ls-tree -r --name-only "$HEAD" -- "${carpeta%/}" | sed "s|^${carpeta}||")"
+          tiene_pruebas() { grep -qiE "^$1_[^/]+${suf_re}\$" <<< "$nombres"; }
+          if [ "$piezas" = " " ] && [ "$escenarios" = 0 ] && [ "$revert" = 0 ] &&
+             { [[ "$TITULO" =~ ^([A-Za-z]+[0-9]+[A-Za-z]?)([^A-Za-z0-9]|$) ]] || [[ "$TITULO" =~ ^([A-Za-z]+[0-9]+) ]]; }; then
+            p="${BASH_REMATCH[1]}"
+            if tiene_pruebas "$p"; then
+              echo "::error::El título no sigue la forma del plan: tiene que empezar «$p · » (o «$p + … · » si lleva varias piezas)."; exit 1
             fi
-            if [[ "$f" == "$ESCENARIOS_EVALS/"* && "$b" =~ ^[0-9]+-[A-Z]+[0-9]+-. ]]; then echo escenario; return; fi
-            echo fuera
-          }
-          de_pieza() {  # la pieza de un archivo de escenarios, o nada
-            local b="${1##*/}"
-            if [[ "$1" == "$ACEPTACION/"* ]]; then [[ "$b" =~ ^([A-Za-z]+[0-9]+)_.*\.py$ ]] && echo "${BASH_REMATCH[1]^^}"
-            else [[ "$b" =~ ^[0-9]+-([A-Z]+[0-9]+)-. ]] && echo "${BASH_REMATCH[1]}"; fi
-            return 0
-          }
+          fi
+          # qué cambia
           git -c core.quotepath=off diff --name-only --no-renames -z "$COMUN" "$HEAD" > "$RUNNER_TEMP/cambios"
-          kit=0; esc=0; fuera=0; lista=0; flujos=1; tocadas=" "; ajenos=""
+          dentro=0; fuera=0; kit=0; workflow=0; wf=""; conf=0; titulado=0; lista_cambia=0; corredor_cambia=0
           while IFS= read -r -d '' f; do
-            [[ "$f" == .github/workflows/* ]] || flujos=0
-            case "$(clase "$f")" in
-              kit) kit=$((kit + 1));;
-              lista) lista=1;;
-              escenario) esc=$((esc + 1)); p="$(de_pieza "$f")"
-                         if [ -n "$p" ]; then [[ "$tocadas" == *" $p "* ]] || tocadas="$tocadas$p "; fi;;
-              ajeno) ajenos="$ajenos $f";;
-              *) fuera=$((fuera + 1));;
-            esac
+            if [ -n "$corredor" ] && [ "$f" = "$corredor" ]; then kit=$((kit + 1)); titulado=1; corredor_cambia=1
+            elif [[ "$f" == "$carpeta"* ]]; then dentro=$((dentro + 1))
+            elif [ "$f" = "$lista" ]; then lista_cambia=1
+            elif [ "$f" = "$este" ] || [ "$f" = "CLAUDE.md" ]; then kit=$((kit + 1)); [ "$f" = "$este" ] && workflow=1 && wf="$f"; [ "$f" = CLAUDE.md ] && titulado=1
+            elif [[ "$f" == .github/workflows/* ]]; then kit=$((kit + 1)); workflow=1; wf="${wf:-$f}"   # los demás workflows, igual que este
+            elif [ "$f" = CODEOWNERS ] || [ "$f" = .github/CODEOWNERS ] || [ "$f" = docs/CODEOWNERS ] || [ "$f" = .github/dependabot.yml ] || [ "$f" = .github/dependabot.yaml ]; then
+              kit=$((kit + 1)); conf=$((conf + 1)); titulado=1   # la configuración del repositorio: kit junto al workflow, fuera junto a las pruebas
+            else fuera=$((fuera + 1)); fi
           done < "$RUNNER_TEMP/cambios"
-          echo "Título: $tipo, piezas:$piezas. Cambian $kit del kit, $esc de escenarios (piezas:$tocadas), la lista: $lista, y $fuera de fuera."
-          if [ -n "$ajenos" ]; then
-            echo "::error::En $ACEPTACION/ solo van los archivos <pieza>_*.py, RESUMEN.md y los del kit (correr.py, flujo.py):$ajenos"; exit 1
+          echo "Cambian $dentro archivos de $carpeta, $kit del kit, la lista: $lista_cambia, y $fuera fuera."
+          if [ "$workflow" = 1 ] && [ "$fuera" -gt 0 ]; then
+            echo "::error::Este pull request cambia $wf junto con código: va en su propio pull request («Kit · »)."; exit 1
           fi
-          bot=0
-          if [ "$AUTOR" = "dependabot[bot]" ] && [ "$flujos" = 1 ]; then
-            echo "Dependabot solo sube acciones de los workflows: no se le aplican las reglas del kit."; bot=1; kit=0
+          if [ "$corredor_cambia" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ] || [ "$dentro" -gt 0 ]; }; then
+            echo "::error::Este pull request cambia $corredor, el corredor de las pruebas de aceptación, que es parte del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
-          if [ "$kit" -gt 0 ] && { [ "$tipo" != kit ] || [ "$esc" -gt 0 ] || [ "$fuera" -gt 0 ] || [ "$lista" = 1 ]; }; then
-            echo "::error::Este pull request cambia el kit (el workflow, CLAUDE.md, correr.py, flujo.py o su prueba): va solo, en un pull request «Kit · »."; exit 1
+          if [ "$dentro" -gt 0 ] && [ $((fuera + conf)) -gt 0 ]; then
+            echo "::error::Este pull request cambia las pruebas de aceptación ($carpeta) y código fuera de ellas. Los escenarios van en su propio pull request; el de la pieza no los toca."; exit 1
           fi
-          if [ "$tipo" = kit ] && [ "$kit" = 0 ]; then
-            echo "::error::El título dice «Kit · » y no cambia nada del kit."; exit 1
+          # el título «Kit · …» (o su reversión) lo pide el kit salvo los workflows: «Bump …» de Dependabot pasa con el suyo
+          if [ "$titulado" = 1 ] && { [[ "$t" != "Kit · "* ]] || [ "$fuera" -gt 0 ]; }; then
+            echo "::error::Este pull request cambia el CLAUDE.md, el corredor propio o la configuración del repositorio, que son del kit: va solo, en un pull request «Kit · »."; exit 1
           fi
-          if [ "$esc" -gt 0 ] && { [ "$tipo" != escenarios ] || [ "$fuera" -gt 0 ]; }; then
-            echo "::error::Este pull request cambia escenarios: van solos, en un pull request «Escenarios · <pieza>», sin código."; exit 1
+          # en un pull request de escenarios, cada archivo de pruebas empieza por una pieza de su título y «_»
+          if [ "$escenarios" = 1 ]; then
+            formas=""; for p in $piezas; do formas="$formas${formas:+ o }«${p}_»"; done
+            mal=0
+            while IFS= read -r -d '' f; do
+              [[ "$f" == "$carpeta"* && "$f" == *"$sufijo" ]] || continue
+              git cat-file -e "$HEAD:$f" 2>/dev/null || continue
+              n="${f#"$carpeta"}"; [ "$CORREDOR" = pytest ] && [ "$n" = "conftest.py" ] && continue
+              vale=0; for p in $piezas; do shopt -s nocasematch; [[ "$n" == "${p}_"?*"$sufijo" && "$n" != */* ]] && vale=1; shopt -u nocasematch; done
+              if [ "$vale" = 0 ]; then
+                echo "::error::$f no es de ninguna pieza del título: el archivo de una prueba empieza por $formas, termina en «$sufijo» y va suelto en la carpeta (lo que las pruebas comparten va aparte; con pytest, en conftest.py)."; mal=1
+              fi
+            done < "$RUNNER_TEMP/cambios"
+            [ "$mal" = 0 ] || exit 1
           fi
-          if [ "$tipo" = escenarios ]; then
-            for p in $tocadas; do
-              [[ "$piezas" == *" $p "* ]] || { echo "::error::Este pull request de escenarios cambia pruebas de $p, que no está en su título."; exit 1; }
-            done
+          # la lista no pierde ninguna pieza, salvo la que saca su propio pull request de escenarios
+          es_archivo() { [ "$(git ls-tree "$1" -- "$lista" | awk '{print $1}')" = 100644 ]; }
+          if es_archivo "$COMUN" && ! es_archivo "$HEAD" && git ls-tree "$HEAD" -- "$lista" | grep -q .; then
+            echo "::error::$lista ya no es un archivo normal."; exit 1
           fi
-          # la lista es un archivo normal y no pierde ninguna pieza
-          modo() { git ls-tree "$1" -- "$ACTIVAS" | awk '{print $1}'; }
-          if [ -n "$(modo "$HEAD")" ] && [ "$(modo "$HEAD")" != 100644 ]; then
-            echo "::error::$ACTIVAS no es un archivo normal."; exit 1
-          fi
-          leer() { git show "$1:$ACTIVAS" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -E "$ident" | tr 'a-z' 'A-Z' || true; }
-          malas="$(git show "$HEAD:$ACTIVAS" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -vE "^\$|$ident" || true)"
-          [ -z "$malas" ] || { echo "::error::$ACTIVAS tiene líneas que no son un identificador de pieza: $(echo $malas)."; exit 1; }
+          leer() { git show "$1:$lista" 2>/dev/null | sed 's/#.*//; s/[[:space:]]//g' | grep -E '^[A-Za-z]+[0-9]+[A-Za-z]?$' | while IFS= read -r p; do canon "$p"; echo; done || true; }
           antes="$(leer "$COMUN")"; ahora=" $(leer "$HEAD" | tr '\n' ' ')"
           for p in $antes; do
             [[ "$ahora" == *" $p "* ]] && continue
-            if [ "$tipo" = escenarios ] && [[ "$tocadas" == *" $p "* ]]; then
-              echo "$p sale de la lista mientras cambian sus escenarios; el próximo pull request de versión la vuelve a añadir."; continue
+            if [ "$escenarios" = 1 ] && [[ "$piezas" == *" $p "* ]] && [ "$fuera" = 0 ] && [ "$dentro" -gt 0 ]; then
+              echo "$p sale de la lista mientras se cambian sus escenarios; su próximo pull request la vuelve a añadir."; continue
             fi
-            asunto="${TITULO#Revert \"}"; asunto="${asunto%\"}"
-            if [ "$revierte" = 1 ] && [ "$tipo" = escenarios ] && [[ "$piezas" == *" $p "* ]]; then continue; fi
-            if [ "$tipo" = revert ] && [[ "$piezas" == *" $p "* ]] && git log --format=%s "$BASE" | grep -qxF -- "$asunto"; then
+            if [ "$revert" = 1 ] && [[ "$piezas" == *" $p "* ]]; then
               echo "::warning::La reversión saca $p de la lista: sus pruebas dejan de contar hasta que otro pull request de $p la vuelva a añadir."; continue
             fi
-            echo "::error::Este pull request quita $p de $ACTIVAS: sus pruebas dejarían de contar. Solo la saca el pull request de escenarios que cambia sus pruebas («Escenarios · $p») o la reversión del pull request que la añadió."; exit 1
+            echo "::error::Este pull request quita $p de $lista: sus pruebas dejarían de contar. Solo la saca el pull request de escenarios de $p («Escenarios · $p»), que no toca código, o su reversión."; exit 1
           done
-          # una pieza activa cuyas pruebas cambian sale de la lista en ese mismo pull request
-          for p in $tocadas; do
-            if [[ "$ahora" == *" $p "* ]] && [ "$revierte" = 0 ]; then
-              echo "::error::Este pull request cambia las pruebas de $p, que está activa: sácala de $ACTIVAS en este mismo pull request; el próximo de versión la vuelve a añadir cuando las cumpla."; exit 1
-            fi
-          done
-          echo "$tipo" > "$RUNNER_TEMP/tipo"; echo "$piezas" > "$RUNNER_TEMP/piezas"; echo "$tocadas" > "$RUNNER_TEMP/tocadas"
+          # el pull request de una pieza con pruebas en la carpeta la añade a la lista
+          if [ "$escenarios" = 0 ] && [ "$revert" = 0 ]; then
+            for p in $piezas; do
+              if tiene_pruebas "$p" && [[ "$ahora" != *" $p "* ]]; then
+                echo "::error::$p tiene pruebas de aceptación en $carpeta y no está en $lista: su pull request la añade. Una pieza técnica, sin escenarios, no tiene pruebas."; exit 1
+              fi
+            done
+          fi
+      - name: Prepara Node
+        if: env.CORREDOR == 'vitest' && hashFiles('.nvmrc') != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
       - name: Prepara el entorno
-        run: python3 -I -m pip install -q pytest==8.3.5   # las pruebas de P01–P03 corren la plantilla del kit, que usa pytest
+        run: |
+          # las de P01–P03 corren la plantilla del kit con pytest; las de P19–P21 y P25, node, que trae la imagen
+          python3 -I -m pip install -q pytest==8.3.5
       - name: Pasan las pruebas de las piezas activas, y fallan las de un pull request de escenarios
         env:
-          CUERPO: ${{ github.event.pull_request.body }}
+          TITULO: ${{ github.event.pull_request.title }}
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"   # un plugin que instala el código no entra solo en las pruebas
+          PYTEST_ADDOPTS: ""                    # ni opciones o plugins que deje en el entorno lo que se instaló
+          PYTEST_PLUGINS: ""
         run: |
           set -o pipefail
-          for a in tipo piezas tocadas; do [ -f "$RUNNER_TEMP/$a" ] || { echo "::error::Falta lo que deja el paso anterior ($a)."; exit 1; }; done
-          tipo="$(cat "$RUNNER_TEMP/tipo")"; piezas="$(cat "$RUNNER_TEMP/piezas")"
-          # las piezas activas de lo que se va a unir (el checkout), no de la rama: una rama atrasada no esconde una activa
-          activas=" "
-          if [ -e "$ACTIVAS" ] || [ -L "$ACTIVAS" ]; then
-            [ "$(git ls-tree HEAD -- "$ACTIVAS" | awk '{print $1}')" = 100644 ] || { echo "::error::$ACTIVAS no es un archivo normal."; exit 1; }
-            while IFS= read -r p || [ -n "$p" ]; do
+          [ -d "$ACEPTACION" ] || { echo "Todavía no hay pruebas de aceptación."; exit 0; }
+          ident='^[A-Za-z]+[0-9]+[A-Za-z]?$'
+          canon() { [[ "$1" =~ ^([A-Za-z]+)([0-9]+)([A-Za-z]?)$ ]] && printf '%s%s%s' "${BASH_REMATCH[1]^^}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3],,}"; }
+          dir="$ACEPTACION"; while [[ "$dir" == ./* ]]; do dir="${dir#./}"; done; dir="$(printf '%s' "$dir" | tr -s '/')"; dir="${dir%/}"
+          case "$CORREDOR" in pytest) sufijo=".py" ;; vitest) sufijo=".test.ts" ;; *) sufijo="$SUFIJO" ;; esac
+          # los archivos de una pieza: los que empiezan por ella y «_» y terminan como dice el corredor, sueltos en la carpeta
+          archivos_de() { find "$dir" -maxdepth 1 -type f -iname "$1_*$sufijo" | LC_ALL=C sort; }
+          # corre esos archivos con el corredor y deja en resultados una línea por archivo: PASA, FALLA, SALTADA (ninguna
+          # falla y alguna se saltó, está por hacer o se esperaba como fallo) o NO_CORRIO. pudo=0 si no se pudieron correr
+          correr() {
+            local r="$RUNNER_TEMP/resultados"; : > "$r"; printf '%s\n' "$@" > "$RUNNER_TEMP/pedidos"; pudo=1
+            case "$CORREDOR" in
+              pytest)
+                python3 -m pytest -c /dev/null --rootdir=. --confcutdir="$dir" -p no:cacheprovider --continue-on-collection-errors -r fEsxXp "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
+                case "$rc" in 0|1|2|5) ;; *) pudo=0 ;; esac
+                # del resumen corto, una línea por prueba: «PASSED ruta::prueba», «SKIPPED [1] ruta:3: …», «ERROR ruta - …»
+                # (no se cargó) o «ERROR ruta::prueba» (falló al prepararla)
+                awk 'NR == FNR { if (match($0, /^(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)( \[[0-9]+\])? /)) { c[++n] = $1; l[n] = substr($0, RLENGTH + 1) } next }
+                     { f = $0; pasa = 0; e = "NO_CORRIO"; m = 0
+                       for (i = 1; i <= n; i++) {
+                         if (index(l[i], f) != 1) continue
+                         s = substr(l[i], length(f) + 1, 2); if (s != "" && substr(s, 1, 1) != ":" && substr(s, 1, 1) != " ") continue
+                         k = c[i]; if (k == "ERROR" && s != "::") k = "CARGA"
+                         if (k == "FAILED" || k == "ERROR") m = 3; else if (k == "CARGA" && m < 2) m = 2
+                         else if ((k == "SKIPPED" || k == "XFAIL" || k == "XPASS") && m < 1) m = 1; else if (k == "PASSED") pasa = 1
+                       }
+                       if (m == 3) e = "FALLA"; else if (m == 2) e = "NO_CORRIO"; else if (m == 1) e = "SALTADA"; else if (pasa) e = "PASA"
+                       print e " " f }' "$RUNNER_TEMP/salida" "$RUNNER_TEMP/pedidos" > "$r" || pudo=0 ;;
+              vitest)
+                rm -f "$RUNNER_TEMP/informe.json"
+                npx --no-install vitest run --config "$CONFIG" --root . --reporter=default --reporter=json \
+                  --outputFile.json="$RUNNER_TEMP/informe.json" "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
+                # del informe, por archivo: el que no viene no corrió, y uno sin pruebas tampoco (no se pudo cargar)
+                [ -f "$RUNNER_TEMP/informe.json" ] && node -e '
+                  const fs = require("fs"), path = require("path");
+                  const [informe, ...pedidos] = process.argv.slice(1);
+                  const por = new Map((JSON.parse(fs.readFileSync(informe, "utf8")).testResults || []).map(a => [path.resolve(a.name), a]));
+                  for (const f of pedidos) {
+                    const a = por.get(path.resolve(f)), ps = (a && a.assertionResults) || [];
+                    const n = s => ps.filter(p => p.status === s).length;
+                    let e = "NO_CORRIO";
+                    if (a && (n("failed") > 0 || (a.status === "failed" && ps.length > 0))) e = "FALLA";
+                    else if (ps.length > 0 && n("passed") < ps.length) e = "SALTADA";
+                    else if (ps.length > 0) e = "PASA";
+                    console.log(e + " " + f);
+                  }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0 ;;
+              *)
+                "$CORREDOR" "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
+                [ "$rc" = 0 ] || pudo=0
+                # «PASA <ruta>», «FALLA <ruta>» o «NO_CORRIO <ruta>», con o sin «./» delante; si hay dos, la peor
+                awk 'function limpia(x) { while (substr(x, 1, 2) == "./") x = substr(x, 3); return x }
+                     NR == FNR { if (match($0, /^(PASA|FALLA|NO_CORRIO) /)) { f = substr($0, RLENGTH + 1); sub(/[ \t\r]+$/, "", f); f = limpia(f)
+                                   if (!(f in v) || $1 == "FALLA" || ($1 == "NO_CORRIO" && v[f] == "PASA")) v[f] = $1 } next }
+                     { f = limpia($0); print ((f in v) ? v[f] : "NO_CORRIO") " " $0 }' "$RUNNER_TEMP/salida" "$RUNNER_TEMP/pedidos" > "$r" || pudo=0 ;;
+            esac
+          }
+          estado() { awk -v f="$1" 'substr($0, index($0, " ") + 1) == f { print $1; exit }' "$RUNNER_TEMP/resultados"; }
+          quien() { case "$CORREDOR" in pytest|vitest) printf '%s' "$CORREDOR" ;; *) printf 'el corredor %s' "$CORREDOR" ;; esac; }
+          # los archivos de la pieza $1 con el estado $2, separados por comas
+          con() {
+            local f e s=""
+            while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              e="$(estado "$f")"; [ -n "$e" ] || e=NO_CORRIO
+              [ "$e" = "$2" ] && s="$s${s:+, }$f"
+            done < <(archivos_de "$1")
+            printf '%s' "$s"
+          }
+          activas=" "; todos=(); sin_pruebas=""
+          if [ -f "$ACTIVAS" ]; then
+            mapfile -t filas < "$ACTIVAS"
+            for p in "${filas[@]}"; do
               p="${p%%#*}"; p="${p//[[:space:]]/}"
               [ -z "$p" ] && continue
-              [[ "$p" =~ ^[A-Za-z]+[0-9]+$ ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
-              [[ "$activas" == *" ${p^^} "* ]] || activas="$activas${p^^} "
-            done < "$ACTIVAS"
+              [[ "$p" =~ $ident ]] || { echo "::error::$ACTIVAS: «$p» no es un identificador de pieza."; exit 1; }
+              activas="$activas$(canon "$p") "
+            done
+            for p in $activas; do
+              mapfile -t suyos < <(archivos_de "$p")
+              [ "${#suyos[@]}" -gt 0 ] || sin_pruebas="$sin_pruebas $p"
+              todos+=("${suyos[@]}")
+            done
+            for p in $sin_pruebas; do
+              echo "::error::$p está en la lista de piezas activas y no tiene pruebas: sus archivos se llaman «${p}_<nombre>$sufijo»."
+            done
+            [ -z "$sin_pruebas" ] || exit 1
+            if [ "${#todos[@]}" -gt 0 ]; then
+              echo "== Piezas activas ($activas): sus pruebas tienen que pasar, todas en una corrida"
+              set +e; correr "${todos[@]}"; set -e
+              if [ "$pudo" = 0 ]; then
+                echo "::error::Las pruebas de aceptación no se pudieron correr ($(quien) salió con $rc). Si es un error al cargarlas o algo que falta: no se lee configuración de fuera de la carpeta (cabecera de este workflow)."; exit 1
+              fi
+              mal=0; sueltas=0
+              # con pytest, una prueba que se salta desde el código que importa no lleva su archivo en el resumen
+              ultima="$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/salida" | tail -n 1 || true)"
+              [ "$CORREDOR" = pytest ] && grep -qE ' (skipped|xfailed|xpassed)' <<< "$ultima" && sueltas=1
+              for p in $activas; do
+                if [ -n "$(con "$p" FALLA)" ]; then
+                  echo "::error::Las pruebas de aceptación de $p, que ya cuenta, no pasan: falla $(con "$p" FALLA)."; mal=1
+                elif [ -n "$(con "$p" NO_CORRIO)" ] && [ "$sueltas" = 1 ]; then
+                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" NO_CORRIO) no tiene ninguna pasada, y en la corrida hay pruebas saltadas o esperadas como fallo («$ultima»), que no cuentan."; mal=1
+                elif [ -n "$(con "$p" NO_CORRIO)" ]; then
+                  echo "::error::De las pruebas de aceptación de $p, que ya cuenta, no corrió $(con "$p" NO_CORRIO): unas pruebas que no corren no cuentan como pasadas."; mal=1
+                elif [ -n "$(con "$p" SALTADA)" ]; then
+                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" SALTADA) tiene pruebas saltadas, por hacer o esperadas como fallo, que no cuentan$([ "$CORREDOR" = pytest ] && printf ' (una async sin su plugin se salta)')."; mal=1
+                fi
+              done
+              if [ "$mal" = 0 ] && [ "$sueltas" = 1 ]; then
+                echo "::error::Las pruebas de aceptación no pasaron todas: «$ultima». Una prueba saltada o esperada como fallo no cuenta: busca SKIPPED, XFAIL o XPASS en la salida de arriba para ver cuál es."; mal=1
+              fi
+              if [ "$mal" = 0 ] && [ "$rc" != 0 ]; then
+                echo "::error::Las pruebas de aceptación no se pudieron correr: $(quien) salió con $rc aunque ninguna prueba de una pieza activa falló. Mira la salida de arriba."; mal=1
+              fi
+              [ "$mal" = 0 ] || exit 1
+            fi
           fi
-          # sobre lo que se va a unir (el checkout): cada pieza con pruebas que el título nombra está en la lista
-          if [ "$tipo" = pieza ]; then
-            for p in $piezas; do
-              if compgen -G "$ACEPTACION/${p}_*.py" > /dev/null && [[ "$activas" != *" $p "* ]]; then
-                echo "::error::$p tiene pruebas de aceptación en $ACEPTACION/ y no está en $ACTIVAS: su pull request la añade."; exit 1
+          if [[ "$TITULO" == "Escenarios · "* ]]; then
+            resto="${TITULO#Escenarios · }"; resto="${resto%% · *}"
+            IFS='+' read -r -a piezas <<< "$resto"
+            for p in "${piezas[@]}"; do
+              p="${p//[[:space:]]/}"
+              [[ "$p" =~ $ident ]] || { echo "::error::El título no dice qué pieza («Escenarios · P01»)."; exit 1; }
+              p="$(canon "$p")"
+              [[ "$activas" == *" $p "* ]] && continue
+              echo "== $p (escenarios): sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
+              mapfile -t suyos < <(archivos_de "$p")
+              if [ "${#suyos[@]}" = 0 ]; then echo "::error::No hay pruebas de $p: sus archivos se llaman «${p}_<nombre>$sufijo»."; exit 1; fi
+              set +e; correr "${suyos[@]}"; set -e
+              if [ "$pudo" = 0 ]; then
+                echo "::error::Las pruebas de $p no se pudieron correr ($(quien) salió con $rc): no fallaron como pruebas. ¿Está instalado el corredor?"; exit 1
+              fi
+              if [ -n "$(con "$p" NO_CORRIO)" ]; then
+                echo "::error::Las pruebas de $p no fallaron como pruebas: no corrió $(con "$p" NO_CORRIO) (no se pudo cargar o no trae pruebas$([ "$CORREDOR" = pytest ] && printf ', o pytest no está instalado')). Lo que la pieza aún no tiene se importa dentro de cada prueba, no arriba del archivo."; exit 1
+              fi
+              if [ -z "$(con "$p" FALLA)" ]; then
+                echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios. Si la pieza ya está construida, este pull request la añade a $ACTIVAS y entonces tienen que pasar."; exit 1
               fi
             done
           fi
-          sueltas=""
-          for f in "$ACEPTACION"/*_*.py; do
-            [ -e "$f" ] || continue
-            b="${f##*/}"; [[ "$b" =~ ^([A-Za-z]+[0-9]+)_ ]] || continue
-            p="${BASH_REMATCH[1]^^}"
-            [[ "$activas" == *" $p "* || " $sueltas " == *" $p "* ]] || sueltas="$sueltas $p"
-          done
-          [ -z "$sueltas" ] || echo "::warning::Piezas con pruebas que aún no están activas:$sueltas."
-          if [ "$activas" != " " ]; then
-            [ -f "$ACEPTACION/correr.py" ] || { echo "::error::Hay piezas activas y no está $ACEPTACION/correr.py."; exit 1; }
-            echo "== Piezas activas:$activas: sus pruebas tienen que pasar"
-            set +e; python3 -I "$ACEPTACION/correr.py" $activas; rc=$?; set -e
-            if [ "$rc" != 0 ]; then
-              echo "::error::Las pruebas de aceptación de las piezas activas no pasan (correr.py salió con $rc: 1 es que fallan o se saltan, 2 que no se pudieron correr)."; exit 1
-            fi
-          fi
-          [ "$tipo" = escenarios ] || exit 0
-          for p in $piezas; do
-            [[ "$activas" == *" $p "* ]] && continue
-            evals=()
-            for f in "$ESCENARIOS_EVALS"/[0-9]*-"$p"-*.md; do [ -e "$f" ] && evals+=("$(basename "$f" .md)"); done
-            if compgen -G "$ACEPTACION/${p}_*.py" > /dev/null; then
-              echo "== $p: sus pruebas tienen que fallar, y solo porque la pieza aún no las cumple"
-              set +e; python3 -I "$ACEPTACION/correr.py" "$p" | tee "$RUNNER_TEMP/salida"; rc=$?; set -e
-              ultima="$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/salida" | tail -n 1)"
-              if [ "$rc" = 0 ]; then echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios."; exit 1; fi
-              if [ "$rc" != 1 ]; then echo "::error::Las pruebas de $p no se pudieron correr (correr.py salió con $rc)."; exit 1; fi
-              if [[ ! "$ultima" =~ ([0-9]+)\ fallan\ ·\ ([0-9]+)\ saltadas ]] || [ "${BASH_REMATCH[1]}" = 0 ] || [ "${BASH_REMATCH[2]}" != 0 ]; then
-                echo "::error::Las pruebas de $p tienen que fallar, no saltarse: «$ultima»."; exit 1
-              fi
-            fi
-            linea="$(printf '%s\n' "$CUERPO" | sed 's/<!--.*-->//g' | sed -n 's/^\**Evals:\**[[:space:]]*//p' | head -n 1 | tr -d '\r')"
-            for e in "${evals[@]}"; do
-              if [[ " $linea " != *" $e "* ]]; then
-                echo "::error::La prueba de $p es el eval $e, que corre con la etiqueta «evals»: añade a la descripción la línea «Evals: $e» y comprueba que falla antes de unir."; exit 1
-              fi
-              echo "::notice::La prueba de $p es el eval $e: corre con la etiqueta «evals» y tiene que fallar antes de unir."
-            done
-            if ! compgen -G "$ACEPTACION/${p}_*.py" > /dev/null && [ "${#evals[@]}" = 0 ]; then
-              if grep -qE "^$ACEPTACION/${p}_|^$ESCENARIOS_EVALS/[0-9]+-${p}-" <(tr '\0' '\n' < "$RUNNER_TEMP/cambios" 2>/dev/null); then
-                echo "Los escenarios de $p se retiran."
-              else
-                echo "::error::$p no tiene pruebas: ni $ACEPTACION/${p}_*.py ni un eval $ESCENARIOS_EVALS/NN-$p-….md."; exit 1
-              fi
-            fi
-          done
