@@ -38,7 +38,7 @@ from dispositivo import Dispositivo  # noqa: E402
 
 from zoneinfo import ZoneInfo
 HOY = datetime.datetime.now(ZoneInfo("America/Mexico_City")).date().isoformat()   # la zona que se le da a la conversación
-ALIAS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5", "fable": "claude-fable-5-1"}
+ALIAS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5", "fable": "claude-fable-5-2"}
 
 
 # ---------- el escenario ----------

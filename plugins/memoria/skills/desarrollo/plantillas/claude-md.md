@@ -31,7 +31,7 @@ Se copia a la raíz del repositorio como `CLAUDE.md` y se rellena la tabla. Deba
    - el diseño no cubre lo que la tarea necesita, o no puedes leerlo;
    - vas a construir algo que no entrega valor a quien usa el producto (un arnés, un generador, una imitación de otro sistema) y pasa de unas 200 líneas: di antes cuánto pesa y qué alternativa más barata hay.
 
-   Si algo es difícil de revertir o se sale del diseño, consulta antes una vez a Fable 5.2 y lleva su respuesta a la pregunta. Si un enfoque falló dos veces, propón pasar la pieza a Fable 5.2.
+   Si algo es difícil de revertir o se sale del diseño, consulta antes una vez al modelo de `consulta` de la línea «Modelos:» del proyecto (sin la línea, el de la plantilla de la sección; nunca el que construye) y lleva su respuesta a la pregunta; si no está disponible, dilo, y quien acepta decide si se espera, se consulta a otro o se sigue sin consulta, con la nota «Consulta no disponible: <motivo>; decidió <Nombre Apellido>» en el pull request. Si un enfoque falló dos veces, propón pasar la pieza a ese modelo.
 
 **Hecha** quiere decir: pasan las pruebas de aceptación de la pieza y la suite de «Cómo se prueba» sigue en verde. El pull request de la pieza añade su identificador a la lista de piezas activas, y no toca la carpeta de aceptación; una pieza con el código ya construido la añade su pull request de escenarios, y sus pruebas tienen que pasar en él. Desde entonces CI exige que sus pruebas pasen, y solo la saca de la lista su pull request de escenarios, si cambian, o su reversión. Una pieza técnica, sin escenarios, no tiene pruebas ni entra en la lista. **Para** también si una prueba falla por una razón que no puedes explicar ni arreglar sin cambiarla, o si los escenarios contradicen el diseño.
 

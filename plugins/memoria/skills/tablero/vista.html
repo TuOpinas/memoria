@@ -833,7 +833,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.30.1"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.31.0"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -3444,10 +3444,10 @@ function ayudaArts(){
       <dt>Opus, por defecto</dt><dd>En la misma apertura de sesión, repetida tres veces con cada modelo, Opus tardó en promedio 40 segundos y Sonnet 57, con los mismos tokens y menos pasos. Opus siguió mejor las reglas del método; Sonnet llegó a dar un dato equivocado en el recuadro de apertura.</dd>
       <dt>Esfuerzo antes que modelo</dt><dd>Si la respuesta es superficial, se salta un paso o falla en algo difícil, sube el esfuerzo un nivel (de medio a alto) en el mismo modelo y con la misma conversación. Si en alto, con el contexto completo, sigue fallando, cambia a Fable. Si falla porque le falta contexto, ni esfuerzo ni modelo: dale lo que falta.</dd>
       <dt>Menos esfuerzo</dt><dd>Para lo rutinario, lo repetitivo o lo que se va a revisar después, y cuando tarda de más con un resultado igual de bueno, baja el esfuerzo antes de bajar de modelo. No hace falta pedirle que «piense con cuidado»: eso lo controla el esfuerzo.</dd>
-      <dt>Lo más difícil</dt><dd>Para una revisión de calidad a fondo, decisiones de estrategia o de arquitectura y tareas largas de muchos pasos, el modelo más capaz que tengas disponible.</dd>
+      <dt>Lo más difícil</dt><dd>Para decisiones de estrategia o de arquitectura y tareas largas de muchos pasos, el modelo más capaz que tengas disponible. Una revisión de calidad no lo necesita: sus revisores corren en Opus y en Sonnet aunque tu conversación sea otra, si la herramienta deja elegir su modelo, porque al repetir revisiones ya hechas encontraron los mismos bloqueos que Fable con tokens parecidos.</dd>
       <dt>Sonnet y Haiku</dt><dd>Sonnet funciona, pero en la apertura rindió menos; Haiku no se ha probado con el método. El cierre y la puesta al día del tablero no se midieron.</dd>
     </dl>
-    <p class="hc-nota">Si una conversación empezó con otro modelo, se puede cambiar a mitad: conserva todo lo hablado. En un proyecto de desarrollo, el kit elige solo el modelo de algunos pasos (<button type="button" class="lnk" data-help="desarrollo-modelos">Qué modelo hace qué</button>).</p>`},
+    <p class="hc-nota">Si una conversación empezó con otro modelo, se puede cambiar a mitad: conserva todo lo hablado. En un proyecto de desarrollo, la línea «Modelos:» dice el modelo de cada paso (<button type="button" class="lnk" data-help="desarrollo-modelos">Qué modelo hace qué</button>).</p>`},
   {g:"Cada día", id:"telefono", t:"Desde el teléfono", h:`
     <p>Desde el teléfono o la web, sin la carpeta conectada, Claude puede leer la memoria si vive en Google Drive: abrir sesión para ponerte al día, preguntar ${F("¿qué sabemos de…?")} o pedirle al director cómo va un área. La respuesta empieza con «Memoria en solo lectura».</p>
     <dl class="hc-def">
@@ -3540,7 +3540,7 @@ function ayudaArts(){
       <li>Claude se para y pregunta en lo difícil de revertir, en lo delicado, cuando se sale del diseño, cuando algo falla dos veces o cuando el diseño no lo cubre.</li>
     </ul>`},
   {g:"Proyectos de desarrollo de software", id:"desarrollo-modelos", t:"Qué modelo hace qué", h:`
-    <p>Trabajas en tu sesión con <b>Opus</b> en esfuerzo medio. El kit elige el modelo de cada paso que lanza por su cuenta: las pruebas de aceptación en Opus, la verificación en Release en el modelo que no construyó la pieza (Fable si la construyó Opus, Opus si la construyó Fable), para que no comparta sus supuestos, y el seguimiento en Sonnet. Si un enfoque falla dos veces, Claude propone pasar la pieza a Fable. Si el modelo de un paso no está disponible, Claude lo dice y no lo hace con otro.</p>
+    <p>Cada proyecto dice qué modelo hace cada paso en la línea <b>«Modelos:»</b> de su sección «Desarrollo», y lo que no dice va por defecto: tu sesión en <b>Opus</b>; los revisores de calidad en Opus en esfuerzo medio, con errores y riesgos otra vez en Sonnet en esfuerzo alto; las pruebas de aceptación en Opus; la verificación en Release en un modelo que no construyó la pieza, para que no comparta sus supuestos (Sonnet si la construyó Opus); el seguimiento en Sonnet; y Fable solo para consultar en los puntos de control. Antes de lanzar un paso, Claude dice con qué modelo va. Si un enfoque falla dos veces, propone pasar la pieza al modelo de consulta. Si el modelo de un paso no está disponible, Claude lo dice y no lo hace con otro: tú decides si se espera, se usa otro o, en una consulta, se sigue sin ella.</p>
     <p class="hc-nota">Si una respuesta sale floja, primero sube el esfuerzo en el mismo modelo (junto al nombre del modelo, abajo); cambia de modelo solo si en esfuerzo alto, con el contexto completo, sigue fallando (<button type="button" class="lnk" data-help="modelos">Qué modelo usar</button>).</p>`},
   {g:"El tablero", id:"tablero", t:"Tu tablero", h:`
     <p>Una página que resume la carpeta entera: áreas, proyectos, en qué va cada uno, qué se decidió y qué falta. Es personal: cada persona monta el suyo con ${F("monta el tablero")} (<button type="button" class="lnk" data-help="que-ve-cada-quien">Qué ve cada quien</button>).</p>

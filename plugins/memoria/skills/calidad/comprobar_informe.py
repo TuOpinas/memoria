@@ -18,14 +18,14 @@ puede contar deja sin crédito a la lente que lo encontró.
 - Ninguna otra línea lleva «Lens:» o «Lente:», y en las secciones de hallazgos no hay listas ni tablas con lentes.
 - Las dudas van en su sección («## Dudas», «## Doubts»…), sin «Lens:».
 - La medición más nueva es la primera «## Medición»; sus «Hallazgos» por peso cuadran con las entradas, y lleva
-  «Razonamiento:» (máximo, alto, medio, bajo o no consta, uno por modelo si se quiere) y «Tokens:».
+  «Razonamiento:» (máximo, extra, alto, medio, bajo o no consta, uno por modelo si se quiere) y «Tokens:».
 Los bloques de código (```) no se miran: un informe puede citar el formato.
 """
 import re, sys
 
 LENTES = ("errors", "inconsistencies", "objective", "risks", "efficiency")
 PESOS = {"impide cumplir el objetivo": "impiden", "pone en riesgo el objetivo": "riesgo", "lo mejora": "mejoran"}
-NIVELES = ("máximo", "alto", "medio", "bajo", "no consta")
+NIVELES = ("máximo", "extra", "alto", "medio", "bajo", "no consta")
 ORIGENES = ("en el original", "lo abrió un arreglo anterior", "lo abrió este arreglo")
 LENTE = r"[a-z]+(?: \((?:errors|inconsistencies|objective|risks|efficiency)\))?"
 INICIAL = {"errors": "E", "inconsistencies": "I", "objective": "O", "risks": "R", "efficiency": "F"}
