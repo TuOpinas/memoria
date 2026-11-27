@@ -367,7 +367,7 @@ Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no exis
   - Que el botón «Todas las relaciones» cambie el dibujo y, al pulsarlo otra vez, vuelvan los grupos.
   - Que la ventana de una entidad liste sus relaciones con otros grupos.
 - **P28.**
-  - Que la vista se titule «El sistema» y no haya dibujo de componentes (la prueba solo ve que la página trae ese texto y que el trazado deja sin dibujo los componentes).
+  - Que la vista se titule «Arquitectura técnica» y no haya dibujo de componentes (la prueba solo ve que la página trae ese texto y que el trazado deja sin dibujo los componentes).
   - El color de cada tipo.
   - Que la ventana de una pieza enseñe las filas de sus componentes.
 - **P33.**
