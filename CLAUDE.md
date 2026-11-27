@@ -17,7 +17,7 @@
 2. Antes de abrir el pull request, la revisión de calidad, como dice «Cómo se revisa». El pull request dice con qué modelo se construyó («Construyó: Opus 5.5»).
 3. La base de datos cambia solo con una migración nueva; una ya unida no se edita. (Este repositorio no tiene base de datos.)
 4. Ningún secreto en el código.
-5. No pases nada a Prod: aquí unir el pull request de versión publica el plugin. Lo une quien administra, con el sí en su descripción en la línea «Aprobó: Nombre Apellido, AAAA-MM-DD», después de verificar la candidata instalada en una raíz de prueba de TuOpinas; una versión que, aparte de las líneas de versión que sube `release.sh`, no cambia ningún script (`.py`, `.sh`), ningún hook ni ningún workflow de CI se une sin verificar la candidata (shared-memory/plugin-memoria#2026-11-26-11).
+5. No pases nada a Prod: aquí unir el pull request de versión publica el plugin. Lo une quien administra, con el sí en su descripción en la línea «Aprobó: Nombre Apellido, AAAA-MM-DD», después de verificar la candidata instalada en una raíz de prueba de TuOpinas; una versión que, aparte de las líneas de versión que sube `release.sh`, no cambia ningún script (`.py`, `.sh`), ningún hook, ningún workflow de CI, la página del tablero (`skills/tablero/vista.html`) ni `plugin.json` se une sin verificar la candidata (shared-memory/plugin-memoria#2026-11-26-11 y -14).
 6. Para y pregunta a quien acepta antes de seguir, y escribe la pregunta y su respuesta en el pull request, cuando:
    - algo es difícil de revertir (un esquema, un contrato público, permisos, un proveedor, datos de clientes);
    - el cambio toca lo delicado, que quien acepta revisa antes de unir (una dependencia nueva, permisos, accesos, pagos, datos personales, un cambio de base de datos);
