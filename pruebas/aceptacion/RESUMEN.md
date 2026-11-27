@@ -347,7 +347,7 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-25, en el plan (fase 
   - la tabla «Grupos»;
   - las columnas «Tipo» y «Corre en».
 - **El dibujo.** P27 y P28 sacan de la página el trozo que calcula el dibujo, lo corren aparte (con node) y miden lo que sale. No abren ningún navegador.
-- **La página como texto.** P26, P27, P28 y P33 buscan en la página del tablero textos escritos tal cual: la marca «técnica» (`data-marca="tecnica"`), los textos de la decisión pendiente, «Cierre de fase», el botón «Todas las relaciones», «El sistema» y los artículos de la ayuda.
+- **La página como texto.** P26, P27, P28 y P33 buscan en la página del tablero textos escritos tal cual: la marca «técnica» (`data-marca="tecnica"`), los textos de la decisión pendiente, «Cierre de fase», el botón «Todas las relaciones», «Arquitectura técnica» y los artículos de la ayuda.
 
 Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no existe. Las de P16 a P22 siguen pasando y no cambian.
 
@@ -422,7 +422,7 @@ En «Componentes», una columna «Corre en» al final: Tienda web y API corren e
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Un dibujo en lugar de dos | Esa | El diseño dice que hay sistema; el trazado trae «sistema» y deja sin dibujo los componentes y la infraestructura; la página tiene «El sistema». **Añadido:** ningún aviso, de ninguna parte, pide «Tipo» | P28 |
+| Un dibujo en lugar de dos | Esa | El diseño dice que hay sistema; el trazado trae «sistema» y deja sin dibujo los componentes y la infraestructura; la llamada que titula la sección del dibujo dice «Arquitectura técnica» (#2026-11-27-4). **Añadido:** ningún aviso, de ninguna parte, pide «Tipo» | P28 |
 | Marcos y orden | Esa | Tres contenedores; cada caja dentro de uno solo. Servidor web y Base de datos en el mismo, y Dominio y Pasarela en otros. Dominio queda más arriba que Base de datos y que Pasarela | P28 |
 | El color dice el tipo | Esa | Cada pieza y su caja con su tipo; la leyenda, una entrada por cada uno de los tres tipos, con texto | P28 |
 | **Añadido:** El color dice el tipo (celda vacía) | La celda «Tipo» de Base de datos, vacía | Su tipo es el texto vacío | P28 |
@@ -608,5 +608,6 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-26, en el plan («###
 - El Vitest de mentira, el corredor propio de mentira y el plugin async de pocas líneas están copiados en los archivos que los usan (3, 5 y 6, como en P30). No van en `flujo.py` porque cambiar `flujo.py` lo saca de este pull request: tendría que ir solo, en un «Kit · ».
 - La prueba del escenario 2 usa `flujo._comprobado`, que es privado del arnés, para que vuelva a mirar pytest con el `python3` de 3.9. Si el arnés cambia ese nombre, la prueba se rompe y sale con 2, no con un fallo.
 - Sin `node` y `npx` en el PATH, los archivos de los escenarios 3 y 6 salen con 2 (no se pudieron montar), igual que P30.
+- Con Vitest, `test.fails` y las demás formas de esperar un fallo se ven en el texto del archivo, no en el informe, y el Vitest de mentira no las ejercita: las comprobó la verificación de la 1.31.2 con Vitest 2 a 5 (#2026-11-27-5 y -6).
 - Un aviso de prueba async hecho buscando palabras sin más en la salida de pytest podría poner en rojo un pull request de escenarios válido: uno con una prueba async, con su plugin y su marca, que falla porque la pieza aún no existe. Estas pruebas no tienen esa fila. Lo mira la verificación.
-- Otro módulo de la raíz que pytest importe más tarde, como un `pdb.py`, ocuparía el sitio del de verdad igual que el `pytest.py` del escenario 1. Queda para quien construye P39, sin fila propia: la raíz se repone en `sys.path` justo antes de correr las pruebas, no después de `import pytest`.
+- Otro módulo de la raíz que pytest importe más tarde, como un `pdb.py`, ocuparía el sitio del de verdad igual que el `pytest.py` del escenario 1. Sin fila propia: la 1.31.2 lo cierra poniendo la raíz una sola vez, por su ruta real, al final de `sys.path` antes de cargar pytest (#2026-11-27-3).
