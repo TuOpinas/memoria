@@ -6,9 +6,10 @@ y «_».
 1. El control es la plantilla del kit (plugins/memoria/skills/desarrollo/plantillas/pruebas-aceptacion.yml) con lo que
    este repositorio rellena, y nada más: lo construye adaptar() y tiene que salir igual, línea por línea, sin contar el
    commit al que va fijada cada acción, que sube Dependabot en el workflow y no en la plantilla. Su cabecera lleva la
-   huella de la plantilla de la que salió: si la plantilla cambió después (una versión que la cambia va antes que el
-   «Kit · » que regenera el control, porque el control no deja juntar un workflow con código), lo dice y no falla; si
-   no cambió y el control no sale igual, alguien lo tocó a mano, y falla. Lo que la plantilla decide lo prueban
+   huella del cuerpo de la plantilla de la que salió (sin su primer párrafo ni los commits): si la plantilla cambió
+   después (una versión que la cambia va antes que el «Kit · » que regenera el control, porque el control no deja juntar
+   un workflow con código), lo avisa y no falla mientras el control siga siendo lo que su huella dice; si no, alguien lo
+   tocó a mano, y falla. Quien lo toque a propósito y recalcule la huella pasa con el aviso: la huella ve un descuido. Lo que la plantilla decide lo prueban
    probar_pruebas_aceptacion.py y las pruebas de aceptación de P01–P03 y P30.
 2. Con correr.py como corredor propio, el control queda en verde o en rojo sobre pull requests de mentira, con el arnés
    de flujo.py.
@@ -67,7 +68,7 @@ def huella(texto):
 
 def sin_commits(texto):
     """Cada «uses: acción@commit  # vX» sin el commit ni la versión: los sube Dependabot en el workflow."""
-    return re.sub(r"(uses: [^@\s]+)@[0-9a-f]{40}(\s+#.*)?", r"\1@…", texto)
+    return re.sub(r"(uses: [^@\s]+)@[0-9a-f]{40}([ \t]+#.*)?", r"\1@…", texto)
 
 
 def adaptar(plantilla):
@@ -133,11 +134,10 @@ def por_piezas():
 
 def desadaptar(control):
     """Lo que el control dice que tomó de la plantilla: sin su cabecera y con lo de este repositorio deshecho."""
-    m = re.search(r"Plantilla: ([0-9a-f]{12})\n", control)
-    fin = CABECERA.split("{huella}")[1]
-    if not m or not control.startswith(CABECERA.split("{huella}")[0]) or not control[m.end() - 1:].startswith(fin):
+    m = re.match(re.escape(CABECERA.split("{huella}")[0]) + r"([0-9a-f]{12})\n", control)   # solo la de la cabecera
+    if not m:
         return None, ""
-    texto = sin_commits(control[m.end() - 1 + len(fin):])
+    texto = sin_commits(control[m.end():])
     for viejo, nuevo in CAMBIOS:
         viejo, nuevo = sin_commits(viejo), sin_commits(nuevo)
         if texto.count(nuevo) != 1:
@@ -156,10 +156,13 @@ def comparar(plantilla, control, nombre, decir=print):
         decir(f"bien {nombre} es la plantilla con lo de este repositorio")
         return True
     dice, tomado = desadaptar(control)
-    if dice and dice == huella(tomado) and dice != huella(cuerpo(plantilla)):
-        decir(f"::warning::{nombre} va detrás de la plantilla: regenéralo en un «Kit · » justo después de esta versión")
-        decir(f"bien {nombre} va detrás de la plantilla, que cambió después: regenéralo en un «Kit · » con "
-              "«python3 pruebas/aceptacion/probar_control.py --escribe»")
+    try:
+        otra = dice != huella(cuerpo(plantilla))
+    except ValueError:
+        otra = True
+    if dice and dice == huella(tomado) and otra:
+        decir(f"::warning::{nombre} va detrás de la plantilla, que cambió después: regenéralo en un «Kit · » justo después "
+              "de esta versión, con «python3 pruebas/aceptacion/probar_control.py --escribe»")
         return True
     decir(f"MAL  {nombre} no es la plantilla con lo de este repositorio: no se cambia a mano; genéralo con "
           "«python3 pruebas/aceptacion/probar_control.py --escribe»")
@@ -169,7 +172,11 @@ def comparar(plantilla, control, nombre, decir=print):
 def huella_y_commits():
     """Un «Bump …» y una plantilla nueva pasan; un cambio a mano, no."""
     plantilla = PLANTILLA.read_text(encoding="utf-8")
-    control = adaptar(plantilla)
+    try:
+        control = adaptar(plantilla)
+    except ValueError as e:   # la plantilla cambió lo que se rellena: el control ya se miró contra su huella
+        print(f"bien los casos de la huella esperan al «Kit · » que pone al día adaptar() ({e})")
+        return []
     nueva = plantilla + "# una línea nueva de la plantilla\n"
     a_mano = control + "# una línea escrita a mano\n"
     otra = re.search(r"Plantilla: ([0-9a-f]{12})", control).group(1)
@@ -211,10 +218,7 @@ def main():
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["--escribe"]:
-        nuevo = adaptar(PLANTILLA.read_text(encoding="utf-8"))
-        # los commits que Dependabot ya subió en el control se quedan: la plantilla no los sigue
-        fijados = dict(re.findall(r"uses: ([^@\s]+)(@[0-9a-f]{40}(?:\s+#.*)?)", WF.read_text(encoding="utf-8"))) if WF.exists() else {}
-        nuevo = re.sub(r"uses: ([^@\s]+)@[0-9a-f]{40}(\s+#.*)?", lambda m: "uses: " + m.group(1) + fijados.get(m.group(1), m.group(0)[len("uses: " + m.group(1)):]), nuevo)
-        WF.write_text(nuevo, encoding="utf-8")
+        # con los commits de la plantilla: si Dependabot había subido alguno en el control, lo vuelve a subir
+        WF.write_text(adaptar(PLANTILLA.read_text(encoding="utf-8")), encoding="utf-8")
         sys.exit(0)
     sys.exit(main())
