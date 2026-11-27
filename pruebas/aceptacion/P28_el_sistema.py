@@ -17,7 +17,7 @@
 Por las dos entradas de F5: el generador del tablero sobre la raíz de muestra de P05_lectores.py (diseno.sistema;
 tipo, componentes y verbos de cada pieza de infraestructura; corre_en de cada componente; los avisos) y
 trazarDesarrollo(diseno) de la página, corrido con node como en P21_lineas_que_se_siguen.py (el dibujo «sistema»); el
-título «El sistema», en la página leída como texto. Que la vista salga con ese título, los colores de verdad y lo que
+título «Arquitectura técnica», en la llamada que titula la sección del dibujo, en la página leída como texto. Que la vista salga con ese título, los colores de verdad y lo que
 enseña la ventana de una pieza quedan para la verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P28_el_sistema.py (0 pasa, 1 falla, 2 no se montó).
 """
@@ -113,7 +113,7 @@ def sin_aviso_de_tipo(d, problemas):
 
 def escenarios(inf):
     # 1 · Un dibujo en lugar de dos: diseno.sistema es true; el trazado trae «sistema» y deja componentes e
-    #     infraestructura en null; la página trae «El sistema». Añadido: ningún aviso pide «Tipo»
+    #     infraestructura en null; la página titula el dibujo «Arquitectura técnica». Añadido: ningún aviso pide «Tipo»
     problemas = []
     d, dis, t = sistema_de(con_tipo(), problemas)
     if dis is not None:
@@ -126,8 +126,9 @@ def escenarios(inf):
                                  "no null")
     if not VISTA.is_file():
         raise flujo.Montaje(f"no está la página del tablero en {VISTA}")
-    if TITULO not in VISTA.read_text(encoding="utf-8", errors="replace"):
-        problemas.append(f"la página del tablero no tiene «{TITULO}»: la vista no se titula así")
+    # el título en la llamada que titula la sección, no en la ayuda o un comentario, que también lo nombran
+    if not any("seccion(" in l and f'"{TITULO}"' in l for l in VISTA.read_text(encoding="utf-8", errors="replace").splitlines()):
+        problemas.append(f"la página del tablero no titula su sección «{TITULO}»: la vista no se titula así")
     inf.escenario("Un dibujo en lugar de dos", problemas)
 
     # 2 · Marcos y orden: un contenedor por proveedor, cuenta y ambiente (tres), cada caja dentro de uno solo, Servidor
