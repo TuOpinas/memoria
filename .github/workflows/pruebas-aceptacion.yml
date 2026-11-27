@@ -3,7 +3,7 @@
 # pruebas/aceptacion/correr.py, que corre cada script de prueba y responde por el contrato de abajo. Los evals no entran
 # en este control: cuestan tokens y no siempre dan lo mismo, y corren con la etiqueta «evals» antes del sí
 # (shared-memory/plugin-memoria#2026-11-22-3). Decisiones tecnologia/metodologia-desarrollo#2026-11-19-7 y
-# shared-memory/plugin-memoria#2026-11-25-5. Plantilla: c71e6de88898
+# shared-memory/plugin-memoria#2026-11-25-5. Plantilla: f41c41021602
 #
 # - El corredor lo declara el proyecto en CORREDOR, y las reglas son las mismas con cualquiera:
 #   · pytest: los archivos de una pieza se llaman «<pieza>_<nombre>.py».

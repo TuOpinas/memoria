@@ -52,25 +52,31 @@ CAMBIOS = [
 ]
 
 
-def huella(plantilla):
-    return hashlib.sha256(plantilla.encode("utf-8")).hexdigest()[:12]
+def cuerpo(plantilla):
+    """La plantilla sin su primer párrafo, que dice cómo se copia: lo que el control lleva de ella."""
+    lineas = plantilla.split("\n")
+    if "#" not in lineas:
+        raise ValueError("la plantilla ya no separa su primer párrafo con una línea «#»: pon al día adaptar()")
+    return "\n".join(lineas[lineas.index("#"):])
+
+
+def huella(texto):
+    """La huella del cuerpo de una plantilla, sin los commits de sus acciones."""
+    return hashlib.sha256(sin_commits(texto).encode("utf-8")).hexdigest()[:12]
 
 
 def sin_commits(texto):
     """Cada «uses: acción@commit  # vX» sin el commit ni la versión: los sube Dependabot en el workflow."""
-    return re.sub(r"(uses: [^@\s]+)@\S+(\s+#.*)?", r"\1@…", texto)
+    return re.sub(r"(uses: [^@\s]+)@[0-9a-f]{40}(\s+#.*)?", r"\1@…", texto)
 
 
 def adaptar(plantilla):
     """La plantilla con lo que rellena este repositorio: su cabecera, con la huella de la plantilla, el «env:» y el
     entorno."""
-    lineas = plantilla.split("\n")
-    if "#" not in lineas:
-        raise SystemExit("La plantilla ya no separa su primer párrafo con una línea «#»: ponlo al día.")
-    texto = CABECERA.format(huella=huella(plantilla)) + "\n".join(lineas[lineas.index("#"):])   # su primer párrafo dice cómo se copia: va el nuestro
+    texto = CABECERA.format(huella=huella(cuerpo(plantilla))) + cuerpo(plantilla)   # su primer párrafo dice cómo se copia: va el nuestro
     for viejo, nuevo in CAMBIOS:
         if texto.count(viejo) != 1:
-            raise SystemExit(f"La plantilla cambió y adaptar() ya no encuentra «{viejo.strip()[:60]}»: ponlo al día.")
+            raise ValueError(f"adaptar() ya no encuentra «{viejo.strip()[:60]}» en la plantilla: ponlo al día")
         texto = texto.replace(viejo, nuevo)
     return texto
 
@@ -109,7 +115,8 @@ def por_piezas():
     r = []
     for nombre, archivos, espera in [("pasa", {"P05_x.py": "pasa"}, 0), ("falla", {"P05_x.py": "falla"}, 1),
                                      ("se salta", {"P05_x.py": "saltada"}, 1), ("rota", {"P05_x.py": "rota"}, 2),
-                                     ("sin archivos", {}, 2), ("H22a no toma H22", {"H22a_x.py": "pasa", "H22_x.py": "falla"}, 0)]:
+                                     ("sin archivos", {}, 2), ("H22a no toma H22", {"H22a_x.py": "pasa", "H22_x.py": "falla"}, 0),
+                                     ("p05_y.py también es de P05", {"P05_x.py": "pasa", "p05_y.py": "falla"}, 1)]:
         d = pathlib.Path(tempfile.mkdtemp()) / A
         d.mkdir(parents=True)
         (d / "correr.py").write_text(CORRER, encoding="utf-8")
@@ -124,13 +131,33 @@ def por_piezas():
     return r
 
 
+def desadaptar(control):
+    """Lo que el control dice que tomó de la plantilla: sin su cabecera y con lo de este repositorio deshecho."""
+    m = re.search(r"Plantilla: ([0-9a-f]{12})\n", control)
+    fin = CABECERA.split("{huella}")[1]
+    if not m or not control.startswith(CABECERA.split("{huella}")[0]) or not control[m.end() - 1:].startswith(fin):
+        return None, ""
+    texto = sin_commits(control[m.end() - 1 + len(fin):])
+    for viejo, nuevo in CAMBIOS:
+        viejo, nuevo = sin_commits(viejo), sin_commits(nuevo)
+        if texto.count(nuevo) != 1:
+            return None, ""
+        texto = texto.replace(nuevo, viejo)
+    return m.group(1), texto
+
+
 def comparar(plantilla, control, nombre, decir=print):
-    """True si el control es la plantilla adaptada, o si va detrás de una plantilla que cambió después."""
-    if sin_commits(control) == sin_commits(adaptar(plantilla)):
+    """True si el control es la plantilla adaptada, o la adaptada de una plantilla anterior que su huella nombra."""
+    try:
+        esperado = adaptar(plantilla)
+    except ValueError:
+        esperado = None   # la plantilla cambió lo que adaptar() rellena: el control se mira contra su propia huella
+    if esperado is not None and sin_commits(control) == sin_commits(esperado):
         decir(f"bien {nombre} es la plantilla con lo de este repositorio")
         return True
-    m = re.search(r"Plantilla: ([0-9a-f]{12})", control)
-    if m and m.group(1) != huella(plantilla):
+    dice, tomado = desadaptar(control)
+    if dice and dice == huella(tomado) and dice != huella(cuerpo(plantilla)):
+        decir(f"::warning::{nombre} va detrás de la plantilla: regenéralo en un «Kit · » justo después de esta versión")
         decir(f"bien {nombre} va detrás de la plantilla, que cambió después: regenéralo en un «Kit · » con "
               "«python3 pruebas/aceptacion/probar_control.py --escribe»")
         return True
@@ -143,10 +170,19 @@ def huella_y_commits():
     """Un «Bump …» y una plantilla nueva pasan; un cambio a mano, no."""
     plantilla = PLANTILLA.read_text(encoding="utf-8")
     control = adaptar(plantilla)
-    nueva = plantilla.replace("timeout-minutes: 30", "timeout-minutes: 31")
-    casos = [("un «Bump …» del commit de una acción", plantilla, re.sub(r"(actions/checkout@)[0-9a-f]+", r"\g<1>" + "0" * 40, control), True),
+    nueva = plantilla + "# una línea nueva de la plantilla\n"
+    a_mano = control + "# una línea escrita a mano\n"
+    otra = re.search(r"Plantilla: ([0-9a-f]{12})", control).group(1)
+    sin_anclas = plantilla.replace("  ACEPTACION: tests/aceptacion", "  ACEPTACION: tests/acceptance")
+    uses = re.search(r"uses: [^@\s]+@[0-9a-f]{40}", control)
+    if not uses:
+        raise SystemExit("El control ya no tiene acciones fijadas por commit: pon al día huella_y_commits().")
+    casos = [("un «Bump …» del commit de una acción", plantilla, re.sub(r"(uses: [^@\s]+@)[0-9a-f]{40}", r"\g<1>" + "0" * 40, control, count=1), True),
+             ("una plantilla nueva que cambia lo que se rellena", sin_anclas, control, True),
              ("una plantilla nueva antes de regenerar", nueva, control, True),
-             ("un cambio a mano", plantilla, control.replace("timeout-minutes: 30", "timeout-minutes: 31"), False)]
+             ("un cambio a mano", plantilla, a_mano, False),
+             ("un cambio a mano con otra huella", plantilla, a_mano.replace(otra, "0" * 12), False),
+             ("una acción sin fijar a un commit", plantilla, re.sub(r"(uses: [^@\s]+@)[0-9a-f]{40}", r"\g<1>main", control, count=1), False)]
     r = []
     for nombre, p, c, espera in casos:
         bien = comparar(p, c, nombre, decir=lambda _: None) == espera
@@ -175,6 +211,10 @@ def main():
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["--escribe"]:
-        WF.write_text(adaptar(PLANTILLA.read_text(encoding="utf-8")), encoding="utf-8")
+        nuevo = adaptar(PLANTILLA.read_text(encoding="utf-8"))
+        # los commits que Dependabot ya subió en el control se quedan: la plantilla no los sigue
+        fijados = dict(re.findall(r"uses: ([^@\s]+)(@[0-9a-f]{40}(?:\s+#.*)?)", WF.read_text(encoding="utf-8"))) if WF.exists() else {}
+        nuevo = re.sub(r"uses: ([^@\s]+)@[0-9a-f]{40}(\s+#.*)?", lambda m: "uses: " + m.group(1) + fijados.get(m.group(1), m.group(0)[len("uses: " + m.group(1)):]), nuevo)
+        WF.write_text(nuevo, encoding="utf-8")
         sys.exit(0)
     sys.exit(main())
