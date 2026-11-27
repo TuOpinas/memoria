@@ -47,7 +47,7 @@
 # - Las pruebas no leen configuración de fuera de la carpeta, que un pull request de código podría cambiar para ponerlas
 #   en verde. Con pytest: corre con -c /dev/null y --confcutdir en la carpeta, sin cargar plugins solos ni leer
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
-#   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["anyio"],
+#   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["anyio.pytest_plugin"],
 #   con @pytest.mark.anyio en cada prueba async o pytestmark en su archivo) y sys.path si hace falta más. El control pone
 #   la raíz del repositorio en sys.path justo antes de correr las pruebas, no antes de cargar pytest: un pytest.py, un
 #   pdb.py o cualquier módulo de la raíz no sustituye a pytest, y el código sin instalar se encuentra. Con Vitest, en
@@ -390,7 +390,7 @@ jobs:
               fi
               # con pytest, dos rojos que no son que falte la pieza: una async que pytest no pudo correr y un ERROR al prepararse
               if [ "$CORREDOR" = pytest ] && grep -qE 'async def functions? (are not natively supported|and no async plugin)|requested an async fixture' "$RUNNER_TEMP/salida"; then
-                echo "::error::pytest no pudo correr una prueba async de $p: falta el plugin async en el conftest.py de la carpeta (pytest_plugins = [\"anyio\"]) o la marca de la prueba (@pytest.mark.anyio); no es que falte la pieza."; exit 1
+                echo "::error::pytest no pudo correr una prueba async de $p: falta el plugin async en el conftest.py de la carpeta (pytest_plugins = [\"anyio.pytest_plugin\"]) o la marca de la prueba (@pytest.mark.anyio); no es que falte la pieza."; exit 1
               fi
               if [ "$CORREDOR" = pytest ]; then
                 prep=""; for f in "${suyos[@]}"; do grep -qF "ERROR $f::" "$RUNNER_TEMP/salida" && prep="$prep${prep:+, }$f"; done
