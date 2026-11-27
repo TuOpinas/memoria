@@ -3283,8 +3283,8 @@ def el_sistema(vista, texto_diseno):
             if _clave_dev(k["corre_en"]) not in claves:
                 vista["avisos"].append({"parte": "componentes", "texto": f"«{k['nombre']}» " + (
                     f"corre en «{k['corre_en']}», que no está en «Infraestructura»" if k["corre_en"] else "no dice en qué pieza corre («Corre en»)")
-                    + ": no sale en «El sistema»"})
-        # con «El sistema» no hay dibujo de componentes: su «Flujo:» no hace falta
+                    + ": no sale en «Arquitectura técnica»"})
+        # con «Arquitectura técnica» no hay dibujo de componentes: su «Flujo:» no hace falta
         vista["avisos"] = [a for a in vista["avisos"] if not (a.get("parte") == "componentes" and "«Flujo:»" in (a.get("texto") or ""))]
     roles = _roles([x["nombre"] for x in infra], [(x["nombre"], o) for x in infra for o in x["conecta_con"]], None)
     for x in infra:
@@ -3292,7 +3292,7 @@ def el_sistema(vista, texto_diseno):
     if infra and not d["sistema"]:
         vista["avisos"].append({"parte": "infraestructura", "texto":
             "«Infraestructura» no tiene la columna «Tipo»: añádela con «corre», «guarda» o «externo» en cada pieza, y "
-            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «El sistema»"})
+            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «Arquitectura técnica»"})
 
 
 def proyectos_de(carpeta, indice):
