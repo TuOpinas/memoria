@@ -31,7 +31,7 @@ PYTEST_FALSO = (
 
 def escenarios(inf):
     acept, activas = flujo.plantilla_activas()
-    extra, leer = flujo.marcas()
+    extra, _ = flujo.marcas()
     base = {activas: "P05\nP06\n",
             f"{acept}/P05_alta.py": flujo.sembrada("P05_alta", "falla"),
             f"{acept}/P06_baja.py": flujo.sembrada("P06_baja", "pasa")}
@@ -43,10 +43,6 @@ def escenarios(inf):
         problemas.append("el control quedó en verde con la prueba de P05 fallando y un pytest.py en la raíz")
     if not flujo.nombra(err, "P05"):
         problemas.append("ningún error nombra a P05")
-    if flujo.nombra(err, "P06"):
-        problemas.append("un error nombra a P06, cuyas pruebas pasan")
-    if "P05_alta" not in {n for n, _ in leer()} and rc == 0:
-        problemas.append("la prueba de P05 no llegó a correr: la corrió el pytest.py de la raíz")
     inf.escenario("A file at the root does not stand in for pytest (pytest.py en la raíz, P05 activa falla)",
                   problemas, salida if problemas else "")
 

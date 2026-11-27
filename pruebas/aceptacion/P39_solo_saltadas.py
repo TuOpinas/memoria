@@ -7,8 +7,10 @@
 
 Contra la plantilla del workflow (pruebas-aceptacion.yml), con flujo.py, como P30: con pytest, con un Vitest de mentira
 (un guion de node en node_modules/.bin/vitest que escribe un informe con la forma del de Vitest) y con un corredor
-propio de pocas líneas. «Dice que no corrieron todas» se busca en las líneas de error con pocas palabras: «no corr»,
-«sin correr» o «saltad», sin distinguir mayúsculas. Cómo se monta está en RESUMEN.md.
+propio de pocas líneas. «Dice que no corrieron todas» se busca en las líneas de error con pocas palabras: «salta»,
+«sin correr» o «corrieron», sin distinguir mayúsculas, y ninguna línea dice «no se pudo cargar», que es el error de un
+archivo que no carga, no el de uno que se salta. Con el corredor propio solo se exige rojo: el corredor da NO_CORRIO
+del archivo saltado y el control no puede distinguirlo de uno que no corrió. Cómo se monta está en RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P39_solo_saltadas.py (0 pasa, 1 falla, 2 no se montó).
 """
 import json, pathlib, sys
@@ -18,7 +20,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import flujo  # noqa: E402
 
 TITULO = "Escenarios · P05"
-CLAVES = ("no corr", "sin correr", "saltad")
+CLAVES = ("salta", "sin correr", "corrieron")
+NO_CARGA = "no se pudo cargar"
 CORREDOR_PROPIO = "scripts/corredor-aceptacion"
 SUFIJO = "_test.go"
 
@@ -75,12 +78,16 @@ def corredor_falso(estados):
             "exit 0\n")
 
 
-def juzga(inf, titulo, rc, salida):
+def juzga(inf, titulo, rc, salida, solo_rojo=False):
+    err = [l.lower() for l in flujo.errores(salida)]
     problemas = []
     if rc == 0:
         problemas.append("el control quedó en verde con un archivo de P05 que solo se salta o espera un fallo")
-    if not any(any(c in l.lower() for c in CLAVES) for l in flujo.errores(salida)):
-        problemas.append("ningún error dice que no corrieron todas («" + "», «".join(CLAVES) + "»)")
+    if not solo_rojo:
+        if not any(any(c in l for c in CLAVES) for l in err):
+            problemas.append("ningún error dice que no corrieron todas («" + "», «".join(CLAVES) + "»)")
+        if any(NO_CARGA in l for l in err):
+            problemas.append(f"el error es el de un archivo que «{NO_CARGA}», no el de uno que se salta")
     inf.escenario(f"Scenarios that only skip are not green ({titulo})", problemas, salida if problemas else "")
 
 
@@ -94,9 +101,7 @@ def escenarios(inf):
         cabeza = {f"{acept}/P05_falla.py": flujo.sembrada("P05_falla", "falla"), f"{acept}/P05_salta.py": texto}
         rc, salida = flujo.comprobar(base_pytest, cabeza, TITULO, extra, env_wf={"CORREDOR": "pytest"})
         if "P05_falla" not in {n for n, _ in leer()}:
-            inf.escenario(f"Scenarios that only skip are not green (pytest, {como})",
-                          ["P05_falla.py no llegó a correr: el caso no se montó como dice el escenario"], salida)
-            continue
+            raise flujo.Montaje(f"pytest, {como}: P05_falla.py no llegó a correr, el caso no se montó como dice el escenario")
         juzga(inf, f"pytest, {como}", rc, salida)
 
     # Vitest: el informe da P05_falla como «failed» y P05_salta con su única prueba «skipped»
@@ -120,7 +125,7 @@ def escenarios(inf):
     rc, salida = flujo.comprobar(base, cabeza, TITULO, extra,
                                  env_wf={"CORREDOR": "./" + CORREDOR_PROPIO, "SUFIJO": SUFIJO, "CONFIG": None},
                                  ejecutables=(CORREDOR_PROPIO,))
-    juzga(inf, "corredor propio, NO_CORRIO del archivo saltado", rc, salida)
+    juzga(inf, "corredor propio, NO_CORRIO del archivo saltado: solo rojo", rc, salida, solo_rojo=True)
 
 
 flujo.principal("P39", escenarios)

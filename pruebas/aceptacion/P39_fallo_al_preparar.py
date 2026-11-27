@@ -7,8 +7,9 @@
 
 Contra la plantilla del workflow (pruebas-aceptacion.yml), con flujo.py, como P30. La fixture importa lo que la pieza
 aún no tiene, y eso lanza ModuleNotFoundError al preparar la prueba: pytest da «ERROR …::prueba». Lo que dice el error
-se busca con pocas palabras, sin distinguir mayúsculas: «prepar» (falló la preparación) y «dentro» (se importa dentro
-de la prueba), en una misma línea de error o en dos. Cómo se monta está en RESUMEN.md.
+se busca con pocas palabras, sin distinguir mayúsculas: una línea de error dice «prepar» (falló la preparación) y,
+en la misma línea, «dentro» o «en la prueba» (se importa dentro de la prueba); y ninguna dice «no se pudo cargar», que
+es el error de un archivo que no carga. Cómo se monta está en RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P39_fallo_al_preparar.py (0 pasa, 1 falla, 2 no se
 montó).
 """
@@ -38,13 +39,15 @@ def escenarios(inf):
     err = [l.lower() for l in flujo.errores(salida)]
     problemas = []
     if "fixture" not in {n for n, _ in leer()}:
-        problemas.append("la fixture de P05_alta.py no llegó a correr: el caso no se montó como dice el escenario")
+        raise flujo.Montaje("la fixture de P05_alta.py no llegó a correr: el caso no se montó como dice el escenario")
     if rc == 0:
         problemas.append("el control quedó en verde con la prueba de P05 en ERROR al prepararla")
     if not any("prepar" in l for l in err):
         problemas.append("ningún error dice que falló la preparación («prepar»)")
-    if not any("dentro" in l for l in err):
-        problemas.append("ningún error dice que lo que la pieza aún no tiene se importa dentro de la prueba («dentro»)")
+    elif not any("prepar" in l and ("dentro" in l or "en la prueba" in l) for l in err):
+        problemas.append("ninguna línea que dice «prepar» dice también «dentro» o «en la prueba» (dónde se importa)")
+    if any("no se pudo cargar" in l for l in err):
+        problemas.append("el error es el de un archivo que «no se pudo cargar», no el de una preparación que falla")
     inf.escenario("A failure in preparation is not the piece missing (ERROR en una fixture)", problemas,
                   salida if problemas else "")
 
