@@ -556,3 +556,50 @@ Lo que pedía P23 sigue ahí: sus pruebas siguen en la lista de activas y siguen
 - Una prueba marcada `todo` cuenta como una saltada en el contrato, pero el Vitest de mentira solo da `skipped`: un control que mirase solo `skipped` pasaría. Queda para la verificación.
 - Con el corredor propio, todas las filas tienen solo archivos que terminan en el sufijo declarado: no hay una fila que compruebe que un archivo de la pieza con otro final (`P05_notas.md`) se queda fuera. Queda para la verificación.
 - Las filas de P30 que ya pasan hoy (las cuatro de la pieza construida y sin construir con pytest, y una del identificador) no prueban nada nuevo de P30: esa parte del control ya existe y son un seguro para que no se rompa.
+
+## P39 · Un control sin agujeros
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-26, en el plan («### P39»). Seis escenarios, un archivo por escenario.
+
+**Cómo están planteadas.** Como P30: cada prueba monta un repositorio de mentira con un pull request de mentira y corre sobre él la comprobación tal como la entrega el kit, con `flujo.comprobar(…, env_wf=…, ejecutables=…)`. Con Vitest, la prueba escribe un Vitest de mentira (un guion de `node`) que deja un informe con la forma del de verdad. Con el corredor propio, escribe uno de pocas líneas que responde según el contrato. Nada se instala: el «plugin async» es uno de pocas líneas en el `conftest.py` de la carpeta de mentira, que corre con asyncio las pruebas async con su marca (`asincrona`) y deja las demás, como pytest-asyncio o anyio. En CI solo está pytest.
+
+**Qué se mira.** El código de salida (0 verde, otro rojo) y, en los rojos, las líneas de error de la comprobación (no toda su salida). Las palabras exactas del mensaje no están decididas: se busca la idea con pocas palabras, sin distinguir mayúsculas.
+
+**Qué falla hoy.** Fallan, y deben, los escenarios 1, 3 (con pytest y con Vitest), 4 y 5. Ya pasan hoy el 2, el 6 y el 3 con corredor propio (abajo).
+
+**Necesita** pytest en el `python3` del PATH, y `node` y `npx` para las filas de Vitest (3 y 6), como P30.
+
+| Título que imprime | Situación | Tiene que pasar | Hoy |
+|---|---|---|---|
+| A file at the root does not stand in for pytest (pytest.py en la raíz, P05 activa falla) | P05 y P06 activas; la prueba de P05 falla y la de P06 pasa. Un pull request de código «P09 · …» añade en la raíz un `pytest.py` que escribe «PASSED …» de cada archivo y sale con 0 | Queda en rojo y un error nombra a P05. **Añadido:** ningún error nombra a P06, que pasa | falla (hoy queda en verde: el `pytest.py` de la raíz ocupa el sitio de pytest) |
+| Code that is not installed is still found (Python actual, …) | P05 activa; su prueba importa, dentro de la prueba, el paquete `app` de la raíz, que no está instalado. Pull request de código | La prueba de P05 corre con ese Python, importa `app` y la comprobación queda en verde | ya pasa |
+| Code that is not installed is still found (Python 3.9) | Lo mismo, con un `python3` que llama al `python3.9` del PATH | Lo mismo | ya pasa (si no hay `python3.9` con pytest, la prueba dice «sin comprobar» y no cuenta esta fila) |
+| Scenarios that only skip are not green (pytest, pytest.skip) | «Escenarios · P05»: `P05_falla.py` falla; `P05_salta.py` solo hace `pytest.skip` | Queda en rojo y un error dice que no corrieron todas: «no corr», «sin correr» o «saltad» | falla |
+| Scenarios that only skip are not green (pytest, pytest.importorskip) | Lo mismo, y `P05_salta.py` hace `pytest.importorskip` de un módulo que no está | Lo mismo | falla |
+| Scenarios that only skip are not green (pytest, xfail) | Lo mismo, y `P05_salta.py` lleva una prueba `xfail` | Lo mismo | falla |
+| Scenarios that only skip are not green (Vitest, una prueba skipped) | Lo mismo con Vitest: el informe da `P05_falla.test.ts` como `failed` y `P05_salta.test.ts` con su única prueba `skipped` | Lo mismo | falla |
+| Scenarios that only skip are not green (corredor propio, NO_CORRIO del archivo saltado) | Lo mismo con el corredor propio: dice «FALLA» de `P05_falla` y «NO_CORRIO» de `P05_salta` | Lo mismo | ya pasa (hoy dice «no corrió …») |
+| A failure in preparation is not the piece missing (ERROR en una fixture) | «Escenarios · P05»: la fixture de su prueba importa lo que la pieza aún no tiene y lanza `ModuleNotFoundError`; pytest da `ERROR …::prueba` | Queda en rojo, un error dice «prepar» (falló la preparación) y un error dice «dentro» (se importa dentro de la prueba) | falla (hoy cuenta el `ERROR` como un fallo de la prueba y queda en verde) |
+| An async test pytest cannot run (sin plugin async) | «Escenarios · P05»: una prueba `async def` con `@pytest.mark.asyncio` y ningún plugin async | Queda en rojo y un error dice «plugin» o «marca» | falla |
+| An async test pytest cannot run (con el plugin y sin su marca) | Lo mismo, con el plugin de pocas líneas en el `conftest.py` y la prueba sin su marca | Lo mismo | falla |
+| What already passed still passes (pytest) | P05 y P06 activas, sus pruebas pasan; pull request de código | Corren las dos y queda en verde | ya pasa |
+| **Añadido:** What already passed still passes (pytest, con fixture, async con su plugin y su marca, y parametrizada) | P05 activa con una `conftest.py` (una fixture y el plugin async) y pruebas que la usan: con fixture, async con su marca y una parametrizada | Corren todas y queda en verde | ya pasa |
+| What already passed still passes (Vitest) | Lo mismo con Vitest, las dos `passed` | Lo mismo | ya pasa |
+| What already passed still passes (corredor propio) | Lo mismo con el corredor propio, las dos «PASA» | Lo mismo | ya pasa |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. «Names the piece» (1) es que una línea de error nombra a P05; que no nombre a P06, que pasa, es añadido.
+2. «On Python 3.9 and on the current one» (2): la actual es el `python3` del PATH, con el que corre el arnés. Para 3.9 la prueba pone delante del PATH un `python3` que llama al `python3.9` del PATH, y comprueba que la prueba de P05 corrió con 3.9.
+3. «Says that not every test ran» (3) se busca con «no corr», «sin correr» o «saltad». Con el corredor propio, «el archivo saltado» es uno del que el corredor dice «NO_CORRIO», como dice el encargo.
+4. «Gives `ERROR` in a fixture» (4): la fixture está en el mismo archivo de prueba e importa lo que la pieza aún no tiene, que es el caso de verdad que este mensaje tiene que explicar. Las dos ideas se buscan por separado, «prepar» y «dentro», en cualquier línea de error.
+5. «No async plugin» (5): la prueba lleva la marca de pytest-asyncio sin que el plugin esté, que es como suele pasar. «The plugin or the mark is missing» se busca con «plugin» o «marca»; «not the piece» no se busca aparte.
+6. «Each of the three runners» (6) es pytest, Vitest y un corredor propio, en pull requests de código.
+
+### Lo que queda sabido
+
+- El escenario 2 y el 6 ya pasan hoy, y el 3 con el corredor propio también: son un seguro para que lo que cierra el 1 (que pytest no se tome de la raíz) no deje de encontrar el código de la raíz, y para que nada de P39 ponga en rojo pruebas que pasan.
+- El escenario 5 depende de la versión de pytest: con la de CI (8.3.5) una prueba async sin plugin se salta, y hoy la comprobación queda en rojo diciendo que el archivo «no corrió»; con pytest 8.4 o posterior la prueba falla, y hoy queda en verde. Las dos fallan hoy esta prueba, por no decir «plugin» ni «marca».
+- Con Python 3.9 la prueba solo lo comprueba si hay un `python3.9` con pytest en el PATH. En CI (ubuntu-24.04) no lo hay: allí esa fila queda «sin comprobar».
+- El plugin async es uno de pocas líneas, no pytest-asyncio ni anyio de verdad: que el mensaje acierte con ellos queda para la verificación.
+- Las pruebas buscan palabras, no el sentido: un mensaje que diga «plugin» por otra razón también pasaría. Eso lo ve quien acepta.
