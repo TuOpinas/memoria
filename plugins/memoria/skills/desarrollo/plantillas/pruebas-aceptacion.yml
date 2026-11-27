@@ -12,8 +12,9 @@
 #     única que leen. El control corre «npx --no-install vitest run --config "$CONFIG"» con el informe JSON, y de él lee
 #     cada archivo. Node lo pone el paso «Prepara Node» con la versión de .nvmrc, que se añade antes, en su propio pull
 #     request (no en el «Kit · »); sin .nvmrc, corre con el Node de la máquina. «Prepara el entorno» hace npm ci. Solo
-#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada:
-#     el informe no la distingue, así que tampoco cuenta como esperada como fallo en un pull request de escenarios.
+#     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y una prueba «test.fails» cuenta como pasada
+#     en un pull request de código (el informe no la distingue), y en uno de escenarios lo deja en rojo, porque el
+#     resumen de la salida dice «expected fail».
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
@@ -270,7 +271,7 @@ jobs:
                 # pongan antes: un pytest.py o un pdb.py de ella no sustituye a lo que pytest encuentra instalado, y el código
                 # que no se instala se sigue encontrando, también desde el conftest.py y tras un chdir, salvo un módulo que
                 # se llame como uno de la biblioteca estándar o de una dependencia
-                python3 -c 'import os, sys; c = os.path.realpath("."); sys.path[:] = [p for p in sys.path if os.path.realpath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.console_main())' \
+                python3 -c 'import os, sys; c = os.path.realpath("."); sys.path[:] = [p for p in sys.path if os.path.realpath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.main())' \
                   -c /dev/null --rootdir=. --confcutdir="$dir" -p no:cacheprovider --continue-on-collection-errors -r fEsxXp "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 case "$rc" in 0|1|2|5) ;; *) pudo=0 ;; esac
                 # del resumen corto, una línea por prueba: «PASSED ruta::prueba», «SKIPPED [1] ruta:3: …», «ERROR ruta - …»
@@ -305,7 +306,12 @@ jobs:
                     // un archivo que falla y además salta alguna: lo mira un pull request de escenarios
                     if (e === "FALLA" && n("passed") + n("failed") < ps.length) fs.appendFileSync(path.join(process.env.RUNNER_TEMP, "saltadas"), f + "\n");
                     console.log(e + " " + f);
-                  }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0 ;;
+                  }' "$RUNNER_TEMP/informe.json" "$@" > "$r" || pudo=0
+                # «test.fails» pasa en el informe; solo el resumen de la salida dice «expected fail», sin el archivo:
+                # lo mira un pull request de escenarios (en uno de código cuenta como pasada)
+                if sed 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/salida" | grep -qE '^[[:space:]]*Tests[[:space:]].*[0-9]+ expected fail'; then
+                  echo "un archivo con «test.fails»" >> "$RUNNER_TEMP/saltadas"
+                fi ;;
               *)
                 "$CORREDOR" "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 [ "$rc" = 0 ] || pudo=0
@@ -406,6 +412,8 @@ jobs:
               fi
               # todas tienen que correr: una saltada, por hacer o esperada como fallo no falla como prueba
               ultima="$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/salida" | tail -n 1 || true)"
+              # con vitest, la última línea es la del informe JSON: se cita su resumen
+              [ "$CORREDOR" != vitest ] || ultima="$(sed 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/salida" | grep -E '^[[:space:]]*Tests[[:space:]]' | tail -n 1 | sed 's/^[[:space:]]*//' || true)"
               saltan="$(con "$p" SALTADA)"
               [ -s "$RUNNER_TEMP/saltadas" ] && saltan="$saltan${saltan:+, }$(paste -sd, "$RUNNER_TEMP/saltadas" | sed 's/,/, /g')"
               if [ -n "$saltan" ] || { [ "$CORREDOR" = pytest ] && grep -qE ' (skipped|xfailed|xpassed)' <<< "$ultima"; }; then
