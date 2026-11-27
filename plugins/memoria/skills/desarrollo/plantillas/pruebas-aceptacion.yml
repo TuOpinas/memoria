@@ -15,7 +15,8 @@
 #     admite «.test.ts» (con «.test.tsx» o «.spec.ts», un corredor propio), y un archivo que espera un fallo cuenta como
 #     saltado: el informe da esa prueba como pasada, así que el control busca en el texto del archivo cualquier «.fails»
 #     («test.fails», «it.only.fails», «test.skipIf(x).fails», también en otra línea) y la opción «fails: true». Un alias
-#     de «test» o «test["fails"]» no lo ve, y un comentario que dice «.fails» pone en rojo su archivo, que el error nombra.
+#     de «test» que no escribe «.fails» o «test["fails"]» no lo ve. Por eso, en estas pruebas «.fails» y «fails: true» solo
+#     se escriben para esperar un fallo: en un comentario, una propiedad o un dato también ponen en rojo su archivo.
 #     CONFIG lleva «envDir» en su carpeta, para que los .env de la raíz (con sus VITE_*) no entren en las pruebas, y
 #     «test.dir» en ella, porque el control pasa «--root .»: el ejemplo es vitest.config.ts, al lado de esta plantilla.
 #   · un corredor propio: la ruta de un ejecutable del repositorio que empieza por «./», y SUFIJO dice cómo terminan
@@ -369,7 +370,7 @@ jobs:
                 elif [ -n "$(con "$p" NO_CORRIO)" ]; then
                   echo "::error::De las pruebas de aceptación de $p, que ya cuenta, no corrió $(con "$p" NO_CORRIO): unas pruebas que no corren no cuentan como pasadas."; mal=1
                 elif [ -n "$(con "$p" SALTADA)" ]; then
-                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" SALTADA) tiene pruebas saltadas, por hacer o esperadas como fallo, que no cuentan$([ "$CORREDOR" = pytest ] && printf ' (una async sin su plugin se salta)')."; mal=1
+                  echo "::error::Las pruebas de aceptación de $p no pasaron todas: $(con "$p" SALTADA) tiene pruebas saltadas, por hacer o esperadas como fallo, que no cuentan$([ "$CORREDOR" = pytest ] && printf ' (una async sin su plugin se salta)')$([ "$CORREDOR" = vitest ] && printf ' (con Vitest, también un «.fails» o «fails: true» en su texto, que en estas pruebas solo se escribe para esperar un fallo)')."; mal=1
                 fi
               done
               if [ "$mal" = 0 ] && [ "$sueltas" = 1 ]; then
@@ -416,7 +417,7 @@ jobs:
               saltan="$(con "$p" SALTADA)"
               [ -s "$RUNNER_TEMP/saltadas" ] && saltan="$saltan${saltan:+, }$(paste -sd, "$RUNNER_TEMP/saltadas" | sed 's/,/, /g')"
               if [ -n "$saltan" ] || { [ "$CORREDOR" = pytest ] && grep -qE ' (skipped|xfailed|xpassed)' <<< "$ultima"; }; then
-                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo$([ "$CORREDOR" = vitest ] && printf ', o un beforeAll que falló') («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
+                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo$([ "$CORREDOR" = vitest ] && printf ', o un beforeAll que falló, o un «.fails» o «fails: true» en su texto, que en estas pruebas solo se escribe para esperar un fallo') («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
               fi
               if [ -z "$(con "$p" FALLA)" ]; then
                 echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios. Si la pieza ya está construida, este pull request la añade a $ACTIVAS y entonces tienen que pasar."; exit 1
