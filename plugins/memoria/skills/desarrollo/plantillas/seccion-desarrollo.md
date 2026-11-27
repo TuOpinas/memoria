@@ -16,30 +16,29 @@ Audita: Nombre Apellido (correo, @usuario)
 Construye: Nombre Apellido (correo, @usuario) · Otra Persona (correo, @usuario)
 Administra: Nombre Apellido (correo, @usuario)
 Recibe: Nombre Apellido (correo)
-Modelos: revisa Opus 5.5 medio · contraste Sonnet 5.5 alto · consulta Fable 5.2
 ```
 
 Cada persona va como `Nombre Apellido (correo, @usuario)`; el usuario de GitHub se omite si no tiene cuenta. «Audita» puede decir `nadie`, y la línea «Recibe» es opcional: sin ella no falta nada. La plataforma y los repositorios van en una sola configuración (`configuracion.md`): las dos claves pueden apuntar al mismo archivo.
 
-**Modelos** dice qué modelo hace cada tarea del proyecto, y es opcional: una tarea que no sale, o toda la línea si falta, toma el valor de la tabla de abajo, que es el único sitio donde están los valores por defecto (las skills `calidad` y `desarrollo`, los agentes y la plantilla del `CLAUDE.md` remiten aquí). Cada valor es `<tarea> <modelo> [esfuerzo]`, separados por ` · `: el modelo con su familia y versión («Opus 5.5»), y el esfuerzo, si se dice, `bajo`, `medio`, `alto`, `extra` o `máximo`. `consulta nadie` quiere decir que el proyecto no usa un segundo modelo en los puntos de control. Ningún script la lee (los de la apertura y el tablero la dejan pasar como clave que no conocen): la lee Claude.
+**Modelos**, una línea opcional que va después de las de arriba (`Modelos: revisa Opus 5.5 medio · consulta nadie`), dice qué modelo hace cada tarea del proyecto: una tarea que no sale, o toda la línea si falta, toma el valor de la tabla de abajo, que es el único sitio donde están los valores por defecto (las skills `calidad` y `desarrollo`, los agentes y la plantilla del `CLAUDE.md` remiten aquí). Cada valor es `<tarea> <modelo> [esfuerzo]`, separados por ` · `: el modelo con su familia y versión («Opus 5.5»), y el esfuerzo, si se dice, `bajo`, `medio`, `alto`, `extra` o `máximo`. `consulta nadie` quiere decir que el proyecto no usa un segundo modelo en los puntos de control. Ningún script la lee (los de la apertura y el tablero la dejan pasar como clave que no conocen): la lee Claude.
 
 | Tarea | Qué es | Por defecto |
 |---|---|---|
 | `construye` | la sesión que construye | Opus 5.5; lo elige la persona en el selector, Claude lo propone |
 | `coordina` | la sesión principal que planea y coordina una fase | Opus 5.5, igual |
 | `revisa` | los revisores de una revisión de calidad | Opus 5.5 medio |
-| `contraste` | errores y riesgos otra vez, en otro modelo, donde lo pide la revisión | Sonnet 5.5 alto si construyó Opus; Opus 5.5 medio si construyó otro |
+| `contraste` | errores y riesgos otra vez, en otro modelo, donde lo pide la revisión | Sonnet 5.5 alto |
 | `arreglos` | los revisores de una revisión de arreglos | Opus 5.5 medio |
 | `verifica` | la verificación sobre Release, antes del sí | el más barato de los que no construyeron: Sonnet 5.5 alto si construyó Opus; Opus 5.5 medio si construyó otro |
 | `escenarios` | el subagente que escribe las pruebas de aceptación | Opus 5.5 medio |
 | `seguimiento` | el subagente que prepara el seguimiento | Sonnet 5.5 medio |
-| `consulta` | el segundo modelo de los puntos de control del `CLAUDE.md` | Fable 5.2 medio |
+| `consulta` | el segundo modelo de los puntos de control del `CLAUDE.md` | Fable 5.2 medio; si construyó Fable, Opus 5.5 medio |
 
-Los valores por defecto salen de 25 revisores que repitieron cuatro revisiones ya medidas (shared-memory/plugin-memoria#2026-11-26-8) y se revisan en cada lectura de las revisiones (paso 8 de `calidad`). Ningún revisor corre en Fable por defecto; Fable se queda para la consulta. Con revisores de Sonnet, la sesión que junta los hallazgos vuelve a juzgar su peso contra la vara, porque Sonnet lo rebaja.
+Salen de revisiones medidas (shared-memory/plugin-memoria#2026-11-26-8) y se revisan en cada lectura de la efectividad (paso 8 de `calidad`); `verifica` todavía no tiene verificaciones medidas con Sonnet.
 
 - **Antes de lanzar**, la sesión dice en una línea qué modelo y qué esfuerzo corre cada tarea («revisa Opus 5.5 medio · contraste Sonnet 5.5 alto»), de la línea o por defecto. Una tarea que no es de la tabla, o un valor que no se entiende, se dice en esa línea y toma el valor por defecto.
-- **La verificación nunca la hace el modelo que construyó** (tecnologia/metodologia-desarrollo#2026-11-19-10): si `verifica` nombra ese modelo, se usa el valor por defecto y se dice. El modelo que construyó lo dice el pull request («Construyó:»).
-- **Si un modelo no está disponible** (se acabó su presupuesto, la herramienta no deja elegirlo o no hay herramienta de agentes), se dice y el paso espera: nunca se hace en silencio con otro modelo, ni la consulta con el que construye, que no sería un segundo parecer. Quien acepta elige: esperar, nombrar otro modelo, o seguir esa vez sin la consulta, con una nota en el pull request («Consulta no disponible: <motivo>; decidió <Nombre Apellido>»), que ocupa el sitio de la pregunta y su respuesta.
+- **La verificación nunca la hace el modelo que construyó** (tecnologia/metodologia-desarrollo#2026-11-19-10), ni la consulta: si `verifica` o `consulta` nombran ese modelo, o una variable de entorno lo impone, se usa el de la tabla para ese caso, y si no se puede, el paso espera. El modelo que construyó lo dice el pull request («Construyó:»).
+- **Si un modelo no está disponible** (se acabó su presupuesto, o la herramienta no deja elegirlo), se dice y el paso espera: nunca se hace en silencio con otro modelo, ni la consulta con el que construye, que no sería un segundo parecer. Quien acepta elige: esperar, nombrar otro modelo, o seguir esa vez sin la consulta, con una nota en el pull request («Consulta no disponible: <motivo>; decidió <Nombre Apellido>»), que ocupa el sitio de la pregunta y su respuesta.
 - **Lo que corrió de verdad** es lo que se apunta: el informe de la revisión y el de la verificación dicen el modelo y el esfuerzo con que corrieron, no los que se pidieron.
 
 **Seguimiento** lo escribe Claude cuando alguien lo pide (skill `desarrollo`), y mientras diga `por crear` no cuenta como pieza que falta: el primero se crea en `entregables/seguimiento.md` del proyecto, que nace `vigente`, y pone aquí su ruta. Cada entrada va arriba de la anterior, sin borrarla, y lleva en este orden:
