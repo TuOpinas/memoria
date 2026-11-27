@@ -69,7 +69,8 @@ Su prueba es de otro tipo: el seguimiento lo hace Claude, sin programa, así que
 
 ## Lo que no es una prueba
 
-- `correr.py` corre las pruebas de las piezas que se le piden. Su última línea, «N pasan · M fallan · K saltadas», cuenta archivos de prueba, no filas de este resumen. Una prueba que no arranca cuenta como error, no como fallo.
+- `correr.py` es el corredor propio del control: con archivos da `PASA`, `FALLA` o `NO_CORRIO` por cada uno, y por piezas termina con «N pasan · M fallan · K saltadas», que cuenta archivos de prueba, no filas de este resumen. Una prueba que no arranca o se salta no cuenta como pasada ni como fallo.
+- `probar_control.py` comprueba que el control del repositorio es la plantilla con lo de memoria, y lo genera con `--escribe`.
 - `flujo.py` arma el repositorio de mentira y corre la comprobación. Entiende una parte de lo que GitHub admite, que su cabecera lista; ante lo que no entiende, se detiene con un error en vez de correr otra cosa.
 
 ## Lo que queda sabido
