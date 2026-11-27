@@ -611,3 +611,69 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-26, en el plan («###
 - Con Vitest, `test.fails` y las demás formas de esperar un fallo se ven en el texto del archivo, no en el informe, y el Vitest de mentira no las ejercita: las comprobó la verificación de la 1.31.2 con Vitest 2 a 5 (#2026-11-27-5 y -6).
 - Un aviso de prueba async hecho buscando palabras sin más en la salida de pytest podría poner en rojo un pull request de escenarios válido: uno con una prueba async, con su plugin y su marca, que falla porque la pieza aún no existe. Estas pruebas no tienen esa fila. Lo mira la verificación.
 - Otro módulo de la raíz que pytest importe más tarde, como un `pdb.py`, ocuparía el sitio del de verdad igual que el `pytest.py` del escenario 1. Sin fila propia: la 1.31.2 lo cierra poniendo la raíz una sola vez, por su ruta real, al final de `sys.path` antes de cargar pytest (#2026-11-27-3).
+
+## P40 y P41 · La fase que se explica y lo archivado
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan: los de P40 y P41.
+
+**Cómo están planteadas.** Como en F5 y F6:
+
+- **Lo que el tablero prepara (P40).** A la organización de mentira de P05 se le cambia el bloque «### F1 en llano» o se le quita el de F2, se genera el tablero y se lee lo que prepara de cada fase: el párrafo (`en_llano`) y las filas de la tabla (`arregla`, cada una con su pieza y su texto).
+- **Un trozo de la página, corrido aparte (P40 y P41).** Las pruebas sacan de la página del tablero dos trozos y los corren con node, sin abrir un navegador:
+  - el que decide qué lleva la fase: la primera frase para la tarjeta, y el párrafo y las filas para la ventana, o nada si la fase no tiene bloque;
+  - el que arma el menú: qué áreas y proyectos salen, en qué orden, cuáles van marcados como archivados o cerrados, y qué dice el botón.
+- **La página como texto (P41).** Que traiga el rótulo «Archivado», la palabra «Archivada», la etiqueta «cerrado» y la marca `data-archivado`, y que lea y escriba la elección del botón con la clave `ver-archivadas`.
+
+Hoy fallan todas las filas, y deben: la página aún no trae esos dos trozos. Además, el tablero ya prepara el párrafo y las filas de cada fase, pero llama «que» al texto de cada fila, y el contrato lo pide como «texto»: P40 pide «texto».
+
+**Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
+- **P40.**
+  - Que la ventana de la fase pinte el párrafo y la tabla arriba de la versión, las horas y «Listo cuando», cada pieza con su texto.
+  - Que la tarjeta lleve la primera frase bajo el nombre, y nada más del bloque.
+  - Que una fase sin bloque se vea como hoy, sin hueco.
+- **P41.**
+  - El gris de la tarjeta y del título de un área archivada, su sitio al final bajo «Archivado» y «Archivada» donde va la cuenta.
+  - El gris del proyecto cerrado y la etiqueta «cerrado» a su derecha.
+  - Que el área vigente no cambie de sitio, tarjeta, título ni cuenta.
+  - Que el botón esté al pie del menú.
+  - Que la elección sobreviva a cerrar y abrir la página en el mismo navegador (la prueba solo ve que la página lee y escribe la clave).
+
+### P40 · La fase que se explica
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| The window says why the phase exists and what each piece brings | El párrafo de F1 con dos frases, y su tabla de P01 y P02 | El tablero trae el párrafo entero y las dos filas, con su pieza y su texto, en su orden. Para la ventana, el trozo de la página da el párrafo y las filas | P40 |
+| **Añadido:** The window says why the phase exists and what each piece brings (block «in plain words») | Lo mismo, con el título «### F1 in plain words» | Igual, y además la primera frase | P40 |
+| The card carries the first sentence | La misma F1; y F2 de la muestra, de una frase | Para la tarjeta de F1, solo la primera frase, sin la segunda ni texto de la tabla. La de F2 es su frase entera | P40 |
+| A phase without the block shows as today | Sin el bloque de F2 | El tablero se genera sin error; F2 trae su versión, «Listo cuando» y piezas de siempre, el párrafo vacío y ninguna fila; el trozo de la página no da nada para F2 (sin hueco) y F1 no cambia | P40 |
+| **Añadido:** A phase without the block shows as today (no keys in the data) | Una fase de un tablero anterior, sin párrafo ni filas en sus datos | El trozo de la página no da nada y no se rompe | P40 |
+| A table that names a piece the phase does not have still shows | La tabla de F1 con una fila más, de P03 (que es de F2) | Esa fila llega tal cual, al final y en su orden; el párrafo, la primera frase y las otras filas no cambian; las piezas de F1 siguen siendo P01 y P02 | P40 |
+
+### P41 · Lo archivado, aparte y marcado
+
+La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, con un proyecto cerrado; y el área «ventas», vigente, con un proyecto cerrado y después uno abierto. El orden está puesto así para ver que lo archivado pasa al final.
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2) | P41 |
+| Shown, each one says what it is | La misma, botón encendido | «ventas» primero, con el abierto y después el cerrado, marcado como cerrado; «archivo» al final, marcada como archivada. La página tiene «Archivado», «Archivada», «cerrado» y `data-archivado` | P41 |
+| The choice stays | Botón encendido | La página lee y escribe la clave `ver-archivadas`; el botón dice «Ocultar lo archivado» y lo archivado sale | P41 |
+| Nothing archived, no button | Tres áreas sin nada cerrado. **Añadido:** una de ellas sin proyectos | Con el botón apagado y encendido: no hay botón, y salen todas las áreas, ninguna como archivada, con todos sus proyectos | P41 |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. «La primera frase» llega hasta el primer punto seguido de espacio, con el punto incluido; si no hay, es el párrafo entero.
+2. Una fase «sin bloque» puede traer el párrafo vacío o nulo, y ninguna fila o la lista ausente. Si el trozo de la página no da nada (null), no queda hueco.
+3. «La fila tal cual» es su pieza y su texto, al final de las filas, en el orden de la tabla.
+4. «El resto de la ventana sin cambiar» se comprueba en lo que el trozo de la página da (párrafo, primera frase, otras filas) y en las piezas de la fase.
+5. El número del botón cuenta las áreas archivadas y los proyectos cerrados de áreas vigentes, como dice el contrato: los proyectos de un área archivada no suman aparte.
+6. De un área archivada, la prueba solo mira que salga al final y marcada, no la lista de sus proyectos.
+7. El orden de los proyectos de un área es el de su lista en la guía.
+8. Un área sin proyectos no es archivada.
+
+### Lo que queda sabido
+
+- El tablero ya lee el bloque, también titulado «in plain words». Cuando la pieza dé «texto» en cada fila, esa parte de las filas de arriba pasa sola.
+- La página ya tiene la palabra «Archivada», la clave `ver-archivadas` (que ya lee y escribe) y «cerrado» muchas veces: buscarlas no prueba nada nuevo. Lo que falla hoy es el trozo del menú, el rótulo «Archivado» y la marca `data-archivado`.
+- Que «Archivado», «Archivada» y «cerrado» estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación.
+- P40 y P41 necesitan node en el PATH; sin él no se montan y salen con 2.
