@@ -49,8 +49,10 @@
 #   PYTEST_ADDOPTS o PYTEST_PLUGINS, y la carpeta no puede tener __init__.py (pytest ejecutaría el de la carpeta de
 #   arriba). Lo que necesiten va en un conftest.py de la carpeta: sus fixtures, sus plugins (pytest_plugins = ["anyio.pytest_plugin"],
 #   con @pytest.mark.anyio en cada prueba async o pytestmark en su archivo) y sys.path si hace falta más. El control pone
-#   la raíz del repositorio en sys.path justo antes de correr las pruebas, no antes de cargar pytest: un pytest.py, un
-#   pdb.py o cualquier módulo de la raíz no sustituye a pytest, y el código sin instalar se encuentra. Con Vitest, en
+#   la raíz del repositorio una sola vez, con su ruta completa, al final de sys.path antes de cargar pytest: un
+#   pytest.py o un pdb.py de la raíz no sustituye a lo que pytest encuentra instalado, y el código sin instalar se
+#   encuentra, también desde el conftest.py, salvo un módulo de la raíz que se llame como uno de la biblioteca estándar
+#   o de una dependencia instalada (email/, queue/, types/…): ese se renombra o se instala. Con Vitest, en
 #   la configuración de CONFIG. Con un corredor propio, lo que lee de fuera lo revisa quien acepta (R2).
 # - Las pruebas de una pieza son los archivos de la carpeta que empiezan por su identificador y «_» y terminan como dice
 #   el corredor (P1_alta.py es de P1; P10_baja.py, no): un archivo de pruebas con otro nombre no entra en un pull request
@@ -267,7 +269,7 @@ jobs:
                 # la raíz del repositorio va una vez y al final de sys.path, aunque PYTHONPATH o una instalación editable la
                 # pongan antes: un pytest.py o un pdb.py de ella no sustituye a pytest ni a lo que pytest carga, y el código
                 # que no se instala se sigue encontrando, también desde el conftest.py y tras un chdir
-                python3 -c 'import os, sys; c = os.getcwd(); sys.path[:] = [p for p in sys.path if os.path.abspath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.console_main())' \
+                python3 -c 'import os, sys; c = os.path.realpath("."); sys.path[:] = [p for p in sys.path if os.path.realpath(p or ".") != c] + [c]; import pytest; sys.exit(pytest.console_main())' \
                   -c /dev/null --rootdir=. --confcutdir="$dir" -p no:cacheprovider --continue-on-collection-errors -r fEsxXp "$@" < /dev/null 2>&1 | tee "$RUNNER_TEMP/salida"; rc=$?
                 case "$rc" in 0|1|2|5) ;; *) pudo=0 ;; esac
                 # del resumen corto, una línea por prueba: «PASSED ruta::prueba», «SKIPPED [1] ruta:3: …», «ERROR ruta - …»
@@ -388,7 +390,7 @@ jobs:
               if [ "$pudo" = 0 ]; then
                 echo "::error::Las pruebas de $p no se pudieron correr ($(quien) salió con $rc): no fallaron como pruebas. ¿Está instalado el corredor?"; exit 1
               fi
-              # con pytest, dos rojos que no son que falte la pieza: una async que pytest no pudo correr y un ERROR al prepararse
+              # con pytest, dos rojos que no son que falte la pieza: una async que pytest no pudo correr y un ERROR al prepararse o al limpiarse
               if [ "$CORREDOR" = pytest ] && grep -qE 'async def functions? (are not natively supported|and no async plugin)|requested an async fixture' "$RUNNER_TEMP/salida"; then
                 echo "::error::pytest no pudo correr una prueba async de $p: falta el plugin async en el conftest.py de la carpeta (pytest_plugins = [\"anyio.pytest_plugin\"]) o la marca de la prueba (@pytest.mark.anyio); no es que falte la pieza."; exit 1
               fi
@@ -406,7 +408,7 @@ jobs:
               saltan="$(con "$p" SALTADA)"
               [ -s "$RUNNER_TEMP/saltadas" ] && saltan="$saltan${saltan:+, }$(paste -sd, "$RUNNER_TEMP/saltadas" | sed 's/,/, /g')"
               if [ -n "$saltan" ] || { [ "$CORREDOR" = pytest ] && grep -qE ' (skipped|xfailed|xpassed)' <<< "$ultima"; }; then
-                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo, o un beforeAll que falló («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
+                echo "::error::Las pruebas de $p no corrieron todas: ${saltan:-alguna} tiene pruebas que se saltan, por hacer o esperadas como fallo$([ "$CORREDOR" = vitest ] && printf ', o un beforeAll que falló') («$ultima»). En un pull request de escenarios tienen que correr todas y fallar porque falta la pieza."; exit 1
               fi
               if [ -z "$(con "$p" FALLA)" ]; then
                 echo "::error::Las pruebas de $p ya pasan: no comprueban lo que piden sus escenarios. Si la pieza ya está construida, este pull request la añade a $ACTIVAS y entonces tienen que pasar."; exit 1
