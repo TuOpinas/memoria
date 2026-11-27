@@ -9,7 +9,7 @@ control, y sale con 0 si pudo correrlos, pasen o no, y con 2 si no le llegó nin
 pudo ejecutar o un archivo que no es una prueba de esta carpeta (<pieza>_<nombre>.py, suelto en ella) son NO_CORRIO: no
 cuentan como pasadas ni como fallos de prueba.
 
-Corre, desde este mismo proceso, cada archivo .py de esta carpeta cuyo nombre empieza exactamente por «<PIEZA>_» (P1 no
+Corre, desde este mismo proceso, cada archivo .py de esta carpeta cuyo nombre empieza por «<PIEZA>_», sin distinguir mayúsculas (P1 no
 toma P10_…), cada uno con «python3 -I» y desde la raíz del repositorio. Un script sale con 0 si pasa, 1 si falla y 77 si
 se salta, y su última línea dice lo mismo: «RESULTADO: pasa», «RESULTADO: falla» o «RESULTADO: saltada». Termina con la
 lista de piezas que fallaron y, en la última línea, «N pasan · M fallan · K saltadas», que cuenta archivos de prueba, no
