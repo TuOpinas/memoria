@@ -33,7 +33,7 @@ tamaños; y meta/enfoque-candidatos.json, que no va a la base: lo usa la puesta 
 """
 import sys, os, re, json, datetime, pathlib, hashlib, unicodedata
 
-ESTE_PLUGIN = "1.31.1"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
+ESTE_PLUGIN = "1.31.2"   # la versión del plugin de este script: la pone release.sh, y con ella se compara la versión mínima de la raíz (1.26)
 
 # --- quién escribe: «Quién es quién» y la tabla de áreas de guia.md, y la línea «Colabora:» de un proyecto ---
 # Desde el paso 0 de la versión alojada vive en un solo sitio, el paquete context_core (packages/context-core del repo),
@@ -2166,7 +2166,7 @@ VERSION_PLUGIN = _arg("--version")
 # El formato de lo que el generador escribe por proyecto. Las huellas de proyecto y de taller que guardó una puesta al día
 # valen para reutilizar sus documentos mientras este número no cambie, aunque cambie la versión del plugin (1.24.3: antes,
 # cada versión obligaba a releer la carpeta entera). Súbelo en cuanto cambie lo que sale para un proyecto o un área.
-FORMATO_DATOS = "7"   # 1.30.0: el plan por estado, los datos por grupos y el sistema de la pestaña Desarrollo; 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
+FORMATO_DATOS = "8"   # 1.31.2: los avisos del dibujo dicen «Arquitectura técnica»; 1.30.0: el plan por estado, los datos por grupos y el sistema de la pestaña Desarrollo; 1.29.1: «En corto», el papel de cada caja, la base y las horas de la pestaña Desarrollo; 1.29.0: el recorrido, los verbos y las cuentas de la pestaña Desarrollo; 1.28.0: la marca y la pestaña Desarrollo de un proyecto de desarrollo; 1.26.8: los arreglos del mantenimiento van aparte de las sesiones; 1.25.3: «Acceso: Restringidas» se lee restringida
 # --lineas: el inventario sale en líneas (inventario, cuántos archivos, sus rutas) para leerlo sin otra llamada.
 # --si-cambia <huella>: si la huella de la raíz coincide, solo imprime «AL DIA» y no hace falta traer nada.
 # --sin-cambios <h1,h2,…>: las huellas de proyecto que guardó la última puesta al día (meta/estado «huellas»). Un proyecto
@@ -3283,8 +3283,8 @@ def el_sistema(vista, texto_diseno):
             if _clave_dev(k["corre_en"]) not in claves:
                 vista["avisos"].append({"parte": "componentes", "texto": f"«{k['nombre']}» " + (
                     f"corre en «{k['corre_en']}», que no está en «Infraestructura»" if k["corre_en"] else "no dice en qué pieza corre («Corre en»)")
-                    + ": no sale en «El sistema»"})
-        # con «El sistema» no hay dibujo de componentes: su «Flujo:» no hace falta
+                    + ": no sale en «Arquitectura técnica»"})
+        # con «Arquitectura técnica» no hay dibujo de componentes: su «Flujo:» no hace falta
         vista["avisos"] = [a for a in vista["avisos"] if not (a.get("parte") == "componentes" and "«Flujo:»" in (a.get("texto") or ""))]
     roles = _roles([x["nombre"] for x in infra], [(x["nombre"], o) for x in infra for o in x["conecta_con"]], None)
     for x in infra:
@@ -3292,7 +3292,7 @@ def el_sistema(vista, texto_diseno):
     if infra and not d["sistema"]:
         vista["avisos"].append({"parte": "infraestructura", "texto":
             "«Infraestructura» no tiene la columna «Tipo»: añádela con «corre», «guarda» o «externo» en cada pieza, y "
-            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «El sistema»"})
+            "«Corre en» al final de «Componentes», y los dos dibujos pasan a ser uno, «Arquitectura técnica»"})
 
 
 def proyectos_de(carpeta, indice):

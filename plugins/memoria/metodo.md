@@ -1,4 +1,4 @@
-# Método de trabajo · versión 1.31.1 · huella 29fb7ff · generado desde el plugin memoria, no se edita a mano
+# Método de trabajo · versión 1.31.2 · huella bdc49e9 · generado desde el plugin memoria, no se edita a mano
 
 Este archivo reúne el contrato del método, las normas de estilo y el índice de skills del plugin `memoria`. Sirve a quien trabaja con Gemini u otro modelo sin el plugin, y a quien abre la carpeta sin IA delante. Para ponerlo al día se vuelve a generar desde el plugin y se copia a la raíz.
 
@@ -497,22 +497,34 @@ Quién consume un proyecto lo dicen las líneas `Afecta a:` y `basado_en` que lo
 
 #### Un proyecto de desarrollo (1.27)
 
-Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia es la marca: con ella, la apertura avisa de las piezas del kit de desarrollo que le faltan (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza y quién hace qué, una línea por clave, en este orden:
+Un proyecto que construye software lleva al final de `proyecto.md`, después de `Quién participa`, la sección opcional `## Desarrollo`. Su presencia es la marca: con ella, la apertura avisa de las piezas del kit de desarrollo que le faltan (skill `desarrollo`), y un proyecto sin ella no ve nada nuevo. Dice dónde está cada pieza y quién hace qué, una línea por clave, en este orden, separada de la siguiente por una línea en blanco para que cada una se vea aparte:
 
 ```markdown
 ## Desarrollo
 Repositorios: organización/repositorio · organización/otro
+
 Configuración de plataforma: ruta
+
 Configuración de repositorios: ruta
+
 Diseño: ruta
+
 Plan: ruta
+
 Seguimiento: ruta
+
 Paso a Prod: release de GitHub
+
 Acepta: Nombre Apellido (correo, @usuario)
+
 Audita: Nombre Apellido (correo, @usuario)
+
 Construye: Nombre Apellido (correo, @usuario) · Otra Persona (correo, @usuario)
+
 Administra: Nombre Apellido (correo, @usuario)
+
 Recibe: Nombre Apellido (correo)
+
 Modelos: por defecto
 ```
 
