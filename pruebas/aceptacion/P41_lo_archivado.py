@@ -15,8 +15,9 @@
 Por una función de la página: menuArchivado(areas, proyectos, ver), del bloque entre «// >>> archivado» y
 «// <<< archivado» de vista.html, que se saca como texto y se corre con node como pestanaAlCambiar en P25, sobre listas
 de áreas y proyectos escritas aquí. Devuelve {"boton", "grupos": [{"slug", "archivada", "proyectos": [{"id",
-"cerrado"}]}]}. Y la página leída como texto: el rótulo «Archivado», el atributo data-archivado (como atributo:
-«data-archivado=» o «[data-archivado») y una llamada a menuArchivado( fuera de su bloque. El gris, los sitios en
+"cerrado"}]}]}. Y la página leída como texto: sin el botón de hoy («Mostrar áreas archivadas» / «Ocultar áreas
+archivadas»), con el rótulo «Archivado», «data-archivado» o «dataset.archivado», y el nombre menuArchivado fuera de su
+bloque. El gris, los sitios en
 pantalla, que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página quedan para la
 verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P41_lo_archivado.py (0 pasa, 1 falla, 2 no se montó).
@@ -29,6 +30,7 @@ from P21_lineas_que_se_siguen import *  # noqa: E402,F401,F403  (cómo se saca y
 
 INICIO_A, FIN_A = "// >>> archivado", "// <<< archivado"
 MOSTRAR, OCULTAR = "Mostrar lo archivado", "Ocultar lo archivado"
+BOTON_DE_HOY = ("Mostrar áreas archivadas", "Ocultar áreas archivadas")   # el botón que la pieza sustituye
 
 # La carpeta del encargo. En el orden de la guía, el área archivada va primero, para ver que pasa al final; y en
 # ventas, el proyecto cerrado va primero, para ver que pasa detrás del abierto
@@ -104,8 +106,13 @@ def fuera_del_bloque(texto):
 
 def escenarios(inf):
     # 1 · Oculto por defecto: con el botón apagado, ni el área archivada ni el proyecto cerrado; el botón dice
-    #     «Mostrar lo archivado (2)» (un área archivada + un proyecto cerrado de un área vigente)
+    #     «Mostrar lo archivado (2)» (un área archivada + un proyecto cerrado de un área vigente). Y la página ya no trae
+    #     el botón de hoy, que este sustituye
     problemas = []
+    texto = pagina()
+    for viejo in BOTON_DE_HOY:
+        if viejo in texto:
+            problemas.append(f"la página del tablero aún trae «{viejo}», el botón de hoy: el nuevo lo sustituye")
     r = menu(AREAS, PROYECTOS, False, problemas)
     if r is not None:
         igual(problemas, "el botón con lo archivado oculto", r["boton"], f"{MOSTRAR} (2)")
@@ -118,8 +125,8 @@ def escenarios(inf):
     inf.escenario("Hidden by default", problemas)
 
     # 2 · Visto, cada uno dice qué es: el área vigente en su sitio, con el abierto y después el cerrado marcado; el área
-    #     archivada al final y marcada. Y la página trae el rótulo «Archivado», el atributo data-archivado y una llamada
-    #     a menuArchivado fuera de su bloque. («Archivada» y «cerrado» ya están hoy en la página: buscarlos no prueba nada)
+    #     archivada al final y marcada. Y la página trae el rótulo «Archivado», el atributo data-archivado y el nombre
+    #     menuArchivado fuera de su bloque. («Archivada» y «cerrado» ya están hoy en la página: buscarlos no prueba nada)
     problemas = []
     r = menu(AREAS, PROYECTOS, True, problemas)
     if r is not None:
@@ -127,10 +134,10 @@ def escenarios(inf):
     texto = pagina()
     if "Archivado" not in texto:
         problemas.append("la página del tablero no tiene «Archivado» (el rótulo del grupo del final)")
-    if not re.search(r"data-archivado\s*=|\[\s*data-archivado", texto):
-        problemas.append("la página del tablero no tiene el atributo data-archivado («data-archivado=» o «[data-archivado»)")
-    if "menuArchivado(" not in fuera_del_bloque(texto):
-        problemas.append("la página del tablero no llama a menuArchivado( fuera de su bloque: el menú no lo usa")
+    if "data-archivado" not in texto and "dataset.archivado" not in texto:
+        problemas.append("la página del tablero no tiene «data-archivado» ni «dataset.archivado» (la marca de lo archivado)")
+    if not re.search(r"\bmenuArchivado\b", fuera_del_bloque(texto)):
+        problemas.append("la página del tablero no nombra menuArchivado fuera de su bloque: el menú no lo usa")
     inf.escenario("Shown, each one says what it is", problemas)
 
     # 3 · La elección se queda: con ver verdadero, el botón dice «Ocultar lo archivado». Que la página guarde la

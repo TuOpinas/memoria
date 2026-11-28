@@ -619,7 +619,7 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan: los d
 **Cómo están planteadas.** Como en F5 y F6, de dos maneras:
 
 - **Un trozo de la página, corrido aparte.** La prueba saca de la página del tablero el trozo que arma el menú y lo corre con node, sin abrir un navegador. Le da listas de áreas y proyectos escritas en la propia prueba, y mira qué áreas y proyectos salen, en qué orden, cuáles van marcados como archivados o cerrados, y qué dice el botón. El trozo corre solo: no puede usar nada de fuera de él (otras funciones ni variables de la página).
-- **La página como texto.** Que traiga el rótulo «Archivado» y la marca `data-archivado` como atributo (`data-archivado=` o `[data-archivado`), y que llame al trozo del menú desde fuera de él, para que no baste un trozo que nadie usa.
+- **La página como texto.** Que ya no traiga el botón de hoy («Mostrar áreas archivadas» / «Ocultar áreas archivadas»), que la pieza sustituye por el nuevo. Que traiga el rótulo «Archivado» y la marca de lo archivado, escrita «data-archivado» o «dataset.archivado». Y que nombre el trozo del menú (`menuArchivado`) fuera de él, para que no baste un trozo que nadie usa.
 
 Hoy fallan todas las filas, y deben: la página aún no trae ese trozo, ni el rótulo, ni la marca.
 
@@ -629,14 +629,15 @@ Hoy fallan todas las filas, y deben: la página aún no trae ese trozo, ni el r�
 - Que el área vigente no cambie de sitio, tarjeta, título ni cuenta.
 - Que el botón esté al pie del menú.
 - Que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página en el mismo navegador. La prueba solo ve que, con el botón encendido, el botón dice «Ocultar lo archivado».
-- Que el resto de la página (la cuenta del área, lo que se ve al abrir un proyecto) use la misma regla de área archivada que el menú: un área con proyectos, todos cerrados.
+- Que la página use de verdad el trozo del menú para pintarlo: la prueba solo ve que lo nombra fuera de él.
+- Que la regla de área archivada sea la de `archivada()` de hoy, la misma en el menú y en el resto de la página (la cuenta del área, lo que se ve al abrir un proyecto): un área que se puede leer, con proyectos, todos cerrados y ninguno restringido. El trozo del menú recibe solo las áreas y proyectos que se le pasan, así que lo de leer y restringir lo decide la página antes de llamarlo.
 
 La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, con un proyecto cerrado; y el área «ventas», vigente, con un proyecto cerrado y después uno abierto. El orden está puesto así para ver que lo archivado pasa al final.
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2) | P41 |
-| Shown, each one says what it is | La misma, botón encendido | «ventas» primero, con el abierto y después el cerrado, marcado como cerrado; «archivo» al final, marcada como archivada. La página tiene «Archivado», el atributo `data-archivado` y una llamada al trozo del menú fuera de él | P41 |
+| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». La página ya no trae «Mostrar áreas archivadas» ni «Ocultar áreas archivadas» **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2) | P41 |
+| Shown, each one says what it is | La misma, botón encendido | «ventas» primero, con el abierto y después el cerrado, marcado como cerrado; «archivo» al final, marcada como archivada. La página tiene «Archivado», «data-archivado» o «dataset.archivado», y nombra el trozo del menú fuera de él | P41 |
 | The choice stays | Botón encendido | El botón dice «Ocultar lo archivado» | P41 |
 | Nothing archived, no button | Tres áreas sin nada cerrado. **Añadido:** una de ellas sin proyectos | Con el botón apagado y encendido: no hay botón, y salen todas las áreas, ninguna como archivada, con todos sus proyectos | P41 |
 
@@ -646,10 +647,9 @@ La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, c
 2. De un área archivada, la prueba solo mira que salga al final y marcada, no la lista de sus proyectos.
 3. El orden de los proyectos de un área es el de su lista en la guía.
 4. Un área sin proyectos no es archivada.
-5. Si el trozo del menú no devuelve nada (null), las filas que lo miran fallan y lo dicen.
 
 ### Lo que queda sabido
 
 - La página ya tiene hoy la palabra «Archivada», la etiqueta «cerrado» y la clave `ver-archivadas`: buscarlas no probaría nada, y la prueba no las busca. Lo ve la verificación.
-- Que «Archivado» y `data-archivado` estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación.
+- Que «Archivado» y la marca estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación. Un comentario que diga «data-archivado» ya cumple la fila; que la marca esté de verdad en lo que pinta el menú lo ve la verificación.
 - P41 necesita node en el PATH; sin él no se monta y sale con 2.
