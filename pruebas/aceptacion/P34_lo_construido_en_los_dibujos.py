@@ -109,8 +109,7 @@ def ultima(estados, punto4=PENDIENTE):
 TRES = {"P01": "entregada", "P02": "en curso", "P03": "pendiente"}   # una de cada, como pide el escenario
 FUERA = ("Servicio de cupones (muestra/portal#41)", "Exportación a Excel (muestra/portal#43)")
 FUERA_ANTERIOR = "Buscador de pedidos (muestra/portal#12)"
-OTROS_PUNTOS = ("Arregla la portada", "pruebas de aceptación", "ninguno desde el anterior", "sin recibir por escrito",
-                "pendiente de revisar", "nada")
+OTROS_PUNTOS = ("Arregla la portada", "pruebas de aceptación", "ninguno desde el anterior", "sin recibir por escrito")
 
 
 def pagina():
@@ -163,8 +162,9 @@ def escenarios(inf):
     # 1 · Cada caja lleva el estado de su pieza: la columna «Pieza» en las tres tablas (P01, P02, P03 y una fila sin
     #     pieza en cada una) y la última entrada con P01 entregada, P02 en curso y P03 pendiente. El grupo y lo demás de
     #     cada caja, como hoy (el color sigue diciendo su grupo o tipo). La página trae «data-estado». Añadido: con el
-    #     punto 4 «pendiente de revisar», lo unido fuera del diseño va vacío; y una pieza que la última entrada no nombra
-    #     (P03, aunque la anterior sí) deja sus cajas sin estado
+    #     punto 4 «pendiente de revisar», lo unido fuera del diseño va vacío; y con otra última entrada, con P01 `unida`,
+    #     sin P03 (que la anterior sí nombra) y el punto 4 «- nada»: la caja de P01 lleva «unida» tal cual, las de P03
+    #     van sin estado y lo unido fuera del diseño va vacío
     problemas = []
     d = pestana(*generar(con_pieza() + [ultima(TRES)]), problemas)
     if d is not None:
@@ -179,15 +179,19 @@ def escenarios(inf):
         fuera = lista(problemas, d, "fuera_del_diseno")
         if fuera is not None:
             igual(problemas, "«fuera_del_diseno» con el punto 4 «pendiente de revisar»", fuera, [])
-    sin_p03 = {"P01": "entregada", "P02": "en curso"}
-    d = pestana(*generar(con_pieza() + [ultima(sin_p03)]), problemas)
+    sin_p03 = {"P01": "unida", "P02": "en curso"}
+    d = pestana(*generar(con_pieza() + [ultima(sin_p03, ("nada",))]), problemas)
     if d is not None:
-        cajas(d, problemas, None, sin_p03)   # P03 no está en la última entrada: sus cajas, sin estado
+        cajas(d, problemas, None, sin_p03)   # P01 «unida» tal cual; P03 no está en la última entrada: sin estado
+        fuera = lista(problemas, d, "fuera_del_diseno")
+        if fuera is not None:
+            igual(problemas, "«fuera_del_diseno» con el punto 4 «- nada»", fuera, [])
     en_pagina(problemas, MARCA_ESTADO)
     inf.escenario("Each box takes its piece's state", problemas)
 
     # 2 · Sin la columna, como hoy: la muestra tal cual. Cada caja con «pieza» y «estado» null, ninguna pieza
-    #     desconocida, ningún aviso que nombre «Pieza», y el diseño leído como en P05
+    #     desconocida, ningún aviso que nombre «Pieza», el diseño leído como en P05 y, con una última entrada sin punto
+    #     4, nada fuera del diseño
     problemas = []
     d = pestana(*generar(), problemas)
     if d is not None:
@@ -199,6 +203,9 @@ def escenarios(inf):
         malos = [t for t in avisos(d) if "Pieza" in t]
         if malos:
             problemas.append(f"sin la columna, un aviso nombra «Pieza»: {json.dumps(malos, ensure_ascii=False)}")
+        fuera = lista(problemas, d, "fuera_del_diseno")
+        if fuera is not None:
+            igual(problemas, "«fuera_del_diseno» con una última entrada sin punto 4", fuera, [])
     inf.escenario("Without the column, as today", problemas)
 
     # 2b · Añadido: un diseño de antes, cuya «Infraestructura» no tiene «Recurso» (la muestra de P05 tal cual): su

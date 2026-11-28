@@ -20,10 +20,11 @@
 
 Por el contrato del encargo (campo 3): «el seguimiento corre» es recoger_github.py con un `gh` falso delante en el PATH
 (GH_FALSO, abajo: responde la API REST desde un JSON que escribe cada escenario, nunca la red) y, sobre su salida,
-seguimiento.py contra la raíz de muestra de P05_lectores.py. Ajuste del contrato (decidido en la sesión que construye):
-recoger_github.py lee siempre la regla de la rama principal y la deja en "reglas" (o null con su motivo); si no se
-puede leer, el punto 5 de la entrada dice «sin comprobar», pero eso solo no impide guardar ni hace salir con 3. Lo compartido con P07 (la raíz, el `gh` falso y cómo se
-corren los scripts) está aquí y P07 lo importa. Cómo se lee cada escenario está en RESUMEN.md.
+seguimiento.py --json contra la raíz de muestra de P05_lectores.py. La prueba mira el JSON de seguimiento.py
+(#2026-11-27-15), su código de salida y el seguimiento guardado; el texto de la entrada y sus siete puntos, la
+verificación. recoger_github.py lee siempre la regla de la rama principal y la deja en "reglas" (o null); si no se
+puede leer, check_obligatorio es null, y eso no impide guardar ni hace salir con 3. Lo compartido con P07 (la raíz, el
+`gh` falso y cómo se corren los scripts) está aquí y P07 lo importa. Cómo se lee cada escenario está en RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P06_seguimiento_por_script.py (0 pasa, 1 falla, 2 no se montó).
 """
 import atexit, copy, datetime, json, os, pathlib, re, shutil, subprocess, sys, tempfile
@@ -167,7 +168,8 @@ solo por rulesets (rules/branches/<rama>, rulesets y rulesets/<id>), se pida o n
 (branches/<rama>/protection) da 404 «Branch not protected», como en un repositorio que solo usa rulesets; sin «reglas»,
 403 a las tres. Cada lista trae los campos que da GitHub: la de pulls, sin «merged» ni «merged_by» (van en pulls/<n>);
 la búsqueda, sin «merged_at» ni «merge_commit_sha» sueltos («merged_at» va dentro de «pull_request»), y filtra por los
-calificadores merged:, updated:, created:, closed:, is:, state: y base:. compare/ admite los dos órdenes."""
+calificadores merged:, updated:, created:, closed:, is:, state: y base:. commits?sha= da la lista de esa rama o etiqueta
+(404 si no la conoce). compare/ admite los dos órdenes, y una etiqueta con su propio commit da «identical»."""
 import json, pathlib, re, sys, urllib.parse
 AQUI = pathlib.Path(__file__).resolve().parent
 D = json.loads((AQUI / "datos.json").read_text(encoding="utf-8"))
@@ -307,9 +309,17 @@ if resto == "":
     o = {"full_name": D["repo"], "name": D["repo"].split("/")[1], "default_branch": rama, "private": True,
          "owner": {"login": D["repo"].split("/")[0], "type": "Organization" if D["org"] else "User"}}
     o.update(D["repo_ajustes"]); sale(0, o)
-if resto in (f"branches/{rama}", f"commits/{rama}", "commits"):
-    c = {"sha": sha, "commit": {"message": "Último commit", "committer": {"date": "2026-11-27T12:00:00Z"}}}
-    sale(0, [c] if resto == "commits" else (c if resto.startswith("commits") else {"name": rama, "commit": c, "protected": True}))
+c = {"sha": sha, "commit": {"message": "Último commit", "committer": {"date": "2026-11-27T12:00:00Z"}}}
+if resto == "commits":   # commits?sha=<rama, etiqueta o sha>: la lista desde ahí
+    desde = q.get("sha", rama)
+    if desde in (rama, sha):
+        sale(0, pagina([c]))
+    if desde in etiquetas or desde in etiquetas.values():
+        s = etiquetas.get(desde, desde)
+        sale(0, pagina([{"sha": s, "commit": {"message": "Release", "committer": {"date": "2026-11-25T12:00:00Z"}}}]))
+    error(404, f"No commit found for SHA: {desde}")
+if resto in (f"branches/{rama}", f"commits/{rama}"):
+    sale(0, c if resto.startswith("commits") else {"name": rama, "commit": c, "protected": True})
 if resto.startswith("commits/") and resto[8:] in etiquetas:
     sale(0, {"sha": etiquetas[resto[8:]]})
 if resto in (f"git/ref/heads/{rama}", f"git/refs/heads/{rama}"):
@@ -359,11 +369,13 @@ if resto in ("releases", "releases/latest") or resto.startswith("releases/tags/"
 m = re.match(r"compare/(.+?)\.\.\.(.+)$", resto)
 por_sha = {s: t for t, s in etiquetas.items()}
 if m:   # compare/<etiqueta>...<sha> y compare/<sha>...<etiqueta> (la etiqueta también por su sha)
-    base, cabeza = (por_sha.get(x, x) for x in m.groups())
-    for etiqueta, otro, contenido in ((base, cabeza, "behind"), (cabeza, base, "ahead")):
-        if etiqueta in etiquetas and otro not in etiquetas:
-            if otro == etiquetas[etiqueta]:
-                sale(0, {"status": "identical", "ahead_by": 0, "behind_by": 0})
+    x, y = m.groups()
+    ex, ey = (t if t in etiquetas else por_sha.get(t) for t in (x, y))
+    sx, sy = (etiquetas.get(t, t) for t in (x, y))
+    if (ex or ey) and sx == sy:   # una etiqueta y su propio commit
+        sale(0, {"status": "identical", "ahead_by": 0, "behind_by": 0})
+    for etiqueta, otro, contenido in ((ex, sy, "behind"), (ey, sx, "ahead")):
+        if etiqueta and not (ex and ey):
             if otro in D["contiene"].get(etiqueta, []):
                 sale(0, {"status": contenido, "ahead_by": int(contenido == "ahead"), "behind_by": int(contenido == "behind")})
             sale(0, {"status": "diverged", "ahead_by": 1, "behind_by": 1})
@@ -425,103 +437,76 @@ def recoger(problemas, gh, auditoria=False, desde=DESDE):
     return datos, p
 
 
+def json_de(problemas, script, rc, out, err, forma):
+    """El objeto JSON que un script imprimió con --json, con las claves de su contrato y de su tipo; None si no lo hay."""
+    try:
+        j = json.loads(out)
+    except ValueError:
+        problemas.append(f"{script} --json salió con {rc} sin un JSON en stdout: {ultimas(err or out)}")
+        return None
+    if not isinstance(j, dict):
+        problemas.append(f"el JSON de {script} --json no es un objeto: {out.strip()[:120]}")
+        return None
+    for k, tipos in forma.items():
+        if k not in j:
+            problemas.append(f"el JSON de {script} --json no trae «{k}»")
+        elif not isinstance(j[k], tipos):
+            problemas.append(f"«{k}» del JSON de {script} --json es {json.dumps(j[k], ensure_ascii=False)[:120]}, "
+                             f"no {' o '.join('null' if t is type(None) else t.__name__ for t in tipos)}")
+    return j
+
+
+# La forma del --json de seguimiento.py (el contrato, campo 3: #2026-11-27-15)
+FORMA = {"piezas": (dict,), "fuera_del_plan": (list,), "kit": (list,), "sin_leer": (list,),
+         "check_obligatorio": (bool, type(None)), "punto4": (list,), "completa": (bool,), "guardada": (bool,)}
+
+
 def seguir(problemas, r, datos, guardar=False):
-    """seguimiento.py sobre la raíz r con los datos de recoger: (código, lo que imprimió), o (None, "")."""
+    """seguimiento.py --json sobre la raíz r con los datos de recoger: (código, su JSON), o (None, None)."""
     if not SEGUIR.is_file():
         problemas.append(f"no está seguimiento.py en {SEGUIR.relative_to(REPO)}")
-        return None, ""
-    rc, out, err, _ = correr([SEGUIR, r, PROYECTO, "--datos", datos] + (["--guardar"] if guardar else []))
+        return None, None
+    rc, out, err, _ = correr([SEGUIR, r, PROYECTO, "--datos", datos, "--json"] + (["--guardar"] if guardar else []))
     if rc not in (0, 3):
-        problemas.append(f"seguimiento.py salió con {rc}, no con 0 ni con 3: {ultimas(err or out)}")
-    return rc, out
+        problemas.append(f"seguimiento.py --json salió con {rc}, no con 0 ni con 3: {ultimas(err or out)}")
+    return rc, json_de(problemas, "seguimiento.py", rc, out, err, FORMA)
 
 
 def seguimiento(problemas, gh, cambios=(), guardar=False):
-    """El seguimiento entero: recoger_github.py y, con su JSON, seguimiento.py. Devuelve (raíz, datos, código, salida)."""
+    """El seguimiento entero: recoger_github.py y, con su JSON, seguimiento.py --json. Devuelve (raíz, datos, código, JSON)."""
     r = raiz(cambios)
     datos, ruta = recoger(problemas, gh)
     if datos is None:
-        return r, None, None, ""
-    rc, out = seguir(problemas, r, ruta, guardar)
-    return r, datos, rc, out
+        return r, None, None, None
+    rc, j = seguir(problemas, r, ruta, guardar)
+    return r, datos, rc, j
 
 
-# ---------- leer lo que imprime ----------
-def tabla_estados(texto):
-    """{pieza: estado} de la primera tabla «| Pieza | Estado |» del texto (sin acentos graves y en minúsculas)."""
-    filas, dentro = {}, False
-    for l in texto.splitlines():
-        celdas = [c.strip().strip("`").strip() for c in l.strip().strip("|").split("|")] if l.strip().startswith("|") else None
-        if celdas is None:
-            if dentro:
-                break
-            continue
-        if not dentro:
-            dentro = [c.lower() for c in celdas[:2]] == ["pieza", "estado"]
-            continue
-        if set("".join(celdas)) <= set("-: "):
-            continue
-        filas[re.sub(r"\s*·.*$", "", celdas[0])] = celdas[1].lower() if len(celdas) > 1 else ""
-    return filas
+# ---------- leer el JSON y el archivo ----------
+def numeros(lista):
+    """Los números de pull request de una lista del JSON: 41, «41» o «#41» (y {"number": 41})."""
+    out = set()
+    for x in lista if isinstance(lista, list) else []:
+        x = x.get("number") if isinstance(x, dict) else x
+        if isinstance(x, int) and not isinstance(x, bool):
+            out.add(x)
+        elif isinstance(x, str) and re.fullmatch(r"#?\d+", x.strip()):
+            out.add(int(x.strip().lstrip("#")))
+    return out
+
+
+def es(problemas, que, visto, esperado):
+    if visto != esperado:
+        problemas.append(f"{que} es {json.dumps(visto, ensure_ascii=False)[:200]}, no {json.dumps(esperado, ensure_ascii=False)}")
 
 
 def estados_son(problemas, que, vistos, esperado):
+    vistos = {k: (v.lower() if isinstance(v, str) else v) for k, v in (vistos or {}).items()}
     for pieza, estado in esperado.items():
         if pieza not in vistos:
-            problemas.append(f"la tabla «| Pieza | Estado |» de {que} no tiene la fila de {pieza}: {json.dumps(vistos, ensure_ascii=False)}")
+            problemas.append(f"{que} no trae {pieza}: {json.dumps(vistos, ensure_ascii=False)[:200]}")
         elif vistos[pieza] != estado:
-            problemas.append(f"en la tabla de {que}, {pieza} está «{vistos[pieza]}», y tiene que estar «{estado}»")
-
-
-VINETA, NUMERO = r"[-*+]\s", r"\d+[.)]\s"
-
-
-def rotulados(texto, marca):
-    """Cada línea donde sale la marca: (línea, su rótulo, si es un elemento de lista), en minúsculas. Un elemento es una
-    viñeta («- …») o un punto numerado («3. …»). El rótulo de una línea es la más cercana por encima que no está en
-    blanco ni es una viñeta o una fila de tabla: un punto numerado sí puede ser rótulo de lo que va debajo («3. Fuera del
-    plan:» y debajo «- #41 …»), salvo de otro punto numerado."""
-    lineas, out = texto.splitlines(), []
-    for i, l in enumerate(lineas):
-        if not re.search(re.escape(marca) + r"(?![0-9])", l):
-            continue
-        s = l.strip()
-        numerado = bool(re.match(NUMERO, s))
-        elemento = numerado or bool(re.match(VINETA, s))
-        rotulo = ""
-        for j in range(i - 1, -1, -1):
-            u = lineas[j].strip()
-            if not u or u.startswith("|") or re.match(VINETA, u) or (numerado and re.match(NUMERO, u)):
-                continue
-            rotulo = u
-            break
-        out.append((l.lower(), rotulo.lower(), elemento))
-    return out
-
-
-def contextos(texto, marca):
-    """Cada línea donde sale la marca, con su rótulo detrás (ver rotulados)."""
-    return [f"{l} ⟵ {r}" for l, r, _ in rotulados(texto, marca)]
-
-
-def de_44(texto):
-    """Lo que la salida dice de #44: por cada línea que lo nombra, (lo que se dice de él, si está bajo «fuera del plan»).
-    Lo que se dice de #44 es su trozo de línea, desde #44 hasta la referencia siguiente (#N) o el final, con lo que va
-    delante si #44 es la primera referencia de la línea («Kit: #44 …»), y además su rótulo si la línea es un elemento
-    que solo nombra a #44. Está bajo «fuera del plan» si su línea lo dice antes de #44, si lo dice su trozo, o si es un
-    elemento cuyo rótulo lo dice."""
-    out = []
-    for l, rotulo, elemento in rotulados(texto, "#44"):
-        refs = [m for m in re.finditer(r"#\d+(?![0-9])", l)]
-        i = next(k for k, m in enumerate(refs) if m.group() == "#44")
-        ini = refs[i].start() if i else 0
-        fin = refs[i + 1].start() if i + 1 < len(refs) else len(l)
-        trozo, antes = l[ini:fin], l[:refs[i].start()]
-        solo = len(refs) == 1
-        dicho = trozo + (" ⟵ " + rotulo if elemento and solo else "")
-        fuera = "fuera del plan" in antes or "fuera del plan" in trozo or (elemento and "fuera del plan" in rotulo)
-        out.append((dicho, fuera))
-    return out
+            problemas.append(f"en {que}, {pieza} está {json.dumps(vistos[pieza], ensure_ascii=False)}, y tiene que estar «{estado}»")
 
 
 def igual_archivo(problemas, r, ruta, antes, por_que):
@@ -536,57 +521,35 @@ def entrada_de_hoy(texto):
     return m.group(1) if m else ""
 
 
-# Que una línea dice que el repositorio no se pudo leer (escenario 6), o su motivo de GitHub
-NO_LEIDO = (r"no se (pudo|puede|ha podido) leer|no (pudo|puede) leerse|no se ley[óo]|sin leer|sin acceso|"
-            r"no (hay|tiene|tengo|tenemos) acceso|no se pudo acceder|\b404\b|not found|no encontrado")
-PUNTO4, PENDIENTE ="4. Lo que lo unido añade y el diseño no tiene:", "- pendiente de revisar"
+ANTES = MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n")   # el seguimiento de la muestra, sin tocar
 
 
-def punto4_sin_juzgar(problemas, texto):
-    """Añadido (decisión shared-memory/plugin-memoria#2026-11-27-14): seguimiento.py escribe el punto 4 con su rótulo
-    y debajo solo «- pendiente de revisar»; lo llena después el subagente seguimiento, no el script."""
-    lineas = texto.splitlines()
-    i = next((k for k, l in enumerate(lineas) if l.strip() == PUNTO4), None)
-    if i is None:
-        problemas.append(f"la entrada no trae el punto 4 con su rótulo «{PUNTO4}»")
-        return
-    debajo = []
-    for l in lineas[i + 1:]:
-        s = l.strip()
-        if not s:
-            if debajo:
-                break
-            continue
-        if re.match(NUMERO, s) or s.startswith("#"):
-            break
-        debajo.append(s)
-    if debajo != [PENDIENTE]:
-        problemas.append(f"bajo «{PUNTO4}» la entrada del script no dice solo «{PENDIENTE}», y lo da por juzgado: "
-                         f"{json.dumps(debajo, ensure_ascii=False)[:200]}")
-
-
-def regla_sin_leer(problemas, gh):
-    """Añadido (ajuste del contrato): los mismos datos con la regla de la rama principal en 403. La regla no se puede
-    leer, pero la lista está completa y hay acceso al repositorio: --guardar sale con 0 y guarda la entrada, y su
-    punto 5 (si el check «pruebas de aceptación» es obligatorio) dice «sin comprobar»."""
-    if not RECOGER.is_file() or not SEGUIR.is_file():
-        return   # ya lo dijo la primera corrida del escenario
-    gh = dict(copy.deepcopy(gh), reglas=None)
-    r, datos, rc, out = seguimiento(problemas, gh, guardar=True)
-    if datos is not None and ("reglas" not in datos or datos["reglas"] is not None):
-        problemas.append(f"con la regla en 403, el JSON de recoger no trae «reglas»: null (dice "
-                         f"{json.dumps(datos.get('reglas', '(no está)'), ensure_ascii=False)[:120]})")
-    if rc is None:
-        return
+def guardada(problemas, r, j, rc, que):
+    """Con --guardar: salió con 0, «guardada» es true, la entrada de hoy está arriba y las anteriores siguen debajo.
+    Devuelve la entrada de hoy del archivo ("" si no está)."""
     if rc != 0:
-        problemas.append(f"con la regla en 403 y todo lo demás leído, seguimiento.py --guardar salió con {rc}, no con 0: "
-                         "una regla que no se lee no impide guardar")
-    entrada = entrada_de_hoy((r / SEGUIMIENTO).read_text(encoding="utf-8"))
+        problemas.append(f"{que}, seguimiento.py --guardar salió con {rc}, no con 0")
+    if j is not None and j.get("guardada") is not True:
+        problemas.append(f"{que}, el JSON dice guardada={json.dumps(j.get('guardada'))}, no true")
+    texto = (r / SEGUIMIENTO).read_text(encoding="utf-8")
+    entrada = entrada_de_hoy(texto)
     if not entrada.strip():
-        problemas.append(f"con la regla en 403, --guardar no dejó en el seguimiento la entrada de hoy ({hoy()})")
-    elif not any("pruebas de aceptación" in c for c in contextos(entrada, "sin comprobar")):
-        problemas.append("con la regla en 403, la entrada guardada no dice «sin comprobar» en su punto 5 (en la línea, "
-                         "o bajo el rótulo, que nombra el check «pruebas de aceptación»)")
+        problemas.append(f"{que}, el seguimiento no tiene la entrada de hoy ({hoy()})")
+    elif ANTES.split("\n# Seguimiento\n", 1)[1].strip() not in texto:   # Añadido
+        problemas.append(f"{que}, al guardar, las entradas anteriores del seguimiento no quedaron tal cual, debajo")
+    return entrada
+
+
+def no_guardada(problemas, r, j, rc, que):
+    """Con --guardar y algo sin comprobar: salió con 3, «guardada» es false y el seguimiento no cambió."""
+    if rc != 3:
+        problemas.append(f"{que}, seguimiento.py salió con {rc}, no con 3")
+    if j is not None:
+        if j.get("completa") is not False:
+            problemas.append(f"{que}, el JSON dice completa={json.dumps(j.get('completa'))}, no false")
+        if j.get("guardada") is not False:
+            problemas.append(f"{que}, el JSON dice guardada={json.dumps(j.get('guardada'))}, no false")
+    igual_archivo(problemas, r, SEGUIMIENTO, ANTES, f"{que} la entrada no se guarda")
 
 
 # ---------- los escenarios ----------
@@ -597,52 +560,55 @@ def escenarios(inf):
                  pr(12, "P03 · Pedido en línea", "2026-11-19T10:00:00Z", ["src/pedidos.py"]),
                  pr(13, 'Revert "P03 · Pedido en línea"', "2026-11-21T10:00:00Z", ["src/pedidos.py"],
                     cuerpo="Reverts muestra/portal#12")])
-    antes = MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n")
-    r, datos, rc, out = seguimiento(problemas, gh, guardar=True)
+    r, datos, rc, j = seguimiento(problemas, gh, guardar=True)
+    tres = {"P01": "unida", "P02": "unida", "P03": "revertida"}
     if datos is not None:
         completo = datos.get("completo")
         if datos.get("acceso") is not True or not isinstance(completo, dict) or completo.get("prs") is not True \
                 or completo.get("releases") is not True:
             problemas.append(f"con todo leído, el JSON de recoger dice acceso={json.dumps(datos.get('acceso'))} y "
                              f"completo={json.dumps(datos.get('completo'))}, no true y {{prs: true, releases: true}}")
+        if not isinstance(datos.get("reglas"), list):   # el contrato: la regla se lee siempre
+            problemas.append(f"sin --auditoria, el JSON de recoger no trae la regla de la rama principal en «reglas» "
+                             f"(dice {json.dumps(datos.get('reglas'), ensure_ascii=False)[:120]})")
     if rc is not None:
-        if rc != 0:
-            problemas.append(f"con todo leído, seguimiento.py --guardar salió con {rc}, no con 0, y no guardó la entrada")
-        texto = (r / SEGUIMIENTO).read_text(encoding="utf-8")
+        guardada(problemas, r, j, rc, "con todo leído")
         sys.path.insert(0, str(LECTOR))
         from context_core.dev_view import read_follow_up   # el lector del tablero
-        fecha, estados = read_follow_up(texto)
+        fecha, estados = read_follow_up((r / SEGUIMIENTO).read_text(encoding="utf-8"))
         if fecha != hoy():
             problemas.append(f"la entrada más reciente que lee el tablero es la del {fecha or '(ninguna)'}, no la de hoy ({hoy()})")
         else:
-            estados_son(problemas, "la entrada que lee el tablero", {k: v.lower() for k, v in estados.items()},
-                        {"P01": "unida", "P02": "unida", "P03": "revertida"})
-        if fecha == hoy() and antes.split("\n# Seguimiento\n", 1)[1].strip() not in texto:   # Añadido
-            problemas.append("al guardar, las entradas anteriores del seguimiento no quedaron tal cual, debajo")
-        punto4_sin_juzgar(problemas, out)   # Añadido: la decisión #2026-11-27-14
-    if datos is not None and not isinstance(datos.get("reglas"), list):   # el contrato: la regla se lee siempre
-        problemas.append(f"sin --auditoria, el JSON de recoger no trae la regla de la rama principal en «reglas» "
-                         f"(dice {json.dumps(datos.get('reglas'), ensure_ascii=False)[:120]})")
-    regla_sin_leer(problemas, gh)   # Añadido
+            estados_son(problemas, "la tabla de la entrada guardada, leída por el tablero", estados, tres)
+    if j is not None:
+        estados_son(problemas, "«piezas» del JSON", j.get("piezas"), tres)
+        es(problemas, "«completa»", j.get("completa"), True)
+        es(problemas, "«check_obligatorio», con «pruebas de aceptación» en la regla", j.get("check_obligatorio"), True)  # Añadido
+        es(problemas, "«punto4», que el script no juzga (#2026-11-27-14)", j.get("punto4"), ["pendiente de revisar"])  # Añadido
+    # Añadido: los mismos datos con la regla de la rama principal en 403. La lista está completa y hay acceso: se guarda,
+    # sale con 0, y el check obligatorio queda sin comprobar (null)
+    if RECOGER.is_file() and SEGUIR.is_file():
+        r, datos, rc, j = seguimiento(problemas, dict(copy.deepcopy(gh), reglas=None), guardar=True)
+        if datos is not None and datos.get("reglas", "(no está)") is not None:
+            problemas.append(f"con la regla en 403, el JSON de recoger no trae «reglas»: null (dice "
+                             f"{json.dumps(datos.get('reglas', '(no está)'), ensure_ascii=False)[:120]})")
+        if rc is not None:
+            guardada(problemas, r, j, rc, "con la regla en 403 y todo lo demás leído")
+        if j is not None:
+            es(problemas, "«check_obligatorio» con la regla en 403", j.get("check_obligatorio", "(no está)"), None)
+            es(problemas, "«completa» con la regla en 403", j.get("completa"), True)
     inf.escenario("Block pull requests and reverts give each piece its state", problemas)
 
     # 2 · Una lista cortada en el límite: «sin comprobar» donde hace falta; se muestra y no se guarda
     problemas = []
-    gh = github(pulls_sin_fin=True)
-    r, datos, rc, out = seguimiento(problemas, gh, guardar=True)
+    r, datos, rc, j = seguimiento(problemas, github(pulls_sin_fin=True), guardar=True)
     if datos is not None and (datos.get("completo") or {}).get("prs") is not False:
         problemas.append(f"con la lista de pull requests cortada, el JSON de recoger dice completo="
                          f"{json.dumps(datos.get('completo'))}, sin prs: false")
     if rc is not None:
-        if rc != 3:
-            problemas.append(f"con una lista incompleta, seguimiento.py salió con {rc}, no con 3")
-        estados_son(problemas, "la entrada que imprime", tabla_estados(out),
-                    {p: "sin comprobar" for p in ("P01", "P02", "P03")})
-        fuera_de_la_tabla = [l for l in out.splitlines() if "sin comprobar" in l.lower() and not l.strip().startswith("|")]
-        if not fuera_de_la_tabla:
-            problemas.append("«sin comprobar» solo sale en la tabla: lo de fuera del plan, que sale de la misma lista, no lo dice")
-        igual_archivo(problemas, r, SEGUIMIENTO, MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n"),
-                      "con una lista incompleta la entrada no se guarda")
+        no_guardada(problemas, r, j, rc, "con una lista incompleta")
+    if j is not None:
+        estados_son(problemas, "«piezas» del JSON", j.get("piezas"), {p: "sin comprobar" for p in ("P01", "P02", "P03")})
     inf.escenario("An incomplete list is never saved as whole", problemas)
 
     # 3 · Entregada solo si el release contiene el commit, aunque su fecha sea posterior
@@ -653,26 +619,28 @@ def escenarios(inf):
                            "published_at": "2026-11-25T12:00:00Z", "created_at": "2026-11-25T12:00:00Z",
                            "target_commitish": "main", "sha": "d" * 40}],
                 contiene={"v1.0.0": ["b" * 40]})
-    r, datos, rc, out = seguimiento(problemas, gh)
+    r, datos, rc, j = seguimiento(problemas, gh)
     if datos is not None:
         rel = [x for x in datos.get("releases") or [] if isinstance(x, dict) and x.get("tag_name") == "v1.0.0"]
         contiene = rel[0].get("contiene") if rel else None
         if not isinstance(contiene, list) or "a" * 40 in contiene or "b" * 40 not in contiene:
             problemas.append(f"en el JSON de recoger, «contiene» del release v1.0.0 es {json.dumps(contiene)}: tiene que "
                              "traer el commit de P02 (#20) y no el de P01 (#21)")
-    if rc is not None:
-        estados_son(problemas, "la entrada que imprime", tabla_estados(out), {"P01": "unida", "P02": "entregada"})
+    if j is not None:
+        estados_son(problemas, "«piezas» del JSON", j.get("piezas"), {"P01": "unida", "P02": "entregada"})
     inf.escenario("Delivered only if the release contains the commit", problemas)
 
-    # 4 · Donde unir publica, el sí del pull request de versión entrega
+    # 4 · Donde unir publica, el sí del pull request de versión entrega; quién y cuándo, en la entrada guardada
     problemas = []
     gh = github([pr(31, "P01 + P02 · 1.2.0", "2026-11-21T10:00:00Z",
                     cuerpo="Catálogo y precios.\n\nAprobó: Ana Pérez, 2026-11-20\n")])
-    r, datos, rc, out = seguimiento(problemas, gh, [(PROYECTO_MD, "Paso a Prod: release de GitHub", PASO_UNIR)])
+    r, datos, rc, j = seguimiento(problemas, gh, [(PROYECTO_MD, "Paso a Prod: release de GitHub", PASO_UNIR)], guardar=True)
     if rc is not None:
-        estados_son(problemas, "la entrada que imprime", tabla_estados(out), {"P01": "entregada", "P02": "entregada"})
-        if not [l for l in out.splitlines() if "Ana Pérez" in l and "2026-11-20" in l]:
-            problemas.append("ninguna línea de la entrada dice que Ana Pérez dio el sí el 2026-11-20")
+        entrada = guardada(problemas, r, j, rc, "con todo leído")
+        if entrada.strip() and not [l for l in entrada.splitlines() if "Ana Pérez" in l and "2026-11-20" in l]:
+            problemas.append("ninguna línea de la entrada guardada dice que Ana Pérez dio el sí el 2026-11-20")
+    if j is not None:
+        estados_son(problemas, "«piezas» del JSON", j.get("piezas"), {"P01": "entregada", "P02": "entregada"})
     inf.escenario("Where merging publishes, the version pull request's yes delivers", problemas)
 
     # 5 · Lo que está fuera del plan se lista; el «Bump …» que solo cambia workflows cuenta como kit
@@ -684,45 +652,40 @@ def escenarios(inf):
                     [".github/workflows/pruebas-aceptacion.yml", "src/api.py"]),
                  pr(44, "Bump actions/checkout from 4 to 5", "2026-11-21T10:00:00Z",
                     [".github/workflows/pruebas.yml"], autor="dependabot[bot]")])
-    r, datos, rc, out = seguimiento(problemas, gh)
-    if rc is not None:
+    r, datos, rc, j = seguimiento(problemas, gh)
+    if j is not None:
+        fuera, kit = numeros(j.get("fuera_del_plan")), numeros(j.get("kit"))
         for n in (41, 42, 43):
-            if not any("fuera del plan" in c for c in contextos(out, f"#{n}")):
-                problemas.append(f"#{n} no sale listado bajo «fuera del plan» (ni en su línea ni en el rótulo de su lista)")
-        bump = de_44(out)
-        if not any("kit" in dicho for dicho, _ in bump):
-            problemas.append("#44, el «Bump …» que solo cambia workflows, no sale contado como kit (en lo que se dice de "
-                             f"#44): {json.dumps([d for d, _ in bump], ensure_ascii=False)[:300]}")
-        if any(fuera for _, fuera in bump):
-            problemas.append("#44, el «Bump …» que solo cambia workflows, sale bajo «fuera del plan»")
-        if any("fuera del plan" in c for c in contextos(out, "#40")):   # Añadido: el anterior a --desde no se lee
-            problemas.append(f"#40, unido el 2026-11-10, antes de --desde {DESDE}, sale bajo «fuera del plan»")
+            if n not in fuera:
+                problemas.append(f"#{n} no está en «fuera_del_plan»: {json.dumps(j.get('fuera_del_plan'))}")
+        if 44 not in kit:
+            problemas.append(f"#44, el «Bump …» que solo cambia workflows, no está en «kit»: {json.dumps(j.get('kit'))}")
+        if 44 in fuera:
+            problemas.append("#44, el «Bump …» que solo cambia workflows, está en «fuera_del_plan»")
+        if 40 in fuera | kit:   # Añadido: el anterior a --desde no se lee
+            problemas.append(f"#40, unido el 2026-11-10, antes de --desde {DESDE}, está en «fuera_del_plan» o en «kit»")
     inf.escenario("What is outside the plan is listed", problemas)
 
-    # 6 · Sin acceso al repositorio: las piezas sin estado, el repositorio nombrado, y no se guarda
+    # 6 · Sin acceso al repositorio: las piezas sin estado, el repositorio nombrado con su motivo, y no se guarda
     problemas = []
-    r, datos, rc, out = seguimiento(problemas, github(acceso=False), guardar=True)
+    r, datos, rc, j = seguimiento(problemas, github(acceso=False), guardar=True)
     if datos is not None and (datos.get("acceso") is not False or not str(datos.get("motivo") or "").strip()):
         problemas.append(f"sin acceso, el JSON de recoger dice acceso={json.dumps(datos.get('acceso'))} y "
                          f"motivo={json.dumps(datos.get('motivo'), ensure_ascii=False)}, no false con su motivo")
     if rc is not None:
-        if rc != 3:
-            problemas.append(f"sin acceso, seguimiento.py salió con {rc}, no con 3")
-        vistos = tabla_estados(out)
+        no_guardada(problemas, r, j, rc, "sin acceso")
+    if j is not None:
+        piezas = j.get("piezas") if isinstance(j.get("piezas"), dict) else {}
         for p in ("P01", "P02", "P03"):
-            if p not in vistos:
-                problemas.append(f"la entrada que imprime no tiene la fila de {p} en su tabla «| Pieza | Estado |»")
-            elif vistos[p] in ESTADOS:
-                problemas.append(f"sin acceso, la entrada da a {p} el estado «{vistos[p]}»")
-        motivo = str((datos or {}).get("motivo") or "").strip().lower()
-        nombran = contextos(out, REPOSITORIO)
-        if not nombran:
-            problemas.append(f"la entrada no nombra el repositorio que no pudo leer ({REPOSITORIO})")
-        elif not any(re.search(NO_LEIDO, c) or (motivo and motivo in c) for c in nombran):
-            problemas.append(f"la entrada nombra {REPOSITORIO}, pero ninguna línea que lo nombra dice que no se pudo leer "
-                             f"ni da su motivo: {json.dumps(nombran, ensure_ascii=False)[:300]}")
-        igual_archivo(problemas, r, SEGUIMIENTO, MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n"),
-                      "sin acceso la entrada no se guarda")
+            if p not in piezas:
+                problemas.append(f"«piezas» del JSON no trae {p}: el plan se muestra entero, sin estado")
+            elif str(piezas[p]).lower() in ESTADOS:
+                problemas.append(f"sin acceso, «piezas» da a {p} el estado «{piezas[p]}»")
+        sin_leer = [x for x in j.get("sin_leer") or [] if isinstance(x, dict) and x.get("repo") == REPOSITORIO]
+        if not sin_leer:
+            problemas.append(f"«sin_leer» no nombra {REPOSITORIO}: {json.dumps(j.get('sin_leer'), ensure_ascii=False)[:200]}")
+        elif not str(sin_leer[0].get("motivo") or "").strip():
+            problemas.append(f"«sin_leer» nombra {REPOSITORIO} sin su motivo")
     inf.escenario("No access to a repository is said, and nothing is saved", problemas)
 
 
