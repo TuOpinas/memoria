@@ -728,3 +728,58 @@ La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y cate
 - **P35.** Las filas positivas («recibe escritura») pasan hoy, porque hoy todos la reciben; fallan solo por su parte añadida, la cuenta que no construye.
 - **P36.** El cuarto escenario no tiene prueba: lo dice el propio escenario.
 - Ninguna de las tres necesita pytest ni node.
+
+## Fase F3 · El seguimiento y la auditoría por script (P06 y P07)
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan: los seis de P06 y los cuatro de P07.
+
+**Cómo están planteadas.** Las piezas son tres scripts de `plugins/memoria/skills/desarrollo/`, con el contrato del encargo: `recoger_github.py` lee GitHub y escribe un JSON; `seguimiento.py` lo junta con la sección, el plan y el diseño e imprime la entrada (y con `--guardar` la escribe); `auditoria.py` propone los estados de la configuración (y con `--escribir` los escribe). Cada prueba:
+
+- monta en una carpeta temporal la raíz de muestra de P05 (el portal de pedidos, con P01 a P03 en el plan) y, para P07, un `configuracion.md` con la tabla de la plantilla y estados ya puestos;
+- pone delante en el PATH un **`gh` falso** que responde la API REST de GitHub desde datos que escribe cada escenario (pull requests con sus archivos y su descripción, releases, qué commits contiene cada etiqueta, la regla de la rama principal, la organización). Nunca toca la red: además, cualquier conexión directa va a un proxy que no existe;
+- corre `recoger_github.py` y, con su JSON, el otro script, y mira lo que imprime, con qué código sale y cómo queda el archivo.
+
+Hoy fallan las diez filas, y deben: los tres scripts no existen («no está recoger_github.py en …»).
+
+### P06 · El seguimiento por script
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Block pull requests and reverts give each piece its state | Unidos «P01 + P02 · Catálogo y precios», «P03 · Pedido en línea» y después «Revert "P03 · Pedido en línea"»; se guarda | Sale con 0 y guarda. La entrada más reciente, leída con el mismo lector que usa el tablero, es la de hoy y dice P01 y P02 `unida` y P03 `revertida`. El JSON dice que lo leyó todo y trae la regla de la rama principal en `"reglas"`, aunque no se pidió la auditoría. **Añadido:** las entradas anteriores siguen tal cual, debajo. **Añadido:** con los mismos datos y la regla en 403, `--guardar` sale con 0 y guarda la entrada de hoy; el JSON trae `"reglas": null`, y la entrada dice «sin comprobar» en su punto 5 (en la línea que nombra el check «pruebas de aceptación», o bajo su rótulo) | P06 |
+| An incomplete list is never saved as whole | GitHub devuelve páginas llenas de pull requests sin fin (cerrados sin unir, todos posteriores a la fecha); se pide guardar | Sale con 3; en la tabla, P01, P02 y P03 dicen «sin comprobar», y «sin comprobar» sale también fuera de la tabla; el seguimiento no cambia; el JSON dice que la lista de pull requests no está completa | P06 |
+| Delivered only if the release contains the commit | Release v1.0.0 del 25, con «Aprobó:», que contiene el commit de «P02 · Precios» (unido el 18) y no el de «P01 · Lista de productos» (unido el 22) | P01 `unida`. **Añadido:** P02 `entregada`, para que no baste con no entregar nunca; el JSON trae en «contiene» el commit de P02 y no el de P01 | P06 |
+| Where merging publishes, the version pull request's yes delivers | «Paso a Prod: unir el pull request de versión es el paso a Prod»; unido «P01 + P02 · 1.2.0» con «Aprobó: Ana Pérez, 2026-11-20» en su descripción | P01 y P02 `entregada`, y una línea de la entrada dice Ana Pérez y 2026-11-20 | P06 |
+| What is outside the plan is listed | Unidos #41 «Arregla la portada», #42 «P09 · Exportar pedidos», #43 «Kit · Ajusta el control» que cambia un workflow y `src/api.py`, y #44 «Bump actions/checkout from 4 to 5», de dependabot, que solo cambia un workflow | #41, #42 y #43 salen bajo «fuera del plan»; #44 sale como kit y no como fuera del plan | P06 |
+| No access to a repository is said, and nothing is saved | GitHub responde 404 a todo lo del repositorio; se pide guardar | Sale con 3; la tabla tiene P01, P02 y P03 sin ninguno de los cinco estados; la entrada nombra `muestra/portal`; el seguimiento no cambia; el JSON dice acceso falso con su motivo | P06 |
+
+### P07 · La auditoría mensual
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| A failing rule is proposed with its evidence | La regla de la rama principal exige «pruebas» y «secretos», no «pruebas de aceptación»; sin `--escribir` | R2 sale «no cumple» y lo que dice de R2 nombra «pruebas de aceptación»; `configuracion.md` no cambia | P07 |
+| No access is said, not guessed | GitHub responde 403 a la regla, a los rulesets y a la protección de la rama | R1 y R2 salen «sin comprobar», y lo que dice de cada una da el motivo; `configuracion.md` no cambia | P07 |
+| A merged pull request without a piece fails R6 | Desde la última auditoría (28 de octubre), unido #51 «Arregla la portada», de una persona. **Añadido:** también #52 de pieza, #53 «Escenarios · », #54 «Kit · », #55 una reversión y #56 un «Bump …» de dependabot | R6 sale «no cumple» con «#51». **Añadido:** ninguno de #52 a #56 sale como evidencia de R6 | P07 |
+| With the yes, one change; what the API cannot see stays | La regla bien puesta salvo el check de aceptación; antes, R1 «no cumple» y R2 «cumple»; con `--escribir` | R1 queda «cumple · hoy» y R2 «no cumple · hoy»; PL3 a PL7, R4, R5 y R7 quedan como estaban y la salida los nombra; fuera de las filas que propone la auditoría (R1, R2, R3, R6, PL1, PL2) y de «actualizado:», el archivo no cambia | P07 |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. **El `gh` falso fija parte del contrato, y lo mantiene quien acepta.** Admite solo `gh auth status` y `gh api <ruta REST>` de lectura (`GET`, con `-X GET`, `-f`, `-F`, `-H`, `--hostname` y `--cache`); no admite `--jq`, `--paginate` ni GraphQL (`gh api graphql`, ni `gh pr list` o `gh repo view`, que van por GraphQL): el script lee el JSON tal cual y pide cada página con `page=`. Una ruta que no conoce da 404, como GitHub, y un método que no es `GET`, 403. La regla de la rama principal (`rules/branches/<rama>`, `rulesets` y `branches/<rama>/protection`) la responde igual con y sin `--auditoria`, o 403 a las tres. Si quien construye necesita otra ruta o una de esas opciones, se cambia la prueba en un pull request de escenarios.
+2. **«Cortada en el límite»**: GitHub no se acaba nunca (cada página llena y posterior a la fecha). Así vale cualquier límite de páginas que ponga el script, pero un script sin límite no termina: pasa de dos minutos y la fila falla.
+3. **«Cada parte que lo necesita»**: con la lista cortada, ninguna pieza tiene estado seguro, así que las tres filas de la tabla dicen «sin comprobar», y al menos una línea fuera de la tabla también (lo fuera del plan sale de la misma lista).
+4. **El estado se lee de la tabla `| Pieza | Estado |`** que imprime el script, sin mayúsculas ni acentos graves; la primera fila sí se lee de la entrada guardada, con el lector del tablero. «Sin estado» es cualquier cosa que no sea uno de los cinco estados.
+5. **«Listado como fuera del plan»**: el número va como `#41`, y la frase «fuera del plan» está en su línea o en el rótulo de la lista donde sale. «Cuenta como kit»: la palabra «kit» está en la línea de #44 o en su rótulo.
+6. **Lo que la auditoría dice de una fila** es desde la primera línea que la nombra (R2) hasta la siguiente que nombra otra fila. «El motivo» es que diga 403, acceso o permiso.
+7. **«Desde la última auditoría»** se le pasa a `recoger_github.py` como `--desde 2026-10-28`, la fecha de la configuración de la muestra. **El sí** es `--escribir`.
+8. **«En una sola escritura»**: la prueba ve que una sola llamada con `--escribir` deja los dos estados con la fecha de hoy y nada más cambiado; si el script escribe el archivo una vez o varias dentro de esa llamada, no lo distingue.
+9. **La entrada anterior de la muestra se movió del 20 al 16 de noviembre**, para que «2026-11-20» solo salga en el «Aprobó:» de la cuarta fila de P06.
+10. **La regla de la rama principal, siempre** (ajuste del contrato que decidió la sesión que construye): `recoger_github.py` la lee también sin `--auditoria` y la deja en `"reglas"` (una lista, como la da `rules/branches/<rama>`, o `null` con su motivo). Si no se puede leer, el punto 5 de la entrada dice «sin comprobar», pero eso no hace salir a `seguimiento.py` con 3 ni impide guardar: solo lo impiden una lista incompleta o un repositorio sin acceso. La prueba no fija dónde va el motivo de `"reglas": null` en el JSON (el contrato no le da clave), solo que la entrada diga «sin comprobar» en su punto 5.
+11. **«Su punto 5»**: la entrada no tiene forma fija más allá de la tabla, así que vale una línea de la entrada de hoy con «sin comprobar» que nombra el check «pruebas de aceptación», o que está bajo un rótulo que lo nombra.
+
+### Lo que queda para la verificación en pantalla
+
+Nada de P06 ni de P07: el tablero ya lee la tabla de la entrada. Lo ve la verificación, porque la prueba no lo distingue: que la entrada traiga los siete puntos de la plantilla en su orden, y que la evidencia y lo que se lista para quien administra se lean bien en llano.
+
+### Lo que queda sabido
+
+- P06 y P07 solo necesitan Python 3. P07 importa de P06 la raíz, el `gh` falso y cómo se corren los scripts; P06 importa la raíz de P05.
+- Lo que se apunta como `recoger_github.py` salió sin JSON incluye las últimas llamadas que hizo a `gh`, para ver qué ruta pidió.
