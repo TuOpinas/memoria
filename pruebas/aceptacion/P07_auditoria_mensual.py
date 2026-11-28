@@ -57,22 +57,34 @@ def auditar(problemas, gh, escribir=False):
         problemas.append(f"no está auditoria.py en {AUDITAR.relative_to(REPO)}")
         return r, None, ""
     rc, out, err, _ = correr([AUDITAR, r, PROYECTO, "--datos", ruta] + (["--escribir"] if escribir else []))
-    if rc != 0:
-        problemas.append(f"auditoria.py{' --escribir' if escribir else ''} salió con {rc}, no con 0: {ultimas(err or out)}")
+    # Sale con 0; también con 0 o con 3 (como seguimiento.py) cuando alguna fila queda «sin comprobar»
+    if rc not in (0, 3) or (rc == 3 and "sin comprobar" not in (out or "").lower()):
+        problemas.append(f"auditoria.py{' --escribir' if escribir else ''} salió con {rc}, no con 0 (ni con 3 con alguna "
+                         f"fila «sin comprobar»): {ultimas(err or out)}")
     return r, rc, out
 
 
+def nombradas(linea):
+    """Las filas que nombra una línea, cada una por su identificador suelto («R2», no «R2-R3» ni «R1 a R3»)."""
+    return [f for f in FILAS if re.search(r"(?<![A-Za-z0-9])" + f + r"(?![0-9])", linea)]
+
+
 def bloque(texto, fila):
-    """Lo que la salida dice de una fila: desde la primera línea que la nombra hasta la siguiente que nombra otra."""
-    out, dentro = [], False
-    for l in texto.splitlines():
-        nombra = [f for f in FILAS if re.search(r"(?<![A-Za-z0-9])" + f + r"(?![0-9])", l)]
-        if dentro and nombra and fila not in nombra:
+    """Lo que la salida dice de una fila: desde la primera línea que nombra solo esa fila (una cabecera que nombra
+    varias no lo abre) hasta la siguiente que nombra otra y no esa. Si ninguna línea la nombra sola, desde la primera
+    que la nombra («R1 y R2: sin comprobar …»)."""
+    lineas = texto.splitlines()
+    ini = next((i for i, l in enumerate(lineas) if nombradas(l) == [fila]), None)
+    if ini is None:
+        ini = next((i for i, l in enumerate(lineas) if fila in nombradas(l)), None)
+    if ini is None:
+        return ""
+    out = [lineas[ini]]
+    for l in lineas[ini + 1:]:
+        nombra = nombradas(l)
+        if nombra and fila not in nombra:
             break
-        if fila in nombra:
-            dentro = True
-        if dentro:
-            out.append(l)
+        out.append(l)
     return "\n".join(out)
 
 
@@ -124,12 +136,16 @@ def escenarios(inf):
     # 3 · Un pull request unido sin pieza hace fallar R6, con su número
     problemas = []
     r, rc, out = auditar(problemas, github(PRS_EN_REGLA + [pr(51, "Arregla la portada", "2026-11-05T10:00:00Z",
-                                                              ["src/portada.py"], autor="luis")]))
+                                                              ["src/portada.py"], autor="luis"),
+                                                           pr(50, "Ajusta el pie de página", "2026-10-20T10:00:00Z",
+                                                              ["src/pie.py"], autor="luis")]))
     if rc is not None:
         b = propone(problemas, out, "R6", "no cumple", ["#51"])
         for n in (52, 53, 54, 55, 56):   # Añadido: los de pieza, escenarios, kit, reversión y bot no son evidencia
             if re.search(rf"#{n}(?![0-9])", b):
                 problemas.append(f"R6 da como evidencia #{n}, que está en regla")
+        if re.search(r"#50(?![0-9])", b):   # Añadido: el unido antes de la última auditoría no cuenta
+            problemas.append(f"R6 da como evidencia #50, unido el 2026-10-20, antes de la última auditoría ({ULTIMA_AUDITORIA})")
     inf.escenario("A merged pull request without a piece fails R6", problemas)
 
     # 4 · Con el sí, un solo cambio; lo que la API no ve se queda y se lista
@@ -146,8 +162,8 @@ def escenarios(inf):
         for fila in LA_API_NO_VE:
             if vistas.get(fila) != eran[fila]:
                 problemas.append(f"en configuracion.md, {fila} pasó de «{eran[fila]}» a «{vistas.get(fila)}»: la API no lo ve")
-            if not re.search(r"(?<![A-Za-z0-9])" + fila + r"(?![0-9])", out):
-                problemas.append(f"la salida no lista {fila} para quien administra")
+            if not any(fila in nombradas(l) for l in out.splitlines()):   # por su identificador suelto
+                problemas.append(f"la salida no lista {fila} para quien administra (por su identificador suelto)")
         def fuera(t):   # todo menos las filas que propone la auditoría y la línea «actualizado:»
             return [l for l in t.splitlines() if not l.startswith("actualizado:")
                     and not re.match(r"\|\s*(R1|R2|R3|R6|PL1|PL2)\s*\|", l)]

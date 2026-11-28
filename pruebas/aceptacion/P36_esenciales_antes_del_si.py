@@ -43,6 +43,11 @@ FASES = [("| P01 y P02 pasan | en curso |", "| P01 y P02 pasan | cerrada |"),
          ("| P03 pasa | pendiente |", "| P03 pasa | en curso |")]
 
 
+# «esencial» a mitad del título no lo hace esencial: solo «(esencial)» al final
+A_MITAD = "Cada producto (esencial) muestra su precio"
+MITAD = (f"- **{T02[0]}**\n", f"- **{A_MITAD}**\n")
+
+
 def esencial(titulo):
     """El cambio que pone « (esencial)» al final del título de un escenario."""
     return (f"- **{titulo}**\n", f"- **{titulo} {SUFIJO}**\n")
@@ -134,22 +139,16 @@ def pagina():
 
 def escenarios(inf):
     # 1 · Un escenario esencial se marca: el primero de P01 termina en «(esencial)». read_plan lo da esencial y los demás
-    #     no; la página marca el escenario con «data-esencial»
+    #     no; la página marca el escenario con «data-esencial». Añadido: el de P02 lleva «(esencial)» a mitad del título
+    #     («Cada producto (esencial) muestra su precio»), y no es esencial
     problemas = []
-    plan = leer(plan_con([esencial(T01[0])]), problemas)
+    plan = leer(plan_con([esencial(T01[0]), MITAD]), problemas)
     if plan is not None:
-        marcas(plan, problemas, {"P01": [(T01[0], True), (T01[1], False)], "P02": [(T02[0], False)],
+        marcas(plan, problemas, {"P01": [(T01[0], True), (T01[1], False)], "P02": [(A_MITAD, False)],
                                  "P03": [(T03[0], False)]})
     if MARCA not in pagina():
         problemas.append(f"la página del tablero no tiene «{MARCA}»: la ventana de la pieza no marca el escenario esencial")
     inf.escenario("An essential scenario is marked", problemas)
-
-    # 1b · Añadido: sin ninguno marcado (la muestra tal cual), todos traen «esencial» false
-    problemas = []
-    plan = leer(MUESTRA[PLAN], problemas)
-    if plan is not None:
-        marcas(plan, problemas, {"P01": [(t, False) for t in T01], "P02": [(T02[0], False)], "P03": [(T03[0], False)]})
-    inf.escenario("An essential scenario is marked (none marked, none essential)", problemas)
 
     # 2 · La verificación recibe aparte los esenciales de fases anteriores: F1 cerrada con los dos escenarios de P01
     #     esenciales (P02 no), F2 en curso. Para F2: su escenario y, aparte, los dos de P01
@@ -167,11 +166,14 @@ def escenarios(inf):
     inf.escenario("The verification gets the essential ones of earlier phases, apart (one of the phase's own)", problemas)
 
     # 3 · Sin esenciales, solo los de la fase: F1 cerrada sin ninguno marcado. Para F2, su escenario y ningún esencial.
-    #     Añadido: para F1, que no tiene fases antes, sus tres escenarios y ningún esencial
+    #     Añadido: para F1, que no tiene fases antes, sus tres escenarios y ningún esencial, aunque el de P03, de F2, una
+    #     fase posterior, sea esencial
     problemas = []
     plan = leer(plan_con(FASES), problemas)
     if plan is not None:
         a_verificar(plan, "F2", problemas, list(T03), [])
+    plan = leer(plan_con(FASES + [esencial(T03[0])]), problemas)
+    if plan is not None:
         a_verificar(plan, "F1", problemas, list(T01 + T02), [])
     inf.escenario("No essential ones, only the phase's", problemas)
 

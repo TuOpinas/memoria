@@ -30,6 +30,7 @@ PORTAL = "ventas/portal"
 PROYECTO_MD, GUIA = "ventas/portal/proyecto.md", "guia.md"
 REPOSITORIO = "muestra/portal"
 ESCRITURA, LECTURA = "con escritura", "solo para leer"
+PALABRA = "escritura"   # para quien no construye, la RESPUESTA no la dice en ninguna forma
 
 ANA, MARTA, PABLO, LUIS = "ana@muestra.mx", "marta@muestra.mx", "pablo@muestra.mx", "luis@muestra.mx"
 OTRA = "otra@muestra.mx"   # en «Quién es quién» de nadie y en ningún rol
@@ -123,16 +124,16 @@ def con_escritura(cuenta, cambios, problemas):
 
 
 def sin_escritura(cuenta, cambios, problemas):
-    """La apertura no pide conectar nada con escritura: ninguna línea de la RESPUESTA dice «con escritura». Devuelve
-    el texto de la RESPUESTA (o None)."""
+    """La apertura no pide conectar nada con escritura: ninguna línea de la RESPUESTA dice «escritura», en ninguna
+    forma («con escritura», «acceso de escritura», ni para decir que no). Devuelve el texto de la RESPUESTA (o None)."""
     texto = respuesta(cuenta, cambios, problemas)
     if texto is None:
         return None
     if not pasos(texto):
         problemas.append(f"con {cuenta}, la RESPUESTA no tiene pasos numerados: no hay apertura que juzgar")
     for l in texto.splitlines():
-        if ESCRITURA in l.lower():
-            problemas.append(f"con {cuenta}, que no construye, la RESPUESTA dice «{ESCRITURA}»: {l.strip()[:300]}")
+        if PALABRA in l.lower():
+            problemas.append(f"con {cuenta}, que no construye, la RESPUESTA dice «{PALABRA}»: {l.strip()[:300]}")
     return texto
 
 
@@ -152,7 +153,7 @@ def escenarios(inf):
     inf.escenario("Whoever builds gets write access", problemas)
 
     # 2 · Los demás no reciben nada al abrir: Marta (solo «Acepta»), Pablo (solo «Audita») y una cuenta en ningún rol.
-    #     Ninguna línea de la RESPUESTA dice «con escritura», y un paso dice que, si hace falta el código, se conecta
+    #     Ninguna línea de la RESPUESTA dice «escritura», y un paso dice que, si hace falta el código, se conecta
     #     «solo para leer»
     for cuenta, que in ((MARTA, "only in Acepta"), (PABLO, "only in Audita"), (OTRA, "in no role")):
         problemas = []
@@ -160,13 +161,11 @@ def escenarios(inf):
         solo_lectura(cuenta, texto, problemas)
         inf.escenario(f"Anyone else gets nothing at opening ({que})", problemas)
 
-    # 3 · Varios que construyen: «Construye» con Ana y Marta, separadas por « · ». Cada una recibe escritura.
-    #     Añadido: Pablo, que solo audita, sigue sin ella
+    # 3 · Varios que construyen: «Construye» con Ana y Marta, separadas por « · ». Cada una recibe escritura
     problemas = []
     dos = BASE + [construye("Ana Pérez (ana@muestra.mx) · Marta Ruiz (marta@muestra.mx)")]
     for cuenta in (ANA, MARTA):
         con_escritura(cuenta, dos, problemas)
-    sin_escritura(PABLO, dos, problemas)
     inf.escenario("Several builders", problemas)
 
     # 4 · Quien construye sin cuenta se encuentra por su nombre: «Construye: Luis Gómez», y Luis con su cuenta en

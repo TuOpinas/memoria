@@ -43,8 +43,13 @@ CONFIG = "ventas/portal/entregables/configuracion.md"
 ESTADOS = ("pendiente", "en curso", "unida", "revertida", "entregada")
 PASO_UNIR = "Paso a Prod: unir el pull request de versión es el paso a Prod"
 
-# La entrada anterior de la muestra pasa del 2026-11-20 al 16: así «2026-11-20» solo sale en el «Aprobó:» del escenario 4
-BASE = [(SEGUIMIENTO, "## 2026-11-20\n", f"## {DESDE}\n")]
+# La entrada anterior de la muestra pasa del 2026-11-20 al 16: así «2026-11-20» solo sale en el «Aprobó:» del escenario 4.
+# Y la organización declara su zona en guia.md, «Zona horaria: UTC», para que la fecha de hoy de los scripts (la de la
+# zona de la organización) sea la que la prueba compara, la UTC, en CI y en cualquier computadora
+GUIA = "guia.md"
+BASE = [(SEGUIMIENTO, "## 2026-11-20\n", f"## {DESDE}\n"),
+        (GUIA, "Una organización de muestra para las pruebas.\n", "Una organización de muestra para las pruebas.\n\n"
+                                                                   "Zona horaria: UTC\n")]
 CONFIGURACION = """---
 estado: vigente
 actualizado: 2026-10-28
@@ -91,7 +96,8 @@ CON_CONFIG = [(PROYECTO_MD, "Configuración de plataforma: por crear\nConfigurac
 
 
 def hoy():
-    return datetime.date.today().isoformat()
+    """La fecha de hoy en la zona de la organización de muestra («Zona horaria: UTC» en su guia.md)."""
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
 
 # ---------- la raíz de muestra ----------
@@ -117,10 +123,12 @@ def raiz(cambios=(), archivos=None):
 
 # ---------- lo que responde el gh falso ----------
 def pr(n, titulo, unido="2026-11-18T10:00:00Z", archivos=("src/catalogo.py",), autor="ana", cuerpo="", sha=None):
-    """Un pull request a main; unido=None es cerrado sin unir."""
+    """Un pull request a main, abierto el mismo día en que se unió; unido=None es cerrado sin unir."""
     return {"number": n, "title": titulo, "state": "closed", "merged_at": unido, "body": cuerpo, "user": autor,
-            "merge_commit_sha": sha or (f"{n:040x}" if unido else None), "created_at": "2026-11-17T09:00:00Z",
-            "updated_at": unido or "2026-11-17T09:30:00Z", "base": "main", "files": list(archivos)}
+            "merge_commit_sha": sha or (f"{n:040x}" if unido else None),
+            "created_at": f"{unido[:10]}T08:00:00Z" if unido else "2026-11-17T09:00:00Z",
+            "updated_at": unido or "2026-11-17T09:30:00Z", "closed_at": unido or "2026-11-17T09:30:00Z",
+            "base": "main", "files": list(archivos)}
 
 
 REGLAS_BIEN = [   # la regla de main de un repositorio en regla: pull request, solo squash, sin excepciones, checks obligatorios
@@ -154,9 +162,12 @@ def github(prs=(), **mas):
 GH_FALSO = r'''
 """gh falso de las pruebas de aceptación de P06 y P07: solo «gh auth status» y «gh api <ruta REST>» de lectura, con
 -X GET, -f/-F, -H, --hostname y --cache; ni --jq, ni --paginate, ni GraphQL. Responde desde datos.json, a su lado, y
-apunta cada llamada en llamadas.txt. Una ruta que no conoce da 404, como GitHub. La regla de la rama principal
-(rules/branches, rulesets, branches/<rama>/protection) la responde siempre, se pida o no la auditoría; sin «reglas»,
-403 a las tres."""
+apunta cada llamada en llamadas.txt. Una ruta que no conoce da 404, como GitHub. La regla de la rama principal se sirve
+solo por rulesets (rules/branches/<rama>, rulesets y rulesets/<id>), se pida o no la auditoría; la protección clásica
+(branches/<rama>/protection) da 404 «Branch not protected», como en un repositorio que solo usa rulesets; sin «reglas»,
+403 a las tres. Cada lista trae los campos que da GitHub: la de pulls, sin «merged» ni «merged_by» (van en pulls/<n>);
+la búsqueda, sin «merged_at» ni «merge_commit_sha» sueltos («merged_at» va dentro de «pull_request»), y filtra por los
+calificadores merged:, updated:, created:, closed:, is:, state: y base:. compare/ admite los dos órdenes."""
 import json, pathlib, re, sys, urllib.parse
 AQUI = pathlib.Path(__file__).resolve().parent
 D = json.loads((AQUI / "datos.json").read_text(encoding="utf-8"))
@@ -205,11 +216,12 @@ def pagina(lista):
 
 def sin_fin(n0):
     return [{"number": n0 - ((pag - 1) * pp + k), "title": f"Cambio de prueba {n0 - ((pag - 1) * pp + k)}",
-             "state": "closed", "merged_at": None, "merge_commit_sha": None, "body": "", "user": {"login": "luis"},
-             "created_at": "2026-11-27T09:00:00Z", "updated_at": "2026-11-27T10:00:00Z", "base": {"ref": "main"}}
-            for k in range(pp)]
+             "state": "closed", "merged_at": None, "merge_commit_sha": None, "body": "", "user": "luis",
+             "created_at": "2026-11-27T09:00:00Z", "updated_at": "2026-11-27T10:00:00Z",
+             "closed_at": "2026-11-27T10:00:00Z", "base": "main"} for k in range(pp)]
 
 def completo(p):
+    """El pull request como lo da GET pulls/<n>."""
     o = {k: v for k, v in p.items() if k != "files"}
     o["user"] = {"login": p["user"], "type": "Bot" if p["user"].endswith("[bot]") else "User"}
     o["base"] = {"ref": p["base"]}
@@ -218,18 +230,62 @@ def completo(p):
     o["html_url"] = f"https://github.com/{D['repo']}/pull/{p['number']}"
     return o
 
+def de_lista(p):
+    """El pull request como lo da la lista de pulls: sin «merged» ni «merged_by»."""
+    o = completo(p)
+    del o["merged"], o["merged_by"]
+    return o
+
+def de_busqueda(p):
+    """El pull request como lo da search/issues: un issue, con «merged_at» dentro de «pull_request»."""
+    o = {k: v for k, v in de_lista(p).items() if k not in ("merged_at", "merge_commit_sha", "base")}
+    o["pull_request"] = {"merged_at": p["merged_at"], "html_url": o["html_url"],
+                         "url": f"https://api.github.com/repos/{D['repo']}/pulls/{p['number']}"}
+    return o
+
+def cumple(p, calificador):
+    """Si el pull request cumple un calificador de la búsqueda (uno que no conoce lo deja pasar)."""
+    k, _, v = calificador.partition(":")
+    k, v = k.lower(), v.strip('"')
+    if k == "is":
+        return {"merged": bool(p["merged_at"]), "unmerged": not p["merged_at"], "closed": p["state"] == "closed",
+                "open": p["state"] == "open"}.get(v.lower(), True)
+    if k == "state":
+        return p["state"] == v.lower()
+    if k == "base":
+        return p["base"] == v
+    campo = {"merged": "merged_at", "updated": "updated_at", "created": "created_at", "closed": "closed_at"}.get(k)
+    if campo is None:
+        return True
+    f = p.get(campo)
+    if not f:
+        return False
+    def a(x):   # la fecha del pull request, cortada a la precisión del calificador
+        return f if "T" in x else f[:10]
+    if ".." in v:
+        ini, fin = v.split("..", 1)
+        return (ini == "*" or a(ini) >= ini) and (fin == "*" or a(fin) <= fin)
+    for op in (">=", "<=", ">", "<"):
+        if v.startswith(op):
+            x = v[len(op):]
+            return {">=": a(x) >= x, "<=": a(x) <= x, ">": a(x) > x, "<": a(x) < x}[op]
+    return a(v) == v
+
 if ruta == "search/issues":
     if D["pulls_sin_fin"]:
         if pag * pp > 1000:
             error(422, "Cannot access beyond the first 1000 results")
-        sale(0, {"total_count": 5000, "incomplete_results": False, "items": sin_fin(200000)})
+        sale(0, {"total_count": 5000, "incomplete_results": False, "items": [de_busqueda(p) for p in sin_fin(200000)]})
     if not D["acceso"]:
         error(422, "Validation Failed")
-    palabras = [w for w in q.get("q", "").split() if ":" not in w and w != "OR"]
-    hay = [completo(p) for p in D["pulls"] if not palabras or any(w.lower() in p["title"].lower() for w in palabras)]
-    for h in hay:
-        h["pull_request"] = {"merged_at": h["merged_at"], "url": h["html_url"]}
-    sale(0, {"total_count": len(hay), "incomplete_results": False, "items": pagina(hay)})
+    trozos = q.get("q", "").split()
+    palabras = [w for w in trozos if ":" not in w and w != "OR"]
+    calificadores = [w for w in trozos if ":" in w]
+    hay = [p for p in D["pulls"] if (not palabras or any(w.lower() in p["title"].lower() for w in palabras))
+           and all(cumple(p, c) for c in calificadores)]
+    hay.sort(key=lambda p: p["updated_at" if q.get("sort") == "updated" else "created_at"],
+             reverse=q.get("order", "desc") == "desc")
+    sale(0, {"total_count": len(hay), "incomplete_results": False, "items": pagina([de_busqueda(p) for p in hay])})
 m = re.match(r"orgs/([^/]+)(/members)?$", ruta)
 if m:
     if D["org"] is None or m.group(1) != D["repo"].split("/")[0]:
@@ -277,11 +333,11 @@ if resto.startswith("rules/") or resto.startswith("rulesets") or resto.endswith(
     error(404, "Branch not protected" if resto.endswith("/protection") else "Not Found")
 if resto == "pulls":
     if D["pulls_sin_fin"]:
-        sale(0, sin_fin(100000))
+        sale(0, [de_lista(p) for p in sin_fin(100000)])
     hay = [p for p in D["pulls"] if q.get("state", "open") in ("all", p["state"]) and q.get("base", p["base"]) == p["base"]]
     hay.sort(key=lambda p: p["updated_at" if q.get("sort") in ("updated", "long-running") else "created_at"],
              reverse=q.get("direction", "desc") == "desc")
-    sale(0, pagina([completo(p) for p in hay]))
+    sale(0, pagina([de_lista(p) for p in hay]))
 m = re.match(r"pulls/(\d+)(/files|/reviews|/commits)?$", resto)
 if m:
     p = next((p for p in D["pulls"] if p["number"] == int(m.group(1))), None)
@@ -301,13 +357,16 @@ if resto in ("releases", "releases/latest") or resto.startswith("releases/tags/"
     r = next((r for r in rel if not r["draft"] and (t is None or r["tag_name"] == t)), None)
     sale(0, r) if r else error(404, "Not Found")
 m = re.match(r"compare/(.+?)\.\.\.(.+)$", resto)
-if m and m.group(1) in etiquetas:
-    base, cabeza = m.group(1), m.group(2)
-    if cabeza == etiquetas[base]:
-        sale(0, {"status": "identical", "ahead_by": 0, "behind_by": 0})
-    if cabeza in D["contiene"].get(base, []):
-        sale(0, {"status": "behind", "ahead_by": 0, "behind_by": 1})
-    sale(0, {"status": "diverged", "ahead_by": 1, "behind_by": 1})
+por_sha = {s: t for t, s in etiquetas.items()}
+if m:   # compare/<etiqueta>...<sha> y compare/<sha>...<etiqueta> (la etiqueta también por su sha)
+    base, cabeza = (por_sha.get(x, x) for x in m.groups())
+    for etiqueta, otro, contenido in ((base, cabeza, "behind"), (cabeza, base, "ahead")):
+        if etiqueta in etiquetas and otro not in etiquetas:
+            if otro == etiquetas[etiqueta]:
+                sale(0, {"status": "identical", "ahead_by": 0, "behind_by": 0})
+            if otro in D["contiene"].get(etiqueta, []):
+                sale(0, {"status": contenido, "ahead_by": int(contenido == "ahead"), "behind_by": int(contenido == "behind")})
+            sale(0, {"status": "diverged", "ahead_by": 1, "behind_by": 1})
 error(404, "Not Found")
 '''
 
@@ -414,20 +473,54 @@ def estados_son(problemas, que, vistos, esperado):
             problemas.append(f"en la tabla de {que}, {pieza} está «{vistos[pieza]}», y tiene que estar «{estado}»")
 
 
-def contextos(texto, marca):
-    """Cada línea donde sale la marca, con su rótulo: la línea más cercana por encima que no es un elemento de lista,
-    una fila de tabla ni está en blanco (el título del apartado donde se lista)."""
+VINETA, NUMERO = r"[-*+]\s", r"\d+[.)]\s"
+
+
+def rotulados(texto, marca):
+    """Cada línea donde sale la marca: (línea, su rótulo, si es un elemento de lista), en minúsculas. Un elemento es una
+    viñeta («- …») o un punto numerado («3. …»). El rótulo de una línea es la más cercana por encima que no está en
+    blanco ni es una viñeta o una fila de tabla: un punto numerado sí puede ser rótulo de lo que va debajo («3. Fuera del
+    plan:» y debajo «- #41 …»), salvo de otro punto numerado."""
     lineas, out = texto.splitlines(), []
     for i, l in enumerate(lineas):
         if not re.search(re.escape(marca) + r"(?![0-9])", l):
             continue
+        s = l.strip()
+        numerado = bool(re.match(NUMERO, s))
+        elemento = numerado or bool(re.match(VINETA, s))
         rotulo = ""
         for j in range(i - 1, -1, -1):
-            s = lineas[j].strip()
-            if s and not re.match(r"([-*+]|\d+[.)]|\|)", s):
-                rotulo = s
-                break
-        out.append((l + " ⟵ " + rotulo).lower())
+            u = lineas[j].strip()
+            if not u or u.startswith("|") or re.match(VINETA, u) or (numerado and re.match(NUMERO, u)):
+                continue
+            rotulo = u
+            break
+        out.append((l.lower(), rotulo.lower(), elemento))
+    return out
+
+
+def contextos(texto, marca):
+    """Cada línea donde sale la marca, con su rótulo detrás (ver rotulados)."""
+    return [f"{l} ⟵ {r}" for l, r, _ in rotulados(texto, marca)]
+
+
+def de_44(texto):
+    """Lo que la salida dice de #44: por cada línea que lo nombra, (lo que se dice de él, si está bajo «fuera del plan»).
+    Lo que se dice de #44 es su trozo de línea, desde #44 hasta la referencia siguiente (#N) o el final, con lo que va
+    delante si #44 es la primera referencia de la línea («Kit: #44 …»), y además su rótulo si la línea es un elemento
+    que solo nombra a #44. Está bajo «fuera del plan» si su línea lo dice antes de #44, si lo dice su trozo, o si es un
+    elemento cuyo rótulo lo dice."""
+    out = []
+    for l, rotulo, elemento in rotulados(texto, "#44"):
+        refs = [m for m in re.finditer(r"#\d+(?![0-9])", l)]
+        i = next(k for k, m in enumerate(refs) if m.group() == "#44")
+        ini = refs[i].start() if i else 0
+        fin = refs[i + 1].start() if i + 1 < len(refs) else len(l)
+        trozo, antes = l[ini:fin], l[:refs[i].start()]
+        solo = len(refs) == 1
+        dicho = trozo + (" ⟵ " + rotulo if elemento and solo else "")
+        fuera = "fuera del plan" in antes or "fuera del plan" in trozo or (elemento and "fuera del plan" in rotulo)
+        out.append((dicho, fuera))
     return out
 
 
@@ -441,6 +534,35 @@ def entrada_de_hoy(texto):
     """La entrada «## <hoy>» del seguimiento, hasta el siguiente «## AAAA-MM-DD»; "" si no la hay."""
     m = re.search(r"^## " + re.escape(hoy()) + r"\s*$(.*?)(?=^## \d{4}-\d{2}-\d{2}\s*$|\Z)", texto, re.M | re.S)
     return m.group(1) if m else ""
+
+
+# Que una línea dice que el repositorio no se pudo leer (escenario 6), o su motivo de GitHub
+NO_LEIDO = (r"no se (pudo|puede|ha podido) leer|no (pudo|puede) leerse|no se ley[óo]|sin leer|sin acceso|"
+            r"no (hay|tiene|tengo|tenemos) acceso|no se pudo acceder|\b404\b|not found|no encontrado")
+PUNTO4, PENDIENTE ="4. Lo que lo unido añade y el diseño no tiene:", "- pendiente de revisar"
+
+
+def punto4_sin_juzgar(problemas, texto):
+    """Añadido (decisión shared-memory/plugin-memoria#2026-11-27-14): seguimiento.py escribe el punto 4 con su rótulo
+    y debajo solo «- pendiente de revisar»; lo llena después el subagente seguimiento, no el script."""
+    lineas = texto.splitlines()
+    i = next((k for k, l in enumerate(lineas) if l.strip() == PUNTO4), None)
+    if i is None:
+        problemas.append(f"la entrada no trae el punto 4 con su rótulo «{PUNTO4}»")
+        return
+    debajo = []
+    for l in lineas[i + 1:]:
+        s = l.strip()
+        if not s:
+            if debajo:
+                break
+            continue
+        if re.match(NUMERO, s) or s.startswith("#"):
+            break
+        debajo.append(s)
+    if debajo != [PENDIENTE]:
+        problemas.append(f"bajo «{PUNTO4}» la entrada del script no dice solo «{PENDIENTE}», y lo da por juzgado: "
+                         f"{json.dumps(debajo, ensure_ascii=False)[:200]}")
 
 
 def regla_sin_leer(problemas, gh):
@@ -478,7 +600,9 @@ def escenarios(inf):
     antes = MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n")
     r, datos, rc, out = seguimiento(problemas, gh, guardar=True)
     if datos is not None:
-        if datos.get("acceso") is not True or datos.get("completo") != {"prs": True, "releases": True}:
+        completo = datos.get("completo")
+        if datos.get("acceso") is not True or not isinstance(completo, dict) or completo.get("prs") is not True \
+                or completo.get("releases") is not True:
             problemas.append(f"con todo leído, el JSON de recoger dice acceso={json.dumps(datos.get('acceso'))} y "
                              f"completo={json.dumps(datos.get('completo'))}, no true y {{prs: true, releases: true}}")
     if rc is not None:
@@ -495,6 +619,7 @@ def escenarios(inf):
                         {"P01": "unida", "P02": "unida", "P03": "revertida"})
         if fecha == hoy() and antes.split("\n# Seguimiento\n", 1)[1].strip() not in texto:   # Añadido
             problemas.append("al guardar, las entradas anteriores del seguimiento no quedaron tal cual, debajo")
+        punto4_sin_juzgar(problemas, out)   # Añadido: la decisión #2026-11-27-14
     if datos is not None and not isinstance(datos.get("reglas"), list):   # el contrato: la regla se lee siempre
         problemas.append(f"sin --auditoria, el JSON de recoger no trae la regla de la rama principal en «reglas» "
                          f"(dice {json.dumps(datos.get('reglas'), ensure_ascii=False)[:120]})")
@@ -552,7 +677,8 @@ def escenarios(inf):
 
     # 5 · Lo que está fuera del plan se lista; el «Bump …» que solo cambia workflows cuenta como kit
     problemas = []
-    gh = github([pr(41, "Arregla la portada", "2026-11-18T10:00:00Z", ["src/portada.py"]),
+    gh = github([pr(40, "Ajusta el pie de página", "2026-11-10T10:00:00Z", ["src/pie.py"]),   # Añadido: antes de --desde
+                 pr(41, "Arregla la portada", "2026-11-18T10:00:00Z", ["src/portada.py"]),
                  pr(42, "P09 · Exportar pedidos", "2026-11-19T10:00:00Z", ["src/exportar.py"]),
                  pr(43, "Kit · Ajusta el control", "2026-11-20T10:00:00Z",
                     [".github/workflows/pruebas-aceptacion.yml", "src/api.py"]),
@@ -563,11 +689,14 @@ def escenarios(inf):
         for n in (41, 42, 43):
             if not any("fuera del plan" in c for c in contextos(out, f"#{n}")):
                 problemas.append(f"#{n} no sale listado bajo «fuera del plan» (ni en su línea ni en el rótulo de su lista)")
-        bump = contextos(out, "#44")
-        if not any("kit" in c for c in bump):
-            problemas.append("#44, el «Bump …» que solo cambia workflows, no sale contado como kit")
-        if any("fuera del plan" in c and "kit" not in c for c in bump):
-            problemas.append("#44, el «Bump …» que solo cambia workflows, sale como fuera del plan")
+        bump = de_44(out)
+        if not any("kit" in dicho for dicho, _ in bump):
+            problemas.append("#44, el «Bump …» que solo cambia workflows, no sale contado como kit (en lo que se dice de "
+                             f"#44): {json.dumps([d for d, _ in bump], ensure_ascii=False)[:300]}")
+        if any(fuera for _, fuera in bump):
+            problemas.append("#44, el «Bump …» que solo cambia workflows, sale bajo «fuera del plan»")
+        if any("fuera del plan" in c for c in contextos(out, "#40")):   # Añadido: el anterior a --desde no se lee
+            problemas.append(f"#40, unido el 2026-11-10, antes de --desde {DESDE}, sale bajo «fuera del plan»")
     inf.escenario("What is outside the plan is listed", problemas)
 
     # 6 · Sin acceso al repositorio: las piezas sin estado, el repositorio nombrado, y no se guarda
@@ -585,8 +714,13 @@ def escenarios(inf):
                 problemas.append(f"la entrada que imprime no tiene la fila de {p} en su tabla «| Pieza | Estado |»")
             elif vistos[p] in ESTADOS:
                 problemas.append(f"sin acceso, la entrada da a {p} el estado «{vistos[p]}»")
-        if REPOSITORIO not in out:
+        motivo = str((datos or {}).get("motivo") or "").strip().lower()
+        nombran = contextos(out, REPOSITORIO)
+        if not nombran:
             problemas.append(f"la entrada no nombra el repositorio que no pudo leer ({REPOSITORIO})")
+        elif not any(re.search(NO_LEIDO, c) or (motivo and motivo in c) for c in nombran):
+            problemas.append(f"la entrada nombra {REPOSITORIO}, pero ninguna línea que lo nombra dice que no se pudo leer "
+                             f"ni da su motivo: {json.dumps(nombran, ensure_ascii=False)[:300]}")
         igual_archivo(problemas, r, SEGUIMIENTO, MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n"),
                       "sin acceso la entrada no se guarda")
     inf.escenario("No access to a repository is said, and nothing is saved", problemas)

@@ -78,22 +78,39 @@ def con_pieza(otras=None):
 # ---------- la última entrada del seguimiento de la muestra, y las que la sustituyen ----------
 ULTIMA = "## 2026-11-20\n| Pieza | Estado |\n|---|---|\n| P01 | unida |\n| P02 | en curso |\n"
 ANTERIOR = "## 2026-11-10\n| Pieza | Estado |\n|---|---|\n| P01 | en curso |\n| P02 | pendiente |\n| P03 | en curso |\n"
+# El punto 4, con la forma fija de la decisión shared-memory/plugin-memoria#2026-11-27-14: lo escribe seguimiento.py
+# con su rótulo y «- pendiente de revisar», y el subagente seguimiento lo llena con «- <nombre> (<repositorio>#<número>)»
+# o «- nada»
+PUNTO4 = "4. Lo que lo unido añade y el diseño no tiene:"
+PENDIENTE = ("pendiente de revisar",)
 
 
-def ultima(estados, puntos=""):
-    """La última entrada con estos estados ({pieza: estado}, en orden) y, detrás de la tabla, estos puntos."""
+def entrada(fecha, estados, punto4):
+    """Una entrada con los siete puntos de la plantilla del seguimiento (seccion-desarrollo.md), en su orden: el 2 es la
+    tabla con estos estados ({pieza: estado}, en orden) y el 4 lista estas cosas («- …» cada una)."""
     filas = "".join(f"| {p} | {e} |\n" for p, e in estados.items())
-    return (SEGUIMIENTO, ULTIMA, "## 2026-11-20\n| Pieza | Estado |\n|---|---|\n" + filas + (f"\n{puntos}" if puntos else ""))
+    return (f"## {fecha}\n"
+            "1. Pidió Ana Pérez · leído desde 2026-11-10 · muestra/portal: último commit c0ffee1\n"
+            "   El cliente puede ver en línea qué vende la tienda y a qué precio.\n"
+            "2. Estado de cada pieza:\n\n| Pieza | Estado |\n|---|---|\n" + filas + "\n"
+            "3. Fuera del plan:\n- Arregla la portada (muestra/portal#40), sin pieza\n"
+            f"{PUNTO4}\n" + "".join(f"- {c}\n" for c in punto4) +
+            "5. El check «pruebas de aceptación» es obligatorio en la regla de la rama principal:\n"
+            "- sí; ningún pull request tocó las pruebas de aceptación\n"
+            "6. Pasos a Prod:\n- ninguno desde el anterior\n"
+            "7. Fases recibidas:\n- sin recibir por escrito\n")
+
+
+def ultima(estados, punto4=PENDIENTE):
+    """La última entrada de la muestra, con los siete puntos, estos estados y este punto 4."""
+    return (SEGUIMIENTO, ULTIMA, entrada("2026-11-20", estados, punto4))
 
 
 TRES = {"P01": "entregada", "P02": "en curso", "P03": "pendiente"}   # una de cada, como pide el escenario
 FUERA = ("Servicio de cupones (muestra/portal#41)", "Exportación a Excel (muestra/portal#43)")
-PUNTOS = ("1. Estado de cada pieza: la tabla de arriba.\n"
-          "2. Pull requests abiertos: ninguno.\n"
-          "3. Pruebas fuera de la lista de activas: ninguna.\n"
-          f"4. Unido fuera del diseño: {FUERA[0]} · {FUERA[1]}\n")
 FUERA_ANTERIOR = "Buscador de pedidos (muestra/portal#12)"
-PUNTOS_ANTERIOR = f"\n4. Unido fuera del diseño: {FUERA_ANTERIOR}\n"
+OTROS_PUNTOS = ("Arregla la portada", "pruebas de aceptación", "ninguno desde el anterior", "sin recibir por escrito",
+                "pendiente de revisar", "nada")
 
 
 def pagina():
@@ -145,7 +162,9 @@ def en_pagina(problemas, *cadenas):
 def escenarios(inf):
     # 1 · Cada caja lleva el estado de su pieza: la columna «Pieza» en las tres tablas (P01, P02, P03 y una fila sin
     #     pieza en cada una) y la última entrada con P01 entregada, P02 en curso y P03 pendiente. El grupo y lo demás de
-    #     cada caja, como hoy (el color sigue diciendo su grupo o tipo). La página trae «data-estado»
+    #     cada caja, como hoy (el color sigue diciendo su grupo o tipo). La página trae «data-estado». Añadido: con el
+    #     punto 4 «pendiente de revisar», lo unido fuera del diseño va vacío; y una pieza que la última entrada no nombra
+    #     (P03, aunque la anterior sí) deja sus cajas sin estado
     problemas = []
     d = pestana(*generar(con_pieza() + [ultima(TRES)]), problemas)
     if d is not None:
@@ -157,17 +176,15 @@ def escenarios(inf):
         malos = [t for t in avisos(d) if "Pieza" in t]
         if malos:
             problemas.append(f"con la columna bien puesta, un aviso nombra «Pieza»: {json.dumps(malos, ensure_ascii=False)}")
+        fuera = lista(problemas, d, "fuera_del_diseno")
+        if fuera is not None:
+            igual(problemas, "«fuera_del_diseno» con el punto 4 «pendiente de revisar»", fuera, [])
+    sin_p03 = {"P01": "entregada", "P02": "en curso"}
+    d = pestana(*generar(con_pieza() + [ultima(sin_p03)]), problemas)
+    if d is not None:
+        cajas(d, problemas, None, sin_p03)   # P03 no está en la última entrada: sus cajas, sin estado
     en_pagina(problemas, MARCA_ESTADO)
     inf.escenario("Each box takes its piece's state", problemas)
-
-    # 1b · Añadido: el estado va tal cual de la última entrada, también «unida» y «revertida»; una pieza que la última
-    #      entrada no nombra (P03, aunque la anterior sí) no tiene estado
-    problemas = []
-    otros = {"P01": "unida", "P02": "revertida"}
-    d = pestana(*generar(con_pieza() + [ultima(otros)]), problemas)
-    if d is not None:
-        cajas(d, problemas, None, otros)
-    inf.escenario("Each box takes its piece's state (unida, revertida, and a piece the last entry does not name)", problemas)
 
     # 2 · Sin la columna, como hoy: la muestra tal cual. Cada caja con «pieza» y «estado» null, ninguna pieza
     #     desconocida, ningún aviso que nombre «Pieza», y el diseño leído como en P05
@@ -226,33 +243,28 @@ def escenarios(inf):
     inf.escenario("A piece the plan does not have", problemas)
 
     # 4 · Lo unido fuera del diseño: la última entrada dice en su punto 4 dos cosas unidas que el diseño no tiene;
-    #     fuera_del_diseno las trae, y la página lo nombra. Añadido: no trae el punto 4 de la entrada anterior ni los
-    #     otros puntos de la última
+    #     fuera_del_diseno trae los nombres de esas dos líneas, y la página lo nombra. Añadido: no trae el punto 4 de la
+    #     entrada anterior («- Buscador de pedidos …») ni nada de los otros puntos de la última
     problemas = []
-    d = pestana(*generar([ultima({"P01": "unida", "P02": "en curso"}, PUNTOS),
-                          (SEGUIMIENTO, ANTERIOR, ANTERIOR + PUNTOS_ANTERIOR)]), problemas)
+    d = pestana(*generar([ultima({"P01": "unida", "P02": "en curso"}, FUERA),
+                          (SEGUIMIENTO, ANTERIOR, entrada("2026-11-10", {"P01": "en curso", "P02": "pendiente",
+                                                                          "P03": "en curso"}, (FUERA_ANTERIOR,)))]),
+                 problemas)
     if d is not None:
         fuera = lista(problemas, d, "fuera_del_diseno")
         if fuera is not None:
             texto = json.dumps(fuera, ensure_ascii=False)
+            if not isinstance(fuera, list) or len(fuera) != len(FUERA):
+                problemas.append(f"«fuera_del_diseno» no es la lista de las {len(FUERA)} líneas del punto 4: {texto[:300]}")
             for f in FUERA:
                 if f not in texto:
                     problemas.append(f"«fuera_del_diseno» no trae «{f}», del punto 4 de la última entrada: {texto[:300]}")
-            for f, de in ((FUERA_ANTERIOR, "el punto 4 de la entrada anterior"),
-                          ("Pull requests abiertos", "el punto 2"), ("Pruebas fuera de la lista", "el punto 3")):
+            for f in (FUERA_ANTERIOR,) + OTROS_PUNTOS:
                 if f in texto:
-                    problemas.append(f"«fuera_del_diseno» trae «{f}», de {de}: {texto[:300]}")
+                    problemas.append(f"«fuera_del_diseno» trae «{f}», que no es una línea del punto 4 de la última "
+                                     f"entrada: {texto[:300]}")
     en_pagina(problemas, BAJO_EL_DIBUJO[1])
     inf.escenario("What was merged outside the design", problemas)
-
-    # 4b · Añadido: sin punto 4 en la última entrada (la muestra tal cual), fuera_del_diseno está y va vacío
-    problemas = []
-    d = pestana(*generar(), problemas)
-    if d is not None:
-        fuera = lista(problemas, d, "fuera_del_diseno")
-        if fuera:
-            problemas.append(f"sin punto 4, «fuera_del_diseno» no va vacío: {json.dumps(fuera, ensure_ascii=False)[:300]}")
-    inf.escenario("What was merged outside the design (no point 4, nothing said)", problemas)
 
 
 flujo.principal("P34", escenarios)
