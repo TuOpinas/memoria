@@ -168,8 +168,8 @@ solo por rulesets (rules/branches/<rama>, rulesets y rulesets/<id>), se pida o n
 (branches/<rama>/protection) da 404 «Branch not protected», como en un repositorio que solo usa rulesets; sin «reglas»,
 403 a las tres. Cada lista trae los campos que da GitHub: la de pulls, sin «merged» ni «merged_by» (van en pulls/<n>);
 la búsqueda, sin «merged_at» ni «merge_commit_sha» sueltos («merged_at» va dentro de «pull_request»), y filtra por los
-calificadores merged:, updated:, created:, closed:, is:, state: y base:. commits?sha= da la lista de esa rama o etiqueta
-(404 si no la conoce). compare/ admite los dos órdenes, y una etiqueta con su propio commit da «identical»."""
+calificadores merged:, updated:, created:, closed:, is:, state: y base:. commits?sha= da la lista de esa rama o etiqueta:
+la de una etiqueta, su commit y los que contiene («contiene» de los datos), su historial (404 si no la conoce). compare/ admite los dos órdenes, y una etiqueta con su propio commit da «identical»."""
 import json, pathlib, re, sys, urllib.parse
 AQUI = pathlib.Path(__file__).resolve().parent
 D = json.loads((AQUI / "datos.json").read_text(encoding="utf-8"))
@@ -316,7 +316,11 @@ if resto == "commits":   # commits?sha=<rama, etiqueta o sha>: la lista desde ah
         sale(0, pagina([c]))
     if desde in etiquetas or desde in etiquetas.values():
         s = etiquetas.get(desde, desde)
-        sale(0, pagina([{"sha": s, "commit": {"message": "Release", "committer": {"date": "2026-11-25T12:00:00Z"}}}]))
+        t = next(t for t, x in etiquetas.items() if x == s)
+        historial = [{"sha": s, "commit": {"message": "Release", "committer": {"date": "2026-11-25T12:00:00Z"}}}]
+        historial += [{"sha": x, "commit": {"message": "Unido", "committer": {"date": "2026-11-25T11:00:00Z"}}}
+                      for x in D["contiene"].get(t, []) if x != s]
+        sale(0, pagina(historial))
     error(404, f"No commit found for SHA: {desde}")
 if resto in (f"branches/{rama}", f"commits/{rama}"):
     sale(0, c if resto.startswith("commits") else {"name": rama, "commit": c, "protected": True})
@@ -517,16 +521,35 @@ def igual_archivo(problemas, r, ruta, antes, por_que):
 
 def entrada_de_hoy(texto):
     """La entrada «## <hoy>» del seguimiento, hasta el siguiente «## AAAA-MM-DD»; "" si no la hay."""
-    m = re.search(r"^## " + re.escape(hoy()) + r"\s*$(.*?)(?=^## \d{4}-\d{2}-\d{2}\s*$|\Z)", texto, re.M | re.S)
+    m = re.search(r"^## " + re.escape(hoy()) + r"\b.*?$(.*?)(?=^## \d{4}-\d{2}-\d{2}\b|\Z)", texto, re.M | re.S)
     return m.group(1) if m else ""
 
 
 ANTES = MUESTRA[SEGUIMIENTO].replace("## 2026-11-20\n", f"## {DESDE}\n")   # el seguimiento de la muestra, sin tocar
 
 
+PUNTO4 = "4. Lo que lo unido añade y el diseño no tiene:"
+SIN_REVISAR = "- pendiente de revisar"   # la forma fija del punto 4 sin juzgar (#2026-11-27-14)
+
+
+def punto4_del_archivo(entrada):
+    """Las líneas de lista que siguen al rótulo del punto 4 en la entrada (sin las vacías); None si no está el rótulo."""
+    lineas = entrada.splitlines()
+    i = next((n for n, l in enumerate(lineas) if l.strip() == PUNTO4), None)
+    if i is None:
+        return None
+    out = []
+    for l in lineas[i + 1:]:
+        if l.strip() and not re.match(r"\s*[-*+] ", l):
+            break
+        if l.strip():
+            out.append(l.rstrip())
+    return out
+
+
 def guardada(problemas, r, j, rc, que):
-    """Con --guardar: salió con 0, «guardada» es true, la entrada de hoy está arriba y las anteriores siguen debajo.
-    Devuelve la entrada de hoy del archivo ("" si no está)."""
+    """Con --guardar: salió con 0, «guardada» es true, la entrada de hoy va antes que las anteriores, que siguen tal
+    cual, y su punto 4 es «- pendiente de revisar». Devuelve la entrada de hoy del archivo ("" si no está)."""
     if rc != 0:
         problemas.append(f"{que}, seguimiento.py --guardar salió con {rc}, no con 0")
     if j is not None and j.get("guardada") is not True:
@@ -535,8 +558,19 @@ def guardada(problemas, r, j, rc, que):
     entrada = entrada_de_hoy(texto)
     if not entrada.strip():
         problemas.append(f"{que}, el seguimiento no tiene la entrada de hoy ({hoy()})")
-    elif ANTES.split("\n# Seguimiento\n", 1)[1].strip() not in texto:   # Añadido
-        problemas.append(f"{que}, al guardar, las entradas anteriores del seguimiento no quedaron tal cual, debajo")
+    else:
+        anteriores = ANTES.split("\n# Seguimiento\n", 1)[1].strip()
+        cabecera = re.search(r"^## " + re.escape(hoy()) + r"\b", texto, re.M)
+        if anteriores not in texto:   # Añadido
+            problemas.append(f"{que}, al guardar, las entradas anteriores del seguimiento no quedaron tal cual")
+        elif cabecera.start() > texto.index(anteriores):   # Añadido: la más reciente arriba
+            problemas.append(f"{que}, la entrada de hoy quedó después de las anteriores, no arriba")
+        p4 = punto4_del_archivo(entrada)   # Añadido (#2026-11-27-14)
+        if p4 is None:
+            problemas.append(f"{que}, la entrada de hoy no tiene la línea «{PUNTO4}»")
+        elif p4 != [SIN_REVISAR]:
+            problemas.append(f"{que}, en la entrada de hoy «{PUNTO4}» va seguida de {json.dumps(p4, ensure_ascii=False)[:200]}, "
+                             f"no solo de «{SIN_REVISAR}»")
     return entrada
 
 
@@ -584,7 +618,10 @@ def escenarios(inf):
         estados_son(problemas, "«piezas» del JSON", j.get("piezas"), tres)
         es(problemas, "«completa»", j.get("completa"), True)
         es(problemas, "«check_obligatorio», con «pruebas de aceptación» en la regla", j.get("check_obligatorio"), True)  # Añadido
-        es(problemas, "«punto4», que el script no juzga (#2026-11-27-14)", j.get("punto4"), ["pendiente de revisar"])  # Añadido
+        p4 = j.get("punto4")   # Añadido: cada línea, con o sin «- » delante
+        es(problemas, "«punto4», que el script no juzga (#2026-11-27-14)",
+           [re.sub(r"^- ", "", l) if isinstance(l, str) else l for l in p4] if isinstance(p4, list) else p4,
+           ["pendiente de revisar"])
     # Añadido: los mismos datos con la regla de la rama principal en 403. La lista está completa y hay acceso: se guarda,
     # sale con 0, y el check obligatorio queda sin comprobar (null)
     if RECOGER.is_file() and SEGUIR.is_file():
@@ -613,7 +650,8 @@ def escenarios(inf):
 
     # 3 · Entregada solo si el release contiene el commit, aunque su fecha sea posterior
     problemas = []
-    gh = github([pr(21, "P01 · Lista de productos", "2026-11-22T10:00:00Z", sha="a" * 40),
+    gh = github([pr(21, "P01 · Lista de productos", "2026-11-22T10:00:00Z", sha="a" * 40,   # Añadido: con «Paso a Prod»
+                    cuerpo="Lista de productos.\n\nAprobó: Ana Pérez, 2026-11-21\n"),       # de release, no entrega
                  pr(20, "P02 · Precios", "2026-11-18T10:00:00Z", ["src/precios.py"], sha="b" * 40)],
                 releases=[{"tag_name": "v1.0.0", "name": "1.0.0", "body": "Aprobó: Ana Pérez, 2026-11-25 · seguimiento 2026-11-24",
                            "published_at": "2026-11-25T12:00:00Z", "created_at": "2026-11-25T12:00:00Z",

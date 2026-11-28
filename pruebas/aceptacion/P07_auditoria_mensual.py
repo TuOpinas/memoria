@@ -140,9 +140,9 @@ def escenarios(inf):
         if ev and not re.search(r"(?<![0-9])51(?![0-9])", ev):
             problemas.append(f"la evidencia de R6 no da el número de #51: {ev[:200]!r}")
         for n in (52, 53, 54, 55, 56):   # Añadido: los de pieza, escenarios, kit, reversión y bot no son evidencia
-            if re.search(rf"#{n}(?![0-9])", ev):
+            if re.search(rf"(?<![0-9]){n}(?![0-9])", ev):
                 problemas.append(f"R6 da como evidencia #{n}, que está en regla")
-        if re.search(r"#50(?![0-9])", ev):   # Añadido: el unido antes de la última auditoría no cuenta
+        if re.search(r"(?<![0-9])50(?![0-9])", ev):   # Añadido: el unido antes de la última auditoría no cuenta
             problemas.append(f"R6 da como evidencia #50, unido el 2026-10-20, antes de la última auditoría ({ULTIMA_AUDITORIA})")
     inf.escenario("A merged pull request without a piece fails R6", problemas)
 
