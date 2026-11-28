@@ -1810,6 +1810,22 @@ from context_core.development import seccion_desarrollo, piezas_faltantes, PATH_
 # La misma función en abrir.py y permisos.py (cada uno se descarga suelto); pruebas/sesion/probar_permisos.py comprueba
 # que las dos copias son idénticas. Recibe el texto de «Quién responde por qué» y {nombre en minúscula: cuentas} de la
 # tabla de áreas, y dice si quien administra la carpeta y quien responde por el contexto son la misma persona.
+def cuentas_que_construyen(kit):
+    """Las cuentas que construyen un proyecto de desarrollo (1.32.0, P35): las de «Construye», por su correo o, sin él, por
+    su nombre en «Quién es quién» (#2026-11-27-12), con todas las cuentas de esa persona; y los nombres sin cuenta que no
+    están en el registro. (cuentas, nombres sin cuenta)"""
+    cuentas, sin = set(), []
+    for b in (kit.roles.get("Construye") or []):
+        p = persona(b.email, REG) if b.email else (persona(b.name, REG) if REG.get("hay") and b.name else None)
+        if b.email:
+            cuentas.add(b.email.lower())
+        if p and not p.get("baja"):
+            cuentas |= {c.lower() for c in (p.get("cuentas") or set())}
+        elif not b.email and b.name:
+            sin.append(b.name)
+    return cuentas, sin
+
+
 def administrador_unico(quien, por_nombre):
     """(veredicto, adm, ctx): «una», «dos» o «no se sabe» (un lado trae solo un nombre que no está en la tabla y el otro
     una cuenta: no se afirma nada). Dos correos de la misma persona («En Drive: a@claude es a@drive») cuentan como una."""
@@ -2427,7 +2443,21 @@ def respuesta(sueltos, completa=False, sin_proyecto=False):
     # escritura, y el que no puede lo dice en una línea y sigue. Solo con la sección «## Desarrollo» y repositorios en ella.
     # En cada uno comprueba el kit en el clon, sin leer GitHub, y dice en una línea lo que falta (1.30.0, P31).
     kit_ = globals().get("KIT")
-    if completa and not sin_proyecto and kit_ is not None and kit_.found and kit_.repositories:
+    # 1.32.0 (P35): con escritura, solo la cuenta de quien está en «Construye» (por su correo o, sin él, por su nombre en
+    # «Quién es quién»); a cualquier otra no se le conecta nada al abrir, y solo para leer si lo que pide necesita el código
+    construye_, sin_cuenta_ = cuentas_que_construyen(kit_) if kit_ is not None and kit_.found else (set(), [])
+    if completa and not sin_proyecto and kit_ is not None and kit_.found and kit_.repositories and (CUENTA or "").lower() not in construye_:
+        _por_que = ""
+        if sin_cuenta_:
+            _por_que = (f" «Construye» nombra a {' y a '.join(sin_cuenta_)}, que no {'están' if len(sin_cuenta_) > 1 else 'está'} en «Quién es quién» de guia.md "
+                        "con su cuenta: hasta que el responsable de contexto la añada, o la línea «Construye» lleve su correo, nadie construye desde la apertura; dilo en una línea.")
+        elif not construye_:
+            _por_que = " «Construye» no nombra a nadie en este proyecto: nadie construye desde la apertura hasta que se escriba; dilo en una línea."
+        pasos.append("No conectes ningún repositorio al abrir: esta cuenta no está en «Construye» de este proyecto ("
+                     + " · ".join(kit_.repositories) + ")." + _por_que + " Si lo que se pide necesita el código, conéctalo entonces solo para leer, con la "
+                     "herramienta que añade repositorios a la sesión, y clónalo como diga su resultado; no cambies nada en él ni abras pull requests: lo que haga "
+                     "falta cambiar se prepara en la conversación para quien construye.")
+    elif completa and not sin_proyecto and kit_ is not None and kit_.found and kit_.repositories:
         pasos.append("Conecta con escritura, antes de trabajar, cada repositorio de «Repositorios:» de este proyecto ("
                      + " · ".join(kit_.repositories) + "): con la herramienta que añade repositorios a la sesión, con acceso de escritura, y después clónalo "
                      "como diga su resultado. Todo el desarrollo se hace en remoto, ahí, nunca en la computadora de la persona. Si uno no se puede conectar, "

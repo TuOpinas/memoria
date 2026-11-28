@@ -7,7 +7,7 @@ basado_en: []
 
 # Diseño
 
-Lo redacta Claude al empezar; lo aprueba quien acepta. Las tablas las lee el tablero para dibujar la pestaña Desarrollo: se pueden añadir columnas, pero estas se quedan con su nombre. Varios valores en una celda van separados por « · ». La columna «En corto», en «Componentes», «Datos» e «Infraestructura», es opcional: lo que dice, en unas palabras, sale bajo el nombre de su caja; sin ella, cada caja lleva solo su nombre.
+Lo redacta Claude al empezar; lo aprueba quien acepta. Las tablas las lee el tablero para dibujar la pestaña Desarrollo: se pueden añadir columnas, pero estas se quedan con su nombre. Varios valores en una celda van separados por « · ». La columna «En corto», en «Componentes», «Datos» e «Infraestructura», es opcional: lo que dice, en unas palabras, sale bajo el nombre de su caja; sin ella, cada caja lleva solo su nombre. La columna «Pieza», en las mismas tres tablas, también es opcional: nombra la pieza del plan que construye esa fila («P03»), y en el tablero cada caja sale con el estado de su pieza en el último seguimiento (unida o entregada, en curso, pendiente); una fila sin pieza, o una pieza que el plan no tiene, sale sin estado.
 
 **La regla:** lo que no esté aquí (una entidad, un componente o un concepto) entra solo con una decisión, y esa sesión pone al día este documento. El seguimiento compara lo unido con lo que dice este documento.
 
@@ -26,19 +26,19 @@ Las reglas de negocio que el producto tiene que cumplir.
 | [Una frase] | [Cuándo no aplica] |
 
 ## Componentes
-| Componente | En corto | Qué hace | Dónde vive | Externo | Conecta con | Corre en |
-|---|---|---|---|---|---|---|
-| [Cliente o servicio de fuera] | [Qué es, en unas palabras] | [Una frase] | [quién lo da] | sí | [componente al que llama] | [pieza de «Infraestructura»] |
-| [Nombre] | [Qué es, en unas palabras] | [Una frase] | [organización/repositorio:ruta] | | [otro componente · otro más] | [pieza de «Infraestructura»] |
+| Componente | En corto | Qué hace | Dónde vive | Externo | Conecta con | Corre en | Pieza |
+|---|---|---|---|---|---|---|---|
+| [Cliente o servicio de fuera] | [Qué es, en unas palabras] | [Una frase] | [quién lo da] | sí | [componente al que llama] | [recurso de «Infraestructura»] | |
+| [Nombre] | [Qué es, en unas palabras] | [Una frase] | [organización/repositorio:ruta] | | [otro componente · otro más] | [recurso de «Infraestructura»] | [pieza del plan que lo construye] |
 
-**Flujo:** [componente → otro → otro: el recorrido de la llamada principal, desde quien la hace. Solo vale sin «Tipo» en «Infraestructura»: con ella, cada componente se dibuja dentro de la pieza de su «Corre en»]
+**Flujo:** [componente → otro → otro: el recorrido de la llamada principal, desde quien la hace. Solo vale sin «Tipo» en «Infraestructura»: con ella, cada componente se dibuja dentro del recurso de su «Corre en»]
 
 ## Datos
 Una fila por entidad, con su nombre en el código, y cada relación escrita una sola vez, en la fila de la entidad que apunta a la otra. Entre paréntesis va la cardinalidad (1:N, N:M) o, mejor, el verbo que dice qué hace la relación (vive en, deja, firma).
 
-| Entidad | En corto | Grupo | Qué es | Se relaciona con |
-|---|---|---|---|---|
-| [nombre_en_codigo] | [Qué es, en unas palabras] | [Un grupo de entidades] | [Una frase] | [otra_entidad (vive en) · otra (N:M)] |
+| Entidad | En corto | Grupo | Qué es | Se relaciona con | Pieza |
+|---|---|---|---|---|---|
+| [nombre_en_codigo] | [Qué es, en unas palabras] | [Un grupo de entidades] | [Una frase] | [otra_entidad (vive en) · otra (N:M)] | [pieza del plan que la construye] |
 
 Cada grupo de la columna «Grupo», una fila, en el orden en que se apilan en el dibujo. Papel: `centro` en el grupo con el que trabaja la gente (borde grueso), `aparte` en el que no se une a los demás (sin líneas), o vacío.
 
@@ -58,11 +58,11 @@ Las palabras del producto. Un sinónimo no es un concepto nuevo: va en «No es»
 | [Palabra] | [Una frase] | [otra palabra, otra más] | [entidad · otra] |
 
 ## Infraestructura
-Cada proveedor y cuenta se dibuja como un contenedor con sus piezas dentro. Un servicio del cliente (su Drive, su correo) lleva su propia cuenta.
+Cada proveedor y cuenta se dibuja como un contenedor con sus recursos dentro. Un servicio del cliente (su Drive, su correo) lleva su propia cuenta. La primera columna es «Recurso», lo que se despliega; un diseño de antes que la llama «Pieza» se sigue leyendo así, con esa «Pieza» como el nombre de la caja.
 
-| Pieza | En corto | Tipo | Para qué | Proveedor | Cuenta | Ambiente | Conecta con |
-|---|---|---|---|---|---|---|---|
-| [Servidor, base de datos, dominio, servicio externo] | [Qué es, en unas palabras] | [corre, guarda o externo] | [Una frase] | [Google Cloud, Cloudflare…] | [proyecto o cuenta] | [Prod, Release] | [otra pieza (lee)] |
+| Recurso | En corto | Tipo | Para qué | Proveedor | Cuenta | Ambiente | Conecta con | Pieza |
+|---|---|---|---|---|---|---|---|---|
+| [Servidor, base de datos, dominio, servicio externo] | [Qué es, en unas palabras] | [corre, guarda o externo] | [Una frase] | [Google Cloud, Cloudflare…] | [proyecto o cuenta] | [Prod, Release] | [otro recurso (lee)] | [pieza del plan que lo monta] |
 
 ## Prototipo
 [Enlace y fecha.]

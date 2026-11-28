@@ -9,7 +9,8 @@ from typing import Callable
 
 from .development import (key, _sections, _nfc, _clean, SEPARATOR, DevSection, DESIGN, PLAN, FOLLOW_UP, TO_BUILD)
 
-__all__ = ["read_design", "read_plan", "read_follow_up", "design_detail_path", "development_view", "vista_desarrollo"]
+__all__ = ["read_design", "read_plan", "read_follow_up", "design_detail_path", "development_view", "vista_desarrollo",
+           "scenarios_to_verify", "escenarios_a_verificar", "essential_title", "read_outside_design"]
 
 
 # ── the design, the plan and the follow-up, for the board's «Desarrollo» tab (1.28.0) ─────────────────────────────
@@ -113,6 +114,16 @@ def piece_key(raw: str) -> str:
     return m.group(1).upper() + m.group(2) + m.group(3).lower() if m else raw
 
 
+def _piece_cell(cell: str):
+    """The plan's piece a design row names in its «Pieza» column (1.32.0, P34): «P01» or «P01 · nombre» -> «P01»; None
+    when empty or without the column; anything else as written, so it is named as a piece the plan does not have."""
+    cell = _clean(cell or "")
+    if not cell:
+        return None
+    m = re.match(r"^\s*(" + PIECE_ID + r")\b", cell)
+    return piece_key(m.group(1)) if m else cell
+
+
 def _split_id(cell: str) -> tuple:
     """«P01 · Lista de productos» -> ("P01", "Lista de productos"); «F1» -> ("F1", ""); «P02a» -> ("P02a", "")."""
     m = re.match(r"^\s*(" + PIECE_ID + r")\s*(?:[·:—-]\s*(.*))?$", _clean(cell))
@@ -213,9 +224,14 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         if by_account:
             # 1.29.0 (P18): «Dónde» parted into Proveedor, Cuenta and Ambiente
             cols = ["Pieza", "Para qué", "Proveedor", "Cuenta", "Ambiente", "Conecta con"]
+        # 1.32.0 (P34, #2026-11-27-13): with «Recurso», the box's name is «Recurso» and «Pieza» is the plan's piece that
+        # builds it; a design written before, without «Recurso», keeps «Pieza» as the box's name
+        resource = part == "infraestructura" and key("Recurso") in keys
+        if resource:
+            cols = ["Recurso"] + cols[1:]
         c = _columns(t, cols, name, warn(part))
         if by_account:
-            items = [{"nombre": _cell(r, c["Pieza"]), "para_que": _cell(r, c["Para qué"]), "proveedor": _cell(r, c["Proveedor"]),
+            items = [{"nombre": _cell(r, c[cols[0]]), "para_que": _cell(r, c["Para qué"]), "proveedor": _cell(r, c["Proveedor"]),
                       "cuenta": _cell(r, c["Cuenta"]), "ambiente": _cell(r, c["Ambiente"]),
                       # «donde» también, para una página 1.28.0 que aún no se republicó y lee solo ese campo
                       "donde": " · ".join(x for x in (_cell(r, c["Proveedor"]), _cell(r, c["Cuenta"]), _cell(r, c["Ambiente"])) if x),
@@ -223,8 +239,10 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         else:
             items = [dict(zip(fields, (_cell(r, c[x]) for x in cols[:3])), conecta_con=_list(_cell(r, c["Conecta con"]))) for r in rows]
         short = _optional(t, "En corto")
+        built_by = _optional(t, "Pieza") if part == "componentes" or resource else None
         for i, r in zip(items, rows):
             i["en_corto"] = _cell(r, short)
+            i["pieza"] = _piece_cell(_cell(r, built_by))
         if part == "componentes":
             # 1.29.0 (P17): an optional «Externo» column
             ext = _optional(t, "Externo")
@@ -271,6 +289,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
         t, rows = _table(body.split("\n"))
         c = _columns(t, ["Entidad", "Grupo", "Qué es", "Se relaciona con"], "Datos", warn("datos"))
         short = _optional(t, "En corto")
+        built_by = _optional(t, "Pieza")
         for r in rows:
             rel = []
             for x in (y for y in re.split(r"\s+·\s+|,\s*(?![^()]*\))", _cell(r, c["Se relaciona con"])) if y.strip()):
@@ -289,6 +308,7 @@ def read_design(text: str, detail_text=None, detail_path: str = "") -> tuple:
                     warn("datos")(f"no se entiende la relación «{x.strip()}» de «{_cell(r, c['Entidad'])}»: va como «entidad (tipo)», separadas por « · »")
             out["entidades"].append({"nombre": _cell(r, c["Entidad"]), "grupo": _cell(r, c["Grupo"]) if c["Grupo"] is not None else None,
                                      "que_es": _cell(r, c["Qué es"]), "en_corto": _cell(r, short), "relaciones": rel,
+                                     "pieza": _piece_cell(_cell(r, built_by)),
                                      "detalle": None, "conceptos": []})
         out["entidades"] = _unique(out["entidades"], "Datos", warn("datos"))
         names = {e["nombre"] for e in out["entidades"]}
@@ -449,7 +469,9 @@ def read_plan(text: str) -> tuple:
             # aprobado es nombre y fecha; «pending» o el hueco de la plantilla no aprueban nada
             cur["aprobo"] = _clean(a.group(1)) if re.search(r"\d{4}-\d{2}-\d{2}", a.group(1)) else ""
         elif b:
-            scen = {"titulo": b.group(1).strip(), "texto": b.group(2).strip()}
+            t_ = b.group(1).strip()
+            # 1.32.0 (P36): whoever accepts marks a scenario essential by ending its title with «(esencial)»
+            scen = {"titulo": t_, "texto": b.group(2).strip(), "esencial": bool(_ESSENTIAL.search(t_))}
             cur["escenarios"].append(scen)
         elif scen is not None and l.startswith((" ", "\t")) and l.strip():
             scen["texto"] = (scen["texto"] + "\n" + l.strip()).strip()
@@ -460,16 +482,77 @@ def read_plan(text: str) -> tuple:
     return {"fases": phases, "piezas": pieces}, warnings
 
 
-def read_follow_up(text: str) -> tuple:
-    """The newest entry of a follow-up: (its date, {piece: state}), or ("", {}) without one."""
+_ESSENTIAL = re.compile(r"\(\s*esencial\s*\)\s*$", re.I)
+
+
+def essential_title(title: str) -> str:
+    """A scenario's title without its «(esencial)» mark at the end."""
+    return _ESSENTIAL.sub("", title or "").rstrip()
+
+
+def scenarios_to_verify(plan: dict, phase: str) -> dict:
+    """What the verification of a phase walks (1.32.0, P36): the titles of the phase's scenarios, and apart the essential
+    scenarios of the phases before it in the plan, each with its piece. An essential scenario of the phase itself goes
+    with the phase's. A phase the plan does not have gives nothing."""
+    phases = [f.get("id") for f in (plan or {}).get("fases") or []]
+    pieces = (plan or {}).get("piezas") or []
+    out = {"fase": [], "esenciales": []}
+    if phase not in phases:
+        return out
+    before = set(phases[:phases.index(phase)])
+    for p in pieces:
+        for s in p.get("escenarios") or []:
+            if p.get("fase") == phase:
+                out["fase"].append(s.get("titulo", ""))
+            elif p.get("fase") in before and s.get("esencial"):
+                out["esenciales"].append({"pieza": p.get("id"), "titulo": s.get("titulo", "")})
+    return out
+
+
+escenarios_a_verificar = scenarios_to_verify
+
+
+def _newest_entry(text: str) -> tuple:
+    """The newest dated entry of a follow-up: (its date, its body), or ("", "") without one."""
     entries = []
     for name, body in _sections(text).values():
         m = re.match(r"^(\d{4}-\d{2}-\d{2})\b", name)
         if m:
             entries.append((m.group(1), body))
-    if not entries:
+    return max(entries, key=lambda e: e[0]) if entries else ("", "")
+
+
+# Point 4 of an entry, in the fixed form of #2026-11-27-14: its label, then one line per thing, «- nada», or the
+# «- pendiente de revisar» that `seguimiento.py` leaves until the subagent fills it
+_POINT4 = re.compile(r"^\s*4\s*[.)]\s*Lo que lo unido añade y el diseño no tiene\s*:?\s*$", re.I)
+_NEXT_POINT = re.compile(r"^\s*\d+\s*[.)]\s+\S")
+_NOTHING = re.compile(r"^(nada|ninguno|ninguna|pendiente de revisar)\.?$", re.I)
+
+
+def read_outside_design(text: str) -> list:
+    """What the newest entry of a follow-up says was merged and the design does not have (1.32.0, P34): the lines under
+    its point 4, without the dash, or [] when it says «nada», is still «pendiente de revisar» or has no point 4."""
+    _, body = _newest_entry(text or "")
+    out, inside = [], False
+    for l in _nfc(body).split("\n"):
+        if _POINT4.match(l):
+            inside = True
+            continue
+        if not inside:
+            continue
+        if _NEXT_POINT.match(l) or l.startswith("#"):
+            break
+        m = re.match(r"^\s*[-*]\s+(.+?)\s*$", l)
+        if m and not _NOTHING.match(m.group(1)):
+            out.append(m.group(1))
+    return out
+
+
+def read_follow_up(text: str) -> tuple:
+    """The newest entry of a follow-up: (its date, {piece: state}), or ("", {}) without one."""
+    date, body = _newest_entry(text)
+    if not date:
         return "", {}
-    date, body = max(entries, key=lambda e: e[0])
     states = {}
     lines = body.split("\n")   # la entrada sin tabla «Pieza | Estado» vuelve sin estados, y la vista lo dice
     while lines:
@@ -517,6 +600,7 @@ def development_view(section: DevSection, read: Callable[[str], object]) -> dict
         view["avisos"] += [{"parte": p, "texto": t} for p, t in w]
         view["fuentes"]["plan"] = {"ruta": path, "actualizado": _header(text).get("actualizado")}
     path = section.paths.get(FOLLOW_UP, "")
+    states, outside = {}, []
     if not path or path == TO_BUILD:
         say("seguimiento", "aún no hay seguimiento: las piezas salen sin estado")
     else:
@@ -533,7 +617,29 @@ def development_view(section: DevSection, read: Callable[[str], object]) -> dict
             for p in (view["plan"] or {}).get("piezas", []):
                 if p["id"] in states:
                     p["estado"], p["fecha_estado"] = states[p["id"]], date
+        if text is not None and date:
+            outside = read_outside_design(text)
+    _built(view, states if view["fuentes"]["seguimiento"] else {}, outside)
     return view
+
+
+def _built(view: dict, states: dict, outside: list) -> None:
+    """1.32.0 (P34): each box of the drawings with its piece and that piece's state in the newest follow-up, the pieces
+    the design names and the plan does not have, and what the follow-up found merged outside the design. A box whose
+    piece the plan does not have goes without state."""
+    design = view.get("diseno")
+    if design is None:
+        return
+    known = {p["id"] for p in (view.get("plan") or {}).get("piezas", [])}
+    unknown = []
+    for part in ("entidades", "componentes", "infraestructura"):
+        for box in design.get(part) or []:
+            pid = box.setdefault("pieza", None)
+            box["estado"] = states.get(pid) if pid and pid in known else None
+            if pid and view.get("plan") is not None and pid not in known and pid not in unknown:
+                unknown.append(pid)
+    design["piezas_desconocidas"] = unknown
+    design["fuera_del_diseno"] = outside
 
 
 vista_desarrollo = development_view
