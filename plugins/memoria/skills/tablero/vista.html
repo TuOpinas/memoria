@@ -230,6 +230,12 @@ body{margin:0;padding-inline:0;padding-block:0}
 .side-i.area small{font:500 11.5px var(--f-mono);color:var(--muted)}
 .side-i.proj{padding-left:14px}
 .side-i.proj.closed span{color:var(--muted)}
+.side-cerr{font:500 11px var(--f-mono);color:var(--muted)}
+.side-arch-h{margin-top:18px}
+.side-a.arch{background:var(--ground);border-radius:8px;padding:0 6px 6px;margin-top:8px}
+.side-a.arch .side-i.area{border-top:0;margin-top:0;color:var(--muted)}
+.side-a.arch .side-i:hover{background:var(--rule-soft)}
+.side-i.proj.closed[aria-current="page"] span{color:var(--signal)}
 .side-i:hover{background:var(--ground)}
 .side-i[aria-current="page"]{background:var(--signal-dim);color:var(--signal)}
 .side-i[aria-current="page"] span{color:var(--signal)}
@@ -833,7 +839,7 @@ html,body{overflow-x:clip}
 // Los datos viven en la base de la página: colecciones "areas" y "proyectos", el documento "meta/estado"
 // y la cola "cambios" (lo que se toca aquí y todavía no está escrito en la carpeta).
 // Los escribe generar_vista.py desde la raíz; la vista solo lee la raíz y escribe en su cola.
-const VERSION_TABLERO = "1.31.2"; // la misma que el plugin memoria; la sube release.sh
+const VERSION_TABLERO = "1.31.3"; // la misma que el plugin memoria; la sube release.sh
 let PERMISOS = null, AREAS = [], PROJ = [], META = null, CAMBIOS = [], PROPUESTAS = [], CIERRES = [], ENFOQUE = null, MCP = null, QUERY = "", byId = {}, areaBy = {}, DB = null, CAN = null, OWNER = false, ready = {a:false,p:false};
 const DAY = 864e5;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1807,7 +1813,7 @@ function cabeceraRaiz(){
   const icoI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>`;
   const info = queEs ? `<span class="org-i" role="button" aria-label="Qué es ${esc(org)}" ${tip(queEs)}>${icoI}</span>` : "";
   const infoM = queEs ? `<span class="org-i org-i-m" role="button" ${tip(queEs)}>${icoI}Qué es ${esc(org)}</span>` : "";
-  const nAreas = areasVis().filter(a=>a.legible!==false && !archivada(a)).length, nAct = PROJ.filter(activo).length;
+  const nAreas = AREAS.filter(a=>a.legible!==false && !archivada(a)).length, nAct = PROJ.filter(activo).length;
   return `<div class="org-tit"><h1>${esc(org||"Tablero")}</h1>${info}</div>
     <div class="meta">${infoM}<span>Versión <b>${esc(VERSION_TABLERO)}</b></span>${quien}<span><b>${nAreas}</b> ${nAreas===1?"área":"áreas"} · <b>${nAct}</b> ${nAct===1?"proyecto activo":"proyectos activos"}</span></div>`;
 }
@@ -2007,7 +2013,7 @@ const kTxt = o => [o.ses?cuantos(o.ses,"sesión","sesiones"):"", o.dec?cuantos(o
 
 function actPorArea(ev){
   const esc_ = escribenSet();
-  const filas = areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>{ const o = agrega(ev.filter(e=>e.p.area===a.slug)); return {a, o}; }).sort((x,y)=>(y.o.ses+y.o.dec)-(x.o.ses+x.o.dec));
+  const filas = AREAS.filter(a=>a.legible!==false && !archivada(a)).map(a=>{ const o = agrega(ev.filter(e=>e.p.area===a.slug)); return {a, o}; }).sort((x,y)=>(y.o.ses+y.o.dec)-(x.o.ses+x.o.dec));
   const mx = Math.max(1, ...filas.map(x=>x.o.ses+x.o.dec+x.o.pub));
   return `<section class="due"><div class="top"><h2>Por área</h2><span class="c" style="margin-left:auto">Cuánto se movió cada una y quién</span></div>
     <div class="act-a">${filas.map(({a,o})=>{ const tot = o.ses+o.dec+o.pub, gente = [...o.q].filter(n=>esc_.has(n)).map(nombreCorto);
@@ -2086,7 +2092,7 @@ function actPersonas(ev, areaFija){
     <div class="per-k">${g.ses?`<span><b>${g.ses}</b> ${g.ses===1?"sesión":"sesiones"}</span>`:""}${g.dec?`<span><b>${g.dec}</b> ${g.dec===1?"decisión":"decisiones"}</span>`:""}${docs(g)}${accion(g)}</div></div>`;
   const filaQuieta = g => `<div class="per quiet"><div class="per-h"><span>${nombre(g)}<span class="rol">${ult[g.n] ? `última sesión el ${fmtL(ult[g.n])}` : "sin sesiones todavía"}</span></span></div>
     ${accion(g)?`<div class="per-k">${accion(g)}</div>`:""}</div>`;
-  const opciones = areaFija ? "" : `<select class="act-area" aria-label="Área" data-act-area>${[["", "Toda la carpeta"], ...areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>[a.slug, a.nombre||a.slug])].map(([v,l])=>`<option value="${esc(v)}"${v===areaSel?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
+  const opciones = areaFija ? "" : `<select class="act-area" aria-label="Área" data-act-area>${[["", "Toda la carpeta"], ...AREAS.filter(a=>a.legible!==false && !archivada(a)).map(a=>[a.slug, a.nombre||a.slug])].map(([v,l])=>`<option value="${esc(v)}"${v===areaSel?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
   // lo que no se atribuye se dice como hecho, sin suponer la causa
   // solo lo que cambia cómo se lee la lista: cuántas sesiones no cuentan porque no dicen quién las cerró. Lo que se arregla
   // en la carpeta (colaboradores sin nombre, documentos que cambiaron sin sesión) va a Mantenimiento (1.23.3)
@@ -2549,7 +2555,7 @@ function fichaProyecto(p){
     attrs: `data-go-proj="${esc(p.id)}"`});
 }
 function rumboAreas(){
-  return `<div class="area-cards">${areasVis().filter(a=>a.legible!==false && !archivada(a)).map(a=>{
+  return `<div class="area-cards">${AREAS.filter(a=>a.legible!==false && !archivada(a)).map(a=>{
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(activo), ta = titArea(a), mov = ps.map(p=>p.ultima_sesion).filter(Boolean).sort().pop(), p1 = (a.prioridades||[])[0];
     return ficha({nombre:a.nombre, fecha:ta.fecha, tit:ta.t, sig: ta.fecha ? (primerSiguiente(a.en_corto) || (p1 ? p1.split(/(?<=\.)\s/)[0] : "")) : "", meta: pieDe(ps), attrs:`data-go-area="${esc(a.slug)}"`}); }).join("")}</div>`;
 }
@@ -3967,12 +3973,27 @@ function cuestAbiertos(filtro){
       return `<div class="cq"><span class="t">${inline(c.titulo)}</span><span class="w">${esc(c.planteo||"Alguien")} cuestiona ${objetivo} · ${fmtD(c.fecha)}${de?` · desde <button type="button" class="lnk" data-go-proj="${esc(de.id)}" data-tab="decisiones">${esc(de.nombre)}</button>`:""}${a?` · <button type="button" class="lnk" data-go-proj="${esc(a.id)}" data-tab="decisiones">Ver la decisión ›</button>`:""}</span></div>`; }).join("")}</div></section>`;
 }
 const panTxt = a => a.panorama && a.panorama.texto ? `${a.panorama.fecha?`<time>${fmtD(a.panorama.fecha)}</time>`:""}${inline(a.panorama.texto)}` : `<em>Sin estatus todavía: lo escribe el director del área al cerrar una sesión en ella.</em>`;
-// ---- áreas archivadas: todos sus proyectos cerrados; se ocultan de Inicio y del lateral salvo que se pidan ----
+// ---- áreas archivadas: todos sus proyectos cerrados; Inicio y las demás vistas no las cuentan, y el lateral las enseña solo con el botón (1.31.3) ----
 // sus entregables siguen en Entregables y en la búsqueda: lo publicado de un proyecto cerrado se sigue usando
 let VER_ARCH = false; try{ VER_ARCH = localStorage.getItem("ver-archivadas")==="1"; }catch(e){}
 function archivada(a){ if(!a || a.legible===false) return false; const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean); return ps.length>0 && ps.every(p=>p.cerrado && !p.restringido); }
-const areasVis = () => VER_ARCH ? AREAS : AREAS.filter(a=>!archivada(a));
-const archBtn = n => `<button type="button" class="lnk" data-arch>${VER_ARCH ? "Ocultar áreas archivadas" : `Mostrar áreas archivadas (${n})`}</button>`;
+const archBtn = texto => `<button type="button" class="lnk" data-arch>${esc(texto)}</button>`;
+// >>> archivado
+// 1.31.3 (P41): qué sale en el lateral y qué dice el botón de lo archivado. Corre solo, sin nada de la página: recibe las áreas
+// en el orden de la guía ({slug, nombre, proyectos: [ids]}) y los proyectos ({id, area, nombre, cerrado}); lo que no se lee y lo
+// restringido lo decide la página antes de llamarla. Un área está archivada si tiene proyectos y todos están cerrados.
+function menuArchivado(areas, proyectos, ver){
+  const porId = {}; (proyectos||[]).forEach(p=>{ porId[p.id] = p; });
+  const vigentes = [], archivadas = []; let n = 0;
+  for(const a of (areas||[])){
+    const ps = (a.proyectos||[]).map(i=>porId[i]).filter(Boolean);
+    if(ps.length && ps.every(p=>p.cerrado)){ n++; archivadas.push({slug:a.slug, archivada:true, proyectos:ps.map(p=>({id:p.id, cerrado:true}))}); continue; }
+    const cerrados = ps.filter(p=>p.cerrado); n += cerrados.length;
+    vigentes.push({slug:a.slug, archivada:false, proyectos:ps.filter(p=>!p.cerrado).map(p=>({id:p.id, cerrado:false})).concat(ver ? cerrados.map(p=>({id:p.id, cerrado:true})) : [])});
+  }
+  return {boton: n ? (ver ? "Ocultar lo archivado" : `Mostrar lo archivado (${n})`) : null, grupos: ver ? vigentes.concat(archivadas) : vigentes};
+}
+// <<< archivado
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-arch]"); if(!b) return; VER_ARCH = !VER_ARCH; try{ localStorage.setItem("ver-archivadas", VER_ARCH?"1":"0"); }catch(err){} render(); });
 // ---- lateral ----
 let SIDE_OPEN = false;
@@ -3989,13 +4010,25 @@ function renderSide(){
     <button type="button" class="side-i top" data-go-dec${cur("dec")}><span>Decisiones</span><span class="side-n">${nDec}</span></button>
     <button type="button" class="side-i top" data-go-ent${cur("ent")}><span>Entregables</span><span class="side-n">${nEnt}</span></button>
     <button type="button" class="side-i top" data-go-help${cur("ayuda")}><span>Ayuda</span></button>`;
-  const nArch = AREAS.filter(archivada).length;
-  h += areasVis().map(a => {
+  // 1.31.3 (P41): la misma regla que archivada(): a un área que no se lee no se le pasan proyectos y un proyecto restringido no
+  // cuenta como cerrado (hoy el generador ya los da así; se repite por si cambia)
+  const args = [AREAS.map(a=>({slug:a.slug, proyectos: a.legible===false ? [] : (a.proyectos||[])})), PROJ.map(p=>({id:p.id, cerrado: !!p.cerrado && !p.restringido}))];
+  const menu = menuArchivado(...args, VER_ARCH);
+  // lo que está abierto sale siempre, aunque esté archivado y el botón apagado, para que se vea dónde se está (#2026-11-27-10)
+  const abierto = view.lvl==="proj" ? view.id : null, areaAbierta = view.lvl==="area" ? view.id : (abierto && byId[abierto] ? byId[abierto].area : null);
+  const grupos = VER_ARCH ? menu.grupos : menuArchivado(...args, true).grupos.map(g => g.archivada
+      ? (g.slug!==areaAbierta ? null : view.lvl==="area" ? g : {...g, proyectos: g.proyectos.filter(x=>x.id===abierto)})
+      : {...g, proyectos: g.proyectos.filter(x=>!x.cerrado || x.id===abierto)}).filter(Boolean);
+  let rotulo = false;
+  h += grupos.map(g => {
+    const a = areaBy[g.slug]; if(!a) return "";
     const ps = (a.proyectos||[]).map(i=>byId[i]).filter(Boolean);
-    return `<div class="side-a"><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}${a.legible===false && /^Restringid/.test(noLeido(a,true).pill) ? ` <span class="lock-i" ${tip("Restringida")}>${LOCK}</span>` : ""}</span><small>${ps.filter(p=>!p.cerrado).length}</small></button>
-      ${ps.map(p=>`<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span class="side-nombre">${esc(p.nombre)}</span>${marcaDev(p)}</button>`).join("")}</div>`;
+    const encabezado = g.archivada && !rotulo ? (rotulo = true, `<div class="side-g side-arch-h">Archivado</div>`) : "";
+    return `${encabezado}<div class="side-a${g.archivada?" arch":""}"${g.archivada?" data-archivado":""}><button type="button" class="side-i area" data-go-area="${esc(a.slug)}"${cur("area",a.slug)}><span>${esc(a.nombre)}${a.legible===false && /^Restringid/.test(noLeido(a,true).pill) ? ` <span class="lock-i" ${tip("Restringida")}>${LOCK}</span>` : ""}</span><small>${g.archivada ? "Archivada" : ps.filter(p=>!p.cerrado).length}</small></button>
+      ${g.proyectos.map(x=>{ const p = byId[x.id]; if(!p) return ""; const marca = x.cerrado && !g.archivada;
+        return `<button type="button" class="side-i proj${p.cerrado?" closed":""}" data-go-proj="${esc(p.id)}"${marca?" data-archivado":""}${cur("proj",p.id)}>${p.restringido && /^Restringid/.test(noLeido(p,false).pill) ? `<span class="lock-i side-lock" ${tip("Restringido")}>${LOCK}</span>` : dot(p)}<span class="side-nombre">${esc(p.nombre)}</span>${marca ? `<span class="side-cerr">cerrado</span>` : marcaDev(p)}</button>`; }).join("")}</div>`;
   }).join("");
-  if(nArch) h += `<div class="side-arch">${archBtn(nArch)}</div>`;
+  if(menu.boton) h += `<div class="side-arch">${archBtn(menu.boton)}</div>`;
   const hadFocus = document.activeElement && document.activeElement.id==="side-q", pos = hadFocus ? document.activeElement.selectionStart : 0;
   el.innerHTML = h;
   if(hadFocus){ const q = document.getElementById("side-q"); q.focus(); try{ q.setSelectionRange(pos,pos); }catch(e){} }
