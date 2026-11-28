@@ -13,7 +13,8 @@
   Cuando the drawings show, Entonces it is said under the drawing.
 
 Por el generador del tablero sobre la raíz de muestra de P05_lectores.py, con una columna «Pieza» al final de «Datos»,
-«Componentes» e «Infraestructura» y otra última entrada de seguimiento, y lo que escribe en desarrollo/ventas--portal.json:
+«Componentes» e «Infraestructura» (en esta, la primera columna pasa a llamarse «Recurso»: #2026-11-27-13) y otra
+última entrada de seguimiento, y lo que escribe en desarrollo/ventas--portal.json:
 diseno.entidades[], diseno.componentes[] y diseno.infraestructura[] con «pieza» y «estado»; diseno.piezas_desconocidas y
 diseno.fuera_del_diseno. Y la página del tablero (vista.html) leída como texto: «data-estado» en las cajas, y que nombre
 piezas_desconocidas y fuera_del_diseno, lo que va bajo el dibujo. El borde y la intensidad de cada caja según su estado,
@@ -45,8 +46,9 @@ TABLAS = (
         "Motor de pagos": ("| Motor de pagos | Cobra los pedidos | muestra/portal:pagos | |", "P03"),
         "Panel interno": ("| Panel interno | Donde la tienda prepara los pedidos | muestra/portal:panel | API · Motor de pagos |", ""),
     }),
-    # «Infraestructura» ya tiene una primera columna «Pieza» (el nombre de la caja): la del plan va al final, como en
-    # las otras dos tablas. Ver RESUMEN.md, «Lo que queda sabido».
+    # En la muestra de P05, la primera columna de «Infraestructura» se llama «Pieza» (el nombre de la caja), como en un
+    # diseño de antes. Con la columna del plan, esa primera pasa a llamarse «Recurso» y «Pieza» va al final, la pieza
+    # del plan, como en las otras dos tablas (shared-memory/plugin-memoria#2026-11-27-13)
     ("infraestructura", "| Pieza | Para qué | Dónde | Conecta con |\n|---|---|---|---|", {
         "Servidor web": ("| Servidor web | Sirve la tienda y la API | Nube · producción | Base de datos |", "P02"),
         "Base de datos": ("| Base de datos | Guarda clientes, pedidos y productos | Nube · producción | |", "P01"),
@@ -55,11 +57,17 @@ TABLAS = (
 )
 
 
+RECURSO = "| Recurso |"   # la primera columna de «Infraestructura» en un diseño con la columna del plan
+
+
 def con_pieza(otras=None):
-    """Los cambios que ponen la columna «Pieza» al final de las tres tablas. otras = {nombre: pieza} cambia la de una caja."""
+    """Los cambios que ponen la columna «Pieza» al final de las tres tablas, y en «Infraestructura» llaman «Recurso» a
+    la primera. otras = {nombre: pieza} cambia la de una caja."""
     cambios = []
-    for _, cabecera, filas in TABLAS:
+    for parte, cabecera, filas in TABLAS:
         cab, sep = cabecera.split("\n")
+        if parte == "infraestructura":
+            cab = cab.replace("| Pieza |", RECURSO, 1)
         cambios.append((DISENO, cabecera, f"{cab} Pieza |\n{sep}---|"))
         for nombre, (fila, pieza) in filas.items():
             pieza = (otras or {}).get(nombre, pieza)
@@ -175,6 +183,34 @@ def escenarios(inf):
         if malos:
             problemas.append(f"sin la columna, un aviso nombra «Pieza»: {json.dumps(malos, ensure_ascii=False)}")
     inf.escenario("Without the column, as today", problemas)
+
+    # 2b · Añadido: un diseño de antes, cuya «Infraestructura» no tiene «Recurso» (la muestra de P05 tal cual): su
+    #      «Pieza» es el nombre de la caja. Las tres cajas salen con su nombre y su «Conecta con», sin pieza ni estado,
+    #      y ningún nombre de caja pasa por pieza desconocida (aunque el seguimiento dé estados)
+    problemas = []
+    d = pestana(*generar([ultima(TRES)]), problemas)
+    if d is not None:
+        dis = saca(d, "diseno")
+        vistas = por_clave(dis.get("infraestructura") if isinstance(dis, dict) else None, "nombre")
+        for nombre in INFRAESTRUCTURA:
+            caja = vistas.get(nombre)
+            if caja is None:
+                problemas.append(f"falta «{nombre}» en infraestructura: su «Pieza» de antes es el nombre de la caja")
+                continue
+            for k in ("pieza", "estado"):
+                if k not in caja:
+                    problemas.append(f"«{nombre}» (infraestructura) no trae «{k}» (tiene que ser null)")
+                elif caja[k] is not None and not (k == "pieza" and caja[k] == ""):   # pieza: null o «»; estado: null
+                    problemas.append(f"«{k}» de «{nombre}» (infraestructura) es {json.dumps(caja[k], ensure_ascii=False)}"
+                                     ", y en un diseño sin «Recurso» la caja no tiene pieza")
+        revisa_diseno(d, problemas, ("infraestructura",))
+        desconocidas = lista(problemas, d, "piezas_desconocidas")
+        if desconocidas is not None:
+            malas = [n for n in INFRAESTRUCTURA if n in json.dumps(desconocidas, ensure_ascii=False)]
+            if malas:
+                problemas.append(f"«piezas_desconocidas» trae nombres de cajas de infraestructura: {malas}")
+    inf.escenario("Without the column, as today (an «Infraestructura» without «Recurso»: its «Pieza» is the box's name)",
+                  problemas)
 
     # 3 · Una pieza que el plan no tiene: «pedido» dice P09. Esa caja sin estado (también si el seguimiento nombra P09:
     #     añadido), las demás con el suyo, y P09 en piezas_desconocidas, que la página nombra

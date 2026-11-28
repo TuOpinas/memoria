@@ -660,7 +660,7 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan (fase 
 
 **Cómo están planteadas.** De tres maneras, como en F5 y F6:
 
-- **Lo que el tablero prepara (P34).** A la organización de mentira de P05 se le pone una columna «Pieza» al final de «Datos», «Componentes» e «Infraestructura», y otra última entrada de seguimiento. Se genera el tablero y se lee lo que prepara para la pestaña Desarrollo: cada caja con su pieza y su estado, las piezas que el plan no tiene y lo unido fuera del diseño.
+- **Lo que el tablero prepara (P34).** A la organización de mentira de P05 se le pone una columna «Pieza» al final de «Datos», «Componentes» e «Infraestructura» (en esta, la primera columna, el nombre de la caja, pasa a llamarse «Recurso»), y otra última entrada de seguimiento. Se genera el tablero y se lee lo que prepara para la pestaña Desarrollo: cada caja con su pieza y su estado, las piezas que el plan no tiene y lo unido fuera del diseño.
 - **Lo que dice la apertura (P35).** Se abre la sesión del portal de mentira con una cuenta, como en P23, y se lee lo que la apertura le dice a la sesión. Para tener personas distintas en cada rol, la guía tiene cuatro personas con cuenta (Ana, Luis, Marta y Pablo); acepta Marta, audita Pablo, y construye y administra Ana.
 - **Lo que lee el plan (P36).** Se le pasa al lector del plan el plan de mentira de P05, con títulos que terminan en «(esencial)» y con F1 cerrada y F2 en curso, y se mira qué escenarios marca y qué lista para la verificación de una fase.
 - **La página como texto (P34 y P36).** Que la página del tablero traiga la marca del estado de las cajas (`data-estado`), nombre lo que va bajo el dibujo (`piezas_desconocidas` y `fuera_del_diseno`) y traiga la marca del escenario esencial (`data-esencial`).
@@ -674,13 +674,14 @@ Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no exis
 
 ### P34 · Lo construido, en los dibujos
 
-La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y categoria sin pieza; Tienda web P01, API P02, Motor de pagos P03 y Panel interno sin pieza; Servidor web P02, Base de datos P01 y Dominio sin pieza.
+La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y categoria sin pieza; Tienda web P01, API P02, Motor de pagos P03 y Panel interno sin pieza; Servidor web P02, Base de datos P01 y Dominio sin pieza. En «Infraestructura», con la columna del plan, la primera se llama «Recurso» («| Recurso | Para qué | Dónde | Conecta con | Pieza |»), como decidió quien acepta (shared-memory/plugin-memoria#2026-11-27-13).
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
 | Each box takes its piece's state | La columna «Pieza» en las tres tablas; la última entrada da P01 `entregada`, P02 `en curso` y P03 `pendiente` | Cada caja trae su pieza y el estado de esa pieza, tal cual; la caja sin pieza, los dos vacíos (null). El grupo y lo demás de cada caja, como hoy. Ninguna pieza desconocida y ningún aviso que nombre «Pieza». La página tiene `data-estado` | P34 |
 | **Añadido:** Each box takes its piece's state (unida, revertida, and a piece the last entry does not name) | La última entrada da P01 `unida` y P02 `revertida`, y no nombra P03 (la anterior sí) | Las cajas de P01 y P02 traen `unida` y `revertida`; las de P03, sin estado | P34 |
 | Without the column, as today | La muestra tal cual | Cada caja trae pieza y estado vacíos (null), ninguna pieza desconocida, ningún aviso que nombre «Pieza», y el diseño se lee como en P05 | P34 |
+| **Añadido:** Without the column, as today (an «Infraestructura» without «Recurso»: its «Pieza» is the box's name) | Un diseño de antes: la muestra de P05 tal cual, cuya «Infraestructura» empieza por «Pieza» y no tiene «Recurso»; la última entrada da P01 `entregada`, P02 `en curso` y P03 `pendiente` | Servidor web, Base de datos y Dominio salen con su nombre y su «Conecta con» de P05, sin pieza ni estado (null), y ninguno de esos nombres está en las piezas desconocidas | P34 |
 | A piece the plan does not have | «pedido» dice P09, que el plan no tiene. **Añadido:** el seguimiento da P09 `entregada` | «pedido» sale sin estado; las demás cajas, con el suyo. P09 está en las piezas desconocidas. La página nombra `piezas_desconocidas` | P34 |
 | What was merged outside the design | La última entrada lleva cuatro puntos numerados detrás de su tabla; el punto 4 dice «Unido fuera del diseño: Servicio de cupones (muestra/portal#41) · Exportación a Excel (muestra/portal#43)» | Lo unido fuera del diseño trae esas dos cosas. **Añadido:** no trae el punto 4 de la entrada anterior ni los puntos 2 y 3 de la última. La página nombra `fuera_del_diseno` | P34 |
 | **Añadido:** What was merged outside the design (no point 4, nothing said) | La muestra tal cual, sin punto 4 | Lo unido fuera del diseño está, y va vacío | P34 |
@@ -710,7 +711,7 @@ La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y cate
 
 ### Cómo se leyó lo que el escenario no precisa
 
-1. **P34.** La columna «Pieza» lleva el identificador de la pieza («P01»), y va al final de cada tabla. Una celda vacía se lee como sin pieza: la prueba acepta null o «» para la pieza, y exige null para el estado.
+1. **P34.** La columna «Pieza» lleva el identificador de la pieza del plan («P01»), y va al final de cada tabla; en «Infraestructura», la primera columna se llama entonces «Recurso». Un diseño sin «Recurso» es de antes: su «Pieza» es el nombre de la caja y no hay pieza del plan. Una celda vacía se lee como sin pieza: la prueba acepta null o «» para la pieza, y exige null para el estado.
 2. **P34.** El estado de una caja es el de su pieza en la última entrada del seguimiento, tal cual lo escribe; una pieza que esa entrada no nombra, o que el plan no tiene, deja la caja sin estado (null), aunque el seguimiento la nombre.
 3. **P34.** «Lo que el seguimiento encontró unido y fuera del diseño» es lo que la última entrada dice en su punto 4. La prueba lo escribe como una lista numerada detrás de la tabla («4. Unido fuera del diseño: …», con las cosas separadas por « · »), y solo mira que lo leído traiga el texto de cada cosa, no su forma.
 4. **P34.** «Sin aviso» quiere decir que ningún aviso nombra «Pieza».
@@ -722,7 +723,7 @@ La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y cate
 
 ### Lo que queda sabido
 
-- **P34 y la tabla «Infraestructura».** Su primera columna ya se llama «Pieza» (el nombre de cada caja), en la muestra de P05 y en las de P21. El escenario le añade otra «Pieza», la del plan. La prueba pone la nueva al final, como en las otras dos tablas, y hoy el generador pierde las cajas de infraestructura con dos columnas del mismo nombre. Quien acepta decide, antes de construir, si se quedan los dos nombres o si una de las columnas se llama de otra manera; si cambia, se cambia la muestra de esta prueba en su pull request de escenarios.
+- **P34 y la tabla «Infraestructura».** Lo decidió quien acepta (shared-memory/plugin-memoria#2026-11-27-13): su primera columna pasa a llamarse «Recurso» (el nombre de la caja), y «Pieza», en las tres tablas, es la pieza del plan. Un diseño de antes, sin «Recurso» (la muestra de P05 y las de P21), se sigue leyendo como hoy: su «Pieza» es el nombre de la caja. La muestra de P34 con la columna lleva «Recurso»; la fila añadida de «Without the column» comprueba el diseño de antes. Cambiar la plantilla del diseño es de la pieza, no de estas pruebas.
 - **P34, la forma del punto 4.** El encargo no da la forma del seguimiento con sus puntos, y la prueba no la leyó de la plantilla. Si la plantilla del seguimiento lo escribe de otra manera, se cambia la muestra de esta prueba en su pull request de escenarios.
 - **P35.** Las filas positivas («recibe escritura») pasan hoy, porque hoy todos la reciben; fallan solo por su parte añadida, la cuenta que no construye.
 - **P36.** El cuarto escenario no tiene prueba: lo dice el propio escenario.
