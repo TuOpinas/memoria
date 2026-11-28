@@ -49,7 +49,7 @@ En una organización de Claude Team o Enterprise, el propietario puede distribui
 | `tablero` | Montar y mantener una página personal que muestra la carpeta entera, puesta al día cuando quien la montó lo pide, y con la ayuda dentro |
 | `tarea-tablero` | Los pasos de la puesta al día del tablero, que carga su tarea programada; no se usa en una conversación |
 
-El plugin trae además las dos plantillas del método (brief y comparativo), dentro de la skill `nuevo`, las seis del kit de desarrollo dentro de la skill `desarrollo`, los cuatro subagentes de esa skill en `agents/` (`escenarios`, `verificador`, `verificador-opus` y `seguimiento`, cada uno con su modelo), el archivo `metodo.md` generado y tres scripts:
+El plugin trae además las dos plantillas del método (brief y comparativo), dentro de la skill `nuevo`, las seis del kit de desarrollo dentro de la skill `desarrollo`, sus tres scripts del seguimiento y la auditoría (`recoger_github.py`, `seguimiento.py` y `auditoria.py`), los tres subagentes de esa skill en `agents/` (`escenarios`, `verificador` y `seguimiento`, cada uno con su modelo), el archivo `metodo.md` generado y tres scripts:
 
 | Script | Para qué |
 |---|---|

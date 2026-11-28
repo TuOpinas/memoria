@@ -39,7 +39,7 @@ Las de fases cerradas se quedan. Un identificador no se reutiliza nunca. «Horas
 | P01 · [nombre] | F1 | [Una frase] | [1.5] | [Qué se pregunta antes de construirla, o vacía] |
 
 ## Hecha cuando
-Una pieza está hecha cuando pasan sus escenarios. Claude los propone y quien acepta los aprueba antes de que se construya; un escenario aprobado no se cambia sin que lo apruebe otra vez. Una pieza puramente técnica no tiene escenarios ni verificación: lo dice aquí, «pieza técnica, sin escenarios», y también lo aprueba quien acepta.
+Una pieza está hecha cuando pasan sus escenarios. Claude los propone y quien acepta los aprueba antes de que se construya; un escenario aprobado no se cambia sin que lo apruebe otra vez. Lo que no se puede romper lo marca quien acepta con «(esencial)» al final del título del escenario: la verificación de cada fase siguiente lo recorre otra vez, aparte, y con un esencial fallado no hay sí. Una pieza puramente técnica no tiene escenarios ni verificación: lo dice aquí, «pieza técnica, sin escenarios», y también lo aprueba quien acepta.
 
 ### P01 · [nombre]
 Aprobó: [Nombre Apellido, AAAA-MM-DD]
@@ -48,6 +48,10 @@ Aprobó: [Nombre Apellido, AAAA-MM-DD]
   Dado [la situación de partida]
   Cuando [lo que hace la persona]
   Entonces [lo que tiene que pasar]
+- **[Lo que no se puede romper, en una frase] (esencial)**
+  Dado [...]
+  Cuando [...]
+  Entonces [...]
 - **[El caso de error]**
   Dado [...]
   Cuando [...]
