@@ -653,3 +653,77 @@ La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, c
 - La página ya tiene hoy la palabra «Archivada», la etiqueta «cerrado» y la clave `ver-archivadas`: buscarlas no probaría nada, y la prueba no las busca. Lo ve la verificación.
 - Que «Archivado» y la marca estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación. Un comentario que diga «data-archivado» ya cumple la fila; que la marca esté de verdad en lo que pinta el menú lo ve la verificación.
 - P41 necesita node en el PATH; sin él no se monta y sale con 2.
+
+## Fase F3 · Lo construido en los dibujos, la escritura para quien construye y los escenarios esenciales (P34, P35 y P36)
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan (fase F3, versión 1.32.0): los de P34, P35 y P36.
+
+**Cómo están planteadas.** De tres maneras, como en F5 y F6:
+
+- **Lo que el tablero prepara (P34).** A la organización de mentira de P05 se le pone una columna «Pieza» al final de «Datos», «Componentes» e «Infraestructura», y otra última entrada de seguimiento. Se genera el tablero y se lee lo que prepara para la pestaña Desarrollo: cada caja con su pieza y su estado, las piezas que el plan no tiene y lo unido fuera del diseño.
+- **Lo que dice la apertura (P35).** Se abre la sesión del portal de mentira con una cuenta, como en P23, y se lee lo que la apertura le dice a la sesión. Para tener personas distintas en cada rol, la guía tiene cuatro personas con cuenta (Ana, Luis, Marta y Pablo); acepta Marta, audita Pablo, y construye y administra Ana.
+- **Lo que lee el plan (P36).** Se le pasa al lector del plan el plan de mentira de P05, con títulos que terminan en «(esencial)» y con F1 cerrada y F2 en curso, y se mira qué escenarios marca y qué lista para la verificación de una fase.
+- **La página como texto (P34 y P36).** Que la página del tablero traiga la marca del estado de las cajas (`data-estado`), nombre lo que va bajo el dibujo (`piezas_desconocidas` y `fuera_del_diseno`) y traiga la marca del escenario esencial (`data-esencial`).
+
+Hoy fallan todas las filas, y deben: la pieza que las pone en verde aún no existe.
+
+**Lo que queda para la verificación en pantalla**, porque estas pruebas no lo ven:
+- **P34.** El borde y la intensidad de cada caja según el estado de su pieza, y que su color siga diciendo su grupo o tipo. Que la caja de una pieza desconocida salga sin estado. Que bajo el dibujo salgan, con sus palabras, la pieza que el plan no tiene y lo unido fuera del diseño (la prueba solo ve que la página nombra esos datos).
+- **P35.** Que la sesión conecte de verdad los repositorios con escritura, que no conecte nada a quien no construye, y que los conecte solo para leer cuando lo que se pide necesita el código.
+- **P36.** La marca de esencial en la ventana de la pieza (la prueba solo ve que la página trae `data-esencial`). Y el cuarto escenario entero: que la sesión no pida el sí cuando el informe de la verificación trae un esencial de una fase anterior fallado, y que diga cuál. El escenario dice que lo comprueba la verificación, no una prueba; P36 lo imprime como «queda para la verificación» y no lo cuenta.
+
+### P34 · Lo construido, en los dibujos
+
+La columna «Pieza» de la muestra: cliente P01, pedido P03, producto P02 y categoria sin pieza; Tienda web P01, API P02, Motor de pagos P03 y Panel interno sin pieza; Servidor web P02, Base de datos P01 y Dominio sin pieza.
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Each box takes its piece's state | La columna «Pieza» en las tres tablas; la última entrada da P01 `entregada`, P02 `en curso` y P03 `pendiente` | Cada caja trae su pieza y el estado de esa pieza, tal cual; la caja sin pieza, los dos vacíos (null). El grupo y lo demás de cada caja, como hoy. Ninguna pieza desconocida y ningún aviso que nombre «Pieza». La página tiene `data-estado` | P34 |
+| **Añadido:** Each box takes its piece's state (unida, revertida, and a piece the last entry does not name) | La última entrada da P01 `unida` y P02 `revertida`, y no nombra P03 (la anterior sí) | Las cajas de P01 y P02 traen `unida` y `revertida`; las de P03, sin estado | P34 |
+| Without the column, as today | La muestra tal cual | Cada caja trae pieza y estado vacíos (null), ninguna pieza desconocida, ningún aviso que nombre «Pieza», y el diseño se lee como en P05 | P34 |
+| A piece the plan does not have | «pedido» dice P09, que el plan no tiene. **Añadido:** el seguimiento da P09 `entregada` | «pedido» sale sin estado; las demás cajas, con el suyo. P09 está en las piezas desconocidas. La página nombra `piezas_desconocidas` | P34 |
+| What was merged outside the design | La última entrada lleva cuatro puntos numerados detrás de su tabla; el punto 4 dice «Unido fuera del diseño: Servicio de cupones (muestra/portal#41) · Exportación a Excel (muestra/portal#43)» | Lo unido fuera del diseño trae esas dos cosas. **Añadido:** no trae el punto 4 de la entrada anterior ni los puntos 2 y 3 de la última. La página nombra `fuera_del_diseno` | P34 |
+| **Añadido:** What was merged outside the design (no point 4, nothing said) | La muestra tal cual, sin punto 4 | Lo unido fuera del diseño está, y va vacío | P34 |
+
+### P35 · Los repositorios, conectados solo para quien construye
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Whoever builds gets write access | Ana, en «Construye» con su correo, abre la sesión | Un paso de la apertura nombra el repositorio y pide conectarlo «con escritura» «antes de trabajar», como hoy. **Añadido:** con Marta, que solo acepta, ninguna línea dice «con escritura» (sin esto la fila pasaría hoy, que todos reciben escritura) | P35 |
+| Anyone else gets nothing at opening (only in Acepta) | Abre Marta | Ninguna línea de la apertura dice «con escritura», y un paso dice «solo para leer» | P35 |
+| Anyone else gets nothing at opening (only in Audita) | Abre Pablo | Lo mismo | P35 |
+| Anyone else gets nothing at opening (in no role) | Abre una cuenta que no está en ningún rol ni en «Quién es quién» | Lo mismo | P35 |
+| Several builders | «Construye: Ana Pérez (ana@muestra.mx) · Marta Ruiz (marta@muestra.mx)» | Con Ana y con Marta, la apertura pide conectar con escritura. **Añadido:** con Pablo, ninguna línea dice «con escritura» | P35 |
+| A builder without an account is found by name | «Construye: Luis Gómez», y Luis con su correo en «Quién es quién» | Con Luis, la apertura pide conectar con escritura. **Añadido:** con Ana, que ya no construye, ninguna línea dice «con escritura» | P35 |
+| A builder without an account is found by name (the name is not in «Quién es quién») | «Construye: Rosa Vidal», que no está en «Quién es quién» | Con Ana, Marta, Luis y la cuenta sin rol, ninguna línea dice «con escritura», y la apertura nombra a Rosa Vidal y «Quién es quién» | P35 |
+
+### P36 · Los escenarios esenciales, antes de cada sí
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| An essential scenario is marked | El primer escenario de P01 termina en «(esencial)» | Ese escenario es esencial y los otros tres no. La página tiene `data-esencial` | P36 |
+| **Añadido:** An essential scenario is marked (none marked, none essential) | El plan tal cual | Los cuatro escenarios dicen que no son esenciales | P36 |
+| The verification gets the essential ones of earlier phases, apart | F1 cerrada, con los dos escenarios de P01 esenciales (el de P02 no); F2 en curso | Para F2: su escenario y, aparte, los dos de P01 con su pieza | P36 |
+| **Añadido:** The verification gets the essential ones of earlier phases, apart (one of the phase's own) | Lo mismo, y el escenario de P03 (F2) también esencial | Para F2: el de P03 va con los de la fase, no aparte; aparte, los dos de P01 | P36 |
+| No essential ones, only the phase's | F1 cerrada sin ningún esencial; F2 en curso | Para F2: su escenario y ningún esencial. **Añadido:** para F1, que no tiene fases antes, sus tres escenarios y ningún esencial | P36 |
+| (no se cuenta) A failing essential one stops the yes | — | Lo comprueba la verificación: la prueba lo imprime como «queda para la verificación» | la verificación |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. **P34.** La columna «Pieza» lleva el identificador de la pieza («P01»), y va al final de cada tabla. Una celda vacía se lee como sin pieza: la prueba acepta null o «» para la pieza, y exige null para el estado.
+2. **P34.** El estado de una caja es el de su pieza en la última entrada del seguimiento, tal cual lo escribe; una pieza que esa entrada no nombra, o que el plan no tiene, deja la caja sin estado (null), aunque el seguimiento la nombre.
+3. **P34.** «Lo que el seguimiento encontró unido y fuera del diseño» es lo que la última entrada dice en su punto 4. La prueba lo escribe como una lista numerada detrás de la tabla («4. Unido fuera del diseño: …», con las cosas separadas por « · »), y solo mira que lo leído traiga el texto de cada cosa, no su forma.
+4. **P34.** «Sin aviso» quiere decir que ningún aviso nombra «Pieza».
+5. **P35.** «Pide conectar con escritura» es lo que P23 ya pide: un paso que nombra el repositorio y dice «con escritura» y «antes de trabajar». «No conecta ninguno» es que ninguna línea de la apertura diga «con escritura», ni siquiera para decir que no; lo de solo leer, que un paso diga «solo para leer».
+6. **P35.** Dos personas en «Construye» van separadas por « · », como los repositorios en «Repositorios:». Un nombre sin cuenta va solo («Construye: Luis Gómez»).
+7. **P35.** «Dice por qué» es que la apertura nombre a la persona de «Construye» que no encuentra y «Quién es quién».
+8. **P36.** El lector puede dejar o quitar « (esencial)» del título: la prueba compara los títulos sin él. Las listas de escenarios a verificar se comparan sin orden. La fase se pasa por su identificador («F2») y el plan es el que da `read_plan`.
+9. **P36.** «F1 entregada» es F1 con el estado `cerrada` en «Fases».
+
+### Lo que queda sabido
+
+- **P34 y la tabla «Infraestructura».** Su primera columna ya se llama «Pieza» (el nombre de cada caja), en la muestra de P05 y en las de P21. El escenario le añade otra «Pieza», la del plan. La prueba pone la nueva al final, como en las otras dos tablas, y hoy el generador pierde las cajas de infraestructura con dos columnas del mismo nombre. Quien acepta decide, antes de construir, si se quedan los dos nombres o si una de las columnas se llama de otra manera; si cambia, se cambia la muestra de esta prueba en su pull request de escenarios.
+- **P34, la forma del punto 4.** El encargo no da la forma del seguimiento con sus puntos, y la prueba no la leyó de la plantilla. Si la plantilla del seguimiento lo escribe de otra manera, se cambia la muestra de esta prueba en su pull request de escenarios.
+- **P35.** Las filas positivas («recibe escritura») pasan hoy, porque hoy todos la reciben; fallan solo por su parte añadida, la cuenta que no construye.
+- **P36.** El cuarto escenario no tiene prueba: lo dice el propio escenario.
+- Ninguna de las tres necesita pytest ni node.
