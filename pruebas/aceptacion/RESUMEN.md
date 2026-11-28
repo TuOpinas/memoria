@@ -332,7 +332,7 @@ Las tres vistas (datos, componentes, infraestructura) de los dos diseños de mue
 - P15 busca los textos escritos exactamente así: `class="side-nombre"`, `data-tip="Proyecto de desarrollo"` y `title="Proyecto de desarrollo"`. No ve si el nombre de cada proyecto del menú usa esa clase: solo que la clase y su regla existen.
 - P25 solo prueba lo que pasa al salir de Desarrollo. Desde otra pestaña (Estatus, Pasos, Registro, Qué hay) los escenarios no dicen con cuál se abre, y la prueba no lo mira.
 - Las pruebas de P19, P20, P21 y P25 necesitan node en el PATH (el de la imagen de GitHub); sin él no se montan y salen con 2, no con fallo.
-- Un cambio en las pruebas de P21 o en la muestra de P05 se corre también contra P19, P20 y P25, que dependen de ellos.
+- Un cambio en las pruebas de P21 o en la muestra de P05 se corre también contra P19, P20, P25 y P41, que dependen de ellos (P41 importa de P21, que importa de P05).
 
 ## Fase F6 · El plan por estado, los datos por grupos, el sistema y el proceso en la ayuda
 
@@ -611,3 +611,45 @@ Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-26, en el plan («###
 - Con Vitest, `test.fails` y las demás formas de esperar un fallo se ven en el texto del archivo, no en el informe, y el Vitest de mentira no las ejercita: las comprobó la verificación de la 1.31.2 con Vitest 2 a 5 (#2026-11-27-5 y -6).
 - Un aviso de prueba async hecho buscando palabras sin más en la salida de pytest podría poner en rojo un pull request de escenarios válido: uno con una prueba async, con su plugin y su marca, que falla porque la pieza aún no existe. Estas pruebas no tienen esa fila. Lo mira la verificación.
 - Otro módulo de la raíz que pytest importe más tarde, como un `pdb.py`, ocuparía el sitio del de verdad igual que el `pytest.py` del escenario 1. Sin fila propia: la 1.31.2 lo cierra poniendo la raíz una sola vez, por su ruta real, al final de `sys.path` antes de cargar pytest (#2026-11-27-3).
+
+## P41 · Lo archivado, aparte y marcado
+
+Escenarios aprobados por Juanjo Jiménez-Alfaro el 2026-11-27, en el plan: los de P41. P40 se quitó (#2026-11-27-9: la ventana de la fase ya muestra el resumen).
+
+**Cómo están planteadas.** Como en F5 y F6, de dos maneras:
+
+- **Un trozo de la página, corrido aparte.** La prueba saca de la página del tablero el trozo que arma el menú y lo corre con node, sin abrir un navegador. Le da listas de áreas y proyectos escritas en la propia prueba, y mira qué áreas y proyectos salen, en qué orden, cuáles van marcados como archivados o cerrados, y qué dice el botón. El trozo corre solo: no puede usar nada de fuera de él (otras funciones ni variables de la página).
+- **La página como texto.** Que ya no traiga el botón de hoy («Mostrar áreas archivadas» / «Ocultar áreas archivadas»), que la pieza sustituye por el nuevo. Que traiga el rótulo «Archivado» y la marca de lo archivado, escrita «data-archivado» o «dataset.archivado». Y que nombre el trozo del menú (`menuArchivado`) fuera de él, para que no baste un trozo que nadie usa.
+
+Hoy fallan todas las filas, y deben: la página aún no trae ese trozo, ni el rótulo, ni la marca.
+
+**Lo que queda para la verificación en pantalla**, porque esta prueba no lo ve:
+- El gris de la tarjeta y del título de un área archivada, su sitio al final bajo «Archivado» y «Archivada» donde va la cuenta.
+- El gris del proyecto cerrado y la etiqueta «cerrado» a su derecha.
+- Que el área vigente no cambie de sitio, tarjeta, título ni cuenta.
+- Que el botón esté al pie del menú.
+- Que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página en el mismo navegador. La prueba solo ve que, con el botón encendido, el botón dice «Ocultar lo archivado».
+- Que la página use de verdad el trozo del menú para pintarlo: la prueba solo ve que lo nombra fuera de él.
+- Que la regla de área archivada sea la de `archivada()` de hoy, la misma en el menú y en el resto de la página (la cuenta del área, lo que se ve al abrir un proyecto): un área que se puede leer, con proyectos, todos cerrados y ninguno restringido. El trozo del menú recibe solo las áreas y proyectos que se le pasan, así que lo de leer y restringir lo decide la página antes de llamarlo.
+
+La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, con un proyecto cerrado; y el área «ventas», vigente, con un proyecto cerrado y después uno abierto. El orden está puesto así para ver que lo archivado pasa al final.
+
+| Título que imprime | Situación | Tiene que pasar | La pone en verde |
+|---|---|---|---|
+| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2). La página ya no trae «Mostrar áreas archivadas» ni «Ocultar áreas archivadas», el botón de hoy | P41 |
+| Shown, each one says what it is | La misma, botón encendido | «ventas» primero, con el abierto y después el cerrado, marcado como cerrado; «archivo» al final, marcada como archivada. La página tiene «Archivado», «data-archivado» o «dataset.archivado», y nombra el trozo del menú fuera de él | P41 |
+| The choice stays | Botón encendido | El botón dice «Ocultar lo archivado» | P41 |
+| Nothing archived, no button | Tres áreas sin nada cerrado. **Añadido:** una de ellas sin proyectos | Con el botón apagado y encendido: no hay botón, y salen todas las áreas, ninguna como archivada, con todos sus proyectos | P41 |
+
+### Cómo se leyó lo que el escenario no precisa
+
+1. El número del botón cuenta las áreas archivadas y los proyectos cerrados de áreas vigentes, como dice el contrato: los proyectos de un área archivada no suman aparte.
+2. De un área archivada, la prueba solo mira que salga al final y marcada, no la lista de sus proyectos.
+3. El orden de los proyectos de un área es el de su lista en la guía.
+4. Un área sin proyectos no es archivada.
+
+### Lo que queda sabido
+
+- La página ya tiene hoy la palabra «Archivada», la etiqueta «cerrado» y la clave `ver-archivadas`: buscarlas no probaría nada, y la prueba no las busca. Lo ve la verificación.
+- Que «Archivado» y la marca estén en el menú, y no en otra parte de la página, no lo distingue la prueba: lo ve la verificación. Un comentario que diga «data-archivado» ya cumple la fila; que la marca esté de verdad en lo que pinta el menú lo ve la verificación.
+- P41 necesita node en el PATH; sin él no se monta y sale con 2.
