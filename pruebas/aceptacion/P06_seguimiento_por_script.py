@@ -20,7 +20,9 @@
 
 Por el contrato del encargo (campo 3): «el seguimiento corre» es recoger_github.py con un `gh` falso delante en el PATH
 (GH_FALSO, abajo: responde la API REST desde un JSON que escribe cada escenario, nunca la red) y, sobre su salida,
-seguimiento.py contra la raíz de muestra de P05_lectores.py. Lo compartido con P07 (la raíz, el `gh` falso y cómo se
+seguimiento.py contra la raíz de muestra de P05_lectores.py. Ajuste del contrato (decidido en la sesión que construye):
+recoger_github.py lee siempre la regla de la rama principal y la deja en "reglas" (o null con su motivo); si no se
+puede leer, el punto 5 de la entrada dice «sin comprobar», pero eso solo no impide guardar ni hace salir con 3. Lo compartido con P07 (la raíz, el `gh` falso y cómo se
 corren los scripts) está aquí y P07 lo importa. Cómo se lee cada escenario está en RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P06_seguimiento_por_script.py (0 pasa, 1 falla, 2 no se montó).
 """
@@ -137,7 +139,8 @@ REGLAS_BIEN = [   # la regla de main de un repositorio en regla: pull request, s
 
 def github(prs=(), **mas):
     """Lo que el gh falso sabe del repositorio de la muestra. mas: releases, contiene ({etiqueta: [sha]}), acceso,
-    pulls_sin_fin, reglas (None: la API dice 403), org (None: 404)."""
+    pulls_sin_fin, reglas (None: la API dice 403 a la regla, a los rulesets y a la protección), org (None: 404).
+    La regla se sirve igual con y sin --auditoria: recoger_github.py la lee siempre."""
     d = {"repo": REPOSITORIO, "acceso": True, "rama": "main", "ultimo_commit": "c0ffee" * 6 + "abcd",
          "repo_ajustes": {"allow_squash_merge": True, "allow_merge_commit": False, "allow_rebase_merge": False},
          "pulls": [copy.deepcopy(p) for p in prs], "pulls_sin_fin": False, "releases": [], "contiene": {},
@@ -151,7 +154,9 @@ def github(prs=(), **mas):
 GH_FALSO = r'''
 """gh falso de las pruebas de aceptación de P06 y P07: solo «gh auth status» y «gh api <ruta REST>» de lectura, con
 -X GET, -f/-F, -H, --hostname y --cache; ni --jq, ni --paginate, ni GraphQL. Responde desde datos.json, a su lado, y
-apunta cada llamada en llamadas.txt. Una ruta que no conoce da 404, como GitHub."""
+apunta cada llamada en llamadas.txt. Una ruta que no conoce da 404, como GitHub. La regla de la rama principal
+(rules/branches, rulesets, branches/<rama>/protection) la responde siempre, se pida o no la auditoría; sin «reglas»,
+403 a las tres."""
 import json, pathlib, re, sys, urllib.parse
 AQUI = pathlib.Path(__file__).resolve().parent
 D = json.loads((AQUI / "datos.json").read_text(encoding="utf-8"))
@@ -432,6 +437,36 @@ def igual_archivo(problemas, r, ruta, antes, por_que):
         problemas.append(f"{ruta} cambió, y {por_que}")
 
 
+def entrada_de_hoy(texto):
+    """La entrada «## <hoy>» del seguimiento, hasta el siguiente «## AAAA-MM-DD»; "" si no la hay."""
+    m = re.search(r"^## " + re.escape(hoy()) + r"\s*$(.*?)(?=^## \d{4}-\d{2}-\d{2}\s*$|\Z)", texto, re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def regla_sin_leer(problemas, gh):
+    """Añadido (ajuste del contrato): los mismos datos con la regla de la rama principal en 403. La regla no se puede
+    leer, pero la lista está completa y hay acceso al repositorio: --guardar sale con 0 y guarda la entrada, y su
+    punto 5 (si el check «pruebas de aceptación» es obligatorio) dice «sin comprobar»."""
+    if not RECOGER.is_file() or not SEGUIR.is_file():
+        return   # ya lo dijo la primera corrida del escenario
+    gh = dict(copy.deepcopy(gh), reglas=None)
+    r, datos, rc, out = seguimiento(problemas, gh, guardar=True)
+    if datos is not None and ("reglas" not in datos or datos["reglas"] is not None):
+        problemas.append(f"con la regla en 403, el JSON de recoger no trae «reglas»: null (dice "
+                         f"{json.dumps(datos.get('reglas', '(no está)'), ensure_ascii=False)[:120]})")
+    if rc is None:
+        return
+    if rc != 0:
+        problemas.append(f"con la regla en 403 y todo lo demás leído, seguimiento.py --guardar salió con {rc}, no con 0: "
+                         "una regla que no se lee no impide guardar")
+    entrada = entrada_de_hoy((r / SEGUIMIENTO).read_text(encoding="utf-8"))
+    if not entrada.strip():
+        problemas.append(f"con la regla en 403, --guardar no dejó en el seguimiento la entrada de hoy ({hoy()})")
+    elif not any("pruebas de aceptación" in c for c in contextos(entrada, "sin comprobar")):
+        problemas.append("con la regla en 403, la entrada guardada no dice «sin comprobar» en su punto 5 (en la línea, "
+                         "o bajo el rótulo, que nombra el check «pruebas de aceptación»)")
+
+
 # ---------- los escenarios ----------
 def escenarios(inf):
     # 1 · Un pull request de bloque y una reversión dan su estado a cada pieza, en la tabla que lee el tablero
@@ -460,6 +495,10 @@ def escenarios(inf):
                         {"P01": "unida", "P02": "unida", "P03": "revertida"})
         if fecha == hoy() and antes.split("\n# Seguimiento\n", 1)[1].strip() not in texto:   # Añadido
             problemas.append("al guardar, las entradas anteriores del seguimiento no quedaron tal cual, debajo")
+    if datos is not None and not isinstance(datos.get("reglas"), list):   # el contrato: la regla se lee siempre
+        problemas.append(f"sin --auditoria, el JSON de recoger no trae la regla de la rama principal en «reglas» "
+                         f"(dice {json.dumps(datos.get('reglas'), ensure_ascii=False)[:120]})")
+    regla_sin_leer(problemas, gh)   # Añadido
     inf.escenario("Block pull requests and reverts give each piece its state", problemas)
 
     # 2 · Una lista cortada en el límite: «sin comprobar» donde hace falta; se muestra y no se guarda
