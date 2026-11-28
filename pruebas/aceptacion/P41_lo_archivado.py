@@ -17,8 +17,7 @@ Por una función de la página: menuArchivado(areas, proyectos, ver), del bloque
 de áreas y proyectos escritas aquí. Devuelve {"boton", "grupos": [{"slug", "archivada", "proyectos": [{"id",
 "cerrado"}]}]}. Y la página leída como texto: sin el botón de hoy («Mostrar áreas archivadas» / «Ocultar áreas
 archivadas»), con el rótulo «Archivado», «data-archivado» o «dataset.archivado», y el nombre menuArchivado fuera de su
-bloque. El gris, los sitios en
-pantalla, que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página quedan para la
+bloque. El gris, los sitios en pantalla, que la página guarde la elección del botón y que sobreviva a cerrar y abrir la página quedan para la
 verificación: lo dice RESUMEN.md.
 Uso, desde la raíz del repositorio: python3 -I pruebas/aceptacion/P41_lo_archivado.py (0 pasa, 1 falla, 2 no se montó).
 """

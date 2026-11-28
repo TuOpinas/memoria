@@ -636,7 +636,7 @@ La carpeta de la prueba tiene, en este orden: el área «archivo», archivada, c
 
 | Título que imprime | Situación | Tiene que pasar | La pone en verde |
 |---|---|---|---|
-| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». La página ya no trae «Mostrar áreas archivadas» ni «Ocultar áreas archivadas» **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2) | P41 |
+| Hidden by default | Esa carpeta, botón apagado | Solo sale «ventas», con su proyecto abierto; el botón dice «Mostrar lo archivado (2)». **Añadido:** con dos proyectos cerrados en el área archivada, sigue diciendo (2). La página ya no trae «Mostrar áreas archivadas» ni «Ocultar áreas archivadas», el botón de hoy | P41 |
 | Shown, each one says what it is | La misma, botón encendido | «ventas» primero, con el abierto y después el cerrado, marcado como cerrado; «archivo» al final, marcada como archivada. La página tiene «Archivado», «data-archivado» o «dataset.archivado», y nombra el trozo del menú fuera de él | P41 |
 | The choice stays | Botón encendido | El botón dice «Ocultar lo archivado» | P41 |
 | Nothing archived, no button | Tres áreas sin nada cerrado. **Añadido:** una de ellas sin proyectos | Con el botón apagado y encendido: no hay botón, y salen todas las áreas, ninguna como archivada, con todos sus proyectos | P41 |
